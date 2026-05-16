@@ -281,7 +281,8 @@
     showHint: showHint,
     toggleTheme: toggleTheme,
     markComplete: markComplete,
-    setFontSize: setFontSize
+    setFontSize: setFontSize,
+    toggleSolution: function(btn){ btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('open'); }
   };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);

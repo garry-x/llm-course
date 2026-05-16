@@ -3,669 +3,695 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第8章 文本生成 — LLM 深度学习</title>
+<title>第8章 文本生成 — 采样策略+MTP推测解码 — LLM 深度学习</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-ch="8">
 
 <button class="menu-toggle" aria-label="菜单">☰</button>
-
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <h1>LLM 深度学习</h1>
-    <p>从代码出发，构建大语言模型</p>
-  </div>
-  <div class="sidebar-progress">
-    <span>学习进度: <strong id="progress-text">0 / 10</strong></span>
-    <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
-  </div>
+  <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
+  <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 10</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
   <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
-  <div class="sidebar-footer">
-    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
-      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
-    </button>
-  </div>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
   <h2>第8章 文本生成</h2>
-  <p class="subtitle">实现采样策略 + DeepSeek MTP 推测解码</p>
-  <div class="reading-time">⏱ 预计阅读: 55 分钟 · 11 小节 · 5 道练习</div>
-
-  <div class="font-controls">
-    <span>字号:</span>
+  <p class="subtitle">采样策略 + DeepSeek MTP 推测解码——从概率到文本的最后一公里</p>
+  <div class="reading-time">⏱ 预计阅读: 75 分钟 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
-  <!-- 8.1 -->
-  <section class="card" id="s8-1">
-    <h3>8.1 自回归生成原理</h3>
-    <p>我们已经构建了一个完整的 GPT 模型——6 层 Transformer、12 头注意力、768 维隐藏层、约 1.24 亿参数。但模型本身只是一个"评分器"：给定一个 token 序列，它预测<strong>下一个 token 的概率分布</strong>。如何将概率转化为实际的文本输出，这就是<strong>文本生成（Text Generation）</strong>要解决的问题。</p>
-    <p>大语言模型的生成过程是<strong>自回归（Autoregressive）</strong>的：</p>
+<!-- ================================================================ -->
+<!-- 8.1 自回归生成原理 -->
+<!-- ================================================================ -->
+<section class="card" id="s8-1">
+  <h3>8.1 自回归生成的数学原理</h3>
+  <p>经过第 7 章的训练，我们得到了一个能预测下一个 token 的模型。但模型本身只是一个"评分器"：给定前缀，它输出一个概率分布。如何将概率分布转化为实际文本序列，这就是<strong>文本生成</strong>的核心问题。</p>
+
+  <h4>自回归分解</h4>
+  <p>生成的数学基础依然是<strong>自回归分解</strong>——序列的联合概率分解为条件概率的乘积：</p>
+  <div class="math-box"><div class="label">公式 8.1 自回归生成</div>
     <div class="katex" data-expr="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})"></div>
-    <p>每一步，模型看到已经生成的 token <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]"></span>，输出下一个 token 的概率分布 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})"></span>，然后从该分布中采样或取最大值得到 <span class="katex-inline" data-expr="x_t"></span>。这个过程重复，直到生成结束 token 或达到最大长度。</p>
-    <p>生成过程分为两个阶段：</p>
-    <ul>
-      <li><strong>Prefilling（预填充）：</strong>将用户输入的 prompt 一次性送入模型，计算所有层的 K/V 缓存。这是<strong>计算密集</strong>阶段——大量矩阵乘法并行执行。首 token 延迟 = Prefilling 时间。</li>
-      <li><strong>Decoding（解码）：</strong>逐 token 生成，每次只输入一个 token，利用 KV Cache 增量计算。这是<strong>带宽密集</strong>阶段——每次只生成一个 token，GPU 利用率低（~3-5%）。后续吞吐 = 每秒生成的 token 数。</li>
-    </ul>
-    <div class="info-box key">
-      <span class="icon">🔑</span>
-      <div><strong>重要概念：</strong>首 token 延迟（Time to First Token, TTFT）由 Prefilling 主导，用户感知为"等待第一个字出现的时间"；后续吞吐（Tokens Per Second, TPS）由 Decoding 主导，用户感知为"打字速度"。两者是独立的优化目标。ChatGPT 的 TTFT 约 200-500ms，TPS 约 30-60 tok/s。</div>
-    </div>
-    <p>本章的核心是实现一个<strong>生成器（Generator）</strong>——一个将模型输出 logits 转化为文本 token 序列的模块。我们将实现 4 种采样策略，然后深入探讨生成质量评估、上下文窗口、推测解码（Speculative Decoding）和 DeepSeek 的 Multi-Token Prediction（MTP）。</p>
-  </section>
+  </div>
+  <p>每一步，模型基于已有的前缀 <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]"></span>，输出一个词表上的概率分布 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})"></span>。然后从该分布中<strong>采样</strong>或<strong>取最大值</strong>得到 <span class="katex-inline" data-expr="x_t"></span>。这个过程是逐 token 进行的，直到生成结束 token 或达到最大长度。</p>
 
-  <!-- 8.2 -->
-  <section class="card" id="s8-2">
-    <h3>8.2 动手：Greedy Decoding</h3>
-    <p>贪心解码（Greedy Decoding）是最简单的策略——每一步选择概率最高的 token：</p>
-    <div class="katex" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})"></div>
-    <p>实现非常直接——对 logits 取 <code>argmax</code>：</p>
-    <div class="code-block" data-lang="python">
-    def generate_greedy(model, input_ids, max_new_tokens=100):
-        """贪心解码：每一步选概率最高的 token。"""
-        model.eval()
-        device = next(model.parameters()).device
-        input_ids = input_ids.to(device)
-        seq_len = input_ids.size(1)
+  <h4>Prefilling 与 Decoding 两阶段</h4>
+  <p>生成过程分为两个计算特征完全不同的阶段：</p>
+  <ul>
+    <li><strong>Prefilling（预填充）：</strong>将用户输入的 prompt 一次性送入模型。这是<strong>计算密集</strong>阶段——大量矩阵乘法并行执行。瓶颈在 GPU 算力（FLOPS）。首 token 延迟（TTFT）由这个阶段主导。</li>
+    <li><strong>Decoding（解码）：</strong>逐 token 生成，每次只输入一个 token，利用 KV Cache 增量计算。这是<strong>带宽密集</strong>阶段——GPU 利用率仅 3-5%。后续吞吐（TPS）由这个阶段主导。</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>重要概念：</strong>TTFT（Time to First Token）由 Prefilling 主导，用户感知为"等待第一个字出现的时间"；TPS（Tokens Per Second）由 Decoding 主导，用户感知为"打字速度"。ChatGPT 的 TTFT 约 200-500ms，TPS 约 30-60 tok/s。这两个指标是独立的优化目标。</div></div>
+</section>
 
-        for step in range(max_new_tokens):
-            with torch.no_grad():
-                logits = model(input_ids)  # (1, seq_len, vocab_size)
-            next_logits = logits[:, -1, :]  # 最后一个位置
-            next_token = next_logits.argmax(dim=-1, keepdim=True)  # (1, 1)
-            input_ids = torch.cat([input_ids, next_token], dim=-1)
-            seq_len += 1
+<!-- ================================================================ -->
+<!-- 8.2 为什么贪心解码失败 -->
+<!-- ================================================================ -->
+<section class="card" id="s8-2">
+  <h3>8.2 为什么贪心解码会失败？——重复陷阱与曝光偏差</h3>
+  <p>贪心解码（Greedy Decoding）每一步选择概率最高的 token：<span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})"></span>。它是最简单的策略，但有两个根本缺陷。</p>
 
-            if next_token.item() == model.tokenizer.eos_token_id:
-                break
+  <h4>缺陷一：重复陷阱（Repetition Loop）</h4>
+  <p>模型一旦生成了一个高频 token（如"的"或"the"），后续 <code>argmax</code> 很可能继续选择同一个 token。这是因为高频 token 的 logits 通常远高于其他候选，在 self-attention 中，"的"的 Key 和 Query 会产生高分数的匹配，形成"自激振荡"——每一步的输出都在强化之前的选择。结果就是无穷无尽的重复输出。</p>
 
-        return input_ids</div>
-    <p><strong>严重问题：</strong>贪心解码有一个极其隐蔽的陷阱——<strong>死循环</strong>（Repetition Loop）。模型一旦生成了一个高频 token（如"的"或"the"），后续 <code>argmax</code> 很可能继续选择同一个 token，导致无穷无尽的重复输出。</p>
-    <div class="code-block" data-lang="python">
-    # 示例输入
-    prompt = "深度学习是人工智能的一个重要分支，它"
-    input_ids = tokenizer.encode(prompt, return_tensors='pt')
-    output = generate_greedy(model, input_ids, max_new_tokens=50)
-    print(tokenizer.decode(output[0]))
+  <h4>缺陷二：曝光偏差（Exposure Bias）</h4>
+  <p>训练时，模型每一步看到的是<strong>真实的</strong> ground truth token。但推理时，模型看到的是<strong>自己生成的</strong> token。这两种情况下的分布不同——训练时的条件分布是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{真实}})"></span>，推理时是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{生成}})"></span>。一步的误差会在后续步中被放大，这就是<strong>误差累积</strong>（error accumulation）。</p>
 
-    # 典型输出（可能有重复）：
-    # "深度学习是人工智能的一个重要分支，它的发展非常迅速，它的发展非常迅速，它的发展非常迅速..."</div>
-    <div class="info-box warn">
-      <span class="icon">⚠️</span>
-      <div><strong>argmax 的盲区：</strong>贪心解码永远选择"当前最优"，但语言中"次优"的选择往往更自然。例如"我吃了一个____"中"苹果"的概率略低于"水果"，但前者更合理。更关键的是，argmax 没有回溯机制——一步选错，后续全部受影响。这就是<strong>曝光偏差（Exposure Bias）</strong>：训练时模型看到的是真实文本，推理时看到的是自己的输出。</div>
-    </div>
-    <p>解决方案是引入<strong>随机性</strong>——从概率分布中采样，而不是取最大值。接下来我们会看到三种越来越精细的采样策略。</p>
-  </section>
-
-  <!-- 8.3 -->
-  <section class="card" id="s8-3">
-    <h3>8.3 动手：Temperature Sampling</h3>
-    <p><strong>温度采样（Temperature Sampling）</strong>在 argmax 和完全均匀采样之间提供了一个连续控制旋钮。核心是<strong>温度参数 <span class="katex-inline" data-expr="T"></span></strong>：</p>
+  <h4>温度参数的熵控制视角</h4>
+  <p>解决方案是引入<strong>随机性</strong>——从概率分布中采样而不是取最大值。温度参数 <span class="katex-inline" data-expr="T"></span> 控制这个随机性的程度：</p>
+  <div class="math-box"><div class="label">公式 8.2 温度采样</div>
     <div class="katex" data-expr="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}"></div>
-    <p>其中 <span class="katex-inline" data-expr="z_i"></span> 是 logits，<span class="katex-inline" data-expr="T"></span> 是温度：</p>
-    <ul>
-      <li><span class="katex-inline" data-expr="T \to 0"></span>：softmax 退化为 argmax（确定性的，等价于贪心）</li>
-      <li><span class="katex-inline" data-expr="T = 1"></span>：原始概率分布，不做任何调整</li>
-      <li><span class="katex-inline" data-expr="T > 1"></span>：分布更均匀，更多随机性（创意更多但可能跑题）</li>
-      <li><span class="katex-inline" data-expr="T < 1"></span>：分布更尖锐，聚焦于高概率 token（更保守）</li>
-    </ul>
-    <div class="code-block" data-lang="python">
-    def generate_temperature(model, input_ids, max_new_tokens=100, temperature=1.0):
-        """温度采样：用 temperature 控制分布的尖锐程度。"""
-        model.eval()
-        device = next(model.parameters()).device
-        input_ids = input_ids.to(device)
+  </div>
+  <ul>
+    <li><span class="katex-inline" data-expr="T \to 0"></span>：退化为 argmax（完全确定）</li>
+    <li><span class="katex-inline" data-expr="T = 1"></span>：原始分布</li>
+    <li><span class="katex-inline" data-expr="T \to \infty"></span>：退化为均匀分布（完全随机）</li>
+  </ul>
+  <p>温度的"热力学类比"：在 Boltzmann 分布中，温度控制系统的"探索"程度——高温使系统探索更多状态（更多样的词汇），低温使系统利用已知高概率模式（更确定的输出）。</p>
+</section>
 
-        for step in range(max_new_tokens):
-            with torch.no_grad():
-                logits = model(input_ids)
-            next_logits = logits[:, -1, :]  # (1, vocab_size)
+<!-- ================================================================ -->
+<!-- 编程练习 1: Greedy Decoding -->
+<!-- ================================================================ -->
+<section class="card" id="s8-3">
+  <h3>8.3 编程练习 1：实现 Greedy Decoding</h3>
+  <p>虽然贪心解码有缺陷，但它是理解所有其他采样策略的起点。请实现它，然后观察其问题。</p>
 
-            # 应用温度
-            scaled_logits = next_logits / temperature
-
-            # 从 softmax 分布中采样
-            probs = torch.softmax(scaled_logits, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)  # (1, 1)
-
-            input_ids = torch.cat([input_ids, next_token], dim=-1)
-
-            if next_token.item() == model.tokenizer.eos_token_id:
-                break
-
-        return input_ids</div>
-    <p><strong><span class="katex-inline" data-expr="T=0"></span> 的数值问题：</strong>当 <span class="katex-inline" data-expr="T = 0"></span> 时，除法 <span class="katex-inline" data-expr="z_i / 0 \to \infty"></span> 会导致数值溢出。实际实现中从来不会真的除以 0：<span class="katex-inline" data-expr="T=0"></span> 时直接用 <code>argmax</code>，<span class="katex-inline" data-expr="T > 0"></span> 时才做采样。另一种常见做法是设定 <span class="katex-inline" data-expr="T_{\min} = 1e-8"></span> 作为下限。</p>
-    <p>温度参数的应用实际上是 <strong>Boltzmann 分布</strong> 的变体——在统计力学中，温度控制系统的"探索"程度。高温使系统探索更多状态（更多样的词汇），低温使系统利用已知高概率模式（更确定的输出）。这也是"温度"这个名称的来源。</p>
-    <div class="info-box tip">
-      <span class="icon">💡</span>
-      <div><strong>实际用法：</strong>ChatGPT 默认温度是 0.7 或 0.8——在确定性和创造性之间取得平衡。代码生成任务常用 <span class="katex-inline" data-expr="T = 0.2"></span>（确定性更重要），创意写作任务常用 <span class="katex-inline" data-expr="T = 0.9"></span>。但即使 <span class="katex-inline" data-expr="T = 0.2"></span>，低概率 token 仍有可能被采样到——这就是 Top-K 和 Top-P 要解决的问题。</div>
+  <div class="coding-exercise">
+    <h4>练习 1：贪心解码</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>generate_greedy(model, input_ids, max_new_tokens)</code> 函数。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>输入 <code>input_ids: (1, seq_len)</code>，逐 token 生成最多 <code>max_new_tokens</code> 个新 token</li>
+        <li>每一步取 logits 最后一个位置（<code>logits[:, -1, :]</code>）的 argmax</li>
+        <li>检测 EOS token，遇到时提前停止</li>
+        <li>返回完整的 token 序列</li>
+      </ul>
+      <pre># 预期用法
+prompt = tokenizer.encode("深度学习是", return_tensors='pt')
+output = generate_greedy(model, prompt, max_new_tokens=50)
+print(tokenizer.decode(output[0]))
+# 可能输出: "深度学习是深度学习是深度学习是..."</pre>
     </div>
-  </section>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def generate_greedy(model, input_ids, max_new_tokens=100):
+    """贪心解码：每一步选概率最高的 token"""
+    model.eval()
+    device = next(model.parameters()).device
+    input_ids = input_ids.to(device)
 
-  <!-- 8.4 -->
-  <section class="card" id="s8-4">
-    <h3>8.4 动手：Top-K 采样</h3>
-    <p><strong>Top-K 采样</strong>的思路非常直观：只从概率最高的 K 个 token 中采样，忽略"长尾"的低概率 token。这可以防止模型从概率极低的、不合理的 token 中采样。</p>
-    <div class="katex" data-expr="V' = \{x_i \mid P(x_i) \text{ 排在前 } K \}, \quad x_t \sim \text{Uniform}(V')"></div>
-    <p>GPT-2 的默认参数是 <span class="katex-inline" data-expr="K = 40"></span>。Hugging Face Transformers 也用 <span class="katex-inline" data-expr="K = 50"></span> 作为默认值。</p>
-    <div class="code-block" data-lang="python">
-    def generate_topk(model, input_ids, max_new_tokens=100, temperature=1.0, k=40):
-        """Top-K 采样：只保留概率最高的 K 个 token。"""
-        model.eval()
-        device = next(model.parameters()).device
-        input_ids = input_ids.to(device)
-
-        for step in range(max_new_tokens):
-            with torch.no_grad():
-                logits = model(input_ids)
-            next_logits = logits[:, -1, :] / temperature
-
-            # 找到 top-k 的 logits 和 indices
-            top_logits, top_indices = torch.topk(next_logits, k, dim=-1)
-
-            # 用 top-k logits 计算 softmax 并采样
-            top_probs = torch.softmax(top_logits, dim=-1)  # (1, k)
-            sampled_idx = torch.multinomial(top_probs, num_samples=1)  # (1, 1)
-
-            # 将 sampled_idx 映射回词表 id
-            next_token = top_indices.gather(-1, sampled_idx)  # (1, 1)
-
-            input_ids = torch.cat([input_ids, next_token], dim=-1)
-
-            if next_token.item() == model.tokenizer.eos_token_id:
-                break
-
-        return input_ids</div>
-    <p><strong>Top-K 的固有问题：</strong>K 是一个固定值。在某些上下文中可能只有 3 个合理的选择（K=40 引入了太多噪声），而在另一些上下文中可能有 100 个合理的延续（K=40 截断了太多可能性）。换句话说，<strong>K 无法自适应</strong>。</p>
-    <p>例如：模型预测"美国的首都是____"，此时概率分布极度尖锐——"华盛顿"的概率可能超过 90%。K=40 意味着我们仍然从 40 个候选中随机采样，这极大概率仍然选到"华盛顿"（没问题），但小概率选到"纽约"或"洛杉矶"（明显错误）。而在创意写作中，分布往往更平缓，K=40 可能过于限制创造力。</p>
-  </section>
-
-  <!-- 8.5 -->
-  <section class="card" id="s8-5">
-    <h3>8.5 动手：Top-P (Nucleus) 采样</h3>
-    <p><strong>Top-P（Nucleus）采样</strong>由 Holtzman et al. (2020) 提出，是目前<strong>最主流的采样策略</strong>。它解决了 Top-K 的"K 固定"问题：不是固定选择 K 个 token，而是选择累积概率达到 <span class="katex-inline" data-expr="P"></span> 的最小 token 集合。</p>
-    <p>具体来说：</p>
-    <ol>
-      <li>将 token 按概率从高到低排序</li>
-      <li>从最高概率开始累加，直到累积概率达到 <span class="katex-inline" data-expr="P"></span>（通常 0.9 或 0.95）</li>
-      <li>只从这个"核心集"（nucleus）中采样</li>
-    </ol>
-    <p>当分布尖锐时，核心集很小（如上面"华盛顿"的例子可能只有 1-3 个 token 就达到 P=0.9）；当分布平缓时，核心集自动扩大。这完全由数据驱动，无需手动调整 K。</p>
-    <div class="code-block" data-lang="python">
-    def generate_topp(model, input_ids, max_new_tokens=100, temperature=1.0, p=0.9):
-        """Top-P (Nucleus) 采样：选择累积概率达到 p 的最小 token 集。"""
-        model.eval()
-        device = next(model.parameters()).device
-        input_ids = input_ids.to(device)
-
-        for step in range(max_new_tokens):
-            with torch.no_grad():
-                logits = model(input_ids)
-            next_logits = logits[:, -1, :] / temperature
-            probs = torch.softmax(next_logits, dim=-1)  # (1, vocab_size)
-
-            # 按概率降序排序
-            sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
-
-            # 计算累积概率
-            cumsum = torch.cumsum(sorted_probs, dim=-1)
-
-            # 找到累积概率 > p 的位置，将其后的概率置 0
-            mask = cumsum - sorted_probs > p  # 关键：减去自身，使"第一个 >p"也被包含
-            sorted_probs[mask] = 0.0
-
-            # 归一化（被 mask 的 token 概率为 0）
-            renormalized = sorted_probs / sorted_probs.sum(dim=-1, keepdim=True)
-
-            # 从归一化后的分布中采样
-            sampled_idx = torch.multinomial(renormalized, num_samples=1)  # (1, 1)
-            next_token = sorted_indices.gather(-1, sampled_idx)  # (1, 1)
-
-            input_ids = torch.cat([input_ids, next_token], dim=-1)
-
-            if next_token.item() == model.tokenizer.eos_token_id:
-                break
-
-        return input_ids</div>
-    <div class="info-box key">
-      <span class="icon">🔑</span>
-      <div><strong>P 的选择：</strong><span class="katex-inline" data-expr="P = 0.9"></span> 是最常用值，兼顾多样性和质量。<span class="katex-inline" data-expr="P = 0.95"></span> 更激进（核心集更大），<span class="katex-inline" data-expr="P = 0.8"></span> 更保守。Google 的 PaLM 使用 <span class="katex-inline" data-expr="P = 0.95"></span>，而 Anthropic 的 Claude 使用 <span class="katex-inline" data-expr="P = 0.9"></span>。实际应用中，温度 + Top-P 通常联合使用——先用温度调整分布形状，再用 Top-P 截断尾部。</div>
-    </div>
-  </section>
-
-  <!-- 8.6 -->
-  <section class="card" id="s8-6">
-    <h3>8.6 动手：采样策略对比实验</h3>
-    <p>现在我们把所有策略放在一起对比。用同一个 prompt 和同一个模型，观察不同策略的输出差异：</p>
-    <div class="code-block" data-lang="python">
-    class Generator:
-        """统一的生成器，支持多种采样策略。"""
-
-        def __init__(self, model, tokenizer):
-            self.model = model
-            self.tokenizer = tokenizer
-            self.device = next(model.parameters()).device
-
-        def generate(self, prompt: str, strategy: str = "top-p",
-                     max_new_tokens: int = 100, temperature: float = 0.8,
-                     k: int = 40, p: float = 0.9) -> str:
-            """
-            统一的生成接口。
-            strategy: "greedy" | "temperature" | "top-k" | "top-p"
-            """
-            input_ids = self.tokenizer.encode(
-                prompt, return_tensors='pt'
-            ).to(self.device)
-
-            for step in range(max_new_tokens):
-                with torch.no_grad():
-                    logits = self.model(input_ids)
-                next_logits = logits[:, -1, :]
-
-                # —— 策略选择 ——
-                if strategy == "greedy":
-                    next_token = next_logits.argmax(dim=-1, keepdim=True)
-
-                elif strategy == "temperature":
-                    scaled = next_logits / temperature
-                    probs = torch.softmax(scaled, dim=-1)
-                    next_token = torch.multinomial(probs, 1)
-
-                elif strategy == "top-k":
-                    scaled = next_logits / temperature
-                    top_v, top_i = torch.topk(scaled, k, dim=-1)
-                    probs = torch.softmax(top_v, dim=-1)
-                    idx = torch.multinomial(probs, 1)
-                    next_token = top_i.gather(-1, idx)
-
-                elif strategy == "top-p":
-                    scaled = next_logits / temperature
-                    probs = torch.softmax(scaled, dim=-1)
-                    sorted_p, sorted_i = torch.sort(probs, descending=True, dim=-1)
-                    cumsum = torch.cumsum(sorted_p, dim=-1)
-                    mask = cumsum - sorted_p > p
-                    sorted_p[mask] = 0.0
-                    sorted_p /= sorted_p.sum(dim=-1, keepdim=True)
-                    idx = torch.multinomial(sorted_p, 1)
-                    next_token = sorted_i.gather(-1, idx)
-
-                input_ids = torch.cat([input_ids, next_token], dim=-1)
-
-                if next_token.item() == self.tokenizer.eos_token_id:
-                    break
-
-            return self.tokenizer.decode(input_ids[0])
-
-    # 对比实验
-    gen = Generator(model, tokenizer)
-    prompt = "人工智能的未来发展将"
-
-    print("=== Greedy ===")
-    print(gen.generate(prompt, "greedy")[:200])
-
-    print("\n=== Temperature (T=0.8) ===")
-    print(gen.generate(prompt, "temperature", temperature=0.8)[:200])
-
-    print("\n=== Top-K (K=40, T=0.8) ===")
-    print(gen.generate(prompt, "top-k", temperature=0.8, k=40)[:200])
-
-    print("\n=== Top-P (P=0.9, T=0.8) ===")
-    print(gen.generate(prompt, "top-p", temperature=0.8, p=0.9)[:200])</div>
-    <p><strong>典型观察：</strong></p>
-    <ul>
-      <li><strong>Greedy：</strong>最短、最确定性、最可能陷入重复循环。输出通常是"安全但无聊"的——统计上最可能的延续往往也是最平淡的。</li>
-      <li><strong>Temperature：</strong>更多样化，但 T 过高时可能跑题甚至输出乱码。每次运行结果不同。</li>
-      <li><strong>Top-K：</strong>在多样性和质量间取得平衡，但偶尔出现不合理 token（因为 K 固定无法适应）。</li>
-      <li><strong>Top-P：</strong>质量最高的策略——合理且多样，极少出现荒谬输出。这是当前工业界最常用的策略。</li>
-    </ul>
-  </section>
-
-  <!-- 8.7 -->
-  <section class="card" id="s8-7">
-    <h3>8.7 生成质量评估</h3>
-    <p>如何衡量生成文本的质量？主要从以下三个维度出发：</p>
-    <p><strong>1. Perplexity（困惑度）：</strong>衡量模型对文本的"惊讶程度"。给定真实 token 序列 <span class="katex-inline" data-expr="x_1, \ldots, x_T"></span>：</p>
-    <div class="katex" data-expr="\text{PPL} = \exp\left(-\frac{1}{T} \sum_{t=1}^T \log P(x_t \mid x_{&lt;t})\right)"></div>
-    <p>PPL 越低越好——模型对生成文本的预测越自信。但 PPL 与人类判断并不完全一致：重复文本的 PPL 往往很低（重复模式容易预测），但人类不会认为它是高质量输出。</p>
-    <div class="code-block" data-lang="python">
-    def compute_perplexity(model, tokenizer, text: str) -> float:
-        """计算文本的困惑度。"""
-        enc = tokenizer.encode(text, return_tensors='pt').to(device)
+    for _ in range(max_new_tokens):
         with torch.no_grad():
-            logits = model(enc)  # (1, seq_len, vocab_size)
-        # 计算每个位置的交叉熵损失
-        shift_logits = logits[:, :-1, :].contiguous()
-        shift_labels = enc[:, 1:].contiguous()
-        loss = F.cross_entropy(
-            shift_logits.view(-1, shift_logits.size(-1)),
-            shift_labels.view(-1),
-            reduction='mean'
-        )
-        return torch.exp(loss).item()
+            logits = model(input_ids)
+        # 取最后一个位置的 logits
+        next_logits = logits[:, -1, :]          # (1, vocab_size)
+        next_token = next_logits.argmax(dim=-1, keepdim=True)  # (1, 1)
+        input_ids = torch.cat([input_ids, next_token], dim=-1)
 
-    text1 = "人工智能是计算机科学的一个重要分支。"
-    text2 = "人工智能人工人工人工人工人工人工"
-    print(f"PPL(合理文本): {compute_perplexity(model, tokenizer, text1):.2f}")
-    print(f"PPL(重复文本): {compute_perplexity(model, tokenizer, text2):.2f}")</div>
-    <p><strong>2. 多样性（Diversity）：</strong>使用 distinct-n 指标——生成文本中不同的 n-gram 比例：</p>
-    <div class="code-block" data-lang="python">
-    def distinct_ngrams(text: str, n: int = 2) -> float:
-        """计算 distinct-n 分数：不同的 n-gram 占所有 n-gram 的比例。"""
+        if next_token.item() == model.tokenizer.eos_token_id:
+            break
+
+    return input_ids</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>观察：</strong>即使在小模型上，贪心解码也极其容易陷入重复。注意 <code>logits[:, -1, :]</code> 中的 <code>-1</code>——我们在取"最后一个位置"的 logits，即模型对<strong>下一个 token</strong> 的预测。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 2: Temperature Sampling -->
+<!-- ================================================================ -->
+<section class="card" id="s8-4">
+  <h3>8.4 编程练习 2：实现 Temperature Sampling</h3>
+  <p>温度采样通过在 logits 上应用除法 <span class="katex-inline" data-expr="z_i / T"></span> 来控制分布的"锐度"。核心变化是：<strong>argmax → softmax + multinomial</strong>。</p>
+
+  <div class="coding-exercise">
+    <h4>练习 2：温度采样</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>generate_temperature(model, input_ids, max_new_tokens, temperature)</code>。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>logits 除以 temperature 后再做 softmax</li>
+        <li>使用 <code>torch.multinomial</code> 从分布中采样</li>
+        <li>处理 <span class="katex-inline" data-expr="T=0"></span> 的特殊情况：退化为 argmax（避免除零）</li>
+        <li>接受相同 prompt 多次运行应产生不同结果（因为随机采样）</li>
+      </ul>
+      <pre># 预期用法
+prompt = tokenizer.encode("人工智能的未来", return_tensors='pt')
+
+# 低温: 确定性高
+output1 = generate_temperature(model, prompt, 100, temperature=0.2)
+# 高温: 多样性高
+output2 = generate_temperature(model, prompt, 100, temperature=1.5)
+
+# 不同次运行应不同
+output3 = generate_temperature(model, prompt, 100, temperature=0.8)
+output4 = generate_temperature(model, prompt, 100, temperature=0.8)
+assert output3.tolist() != output4.tolist()</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def generate_temperature(model, input_ids, max_new_tokens=100,
+                         temperature=1.0):
+    """温度采样：用 temperature 控制分布的尖锐程度"""
+    model.eval()
+    device = next(model.parameters()).device
+    input_ids = input_ids.to(device)
+
+    for _ in range(max_new_tokens):
+        with torch.no_grad():
+            logits = model(input_ids)
+        next_logits = logits[:, -1, :]  # (1, vocab_size)
+
+        # T=0 退化为贪心
+        if temperature == 0:
+            next_token = next_logits.argmax(dim=-1, keepdim=True)
+        else:
+            scaled = next_logits / temperature
+            probs = torch.softmax(scaled, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)
+
+        input_ids = torch.cat([input_ids, next_token], dim=-1)
+
+        if next_token.item() == model.tokenizer.eos_token_id:
+            break
+
+    return input_ids</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>T=0 的处理：</strong>当 T→0 时，<span class="katex-inline" data-expr="z_i/0 \to \infty"></span> 会导致数值溢出。实际实现中从不除以真正的 0——T=0 时直接用 argmax，T>0 时才做采样。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 8.5 从 Temperature 到 Top-K/Top-P -->
+<!-- ================================================================ -->
+<section class="card" id="s8-5">
+  <h3>8.5 从 Temperature 到 Top-K / Top-P：截断"无聊的尾部"</h3>
+  <p>温度采样虽好，但有一个问题：当词表很大时（如 50257），softmax 的尾部包含大量概率极低的 token。即使使用 <span class="katex-inline" data-expr="T=0.8"></span>，模型仍有小概率采样到这些"无意义"的 token，生成出一个荒谬的词。Top-K 和 Top-P 就是用来截断这个"无聊的尾部"的。</p>
+
+  <h4>Top-K 的逻辑</h4>
+  <p>只保留概率最高的 K 个 token，重新归一化后从中采样。K 是一个固定值（GPT-2 默认 K=40）。</p>
+
+  <h4>Top-K 的固有问题</h4>
+  <p>K 是<strong>固定</strong>的。在某些上下文中可能只有 3 个合理的选择（K=40 引入了太多噪声），而在另一些上下文中可能有 100 个合理的延续（K=40 截断了太多可能性）。比如：</p>
+  <ul>
+    <li><strong>"美国的首都是____"</strong> —— 分布极度尖锐，"华盛顿"的概率可能超过 90%。K=40 仍然从 40 个 token 中采样，小概率选到"纽约"（明显错误）</li>
+    <li><strong>"给她写一首关于____的诗"</strong> —— 分布很平缓，K=40 可能过于限制创造力</li>
+  </ul>
+
+  <h4>Top-P (Nucleus) 的自适应解决方案</h4>
+  <p>Top-P（Holtzman et al., 2020）不固定 K，而是选择累积概率达到 P 的最小 token 集合：</p>
+  <ol>
+    <li>将 token 按概率从高到低排序</li>
+    <li>从最高概率开始累加，直到累积概率 <span class="katex-inline" data-expr="\geq P"></span>（典型值 0.9 或 0.95）</li>
+    <li>只从这个"核心集"（nucleus）中采样</li>
+  </ol>
+  <p>当分布尖锐时核心集很小（"华盛顿"的例子可能只有 1-3 个 token），当分布平缓时核心集自动扩大。完全数据驱动，无需手动调整 K。这也是当前工业界最主流的采样策略。</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 3: Top-K and Top-P -->
+<!-- ================================================================ -->
+<section class="card" id="s8-6">
+  <h3>8.6 编程练习 3：实现 Top-K 和 Top-P 采样</h3>
+
+  <div class="coding-exercise">
+    <h4>练习 3a：Top-K 采样</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>generate_topk(model, input_ids, max_new_tokens, k, temperature)</code>。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>用 <code>torch.topk</code> 取概率最高的 K 个 logits</li>
+        <li>在 Top-K 子集上做 softmax 归一化</li>
+        <li>采样后通过 <code>gather</code> 将索引映射回原始词表 ID</li>
+      </ul>
+      <pre># 预期用法
+prompt = tokenizer.encode("给我讲一个故事", return_tensors='pt')
+output = generate_topk(model, prompt, 100, k=40, temperature=0.8)</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def generate_topk(model, input_ids, max_new_tokens=100,
+                  k=40, temperature=1.0):
+    """Top-K 采样：只保留概率最高的 K 个 token"""
+    model.eval()
+    device = next(model.parameters()).device
+    input_ids = input_ids.to(device)
+
+    for _ in range(max_new_tokens):
+        with torch.no_grad():
+            logits = model(input_ids)
+        next_logits = logits[:, -1, :] / temperature
+
+        # 取 top-k
+        top_logits, top_indices = torch.topk(next_logits, k, dim=-1)
+
+        # 在 top-k 子集上采样
+        top_probs = torch.softmax(top_logits, dim=-1)
+        sampled_idx = torch.multinomial(top_probs, num_samples=1)
+
+        # 映射回原始词表 ID
+        next_token = top_indices.gather(-1, sampled_idx)
+        input_ids = torch.cat([input_ids, next_token], dim=-1)
+
+        if next_token.item() == model.tokenizer.eos_token_id:
+            break
+    return input_ids</div>
+    </div>
+  </div>
+
+  <div class="coding-exercise" style="margin-top:16px">
+    <h4>练习 3b：Top-P (Nucleus) 采样</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>generate_topp(model, input_ids, max_new_tokens, p, temperature)</code>。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>对概率分布降序排序，计算累积概率</li>
+        <li><strong>关键：</strong>用 <code>cumsum - sorted_probs > p</code> 来 mask（而非 <code>cumsum > p</code>）——确保累积概率恰好超过 p 的那个 token 也被包含</li>
+        <li>mask 后将剩余概率重新归一化（确保求和为 1）</li>
+        <li>从归一化后的分布中采样</li>
+      </ul>
+      <pre># 预期用法
+prompt = tokenizer.encode("给我讲一个故事", return_tensors='pt')
+output = generate_topp(model, prompt, 100, p=0.9, temperature=0.8)</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def generate_topp(model, input_ids, max_new_tokens=100,
+                  p=0.9, temperature=1.0):
+    """Top-P (Nucleus) 采样：选择累积概率达到 p 的最小 token 集"""
+    model.eval()
+    device = next(model.parameters()).device
+    input_ids = input_ids.to(device)
+
+    for _ in range(max_new_tokens):
+        with torch.no_grad():
+            logits = model(input_ids)
+        next_logits = logits[:, -1, :] / temperature
+        probs = torch.softmax(next_logits, dim=-1)
+
+        # 降序排序
+        sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
+
+        # 累积概率，mask 尾部
+        cumsum = torch.cumsum(sorted_probs, dim=-1)
+        mask = cumsum - sorted_probs > p  # 注意这个技巧
+        sorted_probs = sorted_probs.masked_fill(mask, 0.0)
+
+        # 重新归一化
+        renormalized = sorted_probs / sorted_probs.sum(dim=-1, keepdim=True)
+
+        # 采样
+        sampled_idx = torch.multinomial(renormalized, num_samples=1)
+        next_token = sorted_indices.gather(-1, sampled_idx)
+        input_ids = torch.cat([input_ids, next_token], dim=-1)
+
+        if next_token.item() == model.tokenizer.eos_token_id:
+            break
+    return input_ids</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么用 <code>cumsum - sorted_probs > p</code> 而非 <code>cumsum > p</code>？</strong><code>cumsum[t]</code> 是前 t 个 token 概率和。<code>cumsum[t] - sorted_probs[t]</code> 是排除当前 token 后的累积概率。如果这个值 > p，说明<strong>即使不包括当前 token</strong>累积概率已经超过 p——所以当前 token 应该被 mask。这确保恰好使累积概率超过 p 的那个 token 被包含在核心集中。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 4: Compare Strategies -->
+<!-- ================================================================ -->
+<section class="card" id="s8-7">
+  <h3>8.7 编程练习 4：四种采样策略对比实验</h3>
+  <p>现在把你实现的四种策略放在一起对比。用同一个 prompt 和同一个模型，观察输出差异。同时用定量指标评估质量。</p>
+
+  <div class="coding-exercise">
+    <h4>练习 4：策略对比 + 多样性评估</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>Generator</code> 类，统一封装四种策略。然后用同一个 prompt 生成文本，计算多样性指标。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li><code>Generator</code> 类接受 model 和 tokenizer，提供统一的 <code>generate(prompt, strategy, ...)</code> 接口</li>
+        <li>支持四种 strategy：<code>"greedy"</code>, <code>"temperature"</code>, <code>"top-k"</code>, <code>"top-p"</code></li>
+        <li>对每个策略生成 200 tokens 文本并打印</li>
+        <li>计算并对比每个策略的 distinct-1 和 distinct-2 分数</li>
+      </ul>
+      <pre># 预期输出结构
+=== Greedy ===
+[生成的文本]
+   distinct-1: 0.12, distinct-2: 0.35
+
+=== Temperature (T=0.8) ===
+[生成的文本]
+   distinct-1: 0.28, distinct-2: 0.52
+
+=== Top-K (K=40, T=0.8) ===
+[生成的文本]
+   distinct-1: 0.31, distinct-2: 0.58
+
+=== Top-P (P=0.9, T=0.8) ===
+[生成的文本]
+   distinct-1: 0.35, distinct-2: 0.61</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+class Generator:
+    """统一的生成器，支持多种采样策略"""
+
+    def __init__(self, model, tokenizer):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.device = next(model.parameters()).device
+
+    @torch.no_grad()
+    def generate(self, prompt, strategy="top-p", max_new_tokens=100,
+                 temperature=0.8, k=40, p=0.9):
+        self.model.eval()
+        input_ids = self.tokenizer.encode(prompt, return_tensors='pt').to(self.device)
+
+        for _ in range(max_new_tokens):
+            logits = self.model(input_ids)
+            next_logits = logits[:, -1, :]
+
+            if strategy == "greedy":
+                next_token = next_logits.argmax(dim=-1, keepdim=True)
+            elif strategy == "temperature":
+                probs = torch.softmax(next_logits / temperature, dim=-1)
+                next_token = torch.multinomial(probs, 1)
+            elif strategy == "top-k":
+                scaled = next_logits / temperature
+                top_v, top_i = torch.topk(scaled, k, dim=-1)
+                probs = torch.softmax(top_v, dim=-1)
+                idx = torch.multinomial(probs, 1)
+                next_token = top_i.gather(-1, idx)
+            elif strategy == "top-p":
+                scaled = next_logits / temperature
+                probs = torch.softmax(scaled, dim=-1)
+                sorted_p, sorted_i = torch.sort(probs, descending=True, dim=-1)
+                cumsum = torch.cumsum(sorted_p, dim=-1)
+                mask = cumsum - sorted_p > p
+                sorted_p = sorted_p.masked_fill(mask, 0.0)
+                sorted_p /= sorted_p.sum(dim=-1, keepdim=True)
+                idx = torch.multinomial(sorted_p, 1)
+                next_token = sorted_i.gather(-1, idx)
+
+            input_ids = torch.cat([input_ids, next_token], dim=-1)
+            if next_token.item() == self.tokenizer.eos_token_id:
+                break
+        return self.tokenizer.decode(input_ids[0])
+
+    def distinct_ngrams(self, text, n=2):
         tokens = text.split()
         if len(tokens) < n:
             return 0.0
         ngrams = set()
         for i in range(len(tokens) - n + 1):
             ngrams.add(' '.join(tokens[i:i+n]))
-        return len(ngrams) / (len(tokens) - n + 1)
+        return len(ngrams) / max(1, len(tokens) - n + 1)
 
-    def diversity_report(text: str) -> dict:
-        return {
-            'distinct-1': distinct_ngrams(text, 1),
-            'distinct-2': distinct_ngrams(text, 2),
-            'distinct-3': distinct_ngrams(text, 3),
-        }</div>
-    <p><strong>3. 重复率（Repetition Rate）：</strong>检测生成的文本中有多少内容是重复的：</p>
-    <div class="code-block" data-lang="python">
-    def repetition_rate(text: str, window: int = 3) -> float:
-        """检测文本中重复 n-gram 的比例。"""
-        tokens = text.split()
-        if len(tokens) < window * 2:
-            return 0.0
-        seen = set()
-        repeat_count = 0
-        for i in range(len(tokens) - window + 1):
-            gram = ' '.join(tokens[i:i+window])
-            if gram in seen:
-                repeat_count += 1
-            else:
-                seen.add(gram)
-        return repeat_count / (len(tokens) - window + 1)</div>
-    <div class="info-box tip">
-      <span class="icon">💡</span>
-      <div><strong>评估的"圣三一"：</strong>Perplexity 衡量模型置信度，distinct-n 衡量词汇多样性，重复率衡量局部连贯性。它们共同构成了生成质量的量化评估体系。但最终判断还是需要<strong>人类评估（Human Evaluation）</strong>——LLM-as-a-Judge（用更强模型评估弱模型的输出）是目前工业界常用的自动评估替代方案。</div>
+# === 对比实验 ===
+gen = Generator(model, tokenizer)
+prompt = "人工智能的未来发展将"
+
+for strategy in ["greedy", "temperature", "top-k", "top-p"]:
+    text = gen.generate(prompt, strategy=strategy, max_new_tokens=200)
+    d1 = gen.distinct_ngrams(text, 1)
+    d2 = gen.distinct_ngrams(text, 2)
+    print(f"=== {strategy} ===")
+    print(text[:200])
+    print(f"   distinct-1: {d1:.2f}, distinct-2: {d2:.2f}\n")</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>Greedy 的 distinct 分数最低（重复最多），Top-P 的 distinct 分数最高（多样性最好）。Temperature 单独使用时 distinct 可能高但质量不一定好——这就是为什么工业界几乎所有模型默认使用 Top-P + Temperature 的组合。</p>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- 8.8 -->
-  <section class="card" id="s8-8">
-    <h3>8.8 上下文窗口</h3>
-    <p><strong>上下文窗口（Context Window）</strong>是模型在一次生成中能"看到"的最大 token 数量。为什么越长越好？因为：</p>
-    <ul>
-      <li><strong>长程依赖：</strong>小说的伏笔需要数百页后揭晓；代码中一个函数可能在文件开头定义、末尾调用。更长的上下文意味着模型能更好地处理这些跨段落关系。</li>
-      <li><strong>少样本学习：</strong>在 prompt 中放入更多示例（in-context examples），模型表现更好。上下文越长，可容纳的示例越多。</li>
-      <li><strong>多轮对话：</strong>ChatGPT 等应用需要在上下文窗口中保持完整的对话历史。128K 窗口约可容纳 10 万字的对话历史（约一本 300 页的书）。</li>
-    </ul>
-    <p>但为什么有上限？主要有两个瓶颈：</p>
-    <p><strong>计算复杂度：</strong>标准 Self-Attention 的计算量是 <span class="katex-inline" data-expr="O(L^2 \cdot d)"></span>，其中 <span class="katex-inline" data-expr="L"></span> 是序列长度。当 <span class="katex-inline" data-expr="L"></span> 从 4K 增加到 128K，计算量增加 <span class="katex-inline" data-expr="32^2 = 1024"></span> 倍——从几 GFLOPs 到几 TFLOPs。这也是 FlashAttention 和 MLA（Multi-head Latent Attention）等优化存在的根本原因。</p>
-    <p><strong>Attention Sink（注意力沉没）：</strong>近期的研究发现了一个有趣的现象——在长序列中，模型会将大量的注意力权重分配给初始 token（通常是 <code>&lt;BOS&gt;</code> 或句子开头的 token），即使这些 token 与当前生成的内容无关。这种现象被称为 <strong>Attention Sink</strong>（Xiao et al., 2024）。</p>
-    <div class="info-box warn">
-      <span class="icon">⚠️</span>
-      <div><strong>Attention Sink 的成因：</strong>如果在训练时序列长度有限，模型会产生"残差注意力偏移"——初始 token 吸收了多余的注意力分数。当推理时序列变长，这种偏移被放大，导致模型将大量注意力浪费在无关的早期 token 上。解决方案是添加一个专门的"窗口基线"（如 StreamingLLM）或在训练中对早期 token 施加 attention 惩罚。</div>
-    </div>
-    <p>目前主流模型的上下文窗口：GPT-4 128K、Claude 3 200K、Gemini 1.5 Pro 1M、DeepSeek-V2 128K、DeepSeek-V3 128K。1M 上下文意味着模型可以一次处理整本《三体》三部曲（约 90 万字）。</p>
-  </section>
+<!-- ================================================================ -->
+<!-- 8.8 MTP Theory -->
+<!-- ================================================================ -->
+<section class="card" id="s8-8">
+  <h3>8.8 DeepSeek MTP——多 Token 预测的理论</h3>
+  <p><strong>多 Token 预测（Multi-Token Prediction, MTP）</strong>是 DeepSeek-V3 的一项重要技术创新。传统语言模型每次只预测<strong>一个</strong>未来的 token，而 MTP 让模型一次预测<strong>多个</strong>未来 token。</p>
 
-  <!-- 8.9 -->
-  <section class="card" id="s8-9">
-    <h3>8.9 DeepSeek MTP — 多 Token 预测</h3>
-    <p><strong>多 Token 预测（Multi-Token Prediction, MTP）</strong>是 DeepSeek-V3 的一项重要技术创新。传统语言模型每次只预测<strong>一个</strong>未来的 token，而 MTP 让模型一次预测<strong>多个</strong>未来 token（DeepSeek-V3 使用 <span class="katex-inline" data-expr="D = 1"></span>，即预测 2 个 token，而 DeepSeek-V4 扩展到更大的跨度）。</p>
-    <p><strong>训练时的 MTP：</strong>模型有 <span class="katex-inline" data-expr="D"></span> 个独立的输出头（MTP Head），每个头预测不同偏移的未来 token：</p>
+  <h4>训练时的 MTP：多输出头架构</h4>
+  <p>标准语言模型只有一个输出头（LM Head），将最后一层隐藏状态 <span class="katex-inline" data-expr="\mathbf{h}_t"></span> 映射到词表 logits，预测 <span class="katex-inline" data-expr="x_{t+1}"></span>。MTP 添加 <span class="katex-inline" data-expr="D"></span> 个额外的输出头（MTP Heads），每个头预测不同偏移的未来 token：</p>
+  <div class="math-box"><div class="label">公式 8.3 MTP 损失</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})"></div>
-    <p>其中 <span class="katex-inline" data-expr="P_d"></span> 是第 <span class="katex-inline" data-expr="d"></span> 个 MTP Head。每个头有自己的参数，但所有头共享底层 Transformer 表示。</p>
-    <div class="code-block" data-lang="python">
-    class MTPHead(nn.Module):
-        """MTP 预测头：预测向后偏移 d 个位置的 token。"""
+  </div>
+  <p>每个 MTP Head 是一个小 MLP + LayerNorm，参数量远小于主 Transformer。它们共享底层特征表示，只在输出层有独立参数。</p>
 
-        def __init__(self, d_model: int, vocab_size: int, d: int):
-            super().__init__()
-            self.d = d
-            # 每个 MTP Head 是一个小 MLP + LayerNorm
-            self.norm = nn.LayerNorm(d_model)
-            self.linear = nn.Linear(d_model, vocab_size, bias=False)
+  <h4>双重增益</h4>
+  <ul>
+    <li><strong>训练增益：</strong>更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测下下个 token。这迫使模型学习更长距离的依赖。DeepSeek-V3 的实验表明 MTP 使训练效率提升约 15-20%。</li>
+    <li><strong>推理增益：</strong>MTP Head 在推理时可以作为<strong>推测解码的草稿模型</strong>。由于 MTP Head 的参数远小于完整 Transformer，它们可以快速生成候选 token，然后由主模型一次性验证。</li>
+  </ul>
+  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 选择 <span class="katex-inline" data-expr="D = 1"></span>（额外预测 1 个 token），因为实验发现更大的 <span class="katex-inline" data-expr="D"></span> 带来的边际收益递减。DeepSeek-V4 将 MTP 进一步扩展，与推测解码深度集成。</div></div>
+</section>
 
-        def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
-            """
-            hidden_states: (batch, seq_len, d_model)
-            returns: logits (batch, seq_len, vocab_size)
-            """
-            return self.linear(self.norm(hidden_states))
+<!-- ================================================================ -->
+<!-- 编程练习 5: Speculative Decoding -->
+<!-- ================================================================ -->
+<section class="card" id="s8-9">
+  <h3>8.9 编程练习 5：实现简化版推测解码</h3>
+  <p><strong>推测解码（Speculative Decoding）</strong>的核心思想非常巧妙：用一个<strong>小模型（草稿模型）</strong>快速生成候选 tokens，然后由<strong>大模型（目标模型）</strong>并行验证这些候选，在<strong>不改变输出分布</strong>的前提下实现 ~1.8x-3x 的加速。</p>
 
-    class MultiTokenPredictionModel(nn.Module):
-        """带 MTP 的 GPT 模型。"""
+  <h4>算法流程</h4>
+  <ol>
+    <li><strong>草稿阶段：</strong>用轻量草稿模型（如 100M）自回归生成 <span class="katex-inline" data-expr="\gamma"></span> 个候选 token（通常 <span class="katex-inline" data-expr="\gamma = 4"></span> 或 5）</li>
+    <li><strong>验证阶段：</strong>将候选 tokens + 前缀送入目标模型（如 7B），一次 forward 获得所有位置的 logits</li>
+    <li><strong>拒绝采样：</strong>逐位置检查目标/草稿模型的概率分布——分歧过大则拒绝，从修正分布中重新采样</li>
+    <li><strong>接受：</strong>被接受的 token 和重新采样的 token 一起加入输出序列</li>
+  </ol>
 
-        def __init__(self, base_model, num_mtp_heads: int = 2):
-            super().__init__()
-            self.base = base_model  # 底层 Transformer
-            self.main_head = nn.Linear(base_model.config.d_model,
-                                       base_model.config.vocab_size)
-            self.mtp_heads = nn.ModuleList([
-                MTPHead(base_model.config.d_model,
-                        base_model.config.vocab_size, d=d+1)
-                for d in range(num_mtp_heads)
-            ])
+  <div class="math-box"><div class="label">公式 8.4 接受/拒绝准则</div>
+    <div class="katex" data-expr="\text{Accept } x_t \text{ with prob } \min\left(1, \frac{p_{\text{target}}(x_t)}{p_{\text{draft}}(x_t)}\right)"></div>
+  </div>
 
-        def forward(self, input_ids: torch.Tensor):
-            """返回主头 + 所有 MTP 头的 logits。"""
-            hidden = self.base(input_ids)  # (batch, seq_len, d_model)
-            main_logits = self.main_head(hidden)
-            mtp_logits = [head(hidden) for head in self.mtp_heads]
-            return main_logits, mtp_logits</div>
-    <p><strong>双重增益：</strong></p>
-    <ul>
-      <li><strong>训练增益：</strong>MTP 为模型提供了更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测下下个 token。这迫使模型学习更长距离的依赖关系。DeepSeek-V3 的实验表明，MTP 使训练效率提升约 15-20%。</li>
-      <li><strong>推理增益：</strong>MTP Head 在推理时可以用作<strong>推测解码的草稿模型</strong>（下一节详细讲解）。由于 MTP Head 的参数远小于完整 Transformer，它们可以快速生成候选 token，然后由主模型一次性验证。</li>
-    </ul>
-    <p>DeepSeek-V3 选择 <span class="katex-inline" data-expr="D = 1"></span>（额外预测 1 个 token），因为实验发现更大的 <span class="katex-inline" data-expr="D"></span> 带来的边际收益递减。但 DeepSeek-V4 将 MTP 进一步扩展，与推测解码深度集成。</p>
-  </section>
+  <div class="coding-exercise">
+    <h4>练习 5：实现推测解码</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>speculative_decoding(target_model, draft_model, tokenizer, input_ids, gamma=4)</code>。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>草稿模型用 Top-P 采样生成 <code>gamma</code> 个候选 token</li>
+        <li>目标模型验证：一次 forward 计算所有候选位置的目标概率和草稿概率</li>
+        <li>拒绝采样：以 <code>min(1, p_target / p_draft)</code> 的概率接受每个候选</li>
+        <li>被拒绝时从 <code>max(0, p_target - p_draft)</code> 重新采样</li>
+        <li>全部接受则额外从目标模型采样一个 token</li>
+      </ul>
+      <pre># 预期用法
+output = speculative_decoding(
+    target_model=model_7b,       # 大模型
+    draft_model=model_100m,      # 小模型
+    tokenizer=tokenizer,
+    input_ids=prompt,
+    gamma=4,
+)
+print(f"生成 {output.size(1)} tokens")</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def speculative_decoding(target_model, draft_model, tokenizer,
+                         input_ids, gamma=4, max_new_tokens=100):
+    """
+    推测解码：草稿 → 验证 → 拒绝采样 → 无损加速
+    """
+    device = next(target_model.parameters()).device
+    prefix = input_ids.to(device)
+    n_orig = prefix.size(1)
 
-  <!-- 8.10 -->
-  <section class="card" id="s8-10">
-    <h3>8.10 动手：推测解码</h3>
-    <p><strong>推测解码（Speculative Decoding）</strong>由 Leviathan et al. (2023) 和 Chen et al. (2023) 独立提出。它的核心思想非常巧妙：用一个<strong>小模型（草稿模型）</strong>快速生成候选 tokens，然后由<strong>大模型（目标模型）</strong>并行验证这些候选，在<strong>不改变输出分布</strong>的前提下实现 ~1.8x-3x 的加速。</p>
-    <p>推测解码的步骤如下：</p>
-    <ol>
-      <li><strong>草稿：</strong>用轻量草稿模型（如 100M 参数）自回归生成 <span class="katex-inline" data-expr="\gamma"></span> 个候选 token（通常 <span class="katex-inline" data-expr="\gamma = 4"></span> 或 5）</li>
-      <li><strong>验证：</strong>将候选 tokens + 前缀一并送入目标模型（如 7B 参数），做一次完整的 forward 计算，获得所有位置的 logits</li>
-      <li><strong>拒绝采样：</strong>逐位置检查目标模型和草稿模型的概率分布——如果两者分歧过大，拒绝该候选 token，从修正分布中重新采样</li>
-      <li><strong>接受：</strong>被接受的 token 和重新采样的 token 一起加入输出序列</li>
-    </ol>
-    <div class="code-block" data-lang="python">
-    def speculative_decoding(
-        target_model: nn.Module,      # 大模型（精确但慢）
-        draft_model: nn.Module,       # 小模型（快速但可能不准）
-        tokenizer,                    # 共享分词器
-        input_ids: torch.Tensor,      # 前缀
-        gamma: int = 4,               # 草稿步数
-        max_new_tokens: int = 100,
-    ) -> torch.Tensor:
-        """
-        推测解码：小模型草稿 → 大模型验证 → 拒绝采样修正。
-        """
-        device = next(target_model.parameters()).device
-        prefix = input_ids.to(device)
-        n_orig = prefix.size(1)
+    while prefix.size(1) - n_orig < max_new_tokens:
+        # —— 1. 草稿阶段 ——
+        draft_ids = prefix.clone()
+        with torch.no_grad():
+            for _ in range(gamma):
+                logits = draft_model(draft_ids)
+                probs = torch.softmax(logits[:, -1, :], dim=-1)
+                next_token = torch.multinomial(probs, 1)
+                draft_ids = torch.cat([draft_ids, next_token], dim=-1)
 
-        while prefix.size(1) - n_orig < max_new_tokens:
-            # —— 步骤 1: 草稿阶段 ——
-            draft_ids = prefix.clone()
-            with torch.no_grad():
-                for _ in range(gamma):
-                    logits = draft_model(draft_ids)
-                    next_logit = logits[:, -1, :]
-                    # 草稿模型用目标策略（如 top-p）采样
-                    next_token = sample_top_p(next_logit, p=0.9)
-                    draft_ids = torch.cat([draft_ids, next_token], dim=-1)
+        draft_tokens = draft_ids[:, -gamma:]
 
-            draft_tokens = draft_ids[:, -gamma:]  # (1, gamma)
+        # —— 2. 验证：目标模型一次 forward ——
+        with torch.no_grad():
+            target_logits = target_model(draft_ids)
+            draft_logits = draft_model(draft_ids)
 
-            # —— 步骤 2: 验证阶段 ——
-            with torch.no_grad():
-                target_logits = target_model(draft_ids)
-                draft_logits  = draft_model(draft_ids)
+        # 获取候选位置的概率
+        target_probs = torch.softmax(
+            target_logits[:, -(gamma+1):-1, :], dim=-1)
+        draft_probs = torch.softmax(
+            draft_logits[:, -(gamma+1):-1, :], dim=-1)
 
-            # 获取目标模型和草稿模型在第 0..gamma-1 步的概率
-            target_probs = torch.softmax(
-                target_logits[:, -(gamma+1):-1, :], dim=-1
-            )  # (1, gamma, vocab_size)
-            draft_probs = torch.softmax(
-                draft_logits[:, -(gamma+1):-1, :], dim=-1
-            )  # (1, gamma, vocab_size)
+        # —— 3. 拒绝采样 ——
+        accepted = []
+        n_accepted = 0
 
-            # —— 步骤 3: 拒绝采样 ——
-            accepted = []
-            n_accepted = 0
-            rng = torch.quasirandom.SobolEngine(1, scramble=True)
+        for t in range(gamma):
+            token = draft_tokens[0, t].item()
+            p = target_probs[0, t, token].item()
+            q = draft_probs[0, t, token].item()
 
-            for t in range(gamma):
-                token = draft_tokens[0, t].item()
-                q = draft_probs[0, t, token].item()  # 草稿模型对 token 的概率
-                p = target_probs[0, t, token].item()  # 目标模型对 token 的概率
-
-                # 接受准则: 以 min(1, p/q) 的概率接受
-                if p >= q:
+            if p >= q:
+                accepted.append(token)
+                n_accepted += 1
+            else:
+                if torch.rand(1).item() < p / q:
                     accepted.append(token)
                     n_accepted += 1
                 else:
-                    r = rng.draw(1).item()
-                    if r < p / q:
-                        accepted.append(token)
-                        n_accepted += 1
-                    else:
-                        # 从修正分布 (p - q)_+ 中重新采样
-                        residual = (target_probs[0, t] - draft_probs[0, t]).clamp(min=0)
-                        residual /= residual.sum()  # 归一化
-                        corrected = torch.multinomial(residual, 1).item()
-                        accepted.append(corrected)
-                        # 接受后停止（剩余候选被丢弃）
-                        break
+                    # 从修正分布采样
+                    residual = (target_probs[0, t] - draft_probs[0, t]).clamp(min=0)
+                    residual /= residual.sum()
+                    corrected = torch.multinomial(residual, 1).item()
+                    accepted.append(corrected)
+                    break
 
-            if n_accepted == gamma:
-                # 所有候选被接受，额外从目标模型采样一个 token
-                last_logit = target_logits[:, -1, :]
-                extra_token = sample_top_p(last_logit, p=0.9)
-                accepted.append(extra_token.item())
+        if n_accepted == gamma:
+            # 全部接受：额外采样一个 token
+            last_logit = target_logits[:, -1, :]
+            extra_probs = torch.softmax(last_logit, dim=-1)
+            extra = torch.multinomial(extra_probs, 1).item()
+            accepted.append(extra)
 
-            # —— 步骤 4: 添加接受的 token ——
-            prefix = torch.cat([
-                prefix,
-                torch.tensor([accepted], device=device)
-            ], dim=-1)
+        # —— 4. 添加结果 ——
+        prefix = torch.cat([
+            prefix,
+            torch.tensor([accepted], device=device)
+        ], dim=-1)
 
-        return prefix</div>
-    <p><strong>为什么这能保证输出分布不变？</strong>拒绝采样算法的精妙之处在于：虽然我们用了草稿模型的近似分布，但通过精确的接受/拒绝准则和修正采样，最终的输出分布<strong>在数学上等价于直接用目标模型自回归生成</strong>。这意味着推测解码是一种<strong>无损加速</strong>方法。</p>
-    <div class="info-box key">
-      <span class="icon">🔑</span>
-      <div><strong>加速比分析：</strong>加速比 ≈ <span class="katex-inline" data-expr="\frac{\gamma}{1 + \alpha\gamma}"></span>，其中 <span class="katex-inline" data-expr="\alpha = t_{\text{draft}} / t_{\text{target}}"></span>（草稿/目标单步时间比），<span class="katex-inline" data-expr="\gamma"></span> 是草稿步数。当草稿模型足够小（<span class="katex-inline" data-expr="\alpha \approx 0.1"></span>）且接受率足够高（约 0.7-0.9）时，可实现约 1.8x-3x 加速。DeepSeek-V3 的 MTP Head 天然就是优秀的草稿模型——它们与主模型共享底层表示，额外计算量极小。</div>
+    return prefix</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>无损性分析：</strong>拒绝采样保证最终输出分布<strong>在数学上等价于</strong>直接用目标模型自回归生成。加速比 ≈ <span class="katex-inline" data-expr="\gamma / (1 + \alpha \gamma)"></span>，其中 <span class="katex-inline" data-expr="\alpha = t_{\text{draft}} / t_{\text{target}}"></span>。当 <span class="katex-inline" data-expr="\alpha \approx 0.1, \gamma = 4"></span> 时，加速约 2.8x。</p>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- 8.11 -->
-  <section class="card" id="s8-11">
-    <h3>8.11 本章总结</h3>
-    <p>你已经实现了：</p>
-    <ul>
-      <li>✅ 自回归生成的基本原理——Prefilling + Decoding 两阶段</li>
-      <li>✅ Greedy Decoding——简单但容易陷入重复循环</li>
-      <li>✅ Temperature Sampling——用温度控制分布的尖锐程度</li>
-      <li>✅ Top-K 采样——截断到 K 个最高概率 token</li>
-      <li>✅ Top-P (Nucleus) 采样——累积概率阈值，动态调整候选集大小</li>
-      <li>✅ 统一的 Generator 类——四种策略一键切换</li>
-      <li>✅ 生成质量评估体系——PPL / distinct-n / 重复率</li>
-      <li>✅ 上下文窗口的概念和限制——计算复杂度与 Attention Sink</li>
-      <li>✅ DeepSeek MTP——一次预测多个未来 token，训练/推理双重增益</li>
-      <li>✅ 推测解码——小模型草稿 + 大模型验证，无损加速 ~1.8x</li>
-    </ul>
-    <p>文本生成是 LLM 与用户交互的"最后一步"。采样策略的选择直接决定了用户对模型输出的感知——太确定则无聊且重复，太随机则跑题且荒谬。在工业界，<strong>Top-P（P=0.9）+ Temperature（T=0.7-0.8）</strong>被绝大多数模型采纳为默认配置。</p>
-    <p>下一章，我们将进入<strong>微调与对齐</strong>——将预训练模型从"一个能续写文本的统计模型"转化为"一个有用、诚实、无害的助手"。你将亲手实现 SFT、LoRA、DPO 和 GRPO，深入理解对齐技术的核心原理。</p>
-    <div class="info-box key">
-      <span class="icon">📚</span>
-      <div><strong>延伸阅读：</strong>
-        <a href="https://arxiv.org/abs/1904.09751" target="_blank">Holtzman et al. (2020) — The Curious Case of Neural Text Degeneration (Top-P)</a> ·
-        <a href="https://arxiv.org/abs/2302.01318" target="_blank">Leviathan et al. (2023) — Fast Inference from Transformers via Speculative Decoding</a> ·
-        <a href="https://arxiv.org/abs/2302.01331" target="_blank">Chen et al. (2023) — Accelerating LLM Inference with Speculative Decoding</a> ·
-        <a href="https://arxiv.org/abs/2309.17453" target="_blank">Xiao et al. (2024) — Efficient Streaming Language Models with Attention Sinks</a> ·
-        <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 技术报告（§3.3 MTP, §4.3 推测解码）</a>
-      </div>
+<!-- ================================================================ -->
+<!-- 8.10 上下文窗口 -->
+<!-- ================================================================ -->
+<section class="card" id="s8-10">
+  <h3>8.10 上下文窗口与 Attention Sink</h3>
+  <p><strong>上下文窗口</strong>是模型在一次生成中能"看到"的最大 token 数量。为什么越长越好？</p>
+  <ul>
+    <li><strong>长程依赖：</strong>小说的伏笔需要数百页后揭晓；函数定义在文件开头、调用在末尾。更长的上下文意味着更好的跨段落推理。</li>
+    <li><strong>少样本学习：</strong>prompt 中放入更多示例（in-context examples），模型表现更好。上下文越长，可容纳的示例越多。</li>
+    <li><strong>多轮对话：</strong>保持完整的对话历史。128K 窗口约可容纳 10 万字对话历史。</li>
+  </ul>
+
+  <h4>Attention Sink</h4>
+  <p>近期的研究发现了一个有趣的现象——在长序列中，模型会将大量的注意力权重分配给初始 token（通常是 <code>&lt;BOS&gt;</code> 或句首 token），即使这些 token 与当前生成的内容无关。这被称为 <strong>Attention Sink</strong>（Xiao et al., 2024）。</p>
+  <p>成因：训练时序列长度有限（如 4K），模型会产生"残差注意力偏移"——初始 token 吸收了多余的注意力分数。当推理时序列变长，这种偏移被放大，模型浪费大量注意力在无关的早期 token 上。</p>
+
+  <h4>当前模型上下文窗口</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>模型</th><th>最大上下文</th><th>约可容纳</th></tr>
+      <tr><td>GPT-4</td><td>128K</td><td>9 万字</td></tr>
+      <tr><td>Claude 3</td><td>200K</td><td>15 万字</td></tr>
+      <tr><td>Gemini 1.5 Pro</td><td>1M</td><td>《三体》三部曲</td></tr>
+      <tr><td>DeepSeek-V4</td><td>1M</td><td>同上（CSA+HCA 优化）</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 8.11 总结 -->
+<!-- ================================================================ -->
+<section class="card" id="s8-11">
+  <h3>8.11 本章总结</h3>
+  <ul>
+    <li>✅ <strong>自回归生成原理</strong> — Autoregressive decomposition of P(x), Prefilling vs. Decoding</li>
+    <li>✅ <strong>编程练习 1：Greedy Decoding</strong> — argmax 策略，暴露重复陷阱和曝光偏差</li>
+    <li>✅ <strong>编程练习 2：Temperature Sampling</strong> — 温度控制分布熵，T→0 退化为贪心</li>
+    <li>✅ <strong>编程练习 3a：Top-K Sampling</strong> — 固定 K 截断，缺点是无法自适应</li>
+    <li>✅ <strong>编程练习 3b：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，当前最主流</li>
+    <li>✅ <strong>编程练习 4：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
+    <li>✅ <strong>编程练习 5：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，无损加速</li>
+    <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
+    <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>
+  </ul>
+  <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
+    <a href="https://arxiv.org/abs/1904.09751" target="_blank">Holtzman et al. (2020) — The Curious Case of Neural Text Degeneration (Top-P)</a> ·
+    <a href="https://arxiv.org/abs/2302.01318" target="_blank">Leviathan et al. (2023) — Fast Inference via Speculative Decoding</a> ·
+    <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 (§3.3 MTP, §4.3 Speculative Decoding)</a> ·
+    <a href="https://arxiv.org/abs/2309.17453" target="_blank">Xiao et al. (2024) — Attention Sinks</a></div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 概念练习 -->
+<!-- ================================================================ -->
+<section class="card">
+  <h3>概念练习巩固</h3>
+
+  <div class="exercise" data-answer="1" data-explain="Top-K 固定 K 值，无法适应不同上下文需要的候选数。Top-P 通过累积概率动态调整候选集——分布尖锐时候选集小，分布平缓时候选集自动扩大。">
+    <h4>练习 1：Top-K 采样相对于 Top-P 采样的主要缺陷是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q1" value="0"> A. Top-K 计算速度更慢</label>
+      <label><input type="radio" name="q1" value="1"> B. K 固定无法自适应不同上下文的需要</label>
+      <label><input type="radio" name="q1" value="2"> C. Top-K 不支持温度调节</label>
+      <label><input type="radio" name="q1" value="3"> D. Top-K 需要更大的 GPU 显存</label>
     </div>
-  </section>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
 
-  <!-- 练习 -->
-  <section class="card">
-    <h3>练习巩固</h3>
-
-    <div class="exercise" data-answer="1" data-explain="Top-K 固定 K 值，无法适应不同上下文需要的候选数。Top-P 通过累积概率动态调整候选集——分布尖锐时候选集小，分布平缓时候选集自动扩大。">
-      <h4>练习 1：Top-K 采样相对于 Top-P 采样的主要缺陷是什么？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q1" value="0"> A. Top-K 计算速度更慢</label>
-        <label><input type="radio" name="q1" value="1"> B. K 固定无法自适应不同上下文的需要</label>
-        <label><input type="radio" name="q1" value="2"> C. Top-K 不支持温度调节</label>
-        <label><input type="radio" name="q1" value="3"> D. Top-K 需要更大的 GPU 显存</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
+  <div class="exercise" data-answer="0" data-explain="当 T→0 时，softmax 退化为 argmax——概率最高的 token 的概率趋近于 1，其他趋近于 0，因此相当于贪心解码。">
+    <h4>练习 2：当温度参数 T 趋近于 0 时，温度采样会退化为哪种策略？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q2" value="0"> A. Greedy Decoding</label>
+      <label><input type="radio" name="q2" value="1"> B. Top-K 采样</label>
+      <label><input type="radio" name="q2" value="2"> C. Top-P 采样</label>
+      <label><input type="radio" name="q2" value="3"> D. 均匀随机采样</label>
     </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
 
-    <div class="exercise" data-answer="0" data-explain="当 T→0 时，softmax 退化为 argmax——概率最高的 token 的概率趋近于 1，其他趋近于 0，因此相当于贪心解码。">
-      <h4>练习 2：当温度参数 T 趋近于 0 时，温度采样会退化为哪种策略？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q2" value="0"> A. Greedy Decoding</label>
-        <label><input type="radio" name="q2" value="1"> B. Top-K 采样</label>
-        <label><input type="radio" name="q2" value="2"> C. Top-P 采样</label>
-        <label><input type="radio" name="q2" value="3"> D. 均匀随机采样</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
+  <div class="exercise" data-answer="2" data-explain="推测解码通过拒绝采样保证数学等价。接受/拒绝准则 min(1, p/q) 确保最后的采样分布与实际直接用目标模型采样完全一致。这是一种"无损"加速方法。">
+    <h4>练习 3：推测解码为什么能实现"无损"加速？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q3" value="0"> A. 因为它使用量化减少精度</label>
+      <label><input type="radio" name="q3" value="1"> B. 因为它只在简单上下文中加速</label>
+      <label><input type="radio" name="q3" value="2"> C. 因为拒绝采样保证了输出分布与目标模型直接采样等价</label>
+      <label><input type="radio" name="q3" value="3"> D. 因为它跳过了一些不必要的注意力计算</label>
     </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
 
-    <div class="exercise" data-answer="2" data-explain="推测解码通过草稿→验证→拒绝采样流程保证数学等价。接受/拒绝准则确保了最后的采样分布与实际直接用目标模型采样完全一致。">
-      <h4>练习 3：推测解码为什么能实现"无损"加速？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q3" value="0"> A. 因为它使用量化减少精度</label>
-        <label><input type="radio" name="q3" value="1"> B. 因为它只在简单上下文上加速，难的地方仍然用大模型</label>
-        <label><input type="radio" name="q3" value="2"> C. 因为拒绝采样保证了输出分布与目标模型自回归等价</label>
-        <label><input type="radio" name="q3" value="3"> D. 因为它跳过了一些不必要的注意力计算</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
+  <div class="exercise" data-answer="1" data-explain="Prefilling 阶段并行处理整个 prompt，计算量大但 GPU 利用率高。Decoding 阶段每步只处理一个 token，大部分时间在等待数据从显存搬运到计算单元，GPU 利用率仅 3-5%。">
+    <h4>练习 4：为什么 Decoding 阶段 GPU 利用率远低于 Prefilling 阶段？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q4" value="0"> A. 因为 Decoding 需要更多层计算</label>
+      <label><input type="radio" name="q4" value="1"> B. 因为 Decoding 每步只处理一个 token，计算量小，瓶颈在内存带宽</label>
+      <label><input type="radio" name="q4" value="2"> C. 因为 Decoding 阶段精度更高</label>
+      <label><input type="radio" name="q4" value="3"> D. 因为 Decoding 阶段禁用了矩阵乘法</label>
     </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
 
-    <div class="exercise" data-answer="1" data-explain="Prefilling 阶段并行处理整个 prompt，计算量大但 GPU 利用率高。Decoding 阶段逐 token 生成，每次只算一个 token，GPU 利用率仅 3-5%，是典型的 memory-bound 操作。">
-      <h4>练习 4：为什么 Decoding 阶段 GPU 利用率远低于 Prefilling 阶段？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q4" value="0"> A. 因为 Decoding 需要更多层计算</label>
-        <label><input type="radio" name="q4" value="1"> B. 因为 Decoding 每步只处理一个 token，计算量小</label>
-        <label><input type="radio" name="q4" value="2"> C. 因为 Decoding 阶段精度更高</label>
-        <label><input type="radio" name="q4" value="3"> D. 因为 Decoding 阶段禁用了矩阵乘法</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
+  <div class="exercise" data-answer="0" data-explain="Attention Sink 指模型将大量注意力分配给初始 token（BOS 或句首 token）的现象，即使这些 token 与当前输出无关。这导致长序列上注意力分布不健康，浪费在无关的早期 token 上。">
+    <h4>练习 5：Attention Sink 现象指的是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q5" value="0"> A. 模型将过多注意力分配给初始 token</label>
+      <label><input type="radio" name="q5" value="1"> B. 注意力权重在深层网络中消失</label>
+      <label><input type="radio" name="q5" value="2"> C. 注意力分数溢出导致 NaN</label>
+      <label><input type="radio" name="q5" value="3"> D. KV Cache 溢出 GPU 显存</label>
     </div>
-
-    <div class="exercise" data-answer="0" data-explain="Attention Sink 指的是模型将大量注意力权重分配给初始 token 的现象（如 BOS 或句首 token），即使这些 token 与当前输出无关。这会导致长序列上的注意力分布不健康。">
-      <h4>练习 5：Attention Sink 现象指的是什么？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q5" value="0"> A. 模型将过多注意力分配给初始 token</label>
-        <label><input type="radio" name="q5" value="1"> B. 注意力权重在深层网络中消失</label>
-        <label><input type="radio" name="q5" value="2"> C. 注意力分数溢出导致 NaN</label>
-        <label><input type="radio" name="q5" value="3"> D. KV Cache 溢出 GPU 显存</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
-    </div>
-  </section>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+</section>
 </article>
 
 <nav class="chapter-nav">
@@ -675,8 +701,7 @@
 </nav>
 </main>
 
-<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
-
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script src="../js/app.js"></script>

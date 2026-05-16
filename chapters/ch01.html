@@ -3,372 +3,574 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第1章 环境搭建与分词 — LLM 深度学习</title>
+<title>第1章 BPE 分词器 — LLM 深度学习</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-ch="1">
 
 <button class="menu-toggle" aria-label="菜单">☰</button>
-
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <h1>LLM 深度学习</h1>
-    <p>从代码出发，构建大语言模型</p>
-  </div>
-  <div class="sidebar-progress">
-    <span>学习进度: <strong id="progress-text">0 / 10</strong></span>
-    <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
-  </div>
+  <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
+  <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 10</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
   <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
-  <div class="sidebar-footer">
-    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
-      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
-    </button>
-  </div>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
-  <h2>第1章 环境搭建与分词</h2>
-  <p class="subtitle">实现一个完整的 BPE Tokenizer——从字符到子词</p>
-  <div class="reading-time">⏱ 预计阅读: 45 分钟 · 10 小节 · 5 道练习</div>
-
-  <div class="font-controls">
-    <span>字号:</span>
+  <h2>第1章 BPE 分词器</h2>
+  <p class="subtitle">从零实现 Byte Pair Encoding——LLM 的"第一道门"</p>
+  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 10 小节 · 4 道编程练习 · 5 道概念练习</div>
+  <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
-  <!-- 1.1 -->
-  <section class="card" id="s1-1">
-    <h3>1.1 课程概览：我们要构建什么</h3>
-    <p>这是一门<strong>从代码出发</strong>的 LLM 课程。我们不会停留在概念层面，而是用 Python 和 PyTorch 逐行实现一个大语言模型的每个组件。到课程结束时，你将拥有：</p>
-    <ul>
-      <li>一个从零实现的 BPE Tokenizer（第 1 章）</li>
-      <li>完整的 Embedding + RoPE 位置编码层（第 2 章）</li>
-      <li>手写的自注意力机制——从单头到多头再到 GQA/MLA（第 3-4 章）</li>
-      <li>一个可训练的 Transformer Block（第 5 章）</li>
-      <li>完整的 GPT-2 124M 模型（第 6 章）</li>
-      <li>训练循环——从 DataLoader 到混合精度（第 7 章）</li>
-      <li>文本生成器——支持多种采样策略（第 8 章）</li>
-      <li>微调流程——SFT / LoRA / DPO / GRPO（第 9 章）</li>
-      <li>推理优化——KV Cache、量化、RAG（第 10 章）</li>
-    </ul>
-    <p>我们还会深入探讨 <strong>DeepSeek 系列</strong>（V2→R1→V3→V4）的核心创新——MLA、GRPO、MoE、CSA+HCA 混合注意力——并理解每一项技术背后的"为什么"。</p>
-    <div class="info-box tip">
-      <span class="icon">💡</span>
-      <div><strong>学习方法：</strong>每章的代码都可以独立运行。建议跟着敲一遍，而不是复制粘贴。理解每一行代码的含义远比你想象的重要。</div>
-    </div>
-  </section>
+<!-- ================================================================ -->
+<!-- 1.1 课程概览 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-1">
+  <h3>1.1 课程概览：从 token 到参数</h3>
+  <p>这是一门<strong>从代码出发</strong>的 LLM 课程。我们不会停留在概念层面，而是用 Python 和 PyTorch 逐行实现大语言模型的每一个核心组件。到课程结束时，你将亲手构建：</p>
+  <ul>
+    <li>一个从零手写的 BPE Tokenizer（第 1 章）</li>
+    <li>完整的 Embedding + RoPE 位置编码层（第 2 章）</li>
+    <li>手写注意力机制——单头、多头、GQA、MLA（第 3-4 章）</li>
+    <li>可训练的 Transformer Block + 完整 GPT 模型（第 5-6 章）</li>
+    <li>训练循环、采样策略、微调（LoRA/DPO/GRPO）和推理优化（第 7-10 章）</li>
+  </ul>
+  <p>每章的练习是<strong>核心学习手段</strong>——不是"看完代码"，而是"手写代码"。理解每一行代码的"为什么"远比"是什么"重要。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>方法：</strong>遇到编程练习时，先自己写，再对照参考解答。动手写错比看对的学习效果强 10 倍。</div></div>
+</section>
 
-  <!-- 1.2 -->
-  <section class="card" id="s1-2">
-    <h3>1.2 开发环境配置</h3>
-    <p>在开始之前，确保你的环境就绪：</p>
-    <div class="code-block" data-lang="bash">
-# Python 3.10+ 环境
-python --version  # 应 ≥ 3.10
+<!-- ================================================================ -->
+<!-- 1.2 环境配置 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-2">
+  <h3>1.2 开发环境</h3>
+  <div class="code-block" data-lang="bash">
+# Python 3.10+
+python --version
 
 # 安装核心依赖
 pip install torch numpy tqdm
 
-# 验证 PyTorch 安装
+# 验证
 python -c "import torch; print(torch.__version__)"</div>
-    <p>本课程所有代码在 CPU 上也可以运行（速度较慢但完全可用）。如果你有 NVIDIA GPU 和 CUDA 环境，训练章节将自动利用 GPU 加速。</p>
-    <p>推荐使用 <strong>Jupyter Notebook</strong> 或 <strong>VS Code</strong> 作为开发环境——前者适合实验探索，后者适合完整的工程开发。</p>
-  </section>
+  <p>本课程代码在 CPU 上即可运行。推荐 Jupyter Notebook 或 VS Code 作为开发环境。</p>
+</section>
 
-  <!-- 1.3 -->
-  <section class="card" id="s1-3">
-    <h3>1.3 Token 是什么？为什么需要分词</h3>
-    <p>LLM 不直接处理原始文本，而是处理 <strong>token 序列</strong>。分词（Tokenization）是将原始文本转化为 token 序列的过程——它是 LLM 流水线的<strong>第一步和最后一步</strong>。</p>
-    <p>一个 token 可能是：</p>
-    <ul>
-      <li>一个完整的常见词（如 "the"、"是"、"hello"）</li>
-      <li>一个词的一部分（如 "playing" → "play" + "ing"）</li>
-      <li>一个标点符号（如 "."、"。"）</li>
-      <li>一个特殊控制符号（如 &lt;|endoftext|&gt;）</li>
-    </ul>
-    <div class="info-box key">
-      <span class="icon">🔑</span>
-      <div><strong>为什么分词策略至关重要：</strong>词表大小直接影响嵌入层参数量、softmax 计算量、多语言支持能力、推理效率（token 越多越慢越贵）。GPT-4 的 cl100k_base 分词器有约 10 万 token，Llama 3 有 12.8 万 token。</div>
-    </div>
-    <p>对于中文用户来说，分词效率尤其重要——一个中文字通常需要 1.5-2 个 token，而一个英文词只需要约 0.75 个 token。这意味着同样的内容，中文的 token 消耗大约是英文的 2-3 倍。</p>
-  </section>
+<!-- ================================================================ -->
+<!-- 1.3 Token 与分词理论 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-3">
+  <h3>1.3 Token 是什么？——信息论视角</h3>
+  <p>LLM 不直接处理字符或字符串，而是处理 <strong>token</strong>——文本的最小不可再分单元。每个 token 对应一个整数 ID，模型看到的是整数序列，不是文字。</p>
 
-  <!-- 1.4 -->
-  <section class="card" id="s1-4">
-    <h3>1.4 BPE 算法原理</h3>
-    <p><strong>Byte Pair Encoding (BPE)</strong> 是 GPT 系列最核心的分词算法。它源自数据压缩领域（Gage, 1994），后被 Sennrich 等人（2016）引入 NLP。</p>
-    <p>BPE 的核心思想非常简单——<strong>反复合并最频繁出现的相邻符号对</strong>：</p>
-    <ol>
-      <li>初始化词表为所有基础字符（包括空格、标点等，通常 256 个）</li>
-      <li>统计训练语料中所有相邻符号对的出现频率</li>
-      <li>合并最高频的符号对，作为新符号加入词表</li>
-      <li>重复 2-3，直到词表达到目标大小（如 50,257）</li>
-    </ol>
-    <p>让我们通过一个具体例子理解：</p>
-    <div class="code-block" data-lang="text">
+  <h4>从信息论看分词</h4>
+  <p>假设一段文本的信息量是 <span class="katex-inline" data-expr="H"></span> 比特。如果我们用 n 个 token 表示它，每个 token 平均携带 <span class="katex-inline" data-expr="H/n"></span> 比特的信息。分词器的目标是：在给定词表大小 <span class="katex-inline" data-expr="V"></span> 的前提下，最小化每段文本所需的 token 数量。这正是<strong>率失真理论（Rate-Distortion Theory）</strong>中的经典权衡：</p>
+  <ul>
+    <li><strong>词表越大</strong>（V 大），每个 token 信息密度高，序列短，但嵌入矩阵 <span class="katex-inline" data-expr="\mathbb{R}^{V \times d}"></span> 参数量大</li>
+    <li><strong>词表越小</strong>（V 小），参数量少，但序列长，计算量和推理延迟增加</li>
+  </ul>
+
+  <h4>为什么不能直接用词？——Zipf 定律</h4>
+  <p>自然语言遵循 Zipf 定律：第 <span class="katex-inline" data-expr="k"></span> 高频词的频率与 <span class="katex-inline" data-expr="1/k"></span> 成正比。这意味着约一半的词只出现一次——如果用"词"级别的词表，稀有词会导致严重的稀疏性问题。同时，词级词表无法处理未登录词（OOV）。</p>
+  <p>子词分词（Subword Tokenization）的洞见：<strong>在"字符"和"词"之间找到一个中间粒度</strong>。常见词（如 "the"、"and"）保留为完整 token，罕见词被分解为更小的子词（如 "tokenization" → "token" + "ization"），任何未登录词都可以回退到字符甚至字节级别。</p>
+
+  <h4>BPE 的字节级设计</h4>
+  <p>GPT 系列的 BPE 分词器在<strong>字节（byte）</strong>级别操作——基础词表是 256 个字节值（0x00-0xFF），而非字符。这意味着无论文本是英文、中文、阿拉伯文还是 Emoji，底层都统一处理为字节序列。UTF-8 编码将 Unicode 字符映射为 1-4 个字节，BPE 在这个字节序列上做合并。好处是：<strong>任何字符串都可以被 token 化，没有 OOV</strong>。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键数据：</strong>GPT-4 的 cl100k_base 词表约 100K token，Llama 3 约 128K token。中文/日文等 CJK 语言通常比英文多消耗 2-3 倍 token 数，因为每个中文字约需 1.5-2 个 token，而英文每个 token 约覆盖 3.3 个字符。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 1.4 BPE 算法原理——压缩视角 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-4">
+  <h3>1.4 BPE 算法本质：数据压缩驱动的符号归纳</h3>
+  <p>BPE（Byte Pair Encoding）由 Gage（1994）提出用于通用数据压缩，Sennrich 等人（2016）将其引入神经机器翻译。理解 BPE 的关键是：<strong>它不是 NLP 特定的方法，而是通用的压缩策略</strong>。</p>
+
+  <h4>核心观察：频繁模式 = 冗余</h4>
+  <p>在任意字节序列中，某些相邻字节对（byte pair）会反复出现。例如在英文文本中，字节序列 "t" + "h" 出现频率极高。BPE 的策略是：<strong>把这个高频对合并为一个新的符号</strong>，从而缩短序列长度。每次合并相当于发现了一个重复模式并将其抽象为一个更高级的符号。</p>
+
+  <h4>算法流程（抽象层）</h4>
+  <div class="math-box"><div class="label">BPE 训练</div>
+    <div class="katex" data-expr="\begin{aligned}
+    &\text{Input: 文本 } \mathcal{T} \text{, 目标词表大小 } V \\
+    &\text{初始化: } \mathcal{V} \leftarrow \{\text{所有字节 } 0..255\} \\
+    &\text{for } i = 1 \text{ to } (V - 256): \\
+    &\qquad (a,b)^* \leftarrow \arg\max_{(a,b)} \text{count}(a,b \mid \mathcal{T})  \\
+    &\qquad \mathcal{V} \leftarrow \mathcal{V} \cup \{c_{i}\} \quad \text{// 新符号 } c_i = a + b \\
+    &\qquad \text{将 } \mathcal{T} \text{ 中所有 } (a,b) \text{ 替换为 } c_i \\
+    &\text{Return: } \mathcal{V}, \text{合并规则 } \{(a,b) \to c_i\}
+    \end{aligned}"></div>
+  </div>
+  <p>每次合并操作将序列长度缩短 <span class="katex-inline" data-expr="\text{freq}"></span>（该对的出现次数）。经过 <span class="katex-inline" data-expr="V - 256"></span> 次合并后，序列总长度大幅减少，同时词表从 256 增长到 <span class="katex-inline" data-expr="V"></span>。</p>
+
+  <h4>为什么合并最高频对是合理的？</h4>
+  <p>从<strong>最大似然估计（MLE）</strong>的角度看：假设我们有一个 token 序列，想用一个新的合并符号替换某个相邻对。替换后序列长度缩短，而模型对序列的似然不变（因为替换是确定性的）。合并最高频对等价于<strong>在每一步最大化序列长度压缩比</strong>。虽然全局最优需要动态规划（计算所有可能的合并序列），但贪心策略在实践中效果极好。</p>
+  <p>从<strong>信息论</strong>的角度：合并最高频对相当于在每一步选择<strong>互信息最高的相邻符号对</strong>——这对符号在序列中共现的强度远超随机水平，表明它们构成一个有意义的单元。</p>
+
+  <h4>一个具体例子</h4>
+  <div class="code-block" data-lang="text">
 语料: "low lower lowest"
+UTF-8 字节序列: l, o, w, _, l, o, w, e, r, _, l, o, w, e, s, t
 
-初始词表: l, o, w, _, e, r, s, t  (每个字符一个 token)
+初始词表 (8 个字符): l, o, w, _, e, r, s, t
 
-第1轮合并: "l" + "o" → "lo" (出现 3 次)  ← 最高频
-第2轮合并: "lo" + "w" → "low" (出现 3 次)  ← 最高频
-第3轮合并: "e" + "r" → "er" (出现 3 次)  ← 最高频
+第 1 轮: "l"+"o" 出现 3 次 → 合并为 token 256 ("lo")
+  序列: lo, w, _, lo, w, e, r, _, lo, w, e, s, t
 
-词表演进: 8字符 → +lo → +low → +er = 11个符号</div>
-    <p><strong>编码时</strong>，采用贪心最长匹配：从当前文本位置出发，尝试匹配词表中最长的已知 token，匹配成功则输出该 token 并前进相应长度。</p>
-  </section>
+第 2 轮: "lo"+"w" 出现 3 次 → 合并为 token 257 ("low")
+  序列: low, _, low, e, r, _, low, e, s, t
 
-  <!-- 1.5 -->
-  <section class="card" id="s1-5">
-    <h3>1.5 动手：BPE 训练实现</h3>
-    <p>下面实现 BPE 训练的核心逻辑。我们将维护一个词表和一个合并规则表：</p>
-    <div class="code-block" data-lang="python">
+第 3 轮: "e"+"r" 出现 2 次 → 合并为 token 258 ("er")
+  序列: low, _, low, er, _, low, e, s, t
+
+词表演进: 8 → 9 → 10 → 11 个符号</div>
+  <p>注意："e"+"r" 在第 3 轮才被合并是因为前两轮中 "l"+"o" 和 "lo"+"w" 的频率更高。合并的顺序完全由频率决定——这是 BPE 唯一的"学习信号"。</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 1: _get_stats -->
+<!-- ================================================================ -->
+<section class="card" id="s1-5">
+  <h3>1.5 编程练习 1：统计相邻 token 对频率</h3>
+  <p>BPE 训练的第一步是获取当前的 token 序列，并统计所有相邻 pair 的出现次数。这是算法的"眼睛"，决定了每次合并什么。</p>
+
+  <div class="coding-exercise">
+    <h4>🖥️ 练习 1：实现 _get_stats</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现函数 <code>_get_stats(ids)</code>，输入一个整数列表（token ID 序列），返回所有相邻 pair 的出现频数字典。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>输入 <code>ids</code> 是 <code>list[int]</code></li>
+        <li>输出是 <code>dict[tuple[int, int], int]</code> — key 是 (左 token, 右 token)，value 是该 pair 出现的次数</li>
+        <li>相邻对不重叠：对序列 [1,2,3,4]，考虑 (1,2)、(2,3)、(3,4)</li>
+        <li>可以使用 <code>collections.Counter</code> 或手写字典</li>
+      </ul>
+      <pre># 预期用法
+assert _get_stats([1, 2, 3, 1, 2]) == {(1,2): 2, (2,3): 1, (3,1): 1}
+
+# 空序列或单元素序列应返回空字典
+assert _get_stats([]) == {}
+assert _get_stats([42]) == {}</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
 from collections import Counter
 
-class BPETokenizer:
-    def __init__(self):
-        self.vocab = {}       # token_id → bytes
-        self.merges = {}      # (int,int) → int (新 token id)
-        self.special_tokens = {}
+def _get_stats(ids):
+    """统计所有相邻 token 对的出现频率。"""
+    counts = Counter()
+    for pair in zip(ids, ids[1:]):
+        counts[pair] += 1
+    return counts
 
-    def _get_stats(self, ids):
-        """统计所有相邻 token 对的频率"""
-        counts = Counter()
-        for pair in zip(ids, ids[1:]):
-            counts[pair] += 1
-        return counts
-
-    def _merge(self, ids, pair, new_id):
-        """将序列中所有指定对替换为新 id"""
-        new_ids = []
-        i = 0
-        while i < len(ids):
-            if i < len(ids) - 1 and ids[i] == pair[0] and ids[i+1] == pair[1]:
-                new_ids.append(new_id)
-                i += 2
-            else:
-                new_ids.append(ids[i])
-                i += 1
-        return new_ids
-
-    def train(self, text, vocab_size):
-        # 初始化：每个字节就是一个 token (0-255)
-        ids = list(text.encode('utf-8'))
-        self.vocab = {i: bytes([i]) for i in range(256)}
-        num_merges = vocab_size - 256
-
-        for i in range(num_merges):
-            stats = self._get_stats(ids)
-            if not stats: break
-            pair = max(stats, key=stats.get)
-            new_id = 256 + i
-            ids = self._merge(ids, pair, new_id)
-            self.merges[pair] = new_id
-            self.vocab[new_id] = self.vocab[pair[0]] + self.vocab[pair[1]]
-
-        print(f"训练完成: 词表大小 {len(self.vocab)}")
+# 一行版:
+def _get_stats(ids):
+    return dict(Counter(zip(ids, ids[1:])))</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <code>zip(ids, ids[1:])</code> 是 Python 中生成相邻对的标准惯用法。它创建了一个滑动窗口大小为 2 的迭代器，既不产生多余的中间列表，又干净地表达了"相邻"概念。</p>
     </div>
-    <p>核心逻辑只有约 30 行代码。<code>_get_stats</code> 统计相邻对频率，<code>_merge</code> 执行合并，<code>train</code> 循环迭代直到达到目标词表大小。整个过程就是不断找最高频对然后合并。</p>
-  </section>
+  </div>
+</section>
 
-  <!-- 1.6 -->
-  <section class="card" id="s1-6">
-    <h3>1.6 动手：BPE 编码与解码</h3>
-    <p>有了词表和合并规则，编码和解码就很直接了：</p>
-    <div class="code-block" data-lang="python">
-    def encode(self, text):
-        """将文本编码为 token id 序列"""
-        ids = list(text.encode('utf-8'))
-        while len(ids) >= 2:
-            stats = self._get_stats(ids)
-            # 找到在合并规则中优先级最高的相邻对
-            pair = min(stats, key=lambda p: self.merges.get(p, float('inf')))
-            if pair not in self.merges: break  # 没有可合并的对
-            ids = self._merge(ids, pair, self.merges[pair])
-        return ids
+<!-- ================================================================ -->
+<!-- 1.6 理论：为什么选择最高频 pair -->
+<!-- ================================================================ -->
+<section class="card" id="s1-6">
+  <h3>1.6 深入理解：频率选择的信息论解释</h3>
+  <p>上一节实现了 <code>_get_stats</code>，接下来需要回答一个核心问题：<strong>为什么合并最高频 pair 是最优的？</strong></p>
 
-    def decode(self, ids):
-        """将 token id 序列解码回文本"""
-        tokens = b''.join(self.vocab[idx] for idx in ids)
-        return tokens.decode('utf-8', errors='replace')
+  <h4>压缩视角</h4>
+  <p>每次合并将序列中所有 <span class="katex-inline" data-expr="(a,b)"></span> 替换为一个新符号 <span class="katex-inline" data-expr="c"></span>。替换后，序列长度减少 <span class="katex-inline" data-expr="f"></span>（<span class="katex-inline" data-expr="f"></span> 是该 pair 的频率），词表增加 1。选择最高频的 pair 意味着<strong>在每一步最大化边际压缩率</strong> <span class="katex-inline" data-expr="\Delta L / \Delta V"></span>。虽然贪心策略不能保证全局最优（最优词表需要查看所有合并路径），但实践表明贪心 BPE 非常接近最优。</p>
+
+  <h4>与 Huffman 编码的对比</h4>
+  <p>Huffman 编码从底层向上构建最优前缀码——它合并频率最低的两个节点。BPE 却合并频率最高的 pair。区别在于：</p>
+  <ul>
+    <li><strong>Huffman</strong> 构建的是<strong>编码</strong>——每个符号有唯一的二进制码。合并低频节点使高频符号获得短编码。</li>
+    <li><strong>BPE</strong> 构建的是<strong>词表</strong>——序列中相邻的符号被抽象为一个新符号。合并高频 pair 使最常见组合被"词汇化"。</li>
+  </ul>
+  <p>两者都通过反复合并来构建层次结构，但合并准则服务于不同的最终目标。</p>
+
+  <h4>频率与互信息</h4>
+  <p>两个 token <span class="katex-inline" data-expr="a, b"></span> 的<strong>点互信息（PMI）</strong>定义为：</p>
+  <div class="math-box"><div class="label">点互信息</div>
+    <div class="katex" data-expr="\text{PMI}(a,b) = \log \frac{p(a,b)}{p(a)p(b)}"></div>
+  </div>
+  <p>高频率不一定意味着高 PMI——例如 "t" + "h" 在英语中很常见，但这是因为 "t" 和 "h" 各自就很常见。真正的"有意义"组合是频率远超各分量独立概率乘积的 pair。在标准 BPE 实现中直接使用 raw 频率而非 PMI，这对高频但弱相关的 pair（如 " " + "t"）可能会产生次优合并。这是 BPE 已知的局限性之一。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>改进思路：</strong>部分现代分词器（如 WordPiece）用似然增益代替 raw 频率，在每一步选择使训练数据似然提升最大的合并——这等价于考虑了 PMI 的因素。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 2: _merge -->
+<!-- ================================================================ -->
+<section class="card" id="s1-7">
+  <h3>1.7 编程练习 2：实现 pair 替换</h3>
+  <p>找到最高频 pair 后，我们需要在序列中<strong>原地替换</strong>所有出现位置。这是 BPE 训练的核心操作。</p>
+
+  <div class="coding-exercise">
+    <h4>🖥️ 练习 2：实现 _merge</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现函数 <code>_merge(ids, pair, new_id)</code>，在整数序列 <code>ids</code> 中找到所有 <code>pair</code> 的出现位置，将其替换为 <code>new_id</code>。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>输入 <code>ids</code> 是 <code>list[int]</code>，<code>pair</code> 是 <code>tuple[int, int]</code>，<code>new_id</code> 是 <code>int</code></li>
+        <li>返回一个新的 <code>list[int]</code>，不修改原列表</li>
+        <li>替换不重叠：合并 (1,2) 在 [1,2,1,2] 中产生 [new_id, new_id]，而不是 [new_id, 1, 2]</li>
+        <li>遍历一次完成，复杂度 <span class="katex-inline" data-expr="O(n)"></span></li>
+        <li>不能使用 <code>str.replace</code> 或正则表达式</li>
+      </ul>
+      <pre># 预期用法
+assert _merge([1, 2, 3, 1, 2], (1, 2), 99) == [99, 3, 99]
+assert _merge([1, 1, 1], (1, 1), 99) == [99, 1]   # 不重叠替换
+assert _merge([5, 6], (1, 2), 99) == [5, 6]        # 无匹配</pre>
     </div>
-    <p><strong>编码过程：</strong>从字节序列开始，反复应用学到的合并规则，直到没有可合并的相邻对。注意我们按<strong>合并规则被学习的顺序</strong>（优先级）来应用——先被合并的规则优先级更高。这与训练时的贪心策略一致。</p>
-    <p><strong>解码过程：</strong>非常简单——将每个 token id 映射回对应的字节序列，拼接后用 UTF-8 解码即可。BPE 的一个巨大优势就是<strong>解码完全可逆</strong>——不需要任何额外的规则或词典。</p>
-  </section>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def _merge(ids, pair, new_id):
+    """将序列中所有指定相邻对替换为新 id。"""
+    new_ids = []
+    i = 0
+    while i < len(ids):
+        # 检查当前位置是否匹配 pair
+        if (i < len(ids) - 1 and ids[i] == pair[0] and ids[i+1] == pair[1]):
+            new_ids.append(new_id)
+            i += 2  # 跳过 pair 的第二个元素（不重叠）
+        else:
+            new_ids.append(ids[i])
+            i += 1
+    return new_ids</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么用 while 而不是 for？</strong>因为循环体内需要根据是否匹配来跳 1 步或 2 步，用 <code>for i in range(len(ids))</code> 无法在三目运算符中灵活控制步长。<code>while</code> + 手动索引是最清晰的实现。</p>
+    </div>
+  </div>
+</section>
 
-  <!-- 1.7 -->
-  <section class="card" id="s1-7">
-    <h3>1.7 验证：用我们的 Tokenizer 处理中英文</h3>
-    <p>让我们测试实现的正确性：</p>
-    <div class="code-block" data-lang="python">
-# 用小语料训练一个微型 tokenizer
-train_text = "low " * 100 + "lower " * 80 + "lowest " * 60
-tokenizer = BPETokenizer()
-tokenizer.train(train_text, vocab_size=300)
+<!-- ================================================================ -->
+<!-- 1.8 理论：训练循环 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-8">
+  <h3>1.8 BPE 训练循环：从字节到词表</h3>
+  <p>有了 <code>_get_stats</code> 和 <code>_merge</code>，BPE 训练就是一个简单的迭代过程。每次迭代：</p>
+  <ol>
+    <li>统计当前序列的所有相邻 pair 频率</li>
+    <li>找到最高频的 pair</li>
+    <li>记录合并规则 <span class="katex-inline" data-expr="(a,b) \to \text{new_id}"></span></li>
+    <li>在序列中应用合并</li>
+    <li>将新 token 的字节表示存入词表</li>
+  </ol>
+  <p>这个过程产生两个数据结构：</p>
+  <ul>
+    <li><strong>vocab</strong>（<code>dict[int, bytes]</code>）：token id 到原始字节序列的映射——用于<strong>解码</strong></li>
+    <li><strong>merges</strong>（<code>dict[tuple[int,int], int]</code>）：pair 到新 token id 的映射——用于<strong>编码</strong></li>
+  </ul>
+  <p>词表的构建方式：新 token 的字节表示是其组成 token 的字节拼接。例如，如果 token 256 = "lo"（由 token 108='l' 和 token 111='o' 合并），则 <code>vocab[256] = vocab[108] + vocab[111]</code>。这个递归定义使得 vocab 中的每个条目都可以追溯到原始字节。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>重要性质：</strong>vocab 是<strong>无损的</strong>——任何 token 都可以还原为原始的字节序列。这是 BPE 解码无需任何模型或概率的数学基础。</div></div>
 
-# 测试编码
+  <h4>复杂度分析</h4>
+  <p>如果语料有 <span class="katex-inline" data-expr="N"></span> 个 token，需要 <span class="katex-inline" data-expr="M = V - 256"></span> 次合并：</p>
+  <ul>
+    <li>每次合并需要扫描整个序列（<span class="katex-inline" data-expr="O(N)"></span>）来统计频率和替换</li>
+    <li>总复杂度 <span class="katex-inline" data-expr="O(M \times N)"></span></li>
+    <li>实际中 <span class="katex-inline" data-expr="M \approx 50000"></span>，<span class="katex-inline" data-expr="N"></span> 可达数亿——所以原始 BPE 训练可能很慢</li>
+  </ul>
+  <p>优化方案：用优先队列（heap）维护 pair 频率，每次合并后只更新受影响的局部区域。GPT-4 的 tiktoken 库使用了高度优化的并行版本。</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 3: train -->
+<!-- ================================================================ -->
+<section class="card" id="s1-9">
+  <h3>1.9 编程练习 3：实现 BPE 训练</h3>
+  <p>现在将 <code>_get_stats</code> 和 <code>_merge</code> 组合成完整的训练循环。</p>
+
+  <div class="coding-exercise">
+    <h4>🖥️ 练习 3：BPE 训练函数</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>train(text, vocab_size)</code>，在输入文本上训练 BPE 词表，返回 <code>(vocab, merges)</code>。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>输入 <code>text</code> 为 <code>str</code>，<code>vocab_size</code> 为 <code>int</code>（目标词表大小，≥ 256）</li>
+        <li>基础词表为 256 个字节 token（<code>vocab[i] = bytes([i])</code>）</li>
+        <li>返回 <code>(vocab, merges)</code>：
+          <ul>
+            <li><code>vocab: dict[int, bytes]</code></li>
+            <li><code>merges: dict[tuple[int,int], int]</code></li>
+          </ul>
+        </li>
+        <li>每次迭代找最高频 pair（用 <code>max(stats, key=stats.get)</code>）</li>
+        <li>新 token id 从 256 开始递增</li>
+        <li>训练结束后序列本身可以丢弃——我们只需要 merges 规则</li>
+      </ul>
+      <pre># 预期用法
+text = "low " * 100 + "lower " * 80 + "lowest " * 60
+vocab, merges = train(text, vocab_size=280)
+
+# 验证
+assert len(vocab) >= 280
+assert 256 in vocab    # 第一个新 token
+# 常见合并应该出现在 merges 中
+print(f"词表大小: {len(vocab)}")
+print(f"合并规则数: {len(merges)}")</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def train(text, vocab_size):
+    """在输入文本上训练 BPE 分词器，返回 (vocab, merges)。"""
+    # 初始化: 字节序列 + 基础词表
+    ids = list(text.encode("utf-8"))
+    vocab = {i: bytes([i]) for i in range(256)}
+    merges = {}
+    num_merges = vocab_size - 256
+
+    for i in range(num_merges):
+        # 1. 统计频率
+        stats = _get_stats(ids)
+        if not stats:
+            break  # 序列只有一个 token，无法继续
+
+        # 2. 找最高频 pair
+        pair = max(stats, key=stats.get)
+
+        # 3. 分配新 token id
+        new_id = 256 + i
+
+        # 4. 记录合并规则
+        merges[pair] = new_id
+
+        # 5. 构建新 token 的字节表示
+        vocab[new_id] = vocab[pair[0]] + vocab[pair[1]]
+
+        # 6. 应用合并
+        ids = _merge(ids, pair, new_id)
+
+        # （可选）每 1000 步打印状态
+        if (i + 1) % 1000 == 0:
+            print(f"  第 {i+1} 次合并: 序列长度 = {len(ids)}")
+
+    return vocab, merges</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>vocab 的递归构造：</strong><code>vocab[new_id] = vocab[pair[0]] + vocab[pair[1]]</code> 利用了 vocab 中已经存储的字节表示——pair[0] 和 pair[1] 可能是原始字节 token 或之前合并产生的 token。这种递归定义确保了解码的正确性。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 1.10 编码与解码理论 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-10">
+  <h3>1.10 编码与解码——从规则到完整的分词器</h3>
+  <p>训练完成后，我们用 <code>merges</code> 规则对新文本进行编码，用 <code>vocab</code> 将 token 序列解码回文本。</p>
+
+  <h4>解码：简单而完美可逆</h4>
+  <p>解码是<strong>查表拼接</strong>：对 token ID 序列中的每个 ID，从 vocab 中取出对应的字节串，拼接后用 UTF-8 解码：</p>
+  <div class="katex" data-expr="\text{decode}([t_1, t_2, ..., t_n]) = \text{utf8\_decode}\big(\text{vocab}[t_1] \circ \text{vocab}[t_2] \circ ... \circ \text{vocab}[t_n]\big)"></div>
+  <p>由于 vocab 中的每个 token 都是字节序列的确定拼接，解码不需要任何搜索或模型——它总是生成唯一结果。这是 BPE 相比其他分词方案的关键优势。</p>
+
+  <h4>编码：贪心最长匹配</h4>
+  <p>编码需要将新文本转化为 token ID 序列。策略是：从字节序列开始，反复应用合并规则，每次优先应用<strong>按训练顺序最早</strong>（即优先级最高）的合并。</p>
+  <p>具体做法：</p>
+  <ol>
+    <li>将文本编码为 UTF-8 字节序列，转为整数列表</li>
+    <li>重复检查所有相邻 pair——如果某个 pair 在 merges 字典中，找到<strong>最早被合并</strong>（即 new_id 最小）的那个 pair</li>
+    <li>应用该合并，更新序列</li>
+    <li>直到没有可合并的 pair 为止</li>
+  </ol>
+  <p>寻找"最早合并"的技巧：<code>min(stats, key=lambda p: merges.get(p, float('inf')))</code>。如果 pair 不在 merges 中，返回 inf——只有已经学习过的合并规则才会被应用。</p>
+
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>直觉：</strong>训练时先合并的 pair（new_id 小）是"更基础"的模式——它们在文本中更常见、更稳定。编码时优先应用这些基础规则，符合贪心最长匹配的"从大到小"原则。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 4: encode + decode -->
+<!-- ================================================================ -->
+<section class="card" id="s1-11">
+  <h3>1.11 编程练习 4：实现完整的编码与解码</h3>
+
+  <div class="coding-exercise">
+    <h4>🖥️ 练习 4a：实现 decode</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>decode(ids, vocab)</code>，将 token ID 序列还原为文本。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>输入 <code>ids</code> 为 <code>list[int]</code>，<code>vocab</code> 为 <code>dict[int, bytes]</code></li>
+        <li>返回 <code>str</code>，用 <code>.decode('utf-8', errors='replace')</code> 处理非法字节序列</li>
+        <li>非法字节用 <code>�</code> 替换</li>
+      </ul>
+      <pre># 预期用法（需先训练）
+vocab, merges = train("hello hello hello", vocab_size=260)
+decoded = decode([104, 101, 256], vocab)
+print(decoded)  # 假设 256="he" → 应输出 "he"</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def decode(ids, vocab):
+    """将 token ID 序列解码为文本字符串。"""
+    tokens = b"".join(vocab[idx] for idx in ids)
+    return tokens.decode("utf-8", errors="replace")</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 解码只有两行 Python！BPE 的美妙之处在于：<strong>训练复杂，但解码简单</strong>。这保证了推理阶段的高效性——只需要一次查表和一次 UTF-8 解码。</p>
+    </div>
+  </div>
+
+  <div class="coding-exercise" style="margin-top:16px">
+    <h4>🖥️ 练习 4b：实现 encode</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>encode(text, merges)</code>，将文本编码为 token ID 序列。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>输入 <code>text</code> 为 <code>str</code>，<code>merges</code> 为 <code>dict[tuple[int,int], int]</code></li>
+        <li>返回 <code>list[int]</code></li>
+        <li>从 UTF-8 字节序列开始，反复应用 merges 中优先级最高的合并</li>
+        <li>用 <code>min(stats, key=lambda p: merges.get(p, float('inf')))</code> 找最高优先级 pair</li>
+        <li>当没有任何 pair 在 merges 中时停止</li>
+      </ul>
+      <pre># 预期用法
+vocab, merges = train("low " * 100 + "lower " * 80 + "lowest " * 60, vocab_size=280)
 text = "lowest lower"
-ids = tokenizer.encode(text)
-print(f"编码: {ids}")
-print(f"Token 数: {len(ids)}")
+ids = encode(text, merges)
+print(f"编码 {text!r} → {ids}")
 
-# 测试解码
-decoded = tokenizer.decode(ids)
-print(f"解码: {decoded}")
-print(f"还原正确: {decoded == text}")
-
-# 测试中文
-cn_text = "大语言模型是人工智能的重要分支"
-cn_ids = tokenizer.encode(cn_text)
-print(f"中文编码: {cn_ids}")
-print(f"中文 Token 数: {len(cn_ids)} — 注意，未训练的中文会退化为单字节 token")</div>
-    <p><strong>预期输出：</strong>对于训练语料中的词汇（如 "lowest"），tokenizer 会将其编码为少数几个 token；对于未见过的中文文本，由于没有学到中文字符的合并模式，会退化为逐字节编码——这正是 BPE 在未训练语言上的预期行为。</p>
-  </section>
-
-  <!-- 1.8 -->
-  <section class="card" id="s1-8">
-    <h3>1.8 主流分词器对比</h3>
-    <div class="table-wrap">
-      <table>
-        <tr><th>算法</th><th>方向</th><th>选择策略</th><th>代表模型</th></tr>
-        <tr><td>BPE</td><td>bottom-up (合并)</td><td>最高频相邻对</td><td>GPT-2/3/4</td></tr>
-        <tr><td>WordPiece</td><td>bottom-up (合并)</td><td>最大似然增益</td><td>BERT</td></tr>
-        <tr><td>Unigram</td><td>top-down (剪枝)</td><td>删除低概率 token</td><td>XLNet、ALBERT</td></tr>
-        <tr><td>SentencePiece</td><td>多种 (空格归一化)</td><td>BPE 或 Unigram</td><td>Llama、T5</td></tr>
-      </table>
+# 验证循环：encode → decode 应得到原始文本
+decoded = decode(ids, vocab)
+assert decoded == text, f"循环不匹配: {decoded!r} != {text!r}"</pre>
     </div>
-    <p><strong>SentencePiece</strong> 的一个关键创新是将空格视为普通字符（用 ▁ U+2581 表示），使分词完全语言无关——不需要针对中文、日语、韩语等无空格语言做特殊处理。Llama 系列全部使用 SentencePiece BPE。</p>
-    <p><strong>GPT-4 的 cl100k_base</strong> 词表约 10 万，基于 tiktoken 库实现，是 BPE 的优化变体——它在训练时使用了更大的语料和更精细的预处理规则。</p>
-    <div class="info-box warn">
-      <span class="icon">⚠️</span>
-      <div><strong>BPE 的常见陷阱：</strong>同一个词在不同上下文中可能被切分为不同的 token 序列（如 "low" 和 "lower" 中 "low" 的切分可能不同），导致模型需要学习同义词的多种表示。这也是为什么有研究在探索 tokenization-free 模型。</div>
-    </div>
-  </section>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def encode(text, merges):
+    """将文本编码为 token ID 序列。"""
+    ids = list(text.encode("utf-8"))
 
-  <!-- 1.9 -->
-  <section class="card" id="s1-9">
-    <h3>1.9 特殊 Token 与 Token 效率</h3>
-    <p>除了从数据中学到的 token，分词器还需要一些<strong>特殊 token</strong>来表示控制信息：</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>特殊 Token</th><th>含义</th><th>典型用法</th></tr>
-        <tr><td>&lt;BOS&gt; / &lt;s&gt;</td><td>序列开始 (Beginning of Sequence)</td><td>标记每条文本的起始</td></tr>
-        <tr><td>&lt;EOS&gt; / &lt;/s&gt;</td><td>序列结束 (End of Sequence)</td><td>标记生成停止；训练中分隔不同文档</td></tr>
-        <tr><td>&lt;PAD&gt;</td><td>填充 (Padding)</td><td>将不等长序列补齐到相同长度</td></tr>
-        <tr><td>&lt;UNK&gt;</td><td>未知词 (Unknown)</td><td>BPE 通常不需要（所有字节都在词表中）</td></tr>
-        <tr><td>&lt;|endoftext|&gt;</td><td>文档分隔 (GPT 风格)</td><td>GPT-2/3/4 用来分隔训练文档</td></tr>
-        <tr><td>&lt;|user|&gt;, &lt;|assistant|&gt;</td><td>对话角色标记</td><td>ChatML 格式（ChatGPT/Claude）</td></tr>
-      </table>
-    </div>
-    <p><strong>Token 效率</strong>直接影响 API 成本和推理速度。不同语言和领域的内容有不同的 token 效率：</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>语言/内容</th><th>近似 Token/字 比</th><th>说明</th></tr>
-        <tr><td>英文</td><td>~0.3 token/字</td><td>最经济；每个 token 约 3.3 个英文字符</td></tr>
-        <tr><td>中文</td><td>~0.5-0.8 token/字</td><td>Llama 3 改善明显，但仍不如英文</td></tr>
-        <tr><td>代码 (Python)</td><td>~0.5 token/字</td><td>缩进和符号是单独的 token</td></tr>
-        <tr><td>数学公式 (LaTeX)</td><td>~0.4 token/字</td><td>命令和符号频繁出现</td></tr>
-      </table>
-    </div>
-  </section>
+    while len(ids) >= 2:
+        # 统计当前序列的相邻 pair 频率
+        stats = _get_stats(ids)
 
-  <!-- 1.10 -->
-  <section class="card" id="s1-10">
-    <h3>1.10 本章总结</h3>
-    <p>你已经实现了：</p>
-    <ul>
-      <li>✅ 一个从零手写的 BPE Tokenizer（约 80 行 Python）</li>
-      <li>✅ 理解了 BPE 的"统计→合并→更新"循环</li>
-      <li>✅ 明白了编码（encode）和解码（decode）的工作原理</li>
-      <li>✅ 了解了主流分词器的差异和适用场景</li>
-    </ul>
-    <p>分词是 LLM 的<strong>第一道门</strong>。一个设计良好的分词器能让模型的"阅读效率"翻倍。在接下来的章节中，我们将进入 LLM 的核心——嵌入层和注意力机制。</p>
-    <div class="info-box key">
-      <span class="icon">📚</span>
-      <div><strong>延伸阅读：</strong>
-        <a href="https://arxiv.org/abs/1508.07909" target="_blank">Sennrich et al. (2016) — Neural Machine Translation of Rare Words with Subword Units</a> ·
-        <a href="https://github.com/openai/tiktoken" target="_blank">OpenAI tiktoken 源码</a> ·
-        <a href="https://arxiv.org/abs/1808.06226" target="_blank">Kudo & Richardson (2018) — SentencePiece</a> ·
-        <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 技术报告 (分词器设计 §2.1)</a>
-      </div>
-    </div>
-  </section>
+        # 找到 prio 最高的 pair（最早被合并的，即 new_id 最小的）
+        pair = min(stats, key=lambda p: merges.get(p, float("inf")))
 
-  <!-- 练习 -->
-  <section class="card">
-    <h3>📝 练习巩固</h3>
+        # 如果最高 priority 的 pair 也不在 merges 中 → 停止
+        if pair not in merges:
+            break
 
-    <div class="exercise" data-answer="1" data-explain="BPE 的核心就是每次合并出现频率最高的相邻符号对，不断扩展词表。WordPiece 用似然增益代替频率，Unigram 是自顶向下剪枝。">
-      <h4>练习 1：BPE 算法在每次迭代中选择合并哪个符号对？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q1" value="0"> A. 随机选择一对</label>
-        <label><input type="radio" name="q1" value="1"> B. 出现频率最高的相邻符号对</label>
-        <label><input type="radio" name="q1" value="2"> C. 长度最长的相邻符号对</label>
-        <label><input type="radio" name="q1" value="3"> D. 使 loss 下降最多的符号对</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
-    </div>
+        # 应用合并
+        new_id = merges[pair]
+        ids = _merge(ids, pair, new_id)
 
-    <div class="exercise" data-answer="2" data-explain="解码时，每个 token id 映射为字节串，拼接后用 UTF-8 解码即可。因为 BPE 的 token 完全由字节序列构成，解码天然可逆。">
-      <h4>练习 2：BPE Tokenizer 的解码 (decode) 过程是怎样的？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q2" value="0"> A. 查字典将每个 token 映射为对应的词</label>
-        <label><input type="radio" name="q2" value="1"> B. 使用贪心搜索找到最可能的文本序列</label>
-        <label><input type="radio" name="q2" value="2"> C. 将每个 token 映射为字节串，拼接后用 UTF-8 解码</label>
-        <label><input type="radio" name="q2" value="3"> D. 通过神经网络重建原始文本</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
+    return ids</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>编码的贪心性质：</strong>每轮只应用一个合并——当前可用的 priority 最高的那个。因为 merges 记录了训练时合并的顺序（new_id 越小表示越早合并），早合并 = 更基础的 token 组合 = 编码时优先应用。</p>
     </div>
+  </div>
+</section>
 
-    <div class="exercise" data-answer="0" data-explain="SentencePiece 将空格视为普通字符，用 ▁ (U+2581) 表示，使得它完全语言无关——对中文、日语等无空格语言同样有效。">
-      <h4>练习 3：SentencePiece 相比传统 BPE 的关键创新是什么？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q3" value="0"> A. 将空格视为普通字符，使分词语言无关</label>
-        <label><input type="radio" name="q3" value="1"> B. 使用神经网络来预测最优的分词方案</label>
-        <label><input type="radio" name="q3" value="2"> C. 将中文每个字固定为一个独立的 token</label>
-        <label><input type="radio" name="q3" value="3"> D. 不使用任何特殊 token</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
-    </div>
+<!-- ================================================================ -->
+<!-- 1.12 主流分词器对比 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-12">
+  <h3>1.12 主流分词器对比</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>算法</th><th>方向</th><th>合并/分裂准则</th><th>代表模型</th></tr>
+      <tr><td>BPE</td><td>自底向上（合并）</td><td>最高频相邻对</td><td>GPT-2/3/4, Llama</td></tr>
+      <tr><td>WordPiece</td><td>自底向上（合并）</td><td>最大似然增益</td><td>BERT</td></tr>
+      <tr><td>Unigram</td><td>自顶向下（剪枝）</td><td>删除最低概率 token</td><td>XLNet, ALBERT</td></tr>
+      <tr><td>SentencePiece</td><td>多种（空格归一化）</td><td>BPE 或 Unigram</td><td>Llama, T5, DeepSeek</td></tr>
+    </table>
+  </div>
+  <p><strong>SentencePiece</strong> 的关键创新是将空格视为普通字符（用 <code>▁</code> U+2581 表示），使分词完全语言无关。DeepSeek-V3 使用了 SentencePiece BPE，词表约 128K。</p>
+</section>
 
-    <div class="exercise" data-answer="2" data-explain="当遇到训练中从未见过的文本（如未训练语言），BPE 会退化为逐字节编码——因为没有任何合并规则可以应用。每个字节就是一个独立的 token。">
-      <h4>练习 4：如果用一个只在英文上训练的 BPE Tokenizer 去编码中文文本，会发生什么？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q4" value="0"> A. 抛出编码错误</label>
-        <label><input type="radio" name="q4" value="1"> B. 每个中文字被映射为一个独立的 token</label>
-        <label><input type="radio" name="q4" value="2"> C. 退化为逐字节编码，每个 UTF-8 字节是一个 token</label>
-        <label><input type="radio" name="q4" value="3"> D. 自动识别中文并创建新的 token</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
-    </div>
+<!-- ================================================================ -->
+<!-- 1.13 总结 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-13">
+  <h3>1.13 本章总结：你实现了一个完整的 BPE 分词器</h3>
+  <ul>
+    <li>✅ <strong>_get_stats</strong> —— 统计相邻 pair 频率的工具函数</li>
+    <li>✅ <strong>_merge</strong> —— 在序列中替换 pair 的核心操作</li>
+    <li>✅ <strong>train</strong> —— 完整的 BPE 训练循环，从字节到目标词表</li>
+    <li>✅ <strong>encode / decode</strong> —— 使用训练好的 merges 和 vocab 进行推理</li>
+    <li>✅ 理解了 BPE 的<strong>数据压缩本质</strong>和频率选择的<strong>信息论基础</strong></li>
+  </ul>
+  <p>全部代码约 <strong>50 行</strong>，但这是一个可用的 BPE 分词器核心。GPT-4 的 tiktoken 本质上就是这套逻辑的高度优化版（支持并行合并、特殊 token、正则表达式预分词）。</p>
+  <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
+    <a href="https://arxiv.org/abs/1508.07909" target="_blank">Sennrich et al. (2016) — Neural Machine Translation of Rare Words with Subword Units</a> ·
+    <a href="https://github.com/openai/tiktoken" target="_blank">OpenAI tiktoken 源码</a> ·
+    <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 技术报告 (§2.1)</a>
+  </div></div>
+</section>
 
-    <div class="exercise" data-answer="1" data-explain="BPE 从 256 个基础字节开始，需要 50241 次合并才能到达 50497 的目标词表大小。GPT-2 的词表是 50257（= 256 基础 + 50000 次合并 + 1 个 EOS token）。">
-      <h4>练习 5：BPE 训练时，从 256 个初始字节 token 开始，需要多少次合并才能达到 50,497 个 token 的词表？</h4>
-      <div class="opts" role="radiogroup">
-        <label><input type="radio" name="q5" value="0"> A. 50,497 次</label>
-        <label><input type="radio" name="q5" value="1"> B. 50,241 次</label>
-        <label><input type="radio" name="q5" value="2"> C. 256 次</label>
-        <label><input type="radio" name="q5" value="3"> D. 无法确定</label>
-      </div>
-      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
-      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
-      <div class="feedback"></div>
+<!-- ================================================================ -->
+<!-- 概念练习 -->
+<!-- ================================================================ -->
+<section class="card">
+  <h3>📝 概念练习巩固</h3>
+
+  <div class="exercise" data-answer="1" data-explain="贪心策略在每一步选择当前频率最高的 pair，因为这样每步的序列长度压缩比最大。虽然不能保证全局最优，但实践证明贪心 BPE 非常有效。">
+    <h4>练习 1：BPE 每次迭代如何选择要合并的 pair？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q1" value="0"> A. 随机选择一对相邻符号</label>
+      <label><input type="radio" name="q1" value="1"> B. 选择当前频率最高的相邻符号对（贪心）</label>
+      <label><input type="radio" name="q1" value="2"> C. 遍历所有可能的合并路径，选全局最优</label>
+      <label><input type="radio" name="q1" value="3"> D. 选择长度最长的相邻对</label>
     </div>
-  </section>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="3" data-explain="从信息论看，BPE 在词表大小和序列长度之间做权衡。大数据表的嵌入矩阵参数量大但序列短（推理快）；小词表参数量小但序列长（推理慢）。BPE 通过子词折中了两者。">
+    <h4>练习 2：从信息论视角看，BPE 的"子词"级别分词解决了什么核心矛盾？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q2" value="0"> A. 一词多义问题</label>
+      <label><input type="radio" name="q2" value="1"> B. 语法错误问题</label>
+      <label><input type="radio" name="q2" value="2"> C. 训练数据不足问题</label>
+      <label><input type="radio" name="q2" value="3"> D. 词级词表太大（稀疏性）与字符级序列太长（效率低）之间的权衡</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="2" data-explain="BPE 的 vocab 存储每个 token id 到原始字节序列的映射。解码时只需查表拼接并用 UTF-8 解码，不需要任何模型或概率计算。这是 BPE 解码高效且可逆的根本原因。">
+    <h4>练习 3：BPE 解码为什么不需要任何搜索或模型？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q3" value="0"> A. 因为解码使用了神经网络预测</label>
+      <label><input type="radio" name="q3" value="1"> B. 因为 BPE 在训练时保存了所有可能的解码路径</label>
+      <label><input type="radio" name="q3" value="2"> C. 因为 vocab 存储了每个 token 的确定性字节拼接，解码只需查表 + UTF-8 解码</label>
+      <label><input type="radio" name="q3" value="3"> D. 因为 BPE 只支持 ASCII 字符集</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="1" data-explain="因为编码是贪心最长匹配，同一个文本的编码结果可能是确定的，但不同的应用顺序可能导致不同的 token 序列。而且训练语料中 'low' 和 'lower' 的频率分布会影响词的边界合并，导致 'low' 在不同上下文中可能被不同地切分。">
+    <h4>练习 4：为什么同一个词（如 "tokenization"）在不同 BPE 分词器中可能被切分不同？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q4" value="0"> A. 因为 BPE 使用随机种子</label>
+      <label><input type="radio" name="q4" value="1"> B. 因为不同的训练语料产生不同的 merge 优先级</label>
+      <label><input type="radio" name="q4" value="2"> C. 因为 BPE 编码过程使用了 dropout</label>
+      <label><input type="radio" name="q4" value="3"> D. 不会不同，BPE 对所有输入产生完全一致的切分</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="2" data-explain="编码时，找出当前序列中所有在 merges 里存在的 pair，选择 new_id 最小的（即最早被合并的）。因为早合并 = 更基础的组合 = 编码时优先应用。这等价于贪心最长匹配策略。">
+    <h4>练习 5：BPE 编码时如何确定当前应该合并哪一对？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q5" value="0"> A. 合并频率最高的一对</label>
+      <label><input type="radio" name="q5" value="1"> B. 随机选择一对可合并的 pair</label>
+      <label><input type="radio" name="q5" value="2"> C. 选择 new_id 最小（训练时最早合并）的 pair</label>
+      <label><input type="radio" name="q5" value="3"> D. 合并使文本最短的一对</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+</section>
 </article>
 
 <nav class="chapter-nav">
@@ -378,8 +580,7 @@ print(f"中文 Token 数: {len(cn_ids)} — 注意，未训练的中文会退化
 </nav>
 </main>
 
-<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
-
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script src="../js/app.js"></script>

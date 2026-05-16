@@ -58,7 +58,13 @@
     updateProgress();
     renderSidebar();
     var btn = document.getElementById('mark-complete');
-    if(btn) btn.textContent = completed.has(currentCh) ? '✅ 已完成 (点击取消)' : '✓ 标记完成';
+    if(btn){
+      btn.textContent = completed.has(currentCh) ? '✅ 已完成 (点击取消)' : '✓ 标记完成';
+      if(completed.has(currentCh)){
+        btn.classList.add('celebrate');
+        setTimeout(function(){ btn.classList.remove('celebrate'); }, 500);
+      }
+    }
   }
 
   // ---- Theme ----
@@ -161,6 +167,81 @@
     toggle.addEventListener('click', function(){ sidebar.classList.toggle('open') });
   }
 
+  // ---- TOC Generation ----
+  function initTOC(){
+    var chapter = document.querySelector('.chapter');
+    if(!chapter) return;
+    var sections = chapter.querySelectorAll('section.card[id]');
+    if(sections.length < 3) return;
+    var toc = document.createElement('div');
+    toc.className = 'toc';
+    toc.innerHTML = '<h4>📑 本章目录</h4><ol>' +
+      Array.from(sections).map(function(s){
+        var h3 = s.querySelector('h3');
+        var title = h3 ? h3.textContent : s.id;
+        return '<li><a href="#'+s.id+'">'+title+'</a></li>';
+      }).join('') + '</ol>';
+    var subtitle = chapter.querySelector('.reading-time');
+    if(subtitle) subtitle.after(toc);
+    // Highlight current section on scroll
+    var tocLinks = toc.querySelectorAll('a');
+    window.addEventListener('scroll', function(){
+      var scrollY = window.scrollY + 120;
+      sections.forEach(function(s, i){
+        if(s.offsetTop <= scrollY && (!sections[i+1] || sections[i+1].offsetTop > scrollY)){
+          tocLinks.forEach(function(a){ a.classList.remove('toc-active') });
+          if(tocLinks[i]) tocLinks[i].classList.add('toc-active');
+        }
+      });
+    });
+    // Smooth scroll with offset
+    tocLinks.forEach(function(a){
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        var target = document.querySelector(a.getAttribute('href'));
+        if(target) window.scrollTo({top:target.offsetTop-30,behavior:'smooth'});
+      });
+    });
+  }
+
+  // ---- Code Copy Buttons ----
+  function initCodeCopy(){
+    document.querySelectorAll('.code-block').forEach(function(block){
+      var wrap = document.createElement('div');
+      wrap.className = 'code-block-wrap';
+      block.parentNode.insertBefore(wrap, block);
+      wrap.appendChild(block);
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.title = '复制代码';
+      btn.innerHTML = '📋';
+      btn.addEventListener('click', function(){
+        var text = block.textContent;
+        if(text.endsWith('\n')) text = text.slice(0,-1);
+        navigator.clipboard.writeText(text).then(function(){
+          btn.classList.add('copied');
+          btn.innerHTML = '✓';
+          setTimeout(function(){ btn.classList.remove('copied'); btn.innerHTML = '📋'; }, 2000);
+        }).catch(function(){});
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  // ---- Reading Progress Bar ----
+  function initReadingBar(){
+    var bar = document.createElement('div');
+    bar.className = 'reading-bar';
+    bar.id = 'reading-bar';
+    document.body.appendChild(bar);
+    window.addEventListener('scroll', function(){
+      var scrollH = document.documentElement.scrollHeight - window.innerHeight;
+      if(scrollH <= 0) return;
+      var pct = Math.min(100, Math.round(window.scrollY / scrollH * 100));
+      bar.style.width = pct + '%';
+    });
+  }
+
   // ---- Init ----
   function init(){
     initTheme();
@@ -170,6 +251,9 @@
     initBackToTop();
     initKeyboardNav();
     initSidebarToggle();
+    initTOC();
+    initCodeCopy();
+    initReadingBar();
     // KaTeX
     if(window.renderMathInElement){
       renderMathInElement(document.body, { delimiters: [

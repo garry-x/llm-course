@@ -421,6 +421,161 @@ td{color:var(--text-secondary)}
   .back-to-top{bottom:16px;right:16px}
 }
 
+/* ---- Reading Progress Bar (top of page) ---- */
+.reading-bar{
+  position:fixed;top:0;left:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-hover));
+  z-index:300;transition:width 100ms linear;
+  box-shadow:0 0 8px rgba(179,92,34,.3)
+}
+
+/* ---- TOC (Table of Contents) ---- */
+.toc{
+  background:var(--surface);border-radius:var(--radius);padding:20px 24px;
+  margin-bottom:24px;box-shadow:var(--shadow-card);border:1px solid var(--border)
+}
+.toc h4{
+  font-family:var(--font-heading);font-size:.9rem;font-weight:600;
+  margin-bottom:12px;color:var(--text)
+}
+.toc ol{list-style:none;counter-reset:toc-counter;margin:0}
+.toc ol li{counter-increment:toc-counter;margin-bottom:2px}
+.toc ol li a{
+  display:flex;align-items:center;gap:8px;min-height:36px;padding:4px 8px;
+  text-decoration:none;color:var(--text-secondary);font-size:.82rem;
+  border-radius:var(--radius-sm);transition:all var(--transition)
+}
+.toc ol li a::before{
+  content:counter(toc-counter);width:22px;height:22px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:.65rem;font-weight:700;flex-shrink:0;
+  background:var(--bg);color:var(--text-secondary)
+}
+.toc ol li a:hover{background:var(--accent-light);color:var(--accent)}
+.toc ol li a.toc-active{background:var(--accent-light);color:var(--accent);font-weight:600}
+.toc ol li a.toc-active::before{background:var(--accent);color:#fff}
+@media(max-width:959px){.toc{display:none}}
+
+/* ---- Code Block: Copy Button + Line Numbers ---- */
+.code-block-wrap{position:relative;margin:14px 0}
+.code-block-wrap .code-block{padding-right:60px;margin:0}
+.copy-btn{
+  position:absolute;top:8px;right:8px;z-index:5;
+  width:32px;height:32px;border-radius:4px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);
+  cursor:pointer;font-size:.7rem;transition:all var(--transition);
+  display:flex;align-items:center;justify-content:center
+}
+.copy-btn:hover{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25)}
+.copy-btn.copied{background:var(--success);border-color:var(--success);color:#fff}
+.code-block.line-numbers{
+  counter-reset:line;padding-left:50px
+}
+.code-block.line-numbers .line{
+  counter-increment:line;display:block
+}
+.code-block.line-numbers .line::before{
+  content:counter(line);
+  display:inline-block;width:28px;margin-left:-45px;margin-right:17px;
+  text-align:right;color:rgba(255,255,255,.18);font-size:.75rem;
+  user-select:none
+}
+
+/* ---- Hero Enhancements ---- */
+.hero{
+  position:relative;overflow:hidden;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 20%,rgba(179,92,34,.06),transparent),
+    radial-gradient(ellipse 60% 80% at 80% 70%,rgba(179,92,34,.04),transparent),
+    var(--surface);
+  border-radius:var(--radius);padding:60px 40px 48px;margin-bottom:32px;
+  box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:center
+}
+.hero::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent)
+}
+.hero h2{font-size:2.4rem;font-weight:700;margin-bottom:12px;position:relative}
+.hero p{color:var(--text-secondary);font-size:1.05rem;max-width:520px;margin:0 auto 28px;position:relative;line-height:1.7}
+.hero .btn{position:relative;padding:12px 32px;font-size:.95rem}
+.hero-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;position:relative}
+.hero-tag{
+  padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;
+  background:var(--accent-light);color:var(--accent);border:1px solid rgba(179,92,34,.15)
+}
+
+/* ---- Dashboard Cards (homepage) ---- */
+.dashboard{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px
+}
+.dash-card{
+  background:var(--surface);border-radius:var(--radius);padding:20px 18px;
+  box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:center;
+  transition:transform var(--transition),box-shadow var(--transition)
+}
+.dash-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.dash-card .dash-icon{font-size:1.6rem;margin-bottom:6px}
+.dash-card .num{font-size:2rem;font-weight:800;color:var(--accent);font-family:var(--font-heading)}
+.dash-card .label{font-size:.78rem;color:var(--text-secondary);margin-top:2px}
+@media(max-width:959px){.dashboard{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:639px){.dashboard{grid-template-columns:1fr}}
+
+/* ---- Chapter List Items (homepage) ---- */
+.chapter-list{display:flex;flex-direction:column;gap:10px;margin-bottom:32px}
+.chapter-item{
+  display:flex;align-items:center;gap:16px;padding:18px 22px;
+  background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);text-decoration:none;color:var(--text);
+  transition:all var(--transition);border:1px solid var(--border);
+  position:relative;overflow:hidden
+}
+.chapter-item::after{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:0;
+  background:linear-gradient(90deg,rgba(179,92,34,.06),transparent);
+  transition:width var(--transition)
+}
+.chapter-item:hover{transform:translateX(4px);box-shadow:var(--shadow-card);border-color:var(--border-strong)}
+.chapter-item:hover::after{width:100%}
+.chapter-item.completed{border-left:3px solid var(--success)}
+.chapter-item .ch-num-big{
+  width:48px;height:48px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0;
+  background:var(--accent-light);color:var(--accent);position:relative;z-index:1
+}
+.chapter-item.completed .ch-num-big{background:#f2faf5;color:var(--success)}
+.chapter-item .ch-info{flex:1;position:relative;z-index:1}
+.chapter-item .ch-info h4{font-size:.95rem;font-weight:700;margin-bottom:2px}
+.chapter-item .ch-info p{font-size:.8rem;color:var(--text-secondary);margin:0}
+.chapter-item .ch-meta{font-size:.75rem;color:var(--text-secondary);text-align:right;position:relative;z-index:1}
+
+/* ---- Feedback Animation ---- */
+.feedback{
+  margin-top:10px;padding:10px 14px;border-radius:var(--radius-sm);
+  font-size:.85rem;display:none;min-height:44px;align-items:center;
+  animation:fadeSlide .25s ease
+}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---- Card Entrance Animation (homepage) ---- */
+.chapter-item{animation:slideIn .4s ease backwards}
+.chapter-item:nth-child(1){animation-delay:.05s}
+.chapter-item:nth-child(2){animation-delay:.1s}
+.chapter-item:nth-child(3){animation-delay:.15s}
+.chapter-item:nth-child(4){animation-delay:.2s}
+.chapter-item:nth-child(5){animation-delay:.25s}
+.chapter-item:nth-child(6){animation-delay:.3s}
+.chapter-item:nth-child(7){animation-delay:.35s}
+.chapter-item:nth-child(8){animation-delay:.4s}
+.chapter-item:nth-child(9){animation-delay:.45s}
+.chapter-item:nth-child(10){animation-delay:.5s}
+@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+
+/* ---- Mark Complete Celebration ---- */
+@keyframes celebrate{
+  0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}
+}
+.celebrate{animation:celebrate .4s ease}
+
 /* ---- Print ---- */
 @media print{
   .sidebar,.menu-toggle,.chapter-nav,.back-to-top,.font-controls{display:none}

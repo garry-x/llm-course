@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" fill="none">
+  <defs>
+    <style>
+      text{font-family:system-ui,sans-serif}
+      .bg{fill:#fbf9f5}
+      .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
+      .box-q{fill:#e8f0fe;stroke:#7baaf7;stroke-width:2}
+      .box-k{fill:#e6f4ea;stroke:#81c995;stroke-width:2}
+      .box-v{fill:#fce8e6;stroke:#f28b82;stroke-width:2}
+      .box-out{fill:#fdf5ed;stroke:#b35c22;stroke-width:2}
+      .arrow{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
+      .arrow-q{stroke:#7baaf7;stroke-width:2;fill:none;marker-end:url(#ahq)}
+      .arrow-k{stroke:#81c995;stroke-width:2;fill:none;marker-end:url(#ahk)}
+      .arrow-v{stroke:#f28b82;stroke-width:2;fill:none;marker-end:url(#ahv)}
+      .label{fill:#5c554a;font-size:13px;text-anchor:middle}
+      .formula{fill:#b35c22;font-size:12px;font-family:monospace;text-anchor:middle}
+      .title{fill:#1c1c1c;font-size:15px;font-weight:700;text-anchor:middle}
+      @media(prefers-color-scheme:dark){
+        .bg{fill:#1a1814}
+        .box{fill:#24221d;stroke:#504a40}
+        .box-q{fill:#1a2530;stroke:#7baaf7}
+        .box-k{fill:#1a2a20;stroke:#81c995}
+        .box-v{fill:#2a1a1a;stroke:#f28b82}
+        .box-out{fill:#2a2018;stroke:#e08940}
+        .label{fill:#a09888}
+        .title{fill:#ede8df}
+        .formula{fill:#e08940}
+      }
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
+    <marker id="ahq" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#7baaf7"/></marker>
+    <marker id="ahk" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#81c995"/></marker>
+    <marker id="ahv" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f28b82"/></marker>
+  </defs>
+  <rect class="bg" width="900" height="600"/>
+
+  <!-- Input X -->
+  <rect class="box" x="50" y="40" width="140" height="40"/>
+  <text class="title" x="120" y="65">输入 X</text>
+  <text class="label" x="120" y="90">(n, d_model)</text>
+
+  <!-- QKV Projections -->
+  <line class="arrow-q" x1="120" y1="80" x2="215" y2="150"/>
+  <line class="arrow-k" x1="120" y1="80" x2="215" y2="280"/>
+  <line class="arrow-v" x1="120" y1="80" x2="215" y2="410"/>
+
+  <!-- Q -->
+  <rect class="box-q" x="220" y="130" width="200" height="40"/>
+  <text class="title" x="320" y="155">Query (Q) = X · W_Q</text>
+  <text class="label" x="320" y="180">"我在找什么?" · 维度 d_k</text>
+
+  <!-- K -->
+  <rect class="box-k" x="220" y="260" width="200" height="40"/>
+  <text class="title" x="320" y="285">Key (K) = X · W_K</text>
+  <text class="label" x="320" y="310">"我有什么?" · 维度 d_k</text>
+
+  <!-- V -->
+  <rect class="box-v" x="220" y="390" width="200" height="40"/>
+  <text class="title" x="320" y="415">Value (V) = X · W_V</text>
+  <text class="label" x="320" y="440">"我的内容" · 维度 d_k</text>
+
+  <!-- QK^T -->
+  <line class="arrow" x1="420" y1="150" x2="510" y2="210"/>
+  <line class="arrow" x1="420" y1="280" x2="510" y2="230"/>
+  <rect class="box" x="515" y="195" width="220" height="55"/>
+  <text class="title" x="625" y="218">Scores = Q · K^T / √d_k</text>
+  <text class="formula" x="625" y="240">(n × n) 注意力分数矩阵</text>
+
+  <!-- Softmax -->
+  <line class="arrow" x1="625" y1="250" x2="625" y2="300"/>
+  <rect class="box-accent" x="515" y="300" width="220" height="40" style="fill:#fdf5ed;stroke:#b35c22;stroke-width:2"/>
+  <text class="title" x="625" y="325">Softmax (按行归一化)</text>
+
+  <!-- Attention × V -->
+  <line class="arrow" x1="625" y1="340" x2="625" y2="390"/>
+  <line class="arrow-v" x1="420" y1="410" x2="510" y2="410"/>
+  <rect class="box" x="515" y="385" width="220" height="55"/>
+  <text class="title" x="625" y="408">Output = Attn · V</text>
+  <text class="formula" x="625" y="430">加权聚合 → (n, d_k)</text>
+
+  <!-- Output -->
+  <line class="arrow" x1="625" y1="440" x2="625" y2="500"/>
+  <rect class="box-out" x="515" y="495" width="220" height="40"/>
+  <text class="title" x="625" y="520">注意力输出</text>
+  <text class="label" x="625" y="545">每个位置的上下文感知表示</text>
+
+  <!-- Annotations -->
+  <rect class="box" x="50" y="500" width="380" height="80"/>
+  <text class="label" x="240" y="522" text-anchor="start" style="fill:#b35c22;font-weight:700">为什么除以 √d_k？</text>
+  <text class="label" x="240" y="540" text-anchor="start">Q·K^T 的方差 = d_k，除以 √d_k 归一化到 1</text>
+  <text class="label" x="240" y="558" text-anchor="start">防止 softmax 饱和 → 保障梯度流畅</text>
+  <text class="label" x="240" y="576" text-anchor="start">等价于 temperature = √d_k</text>
+</svg>

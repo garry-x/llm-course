@@ -62,6 +62,11 @@
   <p>这是"<strong>Divide and Conquer</strong>"在深度学习中的经典体现——将一个大问题分解为多个更小、更专业的子问题并行解决。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么参数相同但效果好？</strong>因为每个头的 <span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_h"></span> 比 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 小得多——在一个更低维的空间中搜索注意力模式更容易收敛。就像在 64 维空间中找最近邻比在 768 维空间中更容易（维度灾难的反面）。</div></div>
 </section>
+<div class="svg-diagram" style="max-width:800px">
+  <img src="../images/transformer-arch.svg" alt="Transformer/GPT 架构全景图" style="width:100%">
+</div>
+<p class="diagram-caption">图 4-1: Decoder-only Transformer (GPT) 完整架构——从 Token ID 到概率输出</p>
+
 
 <!-- ================================================================ -->
 <!-- 编程练习 1: MultiHeadAttention -->

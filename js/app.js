@@ -254,23 +254,18 @@
     initTOC();
     initCodeCopy();
     initReadingBar();
-    // KaTeX
-    if(window.renderMathInElement){
-      renderMathInElement(document.body, { delimiters: [
-        {left:'\\[',right:'\\]',display:true},
-        {left:'\\(',right:'\\)',display:false}
-      ], throwOnError: false });
-    }
+    // KaTeX — render data-expr elements with full config
     if(window.katex){
+      var macros = { '\\parallel': '\\mathrel{/\\!\\!/}' };
       document.querySelectorAll('.katex-inline').forEach(function(el){
-        try{ katex.render(el.getAttribute('data-expr'), el, {throwOnError:false}) }
-        catch(e){ el.textContent='[公式错误]' }
+        try{ katex.render(el.getAttribute('data-expr'), el, {throwOnError:true, strict:false, macros:macros, trust:true}) }
+        catch(e){ console.warn('KaTeX inline error:', el.getAttribute('data-expr'), e.message); el.textContent=el.getAttribute('data-expr'); el.style.color='#cc4444'; }
       });
       document.querySelectorAll('.katex:not(.katex-inline)').forEach(function(el){
         var expr = el.getAttribute('data-expr');
         if(!expr) return;
-        try{ katex.render(expr, el, {displayMode:true, throwOnError:false}) }
-        catch(e){ el.textContent='[公式错误]' }
+        try{ katex.render(expr, el, {displayMode:true, throwOnError:true, strict:false, macros:macros, trust:true}) }
+        catch(e){ console.warn('KaTeX display error:', expr, e.message); el.textContent=expr; el.style.color='#cc4444'; }
       });
     }
   }

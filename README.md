@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="favicon.png" width="64" alt="LLM 深度学习">
+  <img src="favicon.svg" width="64" alt="LLM 深度学习">
 </p>
 
 <h1 align="center">LLM 深度学习</h1>

@@ -35,14 +35,20 @@
 git clone https://github.com/garry-x/llm-learner.git && cd llm-learner
 
 # 构建并启动
-docker compose up -d
+./serve.sh docker-build
+./serve.sh docker-up
 # 浏览器打开 http://localhost:8080
 
 # 指定端口
-PORT=3000 docker compose up -d
+PORT=3000 ./serve.sh docker-up
 
-# 停止
-docker compose down
+# 查看日志 / 停止 / 重启
+./serve.sh docker-logs
+./serve.sh docker-down
+./serve.sh docker-restart
+
+# 或使用 docker compose
+docker compose up -d
 ```
 
 ### 本地运行

@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  llm-learner:
+    build: .
+    image: llm-learner:latest
+    container_name: llm-learner
+    ports:
+      - "${PORT:-8080}:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.llm-learner.rule=Host(`${DOMAIN:-llm-learner.local}`)"

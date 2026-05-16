@@ -29,14 +29,31 @@
 
 ## 快速开始
 
+### Docker 部署（推荐）
+
 ```bash
-git clone <repo-url> && cd llm-learner
+git clone https://github.com/garry-x/llm-learner.git && cd llm-learner
+
+# 构建并启动
+docker compose up -d
+# 浏览器打开 http://localhost:8080
+
+# 指定端口
+PORT=3000 docker compose up -d
+
+# 停止
+docker compose down
+```
+
+### 本地运行
+
+```bash
 ./serve.sh            # 默认 0.0.0.0:8080
 ./serve.sh -p 3000    # 指定端口
 # 浏览器打开 http://localhost:8080
 ```
 
-**环境要求：** Python 3.10+ / PyTorch / 现代浏览器（Safari / Chrome / Edge），推荐 iPad Pro 或桌面端阅读。
+**环境要求：** Docker 或 Python 3.10+ / 现代浏览器（Safari / Chrome / Edge），推荐 iPad Pro 或桌面端阅读。
 
 ## 课程大纲
 

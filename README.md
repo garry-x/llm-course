@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/exercises-102_(52编程+50概念)-blue" alt="102 exercises">
   <img src="https://img.shields.io/badge/DeepSeek-V2→R1→V3→V4-green" alt="DeepSeek">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
+  <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="license">
 </p>
 
@@ -34,30 +35,41 @@
 ```bash
 git clone https://github.com/garry-x/llm-learner.git && cd llm-learner
 
-# 构建并启动
+# 构建并启动 (默认 :8080)
 ./serve.sh docker-build
 ./serve.sh docker-up
-# 浏览器打开 http://localhost:8080
 
-# 指定端口
-PORT=3000 ./serve.sh docker-up
+# 指定端口 (如 :3000)
+./serve.sh docker-build -p 3000
+./serve.sh docker-up -p 3000
 
-# 查看日志 / 停止 / 重启
-./serve.sh docker-logs
-./serve.sh docker-down
-./serve.sh docker-restart
+# 管理命令
+./serve.sh docker-logs        # 实时日志
+./serve.sh docker-restart     # 重启
+./serve.sh docker-down        # 停止并删除
 
 # 或使用 docker compose
 docker compose up -d
+PORT=3000 docker compose up -d
 ```
 
-### 本地运行
+### 本地开发
 
 ```bash
-./serve.sh            # 默认 0.0.0.0:8080
-./serve.sh -p 3000    # 指定端口
-# 浏览器打开 http://localhost:8080
+./serve.sh                    # 默认 0.0.0.0:8080
+./serve.sh serve -p 3000      # 指定端口
 ```
+
+### CLI 命令一览
+
+| 命令 | 说明 | 支持 `-p` |
+|------|------|:---------:|
+| `serve` | 本地 Python HTTP 服务器 | ✓ |
+| `docker-build` | 构建镜像 (`--build-arg LISTEN_PORT`) | ✓ |
+| `docker-up` | 启动容器 (自动检测/终止端口占用) | ✓ |
+| `docker-down` | 停止 + 删除容器 | |
+| `docker-logs` | 实时 nginx 日志 | |
+| `docker-restart` | = down + up | |
 
 **环境要求：** Docker 或 Python 3.10+ / 现代浏览器（Safari / Chrome / Edge），推荐 iPad Pro 或桌面端阅读。
 
@@ -95,21 +107,23 @@ docker compose up -d
 
 ```
 llm-learner/
-├── index.html              # 课程首页：仪表板 + 章节目录
-├── css/style.css            # 暖色 editorial 风格，暗色/浅色双主题
-├── js/app.js                # 主题/字号/进度/搜索/练习/TOC/键盘导航
-├── chapters/
-│   ├── ch01.html ~ ch10.html         # 10 章，纯 HTML（6578 行）
-├── images/                  # 7 张 SVG 概念示意图
-│   ├── bpe-pipeline.svg     #   BPE 训练与编解码流程
-│   ├── rope-rotation.svg    #   RoPE 旋转位置编码原理
-│   ├── attention-flow.svg   #   Scaled Dot-Product Attention 数据流
-│   ├── transformer-arch.svg #   GPT 架构全景
-│   ├── mha-gqa-mla.svg      #   MHA/GQA/MLA KV Cache 压缩对比
-│   ├── training-loop.svg    #   训练循环 + 优化器演进
-│   └── rlhf-dpo-grpo.svg    #   RLHF/DPO/GRPO 对齐方法对比
-├── serve.sh                 # 本地服务器启动脚本
-├── favicon.ico              # ComfyUI + FLUX.1-dev 生成
+├── index.html               # 课程首页：Hero + 仪表板 + 章节目录
+├── css/style.css             # 暖色 editorial 风格，暗色/浅色双主题
+├── js/app.js                 # 搜索/主题/字号/进度/练习/TOC/键盘导航
+├── chapters/                 # 10 章，纯 HTML（~7000 行）
+│   └── ch01.html ~ ch10.html
+├── images/                   # 7 张 SVG 概念示意图（支持暗色模式）
+│   ├── bpe-pipeline.svg      #   BPE 训练与编解码流程
+│   ├── rope-rotation.svg     #   RoPE 旋转位置编码原理
+│   ├── attention-flow.svg    #   Scaled Dot-Product Attention 数据流
+│   ├── transformer-arch.svg  #   GPT 架构全景
+│   ├── mha-gqa-mla.svg       #   MHA / GQA / MLA KV Cache 压缩对比
+│   ├── training-loop.svg     #   训练循环 + 优化器演进
+│   └── rlhf-dpo-grpo.svg     #   RLHF / DPO / GRPO 对齐方法对比
+├── Dockerfile                # nginx:alpine, gzip, ARG LISTEN_PORT
+├── docker-compose.yml        # 一键部署，PORT 环境变量可配
+├── serve.sh                  # 6 个子命令（serve + docker-*）
+├── favicon.svg / .png / .ico # ComfyUI + FLUX.1-dev 生成
 └── README.md
 ```
 
@@ -117,16 +131,19 @@ llm-learner/
 
 | 特性 | 说明 |
 |------|------|
+| 🐳 **Docker 部署** | nginx:alpine，gzip 压缩，`LISTEN_PORT` 可配，<10MB 镜像 |
 | 🎨 **暗色/浅色双主题** | CSS 变量驱动，一键切换，localStorage 持久化 |
-| 📝 **编程练习驱动** | 每章 4-6 道编程题，参考解答可折叠 |
-| 📐 **KaTeX 数学渲染** | 内联 + 块级公式，`throwOnError` + 红色降级显示 |
+| 📝 **编程练习驱动** | 每章 4-6 道编程题，参考解答可折叠（`toggleSolution`） |
+| 📐 **KaTeX 数学渲染** | 内联 + 块级公式，渲染失败红色降级显示 LaTeX 源码 |
 | 🔍 **全文搜索** | 侧边栏按章节标题/描述实时过滤 |
-| 📑 **自动目录生成** | JS 读取 `section.card` 生成 TOC，scroll 高亮 |
-| 📊 **阅读进度条** | 顶部 3px 渐变色，GPU 合成（transform，不触发 layout） |
-| 📋 **代码复制** | Clipboard API + `execCommand` HTTP 回退 |
+| 📑 **自动目录生成** | JS 读取 `section.card` 生成 TOC，scroll 高亮当前小节 |
+| 📊 **阅读进度条** | 顶部 3px 渐变，GPU 合成（`transform: scaleX` + rAF 节流） |
+| 📋 **代码复制** | Clipboard API + `execCommand` HTTP 回退，📋→✓ 反馈 |
 | ⌨️ **键盘导航** | ← → 切换章节，Esc 关闭侧边栏 |
 | 📱 **响应式** | 桌面 / iPad Pro / 手机三级断点（960/640px），触控 ≥44px |
-| 🔤 **可调字号** | 小(14px) / 中(16px) / 大(18px) 三档 |
+| 🔤 **可调字号** | 小(14px) / 中(16px) / 大(18px)，localStorage 持久化 |
+| 🖼️ **7 张 SVG 图表** | CSS filter 暗色适配（`invert + hue-rotate`） |
+| 🏷️ **矢量 favicon** | SVG/PNG/ICO + apple-touch-icon
 
 ## 延伸阅读
 

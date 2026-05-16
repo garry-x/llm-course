@@ -6,7 +6,6 @@ ARG LISTEN_PORT
 
 # 复制静态文件
 COPY index.html /usr/share/nginx/html/
-COPY favicon.svg favicon.png favicon.ico /usr/share/nginx/html/
 COPY css/ /usr/share/nginx/html/css/
 COPY js/ /usr/share/nginx/html/js/
 COPY chapters/ /usr/share/nginx/html/chapters/

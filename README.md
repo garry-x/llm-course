@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="favicon.svg" width="64" alt="LLM 深度学习">
+  <img src="images/favicon.svg" width="64" alt="LLM 深度学习">
 </p>
 
 <h1 align="center">LLM 深度学习</h1>
@@ -119,11 +119,11 @@ llm-learner/
 │   ├── transformer-arch.svg  #   GPT 架构全景
 │   ├── mha-gqa-mla.svg       #   MHA / GQA / MLA KV Cache 压缩对比
 │   ├── training-loop.svg     #   训练循环 + 优化器演进
-│   └── rlhf-dpo-grpo.svg     #   RLHF / DPO / GRPO 对齐方法对比
+│   ├── rlhf-dpo-grpo.svg     #   RLHF / DPO / GRPO 对齐方法对比
+│   └── favicon.svg/.png/.ico #   ComfyUI + FLUX.1-dev 生成
 ├── Dockerfile                # nginx:alpine, gzip, ARG LISTEN_PORT
 ├── docker-compose.yml        # 一键部署，PORT 环境变量可配
 ├── serve.sh                  # 6 个子命令（serve + docker-*）
-├── favicon.svg / .png / .ico # ComfyUI + FLUX.1-dev 生成
 └── README.md
 ```
 

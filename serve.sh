@@ -41,9 +41,10 @@ LLM 深度学习课程 — 本地开发 & Docker 部署
 示例:
   $0 serve                       # 本地开发服务器 :8080
   $0 serve -p 3000               # 本地开发服务器 :3000
-  $0 docker-build                # 构建镜像
+  $0 docker-build                # 构建镜像 (默认端口 8080)
+  $0 docker-build -p 3000        # 构建镜像 (默认端口 3000)
   $0 docker-up                   # Docker 启动 (:8080)
-  PORT=3000 $0 docker-up         # Docker 启动 (:3000)
+  $0 docker-up -p 3000           # Docker 启动 (:3000)
   $0 docker-logs                 # 查看日志
   $0 docker-down                 # 停止容器
 
@@ -126,28 +127,47 @@ cmd_serve() {
 }
 
 cmd_docker_build() {
+  local port="${DEFAULT_PORT}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -p|--port) port="$2"; shift 2 ;;
+      *) echo -e "${RED}未知参数: $1${NC}"; usage ;;
+    esac
+  done
+
   banner
   echo -e "  模式:    ${GREEN}Docker 构建${NC}"
   echo -e "  镜像:    ${IMAGE_NAME}:latest"
+  echo -e "  默认端口: ${port}"
   echo ""
 
   cd "$SCRIPT_DIR"
-  docker build -t "${IMAGE_NAME}:latest" .
+  docker build --build-arg LISTEN_PORT="${port}" -t "${IMAGE_NAME}:latest" .
   echo ""
   echo -e "${GREEN}✓ 镜像构建完成: ${IMAGE_NAME}:latest${NC}"
+  echo -e "  容器端口: ${port}"
+  echo -e "  运行: ${YELLOW}$0 docker-up -p ${port}${NC}"
 }
 
 cmd_docker_up() {
   local port="${DEFAULT_PORT}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -p|--port) port="$2"; shift 2 ;;
+      *) echo -e "${RED}未知参数: $1${NC}"; usage ;;
+    esac
+  done
 
   # 检查镜像是否存在
   if ! docker image inspect "${IMAGE_NAME}:latest" &>/dev/null; then
     echo -e "${YELLOW}镜像不存在，先构建...${NC}"
-    cmd_docker_build
+    cmd_docker_build -p "$port"
   fi
 
   # 停止旧容器
   docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+
+  check_port "$port" && kill_port "$port"
 
   banner
   echo -e "  模式:    ${GREEN}Docker 运行${NC}"
@@ -158,7 +178,7 @@ cmd_docker_up() {
 
   docker run -d \
     --name "$CONTAINER_NAME" \
-    -p "${port}:80" \
+    -p "${port}:${port}" \
     --restart unless-stopped \
     "${IMAGE_NAME}:latest"
 

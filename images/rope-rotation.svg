@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 580" fill="none">
+  <defs>
+    <style>
+      text{font-family:system-ui,-apple-system,sans-serif}
+      .bg{fill:#fbf9f5}
+      .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
+      .b2{fill:#fdf5ed;stroke:#b35c22;stroke-width:2}
+      .t1{fill:#5c554a;font-size:13px}
+      .t2{fill:#1c1c1c;font-size:15px;font-weight:700}
+      .t3{fill:#b35c22;font-size:13px;font-family:'JetBrains Mono','Fira Code',monospace}
+      .ts{fill:#9e968a;font-size:11px}
+      .arr{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
+      .rot{stroke:#e08940;stroke-width:2.5;fill:none;stroke-dasharray:6 3}
+      @media(prefers-color-scheme:dark){
+        .bg{fill:#1a1814}
+        .box{fill:#24221d;stroke:#504a40}
+        .b2{fill:#2a2018;stroke:#e08940}
+        .t1{fill:#a09888}
+        .t2{fill:#ede8df}
+        .t3{fill:#e08940}
+        .ts{fill:#8a8278}
+      }
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
+  </defs>
+  <rect class="bg" width="900" height="580"/>
+
+  <text class="t2" x="450" y="30" text-anchor="middle" style="font-size:18px">RoPE 旋转位置编码 — 工作原理</text>
+
+  <!-- Left: 2D rotation visualization -->
+  <rect class="box" x="30" y="50" width="410" height="250"/>
+  <text class="t2" x="235" y="75" text-anchor="middle">2D 旋转示意 (每对维度)</text>
+
+  <!-- Coordinate axes -->
+  <line x1="60" y1="230" x2="380" y2="230" stroke="#d4cec4" stroke-width="1"/>
+  <line x1="220" y1="70" x2="220" y2="280" stroke="#d4cec4" stroke-width="1"/>
+  <!-- Arrow from origin to point -->
+  <line x1="220" y1="230" x2="340" y2="140" stroke="#b35c22" stroke-width="2.5" marker-end="url(#ah)"/>
+  <text class="t2" x="345" y="135" text-anchor="start">(q₀, q₁)</text>
+  <!-- Dashed rotation arc -->
+  <path class="rot" d="M 300 195 A 80 80 0 0 0 350 165"/>
+  <text class="t3" x="370" y="195" text-anchor="start">θ = pos × ω</text>
+
+  <text class="t1" x="235" y="110" text-anchor="middle">旋转角度 = 位置 m × 频率 θ_i</text>
+  <text class="t3" x="235" y="130" text-anchor="middle">θ_i = 10000^(-2i/d)</text>
+  <text class="ts" x="235" y="148" text-anchor="middle">低频维度 (i 小): 慢旋转, 编码长程位置</text>
+  <text class="ts" x="235" y="163" text-anchor="middle">高频维度 (i 大): 快旋转, 编码短程位置</text>
+
+  <!-- Frequency spectrum -->
+  <g transform="translate(70,265)">
+    <text class="ts" x="0" y="0" text-anchor="middle">i=0</text>
+    <text class="ts" x="70" y="0" text-anchor="middle">i=16</text>
+    <text class="ts" x="140" y="0" text-anchor="middle">i=32</text>
+    <text class="ts" x="210" y="0" text-anchor="middle">i=48</text>
+    <text class="ts" x="280" y="0" text-anchor="middle">i=63</text>
+    <text class="ts" x="140" y="15" text-anchor="middle">← 低频 (慢旋转) —————————— 高频 (快旋转) →</text>
+  </g>
+
+  <!-- Right: Key property -->
+  <rect class="b2" x="460" y="50" width="410" height="250"/>
+  <text class="t2" x="665" y="75" text-anchor="middle">RoPE 的核心性质</text>
+
+  <text class="t1" x="480" y="105" text-anchor="start" style="font-weight:600">1. 相对位置编码</text>
+  <text class="t1" x="480" y="125" text-anchor="start" style="font-size:12px">旋转后的 Q 和 K 做点积:</text>
+  <text class="t3" x="665" y="150" text-anchor="middle">(R_m · q)^T · (R_n · k) = q^T · R_{n-m} · k</text>
+  <text class="t1" x="480" y="175" text-anchor="start" style="font-size:12px">结果仅依赖相对位置 (m-n), 不依赖绝对位置</text>
+
+  <text class="t1" x="480" y="205" text-anchor="start" style="font-weight:600">2. 范数保持</text>
+  <text class="t1" x="480" y="225" text-anchor="start" style="font-size:12px">旋转变换不改变向量长度: ||R·q|| = ||q||</text>
+  <text class="t1" x="480" y="245" text-anchor="start" style="font-size:12px">保证 TokenEmbedding 的语义信息不被位置编码破坏</text>
+
+  <text class="t1" x="480" y="275" text-anchor="start" style="font-weight:600">3. 长序列外推</text>
+  <text class="t1" x="480" y="295" text-anchor="start" style="font-size:12px">通过缩放频率 θ_i (NTK-aware), 可以将训练长度的</text>
+  <text class="t1" x="480" y="310" text-anchor="start" style="font-size:12px">模型扩展到 8× 甚至 32× 的上下文长度无需重训</text>
+
+  <!-- Bottom: Implementation -->
+  <rect class="box" x="30" y="320" width="840" height="100"/>
+  <text class="t2" x="450" y="345" text-anchor="middle">实现要点</text>
+
+  <g font-family="'JetBrains Mono','Fira Code',monospace" font-size="12">
+    <text class="t3" x="50" y="370" text-anchor="start">def apply_rope(q, k, pos):</text>
+    <text class="t1" x="70" y="390" text-anchor="start">freqs = 1.0 / (10000 ** (torch.arange(0, d, 2) / d))   # 频率序列</text>
+    <text class="t1" x="70" y="408" text-anchor="start">angles = pos[:, None] * freqs[None, :]                     # 位置 × 频率 = 旋转角</text>
+    <text class="t1" x="70" y="426" text-anchor="start">q_rot = q * cos(angles) + rotate_half(q) * sin(angles)    # 对每对维度施加旋转</text>
+    <text class="t1" x="70" y="444" text-anchor="start">k_rot = k * cos(angles) + rotate_half(k) * sin(angles)</text>
+  </g>
+
+  <!-- Bottom: comparison table -->
+  <rect class="box" x="30" y="440" width="840" height="120"/>
+  <text class="t2" x="450" y="465" text-anchor="middle">位置编码方案对比</text>
+  <g font-size="12">
+    <text class="t1" x="50" y="490" text-anchor="start" style="font-weight:700">Sinusoidal</text>
+    <text class="t1" x="170" y="490" text-anchor="start">加法注入, 固定不可学</text>
+    <text class="ts" x="450" y="490" text-anchor="start">通常需要配合 Learned PE 使用</text>
+
+    <text class="t1" x="50" y="510" text-anchor="start" style="font-weight:700">Learned PE</text>
+    <text class="t1" x="170" y="510" text-anchor="start">可学习绝对位置, GPT-2/3 使用</text>
+    <text class="ts" x="450" y="510" text-anchor="start">无法外推, 需要插值</text>
+
+    <text class="t1" x="50" y="530" text-anchor="start" style="font-weight:700;fill:#b35c22">RoPE (推荐)</text>
+    <text class="t1" x="170" y="530" text-anchor="start" style="fill:#b35c22">旋转编码, Llama/Qwen/DeepSeek 使用</text>
+    <text class="ts" x="450" y="530" text-anchor="start">天然支持外推, 相对位置, 范数保持</text>
+
+    <text class="t1" x="50" y="550" text-anchor="start" style="font-weight:700">ALiBi</text>
+    <text class="t1" x="170" y="550" text-anchor="start">线性偏置, BLOOM/MPT 使用</text>
+    <text class="ts" x="450" y="550" text-anchor="start">外推能力优秀, 但表达能力有限</text>
+  </g>
+</svg>

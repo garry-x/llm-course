@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 620" fill="none">
+  <defs>
+    <style>
+      text{font-family:system-ui,-apple-system,sans-serif}
+      .bg{fill:#fbf9f5}
+      .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
+      .b2{fill:#fdf5ed;stroke:#b35c22;stroke-width:2}
+      .b3{fill:#e8f0fe;stroke:#7baaf7;stroke-width:2}
+      .t1{fill:#5c554a;font-size:13px}
+      .t2{fill:#1c1c1c;font-size:15px;font-weight:700}
+      .t3{fill:#b35c22;font-size:12px;font-family:'JetBrains Mono','Fira Code',monospace}
+      .ts{fill:#9e968a;font-size:11px}
+      .arr{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
+      .arr-loop{stroke:#7baaf7;stroke-width:2;fill:none;stroke-dasharray:6 3;marker-end:url(#ahb)}
+      @media(prefers-color-scheme:dark){
+        .bg{fill:#1a1814}
+        .box{fill:#24221d;stroke:#504a40}
+        .b2{fill:#2a2018;stroke:#e08940}
+        .b3{fill:#1a2530;stroke:#7baaf7}
+        .t1{fill:#a09888}
+        .t2{fill:#ede8df}
+        .t3{fill:#e08940}
+        .ts{fill:#8a8278}
+      }
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
+    <marker id="ahb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#7baaf7"/></marker>
+  </defs>
+  <rect class="bg" width="920" height="620"/>
+
+  <text class="t2" x="460" y="28" text-anchor="middle" style="font-size:18px">LLM 训练循环</text>
+
+  <!-- Step 1: DataLoader -->
+  <rect class="box" x="50" y="45" width="240" height="62"/>
+  <text class="t2" x="170" y="68" text-anchor="middle">1. DataLoader</text>
+  <text class="t1" x="170" y="85" text-anchor="middle">token IDs → batch 采样</text>
+  <text class="t3" x="170" y="100" text-anchor="middle">x: (B,T) → y: shift(x,1)</text>
+
+  <line class="arr" x1="290" y1="76" x2="345" y2="76"/>
+
+  <!-- Step 2: Forward -->
+  <rect class="b2" x="350" y="45" width="240" height="62"/>
+  <text class="t2" x="470" y="68" text-anchor="middle">2. Forward Pass</text>
+  <text class="t1" x="470" y="85" text-anchor="middle">model(x) → logits</text>
+  <text class="t3" x="470" y="100" text-anchor="middle">CE loss = -log P(y|x)</text>
+
+  <line class="arr" x1="590" y1="76" x2="645" y2="76"/>
+
+  <!-- Step 3: Backward -->
+  <rect class="box" x="650" y="45" width="240" height="62"/>
+  <text class="t2" x="770" y="68" text-anchor="middle">3. Backward Pass</text>
+  <text class="t1" x="770" y="85" text-anchor="middle">loss.backward()</text>
+  <text class="t3" x="770" y="100" text-anchor="middle">计算所有参数的梯度</text>
+
+  <!-- Loop arrow from backward back to forward -->
+  <path class="arr-loop" d="M 770 107 Q 770 150 470 150 Q 170 150 170 107"/>
+
+  <!-- Step 4: Optimizer -->
+  <rect class="b3" x="190" y="165" width="560" height="62"/>
+  <text class="t2" x="470" y="188" text-anchor="middle" style="fill:#7baaf7">4. Optimizer Step</text>
+  <text class="t1" x="470" y="205" text-anchor="middle" style="fill:#7baaf7">optimizer.step() → optimizer.zero_grad()</text>
+  <text class="t3" x="470" y="222" text-anchor="middle" style="fill:#7baaf7">AdamW: m = β₁m + (1-β₁)gₜ,  v = β₂v + (1-β₂)gₜ²  →  θ -= η × m̂/(√v̂+ε) + λθ</text>
+
+  <line class="arr" x1="470" y1="227" x2="470" y2="255"/>
+
+  <!-- Step 5: Logging -->
+  <rect class="box" x="190" y="258" width="560" height="50"/>
+  <text class="t2" x="470" y="280" text-anchor="middle">5. Logging &amp; Checkpoint</text>
+  <text class="t3" x="470" y="300" text-anchor="middle">loss={loss:.4f}  ppl={exp(loss):.1f}  lr={scheduler.get_lr():.2e}  step={step}</text>
+
+  <!-- Loop arrow -->
+  <path class="arr-loop" d="M 750 283 Q 800 283 800 350 Q 800 390 470 390 Q 170 390 170 350 Q 110 310 110 76"/>
+
+  <!-- Details box -->
+  <rect class="box" x="50" y="400" width="390" height="200"/>
+  <text class="t2" x="245" y="422" text-anchor="middle">关键超参数</text>
+  <g font-size="13">
+    <text class="t1" x="65" y="448" text-anchor="start"><tspan font-weight="700">Learning Rate:</tspan> peak 3e-4, warmup 2000 steps, cosine decay to 3e-5</text>
+    <text class="t1" x="65" y="470" text-anchor="start"><tspan font-weight="700">Batch Size:</tspan> 512 sequences × 1024 tokens = 524K tokens/step</text>
+    <text class="t1" x="65" y="492" text-anchor="start"><tspan font-weight="700">Gradient Clip:</tspan> max_norm=1.0, 防止梯度爆炸</text>
+    <text class="t1" x="65" y="514" text-anchor="start"><tspan font-weight="700">Mixed Precision:</tspan> bf16 autocast, FP32 master weights</text>
+    <text class="t1" x="65" y="536" text-anchor="start"><tspan font-weight="700">Weight Decay:</tspan> 0.1 (仅对 weight, 不对 bias/norm)</text>
+    <text class="t1" x="65" y="558" text-anchor="start"><tspan font-weight="700">Steps:</tspan> ~100K-500K for small models, 1M+ for large ones</text>
+    <text class="t1" x="65" y="580" text-anchor="start"><tspan font-weight="700">Tokens:</tspan> Chinchilla: tokens ≈ 20 × params</text>
+  </g>
+
+  <!-- Optimizer comparison -->
+  <rect class="b2" x="460" y="400" width="430" height="200"/>
+  <text class="t2" x="675" y="422" text-anchor="middle">优化器演进</text>
+  <g font-size="13">
+    <text class="t1" x="480" y="450" text-anchor="start"><tspan font-weight="700">SGD+Momentum</tspan>  — 基础, 需要精细调参</text>
+    <text class="t1" x="480" y="472" text-anchor="start"><tspan font-weight="700">Adam</tspan>          — 自适应学习率, 动量+二阶矩</text>
+    <text class="t1" x="480" y="494" text-anchor="start" style="fill:#b35c22"><tspan font-weight="700">AdamW</tspan>         — 权重衰减解耦, LLM 训练标准</text>
+    <text class="t1" x="480" y="518" text-anchor="start" style="fill:#b35c22"><tspan font-weight="700">Muon (DeepSeek)</tspan> — 矩阵正交化, Newton-Schulz 迭代</text>
+    <text class="t1" x="480" y="542" text-anchor="start">替代 AdamW 的动量更新为矩阵正交化</text>
+    <text class="t1" x="480" y="562" text-anchor="start">配合 Q/K RMSNorm 抑制 logits 爆炸</text>
+    <text class="t1" x="480" y="582" text-anchor="start">DeepSeek-V4 首次在 1.6T MoE 规模部署</text>
+  </g>
+</svg>

@@ -199,16 +199,18 @@ body{
 
 /* ---- SVG Diagrams ---- */
 .svg-diagram{
-  display:block;max-width:100%;margin:16px auto;
-  border-radius:var(--radius-sm)
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;margin:16px 0;
+  box-shadow:var(--shadow-card);text-align:center
 }
+.svg-diagram img{display:block;max-width:100%;height:auto;margin:0 auto}
 .svg-diagram.light-only{display:block}
 .svg-diagram.dark-only{display:none}
 [data-theme="dark"] .svg-diagram.light-only{display:none}
 [data-theme="dark"] .svg-diagram.dark-only{display:block}
 .diagram-caption{
   text-align:center;font-size:.82rem;color:var(--text-secondary);
-  margin-top:6px;font-style:italic
+  margin-top:8px;margin-bottom:16px;font-style:italic
 }
 .math-box{
   background:var(--accent-light);border-left:3px solid var(--accent);

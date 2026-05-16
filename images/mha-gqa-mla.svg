@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 620" fill="none">
   <defs>
     <style>
+
       text{font-family:system-ui,-apple-system,sans-serif}
       .bg{fill:#fbf9f5}
       .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
@@ -12,16 +13,9 @@
       .head-q{fill:#7baaf7}
       .head-k{fill:#81c995}
       .head-v{fill:#f28b82}
-      .head-latent{fill:#e08940}
-      @media(prefers-color-scheme:dark){
-        .bg{fill:#1a1814}
-        .box{fill:#24221d;stroke:#504a40}
-        .b2{fill:#2a2018;stroke:#e08940}
-        .t1{fill:#a09888}
-        .t2{fill:#ede8df}
-        .t3{fill:#e08940}
-        .ts{fill:#8a8278}
+      
       }
+    
     </style>
   </defs>
   <rect class="bg" width="940" height="620"/>

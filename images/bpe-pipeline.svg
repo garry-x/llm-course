@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 520" fill="none">
   <defs>
     <style>
+
       text{font-family:system-ui,-apple-system,sans-serif}
       .bg{fill:#fbf9f5}
       .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
@@ -10,15 +11,9 @@
       .t1{fill:#5c554a;font-size:13px}
       .t2{fill:#1c1c1c;font-size:15px;font-weight:700}
       .t3{fill:#b35c22;font-size:13px;font-family:'JetBrains Mono','Fira Code',monospace}
-      @media(prefers-color-scheme:dark){
-        .bg{fill:#1a1814}
-        .box{fill:#24221d;stroke:#504a40}
-        .box-a{fill:#2a2018;stroke:#e08940}
-        .t1{fill:#a09888}
-        .t2{fill:#ede8df}
-        .t3{fill:#e08940}
-        .loop{stroke:#8a8278}
+      
       }
+    
     </style>
     <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
     <marker id="ahl" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#9e968a"/></marker>

@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 920" fill="none">
   <defs>
     <style>
+
       text{font-family:system-ui,-apple-system,sans-serif}
       .bg{fill:#fbf9f5}
       .b1{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
@@ -10,15 +11,9 @@
       .t3{fill:#b35c22;font-size:12px;font-family:'JetBrains Mono','Fira Code',monospace}
       .ts{fill:#9e968a;font-size:11px}
       .arr{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
-      @media(prefers-color-scheme:dark){
-        .bg{fill:#1a1814}
-        .b1{fill:#24221d;stroke:#504a40}
-        .b2{fill:#2a2018;stroke:#e08940}
-        .t1{fill:#a09888}
-        .t2{fill:#ede8df}
-        .t3{fill:#e08940}
-        .ts{fill:#8a8278}
+      
       }
+    
     </style>
     <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
   </defs>

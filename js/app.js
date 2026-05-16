@@ -91,7 +91,7 @@
     }
   }
 
-  // ---- Font size (small/medium/large) ----
+  // ---- Font size ----
   function setFontSize(size){
     document.documentElement.setAttribute('data-font', size);
     safeSet('llm-font', size);
@@ -111,6 +111,7 @@
   // ---- Exercise check (MC) ----
   function checkMC(btn, groupName){
     var exEl = btn.closest('.exercise');
+    if(!exEl) return;
     var fb = exEl.querySelector('.feedback');
     var correctAns = exEl.getAttribute('data-answer');
     var explain = exEl.getAttribute('data-explain')||'';
@@ -159,12 +160,22 @@
     });
   }
 
-  // ---- Mobile sidebar ----
+  // ---- Sidebar toggle (mobile + tablet tap) ----
   function initSidebarToggle(){
     var toggle = document.querySelector('.menu-toggle');
     var sidebar = document.getElementById('sidebar');
     if(!toggle||!sidebar) return;
-    toggle.addEventListener('click', function(){ sidebar.classList.toggle('open') });
+    toggle.addEventListener('click', function(e){
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+    });
+    // Tablet: tap sidebar to expand when collapsed
+    sidebar.addEventListener('click', function(e){
+      if(window.innerWidth <= 959 && window.innerWidth > 639 && !sidebar.classList.contains('open')){
+        sidebar.classList.add('expanded');
+        setTimeout(function(){ sidebar.classList.remove('expanded'); }, 3000);
+      }
+    });
   }
 
   // ---- TOC Generation ----
@@ -183,18 +194,24 @@
       }).join('') + '</ol>';
     var subtitle = chapter.querySelector('.reading-time');
     if(subtitle) subtitle.after(toc);
-    // Highlight current section on scroll
+    // Highlight on scroll (throttled via rAF)
     var tocLinks = toc.querySelectorAll('a');
+    var _tocRaf = false;
     window.addEventListener('scroll', function(){
-      var scrollY = window.scrollY + 120;
-      sections.forEach(function(s, i){
-        if(s.offsetTop <= scrollY && (!sections[i+1] || sections[i+1].offsetTop > scrollY)){
-          tocLinks.forEach(function(a){ a.classList.remove('toc-active') });
-          if(tocLinks[i]) tocLinks[i].classList.add('toc-active');
-        }
+      if(_tocRaf) return;
+      _tocRaf = true;
+      requestAnimationFrame(function(){
+        _tocRaf = false;
+        var scrollY = window.scrollY + 120;
+        sections.forEach(function(s, i){
+          if(s.offsetTop <= scrollY && (!sections[i+1] || sections[i+1].offsetTop > scrollY)){
+            tocLinks.forEach(function(a){ a.classList.remove('toc-active') });
+            if(tocLinks[i]) tocLinks[i].classList.add('toc-active');
+          }
+        });
       });
-    });
-    // Smooth scroll with offset
+    }, {passive: true});
+    // Smooth scroll
     tocLinks.forEach(function(a){
       a.addEventListener('click', function(e){
         e.preventDefault();
@@ -204,7 +221,16 @@
     });
   }
 
-  // ---- Code Copy Buttons ----
+  // ---- Code Copy (with HTTP fallback) ----
+  function fallbackCopy(text, cb, btnRef){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); if(cb) cb(); }
+    catch(e){ if(btnRef){ btnRef.innerHTML = '⚠'; setTimeout(function(){ btnRef.innerHTML = '📋'; }, 1500); } }
+    document.body.removeChild(ta);
+  }
+
   function initCodeCopy(){
     document.querySelectorAll('.code-block').forEach(function(block){
       var wrap = document.createElement('div');
@@ -218,28 +244,70 @@
       btn.addEventListener('click', function(){
         var text = block.textContent;
         if(text.endsWith('\n')) text = text.slice(0,-1);
-        navigator.clipboard.writeText(text).then(function(){
+        var done = function(){
           btn.classList.add('copied');
           btn.innerHTML = '✓';
           setTimeout(function(){ btn.classList.remove('copied'); btn.innerHTML = '📋'; }, 2000);
-        }).catch(function(){});
+        };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done).catch(function(){
+            fallbackCopy(text, done, btn);
+          });
+        } else {
+          fallbackCopy(text, done, btn);
+        }
       });
       wrap.appendChild(btn);
     });
   }
 
-  // ---- Reading Progress Bar ----
+  // ---- Reading Progress Bar (GPU-composited transform + rAF throttle) ----
+  var _barRaf = false;
   function initReadingBar(){
     var bar = document.createElement('div');
     bar.className = 'reading-bar';
     bar.id = 'reading-bar';
+    bar.style.transformOrigin = 'left';
+    bar.style.transform = 'scaleX(0)';
     document.body.appendChild(bar);
     window.addEventListener('scroll', function(){
-      var scrollH = document.documentElement.scrollHeight - window.innerHeight;
-      if(scrollH <= 0) return;
-      var pct = Math.min(100, Math.round(window.scrollY / scrollH * 100));
-      bar.style.width = pct + '%';
+      if(_barRaf) return;
+      _barRaf = true;
+      requestAnimationFrame(function(){
+        _barRaf = false;
+        var scrollH = document.documentElement.scrollHeight - window.innerHeight;
+        if(scrollH <= 0) return;
+        bar.style.transform = 'scaleX(' + Math.min(1, window.scrollY / scrollH) + ')';
+      });
+    }, {passive: true});
+  }
+
+  // ---- Search ----
+  var searchIdx = [];
+  function buildSearchIdx(){
+    CHAPTERS.forEach(function(ch){
+      searchIdx.push({id:ch.id, file:ch.file, title:ch.title, desc:ch.desc});
     });
+  }
+  function handleSearch(val){
+    var box = document.getElementById('search-results');
+    if(!box) return;
+    if(!val || val.length < 2){ box.style.display='none'; box.innerHTML=''; return; }
+    var q = val.toLowerCase();
+    var matches = searchIdx.filter(function(item){
+      return item.title.toLowerCase().indexOf(q)>=0 || item.desc.toLowerCase().indexOf(q)>=0;
+    });
+    if(matches.length===0){
+      box.style.display='block';
+      box.innerHTML = '<div style="padding:6px 8px;opacity:.5;font-size:.72rem">未找到匹配章节</div>';
+    } else {
+      box.style.display='block';
+      box.innerHTML = matches.map(function(m){
+        return '<a href="'+m.file+'" style="display:block;padding:6px 8px;color:var(--sidebar-text);text-decoration:none;border-radius:4px;font-size:.72rem"'+
+          ' onmouseover="this.style.background=\'rgba(255,255,255,.08)\'" onmouseout="this.style.background=\'transparent\'">'+
+          '<span style="color:var(--accent);font-weight:600">Ch'+m.id+'</span> '+m.title+'</a>';
+      }).join('');
+    }
   }
 
   // ---- Init ----
@@ -254,18 +322,22 @@
     initTOC();
     initCodeCopy();
     initReadingBar();
-    // KaTeX — render data-expr elements with full config
+    buildSearchIdx();
+    // Bind search
+    var searchBox = document.getElementById('search-box');
+    if(searchBox) searchBox.addEventListener('input', function(){ handleSearch(this.value); });
+    // KaTeX
     if(window.katex){
       var macros = { '\\parallel': '\\mathrel{/\\!\\!/}' };
       document.querySelectorAll('.katex-inline').forEach(function(el){
         try{ katex.render(el.getAttribute('data-expr'), el, {throwOnError:true, strict:false, macros:macros, trust:true}) }
-        catch(e){ console.warn('KaTeX inline error:', el.getAttribute('data-expr'), e.message); el.textContent=el.getAttribute('data-expr'); el.style.color='#cc4444'; }
+        catch(e){ console.warn('KaTeX inline:', el.getAttribute('data-expr'), e.message); el.textContent=el.getAttribute('data-expr'); el.style.color='#cc4444'; }
       });
       document.querySelectorAll('.katex:not(.katex-inline)').forEach(function(el){
         var expr = el.getAttribute('data-expr');
         if(!expr) return;
         try{ katex.render(expr, el, {displayMode:true, throwOnError:true, strict:false, macros:macros, trust:true}) }
-        catch(e){ console.warn('KaTeX display error:', expr, e.message); el.textContent=expr; el.style.color='#cc4444'; }
+        catch(e){ console.warn('KaTeX display:', expr, e.message); el.textContent=expr; el.style.color='#cc4444'; }
       });
     }
   }

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第3章 单头自注意力 — LLM 深度学习</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-ch="3">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>从代码出发，构建大语言模型</p>
+  </div>
+  <div class="sidebar-progress">
+    <span>学习进度: <strong id="progress-text">0 / 10</strong></span>
+    <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+  </div>
+  <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第3章 单头自注意力</h2>
+  <p class="subtitle">实现 Scaled Dot-Product Attention——LLM 的核心计算</p>
+  <div class="reading-time">⏱ 预计阅读: 45 分钟 · 10 小节 · 5 道练习</div>
+
+  <div class="font-controls">
+    <span>字号:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  </div>
+
+  <!-- 3.1 -->
+  <section class="card" id="s3-1">
+    <h3>3.1 为什么需要注意力？</h3>
+    <p>在 Transformer 出现之前，序列建模的主要工具是 <strong>RNN/LSTM</strong>。它们的工作原理可以概括为"迭代式压缩"：逐个 token 读取输入，将"已读到的全部信息"压缩到一个固定维度的隐状态 <span class="katex-inline" data-expr="\mathbf{h}_t"></span> 中：</p>
+    <div class="katex" data-expr="\mathbf{h}_t = \text{RNN}(\mathbf{h}_{t-1}, \mathbf{x}_t)"></div>
+    <p>这种设计有两个根本性问题：</p>
+    <ul>
+      <li><strong>顺序计算瓶颈：</strong>第 <span class="katex-inline" data-expr="t"></span> 步必须等第 <span class="katex-inline" data-expr="t-1"></span> 步完成才能开始。无法并行化训练，序列越长越慢。</li>
+      <li><strong>长程依赖困境：</strong>隐状态是一个"信息漏斗"——当信息从位置 1 传到位置 1000 时，中间经历了 999 次非线性变换的"挤压"。梯度要么消失（Vanishing Gradient）要么爆炸（Exploding Gradient），导致模型几乎无法捕捉远程依赖。LSTM 和 GRU 用门控机制做了缓解，但并未从根本上解决问题。</li>
+    </ul>
+    <p>直观想象一下：你读一篇 1000 字的文章来回答一个涉及开头句的问题。RNN 需要从头读到尾，"记忆"要在千步压缩中幸存；而注意力机制让你<strong>直接"回看"开头</strong>，用检索代替记忆。</p>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>注意力本质：</strong>不是记忆，而是<strong>检索</strong>。每个位置主动从所有位置中查询相关信息，用"软对齐"（soft alignment）的方式聚合全局信息。这避开了顺序压缩的根本缺陷——信息不经过中间层挤压，直接被提取。</div>
+    </div>
+  </section>
+
+  <!-- 3.2 -->
+  <section class="card" id="s3-2">
+    <h3>3.2 注意力直觉：查询、匹配、聚合</h3>
+    <p>Scaled Dot-Product Attention 可以用一个非常直观的三步流程来理解：</p>
+    <p><strong>第一步：查询（Query）——"我想找什么？"</strong></p>
+    <p>序列中每个 token 都会生成一个"问题向量" <span class="katex-inline" data-expr="\mathbf{q}_i"></span>，表示"我在这个位置上需要什么信息"。</p>
+    <p><strong>第二步：匹配（Match）——"谁有我要的信息？"</strong></p>
+    <p>每个 token 也生成一个"标签向量" <span class="katex-inline" data-expr="\mathbf{k}_j"></span>，表示"我有什么信息可以提供"。用 <span class="katex-inline" data-expr="\mathbf{q}_i \cdot \mathbf{k}_j"></span> 衡量匹配程度 → 这就是<strong>注意力分数</strong>。</p>
+    <p><strong>第三步：聚合（Aggregate）——"把信息拿过来"</strong></p>
+    <p>将匹配分数通过 softmax 归一化到概率分布，然后用这个分布对所有位置携带的"内容向量" <span class="katex-inline" data-expr="\mathbf{v}_j"></span> 做加权平均：</p>
+    <div class="katex" data-expr="\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}"></div>
+    <p>这个公式就是 Transformer <strong>一切魔力的源头</strong>。</p>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>为什么叫"自"注意力（Self-Attention）？</strong>因为 <span class="katex-inline" data-expr="\mathbf{Q},\mathbf{K},\mathbf{V}"></span> 都来自<strong>同一个</strong>输入序列 <span class="katex-inline" data-expr="\mathbf{X}"></span>——每个 token 在<strong>自己和自己之间</strong>做匹配。而在 Encoder-Decoder Attention 中，Q 来自解码器，K、V 来自编码器，那是"交叉注意力"。</div>
+    </div>
+  </section>
+
+  <!-- 3.3 -->
+  <section class="card" id="s3-3">
+    <h3>3.3 动手：QKV 线性投影</h3>
+    <p>在实现完整注意力之前，我们先实现三个线性投影。每个 token 的嵌入向量 <span class="katex-inline" data-expr="\mathbf{x}_i \in \mathbb{R}^{d_{\text{model}}}"></span> 通过三个不同的权重矩阵投影到查询、键、值空间：</p>
+    <div class="katex" data-expr="\mathbf{Q} = \mathbf{X}W_Q^\top, \quad \mathbf{K} = \mathbf{X}W_K^\top, \quad \mathbf{V} = \mathbf{X}W_V^\top"></div>
+    <p>其中 <span class="katex-inline" data-expr="W_Q, W_K, W_V \in \mathbb{R}^{d_{\text{model}} \times d_k}"></span>，<span class="katex-inline" data-expr="d_k"></span> 是注意力头维度（通常 <span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_{\text{heads}}"></span>）。</p>
+    <div class="code-block" data-lang="python">
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class QKVProjection(nn.Module):
+    """Q, K, V 线性投影层。"""
+
+    def __init__(self, d_model: int, d_k: int):
+        super().__init__()
+        self.W_q = nn.Linear(d_model, d_k, bias=False)
+        self.W_k = nn.Linear(d_model, d_k, bias=False)
+        self.W_v = nn.Linear(d_model, d_k, bias=False)
+
+    def forward(self, x: torch.Tensor):
+        """
+        x: (batch, seq_len, d_model)
+        返回: q, k, v 各 (batch, seq_len, d_k)
+        """
+        q = self.W_q(x)
+        k = self.W_k(x)
+        v = self.W_v(x)
+        return q, k, v
+
+# 例: d_model=768, d_k=64 for 12 头的多头注意力
+proj = QKVProjection(d_model=768, d_k=64)
+x = torch.randn(2, 16, 768)
+q, k, v = proj(x)
+print(f"Q: {q.shape}, K: {k.shape}, V: {v.shape}")</div>
+    <p>输出：</p>
+    <div class="code-block" data-lang="text">
+Q: (2, 16, 64), K: (2, 16, 64), V: (2, 16, 64)</div>
+    <p>每个投影矩阵的形状都是 <span class="katex-inline" data-expr="d_{\text{model}} \times d_k"></span>，参数量为 <span class="katex-inline" data-expr="3 \times d_{\text{model}} \times d_k"></span>。在 GPT-2 124M 中，<span class="katex-inline" data-expr="d_{\text{model}}=768, d_k=64"></span>，所以 QKV 投影共 <span class="katex-inline" data-expr="3 \times 768 \times 64 = 147,456"></span> 参数——注意这只是<strong>单头</strong>的参数；12 个头合起来将乘以 12。</p>
+    <p>注意 <code>bias=False</code> 这个细节——GPT-2 和 Llama 系列的注意力投影均不使用偏置。原因是后续的 LayerNorm 已经处理了均值偏移，额外的偏置反而增加了不必要的参数量，且实验表明去掉偏置不影响模型质量。</p>
+  </section>
+
+  <!-- 3.4 -->
+  <section class="card" id="s3-4">
+    <h3>3.4 动手：Scaled Dot-Product Attention</h3>
+    <p>现在我们实现完整的单头缩放点积注意力。整个计算只有不到 10 行核心代码：</p>
+    <div class="code-block" data-lang="python">
+class ScaledDotProductAttention(nn.Module):
+    """单头缩放点积注意力。"""
+
+    def __init__(self, d_k: int, dropout: float = 0.0):
+        super().__init__()
+        self.d_k = d_k
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
+                mask: torch.Tensor = None):
+        """
+        q, k, v: (batch, seq_len, d_k)
+        mask:    (batch, 1, seq_len) 或 (batch, seq_len, seq_len) — 可选
+        返回: (batch, seq_len, d_k), 注意力权重 (batch, seq_len, seq_len)
+        """
+        # 1. 缩放点积: 计算注意力分数
+        scores = torch.matmul(q, k.transpose(-2, -1))   # (b, seq, seq)
+        scores = scores / (self.d_k ** 0.5)              # 缩放: 除以 √d_k
+
+        # 2. 应用掩码（可选）— 将掩码位置设为 -inf
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        # 3. Softmax 归一化 → 注意力权重
+        attn_weights = F.softmax(scores, dim=-1)         # (b, seq, seq)
+
+        # 4. Dropout
+        attn_weights = self.dropout(attn_weights)
+
+        # 5. 加权聚合: 用权重对 V 加权求和
+        output = torch.matmul(attn_weights, v)           # (b, seq, d_k)
+
+        return output, attn_weights
+
+# 使用示例
+d_k = 64
+batch, seq_len = 2, 16
+q = torch.randn(batch, seq_len, d_k)
+k = torch.randn(batch, seq_len, d_k)
+v = torch.randn(batch, seq_len, d_k)
+
+attn = ScaledDotProductAttention(d_k)
+out, weights = attn(q, k, v)
+print(f"输出: {out.shape}")       # (2, 16, 64)
+print(f"注意力权重: {weights.shape}")  # (2, 16, 16)
+print(f"第 0 个样本的注意力矩阵:\n{weights[0]}")</div>
+    <p>这五步——<strong>点积 → 缩放 → 掩码 → softmax → 加权聚合</strong>——就是整个注意力机制的完整计算。让我们逐行解析：</p>
+    <ul>
+      <li><code>torch.matmul(q, k.transpose(-2, -1))</code>：每对 <span class="katex-inline" data-expr="(i,j)"></span> 的点积构成分数矩阵 <span class="katex-inline" data-expr="S_{ij} = q_i \cdot k_j"></span>。</li>
+      <li><code>scores / sqrt(d_k)</code>：除以 <span class="katex-inline" data-expr="\sqrt{d_k}"></span> 防止点积过大（详见 3.5 节）。</li>
+      <li><code>masked_fill(mask == 0, -inf)</code>：将不需要的位置设为 <span class="katex-inline" data-expr="-\infty"></span>，这样 softmax 后这些位置的权重为 0。</li>
+      <li><code>F.softmax(scores, dim=-1)</code>：对每个 query，将所有 key 的分数归一化为概率分布。</li>
+      <li><code>matmul(attn_weights, v)</code>：用注意力权重对 value 做加权平均——这是"信息聚合"步骤。</li>
+    </ul>
+    <p>注意 <code>dropout</code> 应用在 softmax <strong>之后</strong>、加权聚合<strong>之前</strong>——这相当于随机丢弃一些注意力连接，起到正则化作用，防止某些注意力模式过度固化。原版 Transformer 中 dropout = 0.1。</p>
+  </section>
+
+  <!-- 3.5 -->
+  <section class="card" id="s3-5">
+    <h3>3.5 为什么除以 √dₖ？</h3>
+    <p><span class="katex-inline" data-expr="\sqrt{d_k}"></span> 这个缩放因子看似是一个小细节，但它对训练的稳定性至关重要。原因如下：</p>
+    <p>假设 <span class="katex-inline" data-expr="\mathbf{q}_i, \mathbf{k}_j \sim \mathcal{N}(0, 1)"></span>（均值为 0、方差为 1 的独立同分布随机变量），那么点积的均值和方差为：</p>
+    <div class="katex" data-expr="\mathbb{E}[q_i \cdot k_j] = 0, \quad \text{Var}(q_i \cdot k_j) = d_k"></div>
+    <p>点积的方差随着 <span class="katex-inline" data-expr="d_k"></span> 线性增长！当 <span class="katex-inline" data-expr="d_k = 64"></span> 时，点积的标准差为 8。当 <span class="katex-inline" data-expr="d_k = 128"></span> 时，标准差为 11.3。这意味着分数会扩散到整个实数范围。</p>
+    <p>问题出在后续的 softmax 上。Softmax 对指数级大的输入非常敏感：</p>
+    <div class="katex" data-expr="\text{softmax}(x_i) = \frac{e^{x_i}}{\sum_j e^{x_j}}"></div>
+    <p>如果 <span class="katex-inline" data-expr="x_i"></span> 的绝对值很大，<span class="katex-inline" data-expr="e^{x_i}"></span> 会变得极大（或极小）。假设 <span class="katex-inline" data-expr="d_k = 128"></span> 且某个 token 恰好与自身匹配得分达到 11.3×2 = 22.6（2 个标准差），<span class="katex-inline" data-expr="e^{22.6} \approx 6.5 \times 10^9"></span>——这个 token 的 softmax 输出将接近 1，其他所有 token 接近 0。这就是<strong>"注意力坍缩"</strong>：</p>
+    <ul>
+      <li>梯度变得极小——接近 1 的位置 softmax 导数接近 0</li>
+      <li>每个 token 只关注自己（或某个单一 token），失去了全局信息聚合能力</li>
+      <li>训练初期就陷入尖锐的注意力模式，难以恢复</li>
+    </ul>
+    <p>经过 <span class="katex-inline" data-expr="\sqrt{d_k}"></span> 缩放后：</p>
+    <div class="katex" data-expr="\text{Var}\!\left(\frac{q_i \cdot k_j}{\sqrt{d_k}}\right) = 1"></div>
+    <p>分数稳定在 <span class="katex-inline" data-expr="\mathcal{N}(0,1)"></span> 量级，softmax 不会进入饱和区，梯度保持良好。这就是<strong>缩放点积注意力（Scaled Dot-Product Attention）</strong>中"Scaled"的含义。</p>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>数学验证：</strong>如果 <span class="katex-inline" data-expr="X \sim \mathcal{N}(0,1)"></span>，<span class="katex-inline" data-expr="e^X"></span> 的对数在 <span class="katex-inline" data-expr="X \approx 2.5"></span> 左右增长已经很快。除以 <span class="katex-inline" data-expr="\sqrt{d_k}"></span> 确保 <span class="katex-inline" data-expr="X"></span> 的 99.7% 落在 <span class="katex-inline" data-expr="[-3, 3]"></span> 区间，softmax 不会进入极端饱和区。</div>
+    </div>
+  </section>
+
+  <!-- 3.6 -->
+  <section class="card" id="s3-6">
+    <h3>3.6 Softmax 温度与梯度</h3>
+    <p>与 <span class="katex-inline" data-expr="\sqrt{d_k}}"></span> 缩放相关的一个概念是 <strong>温度（Temperature）</strong>。在注意力计算中引入温度参数 <span class="katex-inline" data-expr="\tau"></span>：</p>
+    <div class="katex" data-expr="\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\tau}\right)\mathbf{V}"></div>
+    <p>温度 <span class="katex-inline" data-expr="\tau"></span> 控制 softmax 输出的"尖锐程度"：</p>
+    <ul>
+      <li><span class="katex-inline" data-expr="\tau \to 0"></span>：softmax 退化为 one-hot（argmax 的软近似）——只关注最相关的 token</li>
+      <li><span class="katex-inline" data-expr="\tau \to \infty"></span>：softmax 退化为均匀分布——所有 token 被同等对待</li>
+      <li><span class="katex-inline" data-expr="\tau = \sqrt{d_k}"></span>：标准缩放——保持梯度良好的平衡点</li>
+    </ul>
+    <p>在训练中，温度固定为 <span class="katex-inline" data-expr="\sqrt{d_k}"></span>。但在推理时（第 8 章），我们可以调节生成采样时的温度来控制文本的创造力。</p>
+    <div class="code-block" data-lang="python">
+def attention_with_temperature(q, k, v, temp=1.0, mask=None):
+    """带可调温度的注意力——用于演示温度对分布的影响。"""
+    d_k = q.size(-1)
+    scores = torch.matmul(q, k.transpose(-2, -1)) / temp
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+    attn_weights = F.softmax(scores, dim=-1)
+    return torch.matmul(attn_weights, v), attn_weights
+
+# 不同温度下注意力权重分布的熵
+d_k = 64
+q = torch.randn(1, 1, d_k)
+k = torch.randn(1, 5, d_k)
+for temp in [0.1, 1.0, 8.0]:
+    _, weights = attention_with_temperature(q, k, temp=temp * (d_k ** 0.5))
+    entropy = -(weights * torch.log(weights + 1e-8)).sum(dim=-1).mean()
+    print(f"temp={temp:.1f} | 分布熵: {entropy.item():.3f}")</div>
+    <p>输出显示：低温时熵低（尖锐分布），高温时熵高（均匀分布）。<span class="katex-inline" data-expr="\sqrt{d_k}}"></span> 缩放的本质就是为注意力设置一个"恰当的温度"，使 softmax 既不坍缩也不过度平滑。</p>
+    <p>从梯度角度看，softmax 的雅可比矩阵为：</p>
+    <div class="katex" data-expr="\frac{\partial \text{softmax}(\mathbf{z})_i}{\partial z_j} = p_i(\delta_{ij} - p_j)"></div>
+    <p>其中 <span class="katex-inline" data-expr="p_i = \text{softmax}(\mathbf{z})_i"></span>。如果 <span class="katex-inline" data-expr="p_i \approx 1"></span>（坍缩），梯度会接近 0——模型学不动了。缩放确保 <span class="katex-inline" data-expr="p_i"></span> 保持在中间范围，梯度信号良好。</p>
+  </section>
+
+  <!-- 3.7 -->
+  <section class="card" id="s3-7">
+    <h3>3.7 动手：Causal Mask</h3>
+    <p>在 GPT 这样的<strong>自回归（Autoregressive）</strong>语言模型中，每个 token 只能"看到"它之前的 token（包括自己），而不能偷看未来的 token。这就是 <strong>Causal Mask（因果掩码）</strong>——一个上三角矩阵：</p>
+    <div class="code-block" data-lang="python">
+def create_causal_mask(seq_len: int, device: str = 'cpu'):
+    """
+    创建因果掩码: 上三角全为 0 (被掩码), 下三角 (包括对角线) 为 1 (可见)
+
+    返回: (1, 1, seq_len, seq_len)  可广播到 (batch, n_heads, seq_len, seq_len)
+    """
+    mask = torch.tril(torch.ones(seq_len, seq_len, device=device))
+    # mask[i,j] = 1 ⇔ j ≤ i (token i 可以看到 token j)
+    return mask.unsqueeze(0).unsqueeze(0)  # (1, 1, seq_len, seq_len)
+
+seq_len = 4
+mask = create_causal_mask(seq_len)
+print(f"Causal Mask ({seq_len}×{seq_len}):\n{mask[0,0]}")
+
+# 在注意力中使用
+def causal_attention(q, k, v):
+    d_k = q.size(-1)
+    scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
+    mask = create_causal_mask(q.size(-2), q.device)
+    scores = scores.masked_fill(mask == 0, float('-inf'))
+    return F.softmax(scores, dim=-1) @ v
+
+q = k = v = torch.randn(1, 4, 64)
+out = causal_attention(q, k, v)
+print(f"Causal attention 输出: {out.shape}")</div>
+    <p>输出：</p>
+    <div class="code-block" data-lang="text">
+Causal Mask (4×4):
+tensor([[1., 0., 0., 0.],
+        [1., 1., 0., 0.],
+        [1., 1., 1., 0.],
+        [1., 1., 1., 1.]])
+Causal attention 输出: (1, 4, 64)</div>
+    <p><strong>关键观察：</strong></p>
+    <ul>
+      <li>第 0 行：<code>[1,0,0,0]</code>——第一个 token 只能看自己</li>
+      <li>第 1 行：<code>[1,1,0,0]</code>——第二个 token 可以看前两个</li>
+      <li>第 3 行：<code>[1,1,1,1]</code>——最后一个 token 可以看全部</li>
+    </ul>
+    <p>这是自回归生成的核心约束——每个位置的输出只依赖于它之前（包括它自己）的 token。这也是为什么 GPT 训练不需要标注数据——<strong>文本本身就是标签</strong>，每个 token 的任务是预测它<strong>后面</strong>那个 token。</p>
+    <div class="info-box warn">
+      <span class="icon">⚠️</span>
+      <div><strong>常见的困惑：</strong>在训练时我们同时输入整个序列，但 causal mask 确保位置 <span class="katex-inline" data-expr="i"></span> 的输出 <span class="katex-inline" data-expr="o_i"></span> 不会"看到"位置 <span class="katex-inline" data-expr="i+1"></span> 的输入。这就是所谓的"并行训练 + 自回归约束"——我们利用因果掩码在单次前向传播中完成所有位置的预测，同时保持自回归的正确性。</div>
+    </div>
+  </section>
+
+  <!-- 3.8 -->
+  <section class="card" id="s3-8">
+    <h3>3.8 注意力权重可视化</h3>
+    <p>注意力权重矩阵 <span class="katex-inline" data-expr="A \in \mathbb{R}^{L \times L}"></span> 是非常有用的<strong>可解释性工具</strong>。每一行 <span class="katex-inline" data-expr="A_{i,:}"></span> 表示位置 <span class="katex-inline" data-expr="i"></span> 如何分配对各个位置的注意力：</p>
+    <div class="code-block" data-lang="python">
+# 假设训练好的模型，某层的注意力权重
+# 展示一个长度为 20 的句子的注意力模式
+sentence = ["<BOS>", "大", "语", "言", "模", "型", "深", "度", "学", "习",
+            "课", "程", "从", "零", "开", "始", "构", "建", "GPT", "<EOS>"]
+seq_len = len(sentence)
+
+# 模拟训练好的注意力权重（实际应来自真实模型）
+attn_weights = torch.softmax(
+    torch.randn(seq_len, seq_len) * 0.5 +
+    torch.eye(seq_len) * 2.0 +        # 对角线更强（自己关注自己）
+    torch.tril(torch.ones(seq_len, seq_len), -1) * -1e9,  # 因果掩码
+    dim=-1
+)
+
+# 分析注意力模式
+for i in [0, 5, 10, 15]:
+    top_k = attn_weights[i].topk(3)
+    top_indices = top_k.indices.tolist()
+    top_tokens = [sentence[idx] for idx in top_indices]
+    print(f"位置 {i} ({sentence[i]}) 最关注: {list(zip(top_tokens, [f'{w:.2f}' for w in top_k.values.tolist()]))}")</div>
+    <p>在实际模型中，注意力权重通常显示出几种典型的模式：</p>
+    <ul>
+      <li><strong>对角线主导：</strong>每个 token 最关注自己（占 30-60% 的权重）</li>
+      <li><strong>邻近偏好：</strong>相邻的几个 token 获得更多关注</li>
+      <li><strong>句法对齐：</strong>动词关注它的主语/宾语，代词关注它指代的名词</li>
+      <li><strong>特殊 token：</strong><code>&lt;BOS&gt;</code> 或 <code>&lt;EOS&gt;</code> 往往被广泛关注</li>
+    </ul>
+    <p>注意力可视化在研究模型中非常常见——通过观察注意力头关注的位置，研究人员可以判断模型是否学会了句法结构、共指消解等语言能力。例如，"it"的注意力会集中在其指代的名词上，即使两者相隔数十个位置——这正是注意力机制解决长程依赖的直观证据。</p>
+  </section>
+
+  <!-- 3.9 -->
+  <section class="card" id="s3-9">
+    <h3>3.9 O(n²) 挑战与 DeepSeek MLA 预告</h3>
+    <p>标准的 Full Attention 有一个致命弱点：<strong>计算复杂度是 O(n²)</strong>，其中 <span class="katex-inline" data-expr="n"></span> 是序列长度。为什么？</p>
+    <div class="katex" data-expr="\text{scores} = \mathbf{Q}\mathbf{K}^\top_{\,n \times d_k \;\; d_k \times n} \in \mathbb{R}^{n \times n}"></div>
+    <p>Q 和 K 的矩阵乘法产生一个 <span class="katex-inline" data-expr="n \times n"></span> 的分数矩阵——每个位置与所有位置都要计算匹配度。当 <span class="katex-inline" data-expr="n = 4096"></span> 时，注意力矩阵约 1600 万元素；当 <span class="katex-inline" data-expr="n = 128K"></span> 时，约 160 亿——这已经远超 GPU 显存的承载能力。</p>
+    <p>这对 LLM 意味着什么？</p>
+    <ul>
+      <li><strong>长上下文成本高昂：</strong>128K 上下文的模型，注意力计算可能占推理时间的 70% 以上</li>
+      <li><strong>KV Cache 膨胀：</strong>推理时需要缓存每个 token 的 K 和 V 向量，序列越长缓存越大</li>
+      <li><strong>训练受限：</strong>O(n²) 的内存使长序列训练在现有硬件上极其昂贵</li>
+    </ul>
+    <p><strong>应对策略百花齐放：</strong></p>
+    <ul>
+      <li><strong>稀疏注意力（Sparse Attention）：</strong>只计算部分位置的注意力（如 Sliding Window、Strided Pattern）</li>
+      <li><strong>线性注意力（Linear Attention）：</strong>用核技巧将复杂度降到 O(n)</li>
+      <li><strong>Flash Attention（第 4 章详述）：</strong>不改变数学结果，但通过 IO-aware tiling 大幅减少显存读写</li>
+      <li><strong>DeepSeek MLA（Multi-head Latent Attention）：</strong>对 KV Cache 进行<strong>低秩压缩</strong>，将每个 token 的 KV 维度从 <span class="katex-inline" data-expr="2 \times n_{\text{heads}} \times d_k"></span> 压缩到 <span class="katex-inline" data-expr="d_c \ll n_{\text{heads}} \times d_k"></span>——这是第 4 章的压轴内容</li>
+    </ul>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>线索预告：</strong>标准 MHA 中，KV Cache 占用 = <span class="katex-inline" data-expr="2 \times L \times n_{\text{heads}} \times d_k \times \text{bytes}}"></span>。以 70B 模型为例（<span class="katex-inline" data-expr="n_{\text{heads}}=64, d_k=128, L=4096"></span>），单序列 KV Cache 约 512 MB。而 MLA 可以将这个值压缩 4-8 倍，是 DeepSeek-V2/V3 支持 128K 上下文的关键技术之一。</div>
+    </div>
+  </section>
+
+  <!-- 3.10 -->
+  <section class="card" id="s3-10">
+    <h3>3.10 本章总结</h3>
+    <p>你已经实现了：</p>
+    <ul>
+      <li>✅ 理解了注意力机制的三步范式——查询、匹配、聚合</li>
+      <li>✅ 实现了 QKV 线性投影（~15 行）</li>
+      <li>✅ 实现了完整的 Scaled Dot-Product Attention（~20 行）</li>
+      <li>✅ 理解了为什么除以 <span class="katex-inline" data-expr="\sqrt{d_k}"></span>——缩放保持 softmax 梯度稳定</li>
+      <li>✅ 实现了 Causal Mask——自回归生成的关键约束（~5 行）</li>
+      <li>✅ 了解了注意力权重可视化的可解释性价值</li>
+      <li>✅ 认识了 O(n²) 复杂度挑战和 MLA 的解决思路</li>
+    </ul>
+    <p>单头注意力是所有 Transformer 模型的基本计算单元。第 4 章我们将把它拓展为多头注意力（Multi-Head Attention），并深入探讨从 MHA 到 GQA 再到 DeepSeek MLA 的演进之路——每一步都是为了在模型质量、推理速度和显存约束之间寻找更优的平衡点。</p>
+    <div class="info-box key">
+      <span class="icon">📚</span>
+      <div><strong>延伸阅读：</strong>
+        <a href="https://arxiv.org/abs/1706.03762" target="_blank">Vaswani et al. (2017) — Attention Is All You Need（§3.2.1 Scaled Dot-Product Attention）</a> ·
+        <a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html" target="_blank">The Annotated Transformer — Harvard NLP</a> ·
+        <a href="https://arxiv.org/abs/2205.14135" target="_blank">FlashAttention — Dao et al. (2022)</a> ·
+        <a href="https://arxiv.org/abs/1908.04626" target="_blank">Olsson et al. (2022) — In-context Learning and Induction Heads（注意力模式分析）</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 练习 -->
+  <section class="card">
+    <h3>📝 练习巩固</h3>
+
+    <div class="exercise" data-answer="2" data-explain="缩放点积注意力的公式是: softmax(Q·K^T / sqrt(d_k))·V。核心流程是：计算 QK 相似度 → 缩放 → softmax 归一化 → 加权聚合 V。">
+      <h4>练习 1：标准缩放点积注意力公式中，哪一步负责"确定每个 token 应该关注多少其他 token"？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q1" value="0"> A. QK^T 点积</label>
+        <label><input type="radio" name="q1" value="1"> B. 除以 √d_k</label>
+        <label><input type="radio" name="q1" value="2"> C. Softmax 归一化</label>
+        <label><input type="radio" name="q1" value="3"> D. 乘以 V 的加权平均</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="0" data-explain="点积的方差等于 d_k（因为每个元素方差为1，d_k 个独立变量求和）。除以 √d_k 后方差恢复为 1，防止 softmax 进入极端饱和区。">
+      <h4>练习 2：为什么标准注意力要除以 √d_k？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q2" value="0"> A. 点积的方差随 d_k 增长，缩放使 softmax 梯度稳定</label>
+        <label><input type="radio" name="q2" value="1"> B. 为了使输出均值归一化到 0</label>
+        <label><input type="radio" name="q2" value="2"> C. 为了与 LayerNorm 保持一致</label>
+        <label><input type="radio" name="q2" value="3"> D. 为了减少计算量</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="1" data-explain="Causal Mask 是一个下三角矩阵（包括对角线），确保位置 i 只能看到位置 ≤ i 的 token。这是在自回归模型中防止未来信息泄漏的关键机制。">
+      <h4>练习 3：因果掩码（Causal Mask）的形状和作用是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q3" value="0"> A. 上三角矩阵，让每个 token 关注后面的 token</label>
+        <label><input type="radio" name="q3" value="1"> B. 下三角矩阵，让每个 token 只能看到前面的 token</label>
+        <label><input type="radio" name="q3" value="2"> C. 对角矩阵，让每个 token 只看自己</label>
+        <label><input type="radio" name="q3" value="3"> D. 随机稀疏矩阵，降低计算量</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="3" data-explain="标准 Full Attention 的时间复杂度是 O(n² · d_k)，因为 Q·K^T 计算得到一个 n × n 的分数矩阵，需要对每对位置计算点积。这是长序列推理的主要瓶颈。">
+      <h4>练习 4：标准 Full Self-Attention 的时间复杂度是？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q4" value="0"> A. O(n)</label>
+        <label><input type="radio" name="q4" value="1"> B. O(n log n)</label>
+        <label><input type="radio" name="q4" value="2"> C. O(n · d_k)</label>
+        <label><input type="radio" name="q4" value="3"> D. O(n² · d_k)</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="0" data-explain="RNN 的顺序计算和长程梯度消失是核心痛点。注意力机制通过"检索式"全局信息聚合解决了这两个问题——所有位置并行计算，信息直接传递不经过中间压缩。">
+      <h4>练习 5：相比 RNN/LSTM，注意力机制解决的两个最核心问题是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q5" value="0"> A. 顺序计算不能并行 + 长程依赖梯度消失</label>
+        <label><input type="radio" name="q5" value="1"> B. 无法处理变长序列 + 无法处理中文</label>
+        <label><input type="radio" name="q5" value="2"> C. 参数量过大 + 推理速度慢</label>
+        <label><input type="radio" name="q5" value="3"> D. 没有位置信息 + 词表太小</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+  </section>
+</article>
+
+<nav class="chapter-nav">
+  <a href="ch02.html" class="btn btn-outline" rel="prev">← 上一章</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
+  <a href="ch04.html" class="btn btn-outline" rel="next">下一章 →</a>
+</nav>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第9章 微调与对齐 — LLM 深度学习</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-ch="9">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>从代码出发，构建大语言模型</p>
+  </div>
+  <div class="sidebar-progress">
+    <span>学习进度: <strong id="progress-text">0 / 10</strong></span>
+    <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+  </div>
+  <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第9章 微调与对齐</h2>
+  <p class="subtitle">实现 SFT/LoRA/DPO/GRPO——从预训练到有用助手</p>
+  <div class="reading-time">⏱ 预计阅读: 65 分钟 · 12 小节 · 5 道练习</div>
+
+  <div class="font-controls">
+    <span>字号:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  </div>
+
+  <!-- 9.1 -->
+  <section class="card" id="s9-1">
+    <h3>9.1 预训练够了但不够有用</h3>
+    <p>经过第 7 章的预训练，我们得到了一个能<strong>合理续写文本</strong>的 GPT 模型。它学会了语法、事实知识、甚至某种程度的推理能力。但如果你直接问它"请用中文解释什么是反向传播"，它的输出可能是这样的：</p>
+    <div class="code-block" data-lang="text">
+	"反向传播"是"反向传播"是深度学习中一种"反向传播"是深度学习中一种计算梯度的方法。"反向传播"……</div>
+    <p>——它是一个优秀的<strong>文本续写器</strong>，但不是<strong>有用的助手</strong>。问题在于预训练的目标函数是"预测下一个 token"，而不是"回答问题"。对齐（Alignment）就是弥合这个差距的过程。</p>
+    <p><strong>对齐的三大目标——HHH：</strong></p>
+    <ul>
+      <li><strong>Helpful（有用）：</strong>模型应该按照用户的意图执行任务，而不是简单地续写文本。用户问"如何做番茄炒蛋"，模型应该给出菜谱，而不是继续写美食博客。</li>
+      <li><strong>Honest（诚实）：</strong>模型应该"知道自己不知道"。当被问到不知道的问题时，应该承认不确定，而不是编造看似合理的答案（即减少"幻觉"）。</li>
+      <li><strong>Harmless（无害）：</strong>模型不应该生成有害内容——歧视性言论、危险操作指南、恶意代码等。</li>
+    </ul>
+    <p>对齐技术栈从简单到复杂排列：</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>技术</th><th>数据类型</th><th>需要 RL</th><th>相对复杂度</th></tr>
+        <tr><td>SFT（监督微调）</td><td>指令-回答对</td><td>否</td><td>低</td></tr>
+        <tr><td>RLHF（基于人类反馈的强化学习）</td><td>偏好对 + RL</td><td>是（PPO）</td><td>高</td></tr>
+        <tr><td>DPO（直接偏好优化）</td><td>偏好对</td><td>否</td><td>中</td></tr>
+        <tr><td>GRPO（组相对策略优化）</td><td>偏好对 + 组采样</td><td>是（无 Critic）</td><td>中高</td></tr>
+      </table>
+    </div>
+    <p>本章我们将从最基础的 SFT 开始，逐步深入到 GRPO——DeepSeek-R1 使用的对齐技术。</p>
+  </section>
+
+  <!-- 9.2 -->
+  <section class="card" id="s9-2">
+    <h3>9.2 动手：SFT 实现</h3>
+    <p><strong>监督微调（Supervised Fine-Tuning, SFT）</strong>是最基础的对齐方法。我们在人类标注的<strong>指令-回答对</strong>上继续训练模型，目标是调整模型的行为模式——从"续写任何文本"转变为"回答问题"。</p>
+    <p>SFT 的关键细节：<strong>只对回答部分计算损失</strong>。指令部分（prompt）不计算损失，因为我们要保留模型的"阅读理解"能力，只优化其"输出格式"。</p>
+    <div class="code-block" data-lang="python">
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    from torch.utils.data import Dataset, DataLoader
+
+    class SFTDataset(Dataset):
+        """SFT 数据集：每个样本包含指令 + 回答，只对回答部分计算损失。"""
+
+        def __init__(self, data: list, tokenizer, max_len: int = 1024):
+            """
+            data: [{"instruction": "...", "response": "..."}, ...]
+            """
+            self.input_ids = []
+            self.labels = []          # -100 表示不计算损失的位置
+
+            for item in data:
+                # ChatML 格式: <|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n...<|im_end|>
+                prompt = tokenizer.apply_chat_template([
+                    {"role": "user", "content": item["instruction"]},
+                ], tokenize=False)  # 不含 assistant 回复
+
+                full_text = prompt + item["response"] + tokenizer.eos_token
+
+                enc = tokenizer(
+                    full_text,
+                    truncation=True,
+                    max_length=max_len,
+                    return_tensors='pt'
+                )
+
+                # 找出 assistant 回复的起始位置
+                prompt_len = len(tokenizer.encode(prompt))
+
+                # labels: -100 表示忽略该位置的损失
+                labels = enc["input_ids"][0].clone()
+                labels[:prompt_len] = -100  # 指令部分不计算损失
+                labels[labels == tokenizer.pad_token_id] = -100
+
+                self.input_ids.append(enc["input_ids"][0])
+                self.labels.append(labels)
+
+        def __len__(self):
+            return len(self.input_ids)
+
+        def __getitem__(self, idx):
+            return {
+                "input_ids": self.input_ids[idx],
+                "labels": self.labels[idx],
+            }
+
+    def sft_collate_fn(batch):
+        """动态 padding 到 batch 内最大长度。"""
+        input_ids = [item["input_ids"] for item in batch]
+        labels = [item["labels"] for item in batch]
+
+        input_ids = torch.nn.utils.rnn.pad_sequence(
+            input_ids, batch_first=True, padding_value=tokenizer.pad_token_id
+        )
+        labels = torch.nn.utils.rnn.pad_sequence(
+            labels, batch_first=True, padding_value=-100
+        )
+        attention_mask = (input_ids != tokenizer.pad_token_id).long()
+
+        return {"input_ids": input_ids, "labels": labels,
+                "attention_mask": attention_mask}
+
+    def sft_step(model, batch, optimizer):
+        """单个 SFT 训练步。"""
+        model.train()
+        outputs = model(
+            input_ids=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+        )  # (batch, seq_len, vocab_size)
+
+        logits = outputs.logits
+        shift_logits = logits[:, :-1, :].contiguous()
+        shift_labels = batch["labels"][:, 1:].contiguous()
+
+        loss = F.cross_entropy(
+            shift_logits.view(-1, shift_logits.size(-1)),
+            shift_labels.view(-1),
+            ignore_index=-100,  # 忽略 prompt 部分的损失
+            reduction='mean'
+        )
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        return loss.item()</div>
+    <p><strong>为什么只对回答部分计算损失？</strong>如果我们对整个序列（指令 + 回答）都计算损失，模型会学习到"生成指令也是任务的一部分"——但指令是用户输入的，模型不需要学习如何生成它。更严重的是，这可能导致分布偏移：训练时模型看到的是真实指令，但推理时指令由用户提供。只对回答部分计算损失避免了这个问题。</p>
+  </section>
+
+  <!-- 9.3 -->
+  <section class="card" id="s9-3">
+    <h3>9.3 Instruction Data 格式</h3>
+    <p>SFT 的成败高度依赖数据质量。原始数据需要格式化为模型能理解的对话结构。以下是最主流的格式：</p>
+    <p><strong>ChatML（Chat Markup Language）：</strong>由 OpenAI 提出的结构化对话格式，使用特殊的 role token 区分用户和助手：</p>
+    <div class="code-block" data-lang="text">
+    &lt;|im_start|&gt;system
+    你是一个有用的 AI 助手。&lt;|im_end|&gt;
+    &lt;|im_start|&gt;user
+    请解释什么是反向传播。&lt;|im_end|&gt;
+    &lt;|im_start|&gt;assistant
+    反向传播是一种计算神经网络梯度的算法……&lt;|im_end|&gt;</div>
+    <p><strong>ShareGPT 格式：</strong>更简洁的 JSON 结构，常用于开源数据集：</p>
+    <div class="code-block" data-lang="python">
+    {
+      "conversations": [
+        {"from": "human", "value": "请解释反向传播"},
+        {"from": "gpt",   "value": "反向传播是一种..."},
+        {"from": "human", "value": "那什么是梯度消失？"},
+        {"from": "gpt",   "value": "梯度消失是指在深层网络中..."}
+      ]
+    }</div>
+    <p><strong>数据质量标准——"3H"：</strong></p>
+    <ul>
+      <li><strong>Helpfulness（有用性）：</strong>回答是否准确、完整、直接？避免"正确但无用的回答"（如用户问"如何排序"，回答"排序是一种将元素按某种顺序排列的操作"——这是一个正确的定义，但不是用户想要的代码）。</li>
+      <li><strong>Honesty（诚实性）：</strong>是否存在幻觉？在标注数据集上存在"标注者偏差"——标注者可能对某些领域不熟悉，给出不准确的信息。</li>
+      <li><strong>Harmlessness（无害性）：</strong>是否包含不安全内容？高质量的数据集应该有安全意识过滤。</li>
+    </ul>
+    <div class="info-box warn">
+      <span class="icon">⚠️</span>
+      <div><strong>数据质量 > 数据数量：</strong>LIMA 论文（Zhou et al., 2023）的实验表明，用 1000 个高质量的 SFT 示例就可以取得与 52000 个中低质量示例相当的效果。关键在于<strong>多样性</strong>——覆盖尽可能多的任务类型和领域。DeepSeek-V3 的 SFT 数据约 150 万条，但经过多轮质量筛选和去重。</div>
+    </div>
+  </section>
+
+  <!-- 9.4 -->
+  <section class="card" id="s9-4">
+    <h3>9.4 RLHF 三步曲</h3>
+    <p>RLHF（Reinforcement Learning from Human Feedback）由 InstructGPT 论文（Ouyang et al., 2022）提出，是 ChatGPT 成功的核心技术。它包含三个步骤：</p>
+    <p><strong>第一步：SFT</strong> — 用高质量的指令-回答对进行监督微调，得到一个初始化的"有用模型"。</p>
+    <p><strong>第二步：训练 Reward Model（RM）</strong> — 给定一个 prompt，模型生成多个回答，人类标注者对这些回答进行排序。排序数据被用来训练一个<strong>奖励模型</strong>——它的任务就是"预测人类会多喜欢这个回答"。</p>
+    <div class="code-block" data-lang="python">
+    class RewardModel(nn.Module):
+        """Reward Model: 为生成的回答打分。"""
+
+        def __init__(self, base_model, dropout=0.1):
+            super().__init__()
+            self.base = base_model
+            # 在最后一个隐藏状态上加一个线性层输出标量奖励
+            self.reward_head = nn.Sequential(
+                nn.Linear(base_model.config.d_model, 256),
+                nn.Dropout(dropout),
+                nn.ReLU(),
+                nn.Linear(256, 1),
+            )
+
+        def forward(self, input_ids, attention_mask):
+            hidden = self.base(input_ids, attention_mask=attention_mask)
+            # 取最后一个非 padding token 的隐藏状态
+            last_hidden = hidden.last_hidden_state  # (batch, seq_len, d_model)
+            # 找到每个序列的最后一个有效 token
+            seq_lens = attention_mask.sum(dim=1) - 1
+            batch_indices = torch.arange(len(seq_lens), device=seq_lens.device)
+            reward_hidden = last_hidden[batch_indices, seq_lens]
+            reward = self.reward_head(reward_hidden)  # (batch, 1)
+            return reward
+
+    # 训练 RM：对同一 prompt 的多个回答，让 RM 学会偏好排序
+    def rm_loss(rewards_chosen, rewards_rejected):
+        """Bradley-Terry 偏好模型：最大化 chosen > rejected 的 log 概率。"""
+        return -F.logsigmoid(rewards_chosen - rewards_rejected).mean()</div>
+    <p><strong>第三步：PPO 优化</strong> — 用 PPO（Proximal Policy Optimization）算法在 Reward Model 的指导下更新 LLM。模型生成回答，RM 打分，PPO 根据分数更新模型参数，使其生成更高分的回答。同时加上 KL 惩罚以防止模型偏离原始 SFT 模型太远（避免 reward hacking——模型学会了欺骗 RM 但实际质量下降）。</p>
+    <div class="katex" data-expr="\mathcal{L}_{\text{PPO}} = -\mathbb{E}[\min(\frac{\pi_\theta}{\pi_{\text{ref}}} A, \text{clip}(\frac{\pi_\theta}{\pi_{\text{ref}}}, 1-\epsilon, 1+\epsilon) A)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{ref}})"></div>
+    <p>RLHF 的三步架构奠定了当代 LLM 对齐的范式。但它有三个主要问题：<strong>训练复杂度高</strong>（需要同时维护四个模型：Actor、Reference、Reward Model、Critic）、<strong>训练不稳定</strong>（PPO 对超参数极度敏感）、<strong>标注成本高</strong>（需要大量人类偏好标注）。接下来的几节我们将看到更高效的替代方案。</p>
+  </section>
+
+  <!-- 9.5 -->
+  <section class="card" id="s9-5">
+    <h3>9.5 动手：LoRA 实现</h3>
+    <p><strong>低秩适配（Low-Rank Adaptation, LoRA）</strong>由 Hu et al. (2021) 提出，是当前最主流的<strong>参数高效微调（PEFT）</strong>方法。它的核心洞察是：模型微调时权重矩阵的变化量 <span class="katex-inline" data-expr="\Delta W"></span> 具有<strong>低秩</strong>特性。</p>
+    <p>LoRA 的做法是：不直接更新 <span class="katex-inline" data-expr="W_0 \in \mathbb{R}^{d \times k}"></span>，而是在原来固定的权重上<strong>添加</strong>一个低秩分解的增量：</p>
+    <div class="katex" data-expr="W' = W_0 + BA, \quad B \in \mathbb{R}^{d \times r}, \; A \in \mathbb{R}^{r \times k}, \; r \ll \min(d, k)"></div>
+    <p>其中 <span class="katex-inline" data-expr="r"></span> 是秩（通常 8 或 16，最多 64）。训练时只更新 <span class="katex-inline" data-expr="A"></span> 和 <span class="katex-inline" data-expr="B"></span>，<span class="katex-inline" data-expr="W_0"></span> 被冻结。这使可训练参数量减少约 99%。</p>
+    <div class="code-block" data-lang="python">
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+
+    class LoRALayer(nn.Module):
+        """LoRA 低秩适配层：W' = W_0 + BA"""
+
+        def __init__(self, in_features: int, out_features: int, r: int = 8,
+                     alpha: float = 16.0, dropout: float = 0.1):
+            super().__init__()
+            self.r = r
+            self.alpha = alpha          # 缩放因子
+            self.scaling = alpha / r
+
+            # 冻结原始权重
+            self.W = None               # 外部传入
+
+            # 低秩矩阵
+            self.A = nn.Parameter(torch.randn(r, out_features) * 0.01)
+            self.B = nn.Parameter(torch.zeros(in_features, r))
+            self.dropout = nn.Dropout(dropout)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            """x @ (W + BA)^T = x @ W^T + x @ B @ A"""
+            if self.W is None:
+                raise ValueError("请先设置原始权重 W")
+            # 原始路径（冻结）
+            result = F.linear(x, self.W)
+            # LoRA 路径（可训练）
+            result += self.dropout(x) @ self.B @ self.A * self.scaling
+            return result
+
+    class LoRALinear(nn.Module):
+        """用 LoRA 包装一个 nn.Linear 层。"""
+
+        def __init__(self, original_linear: nn.Linear, r: int = 8,
+                     alpha: float = 16.0, dropout: float = 0.1):
+            super().__init__()
+            self.lora = LoRALayer(
+                original_linear.in_features,
+                original_linear.out_features,
+                r=r, alpha=alpha, dropout=dropout,
+            )
+            # 保存并冻结原始权重
+            self.lora.W = original_linear.weight.data.clone()
+            if original_linear.bias is not None:
+                self.bias = original_linear.bias.data.clone()
+            else:
+                self.bias = None
+
+        def forward(self, x):
+            return self.lora(x) + (self.bias if self.bias is not None else 0)
+
+    def apply_lora(model: nn.Module, r: int = 8, alpha: float = 16.0,
+                   target_modules: list = None):
+        """
+        将模型中的指定模块替换为 LoRA 版本。
+        target_modules: ["q_proj", "v_proj"] 默认为注意力层的 Q 和 V
+        """
+        if target_modules is None:
+            target_modules = ["q_proj", "v_proj"]
+
+        for name, module in model.named_children():
+            if name in target_modules and isinstance(module, nn.Linear):
+                setattr(model, name, LoRALinear(module, r=r, alpha=alpha))
+            else:
+                apply_lora(module, r=r, alpha=alpha, target_modules=target_modules)
+
+        # 冻结所有非 LoRA 参数
+        for param in model.parameters():
+            param.requires_grad = False
+        for name, param in model.named_parameters():
+            if "lora.A" in name or "lora.B" in name:
+                param.requires_grad = True
+
+        # 统计可训练参数
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        total = sum(p.numel() for p in model.parameters())
+        print(f"可训练参数: {trainable:,} / {total:,} ({trainable/total*100:.2f}%)")
+
+        return model</div>
+    <p><strong>为什么 LoRA 有效？</strong>预训练模型已经学到了丰富的特征表示，微调只需要在这些表示的基础上进行"方向微调"——即在高维空间中找到一个低维子空间，在这个子空间中调整模型的输出方向。LoRA 的 <span class="katex-inline" data-expr="A"></span> 和 <span class="katex-inline" data-expr="B"></span> 就是从这个子空间的随机基开始学习。</p>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>LoRA 超参数选择：</strong><span class="katex-inline" data-expr="r = 8"></span> 是最常用的选择，对大多数任务已经足够。<span class="katex-inline" data-expr="r = 16"></span> 或 <span class="katex-inline" data-expr="r = 32"></span> 用于更困难的任务（如数学推理）。<code>alpha</code> 通常设为 <span class="katex-inline" data-expr="r \times 2"></span>。通常只在 <strong>Q 和 V</strong> 投影矩阵上应用 LoRA——这是经验上最有效的选择。LoRA 训练完成后，可以将 <span class="katex-inline" data-expr="BA"></span> 合并回原始权重（<span class="katex-inline" data-expr="W' = W + BA"></span>），推理时零额外开销。</div>
+    </div>
+  </section>
+
+  <!-- 9.6 -->
+  <section class="card" id="s9-6">
+    <h3>9.6 动手：DPO 实现</h3>
+    <p><strong>直接偏好优化（Direct Preference Optimization, DPO）</strong>由 Rafailov et al. (2023) 提出。它完全<strong>不需要 Reward Model 和 PPO</strong>，而是直接在偏好数据上优化策略。DPO 的关键数学洞察是：Bradley-Terry 偏好模型的奖励函数可以表示为策略的 closed-form 函数。</p>
+    <p>DPO 的损失函数非常简洁：</p>
+    <div class="katex" data-expr="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log \frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log \frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]"></div>
+    <p>其中 <span class="katex-inline" data-expr="y_w"></span> 是偏好回答，<span class="katex-inline" data-expr="y_l"></span> 是次优回答，<span class="katex-inline" data-expr="\beta"></span> 控制对偏好的"激进程度"。</p>
+    <div class="code-block" data-lang="python">
+    def dpo_loss(
+        policy_logps: torch.Tensor,        # log πθ(y|x)  (batch,)
+        ref_logps: torch.Tensor,           # log πref(y|x) (batch,)
+        policy_chosen_logps: torch.Tensor, # log πθ(y_w|x)
+        policy_rejected_logps: torch.Tensor,
+        ref_chosen_logps: torch.Tensor,
+        ref_rejected_logps: torch.Tensor,
+        beta: float = 0.1,
+    ) -> torch.Tensor:
+        """
+        DPO 损失函数。
+
+        Args:
+            policy_chosen_logps: log πθ(y_w|x) — 策略模型对偏好回答的 log 概率
+            policy_rejected_logps: log πθ(y_l|x)
+            ref_chosen_logps: 同上，但用参考模型（冻结的 SFT 模型）
+            ref_rejected_logps
+            beta: KL 惩罚系数
+        """
+        # log ratio for chosen
+        chosen_log_ratio = policy_chosen_logps - ref_chosen_logps
+        # log ratio for rejected
+        rejected_log_ratio = policy_rejected_logps - ref_rejected_logps
+
+        # DPO 损失
+        logits = beta * (chosen_log_ratio - rejected_log_ratio)
+        loss = -F.logsigmoid(logits).mean()
+
+        # 可选: 准确率统计
+        acc = (logits > 0).float().mean().item()
+
+        return loss, acc
+
+    def sequence_log_probs(model, input_ids, attention_mask, labels):
+        """
+        计算完整序列的 log 概率。
+        labels 中 -100 表示忽略的位置（指令部分）。
+        """
+        outputs = model(input_ids, attention_mask=attention_mask)
+        logits = outputs.logits  # (batch, seq_len, vocab_size)
+
+        shift_logits = logits[:, :-1, :].contiguous()
+        shift_labels = labels[:, 1:].contiguous()
+
+        log_probs = F.log_softmax(shift_logits, dim=-1)  # (batch, seq_len-1, vocab)
+
+        # 收集目标 token 的 log 概率
+        per_token_logps = log_probs.gather(
+            dim=-1,
+            index=shift_labels.unsqueeze(-1)
+        ).squeeze(-1)
+
+        # 累加（忽略 -100 的位置）
+        mask = (shift_labels != -100).float()
+        sequence_logps = (per_token_logps * mask).sum(dim=1)
+
+        return sequence_logps
+
+    def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
+        """单个 DPO 训练步。"""
+        model.train()
+        ref_model.eval()
+
+        # 偏好回答 (chosen)
+        policy_chosen_logps = sequence_log_probs(
+            model, batch["chosen_ids"], batch["chosen_mask"], batch["chosen_labels"]
+        )
+        ref_chosen_logps = sequence_log_probs(
+            ref_model, batch["chosen_ids"], batch["chosen_mask"], batch["chosen_labels"]
+        )
+
+        # 次优回答 (rejected)
+        policy_rejected_logps = sequence_log_probs(
+            model, batch["rejected_ids"], batch["rejected_mask"],
+            batch["rejected_labels"]
+        )
+        ref_rejected_logps = sequence_log_probs(
+            ref_model, batch["rejected_ids"], batch["rejected_mask"],
+            batch["rejected_labels"]
+        )
+
+        loss, acc = dpo_loss(
+            None, None,
+            policy_chosen_logps, policy_rejected_logps,
+            ref_chosen_logps, ref_rejected_logps,
+            beta=beta,
+        )
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        return loss.item(), acc</div>
+    <p><strong>DPO vs. RLHF：</strong>DPO 的最大优势是<strong>简化</strong>——不需要训练和维护 Reward Model，不需要 PPO 的 Actor-Critic 架构，也不需要对抗生成采样。DPO 只需要一次 forward pass 计算偏好/次优回答的两个 log 概率比值。这使得 DPO 的训练稳定性远高于 RLHF，且超参数更少（<span class="katex-inline" data-expr="\beta"></span> 是唯一需要调节的关键超参数）。</p>
+    <p>但 DPO 也有局限性：它无法处理分布外 prompt——即如果偏好的 (prompt, response) 对在训练数据中不常见，DPO 的效果会下降。此外，DPO 假设偏好数据来自 Bradley-Terry 模型，如果实际偏好不符合这个假设（如存在噪声标注），DPO 的性能也会受到影响。</p>
+  </section>
+
+  <!-- 9.7 -->
+  <section class="card" id="s9-7">
+    <h3>9.7 DeepSeek GRPO — 组相对策略优化</h3>
+    <p><strong>组相对策略优化（Group Relative Policy Optimization, GRPO）</strong>是 DeepSeek-R1 论文中使用的核心 RL 算法。它与 PPO 最大的区别是：<strong>不再需要 Critic 模型（价值网络）</strong>。</p>
+    <p>传统 PPO 需要：Actor（策略模型）+ Critic（价值模型）+ Reference + Reward Model = 4 个模型。GRPO 只需要：Actor + Reference + Reward Model = 3 个模型——去掉了最不稳定的 Critic。</p>
+    <p><strong>GRPO 的核心思想：</strong>对每个 prompt，从当前策略中采样 <span class="katex-inline" data-expr="G"></span> 个回答（通常 <span class="katex-inline" data-expr="G = 8"></span>），用这组回答的<strong>内部相对排名</strong>作为优势函数（Advantage），而不是用 Critic 网络估计的绝对价值。</p>
+    <div class="katex" data-expr="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}"></div>
+    <p>其中 <span class="katex-inline" data-expr="r_i"></span> 是第 <span class="katex-inline" data-expr="i"></span> 个回答的奖励分数，<span class="katex-inline" data-expr="\mu_r, \sigma_r"></span> 是该组回答奖励的均值和标准差。这个"组内白化"操作使优势函数只依赖于<strong>相对表现</strong>而非绝对奖励值，有效解决了不同 prompt 之间奖励尺度不一致的问题。</p>
+    <div class="code-block" data-lang="python">
+    def grpo_loss(
+        model,
+        ref_model,
+        reward_model,
+        prompt_ids: torch.Tensor,
+        prompt_mask: torch.Tensor,
+        tokenizer,
+        beta: float = 0.04,     # KL 惩罚系数
+        group_size: int = 8,    # 每组采样数 G
+        epsilon: float = 0.2,   # PPO clip 范围
+    ) -> torch.Tensor:
+        """
+        GRPO 损失计算。
+
+        流程：
+        1. 从当前策略采样 G 个回答
+        2. 用 reward_model 打分
+        3. 组内白化得到优势函数
+        4. PPO-clip + KL 惩罚
+        """
+        batch_size = prompt_ids.size(0)
+        device = prompt_ids.device
+
+        # —— 1. 采样 ——
+        all_completions = []
+        all_rewards = []
+
+        with torch.no_grad():
+            for _ in range(group_size):
+                # 从当前策略采样
+                outputs = model.generate(
+                    prompt_ids,
+                    attention_mask=prompt_mask,
+                    max_new_tokens=256,
+                    do_sample=True,
+                    temperature=0.8,
+                    pad_token_id=tokenizer.pad_token_id,
+                )
+                completion = outputs[:, prompt_ids.size(1):]
+                all_completions.append(completion)
+
+                # 用 reward model 打分
+                rewards = reward_model(outputs, attention_mask=(outputs != tokenizer.pad_token_id))
+                all_rewards.append(rewards)  # list of (batch, 1)
+
+        # —— 2. 组内白化 ——
+        # rewards shape: (group_size, batch, 1)
+        rewards = torch.stack(all_rewards, dim=0)
+        mean_r = rewards.mean(dim=0, keepdim=True)      # (1, batch, 1)
+        std_r = rewards.std(dim=0, keepdim=True) + 1e-8  # (1, batch, 1)
+        advantages = (rewards - mean_r) / std_r           # (group_size, batch, 1)
+
+        # —— 3. 计算策略 ratio 和 KL ——
+        total_loss = 0.0
+
+        for i in range(group_size):
+            # 当前采样序列
+            sampled_ids = torch.cat([prompt_ids, all_completions[i]], dim=-1)
+            sampled_mask = (sampled_ids != tokenizer.pad_token_id).long()
+
+            # 当前策略的 log prob
+            outputs = model(sampled_ids, attention_mask=sampled_mask)
+            logits = outputs.logits[:, prompt_ids.size(1)-1:-1, :]
+            log_probs = F.log_softmax(logits, dim=-1)
+            token_log_probs = log_probs.gather(
+                dim=-1,
+                index=all_completions[i].unsqueeze(-1)
+            ).squeeze(-1)
+            per_token_logps = token_log_probs * (all_completions[i] != tokenizer.pad_token_id).float()
+            policy_log_prob = per_token_logps.sum(dim=-1)  # (batch,)
+
+            # 参考模型的 log prob (冻结)
+            with torch.no_grad():
+                ref_outputs = ref_model(sampled_ids, attention_mask=sampled_mask)
+                ref_logits = ref_outputs.logits[:, prompt_ids.size(1)-1:-1, :]
+                ref_log_probs = F.log_softmax(ref_logits, dim=-1)
+                ref_token_log_probs = ref_log_probs.gather(
+                    dim=-1, index=all_completions[i].unsqueeze(-1)
+                ).squeeze(-1)
+                ref_per_token_logps = ref_token_log_probs * (all_completions[i] != tokenizer.pad_token_id).float()
+                ref_log_prob = ref_per_token_logps.sum(dim=-1)
+
+            # ratio = exp(log πθ - log πref)
+            log_ratio = (per_token_logps - ref_per_token_logps).sum(dim=-1)
+            ratio = torch.exp(log_ratio)
+
+            # PPO-clip 目标
+            adv = advantages[i].squeeze(-1)  # (batch,)
+            surr1 = ratio * adv
+            surr2 = torch.clamp(ratio, 1.0 - epsilon, 1.0 + epsilon) * adv
+            policy_loss = -torch.min(surr1, surr2).mean()
+
+            # KL 惩罚 (近似)
+            kl_div = (torch.exp(ref_per_token_logps - per_token_logps)
+                      - (ref_per_token_logps - per_token_logps) - 1.0).sum(dim=-1).mean()
+
+            total_loss += policy_loss + beta * kl_div
+
+        return total_loss / group_size</div>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>GRPO 的关键优势：</strong>去掉 Critic 模型不仅减少了 30-40% 的训练内存，还消除了 PPO 中最不稳定的组件（Critic 的梯度估计方差最大）。组内白化使 GRPO 对不同 prompt 的奖励尺度具有天然鲁棒性——不需要像 PPO 那样精细地调节奖励归一化。这使得 GRPO 在 DeepSeek-R1 的数学推理训练中表现出色。</div>
+    </div>
+  </section>
+
+  <!-- 9.8 -->
+  <section class="card" id="s9-8">
+    <h3>9.8 R1-Zero 的"顿悟时刻"</h3>
+    <p>DeepSeek-R1-Zero 是 DeepSeek-R1 系列中最引人注目的实验。它的设定是：<strong>完全不使用人类标注的 CoT（Chain-of-Thought）数据</strong>，只通过 GRPO 在数学推理任务上训练。结果令人惊讶——模型在训练过程中<strong>自发地学会了自我反思</strong>（self-reflection）和自我纠错（self-correction）。</p>
+    <p>DeepSeek-R1 论文中描述了著名的"顿悟时刻"（Aha Moment）：</p>
+    <div class="katex" data-expr="\text{模型输出: "Wait, wait. Let me re-examine..."}</div>
+    <p>在训练过程中，模型自发地学会了在推理中加入类似"等一下，让我重新检查一下"的短语，然后重新审视自己的思考过程并修正错误。这个行为<strong>从未在训练数据中出现过</strong>——它是纯 RL 训练中涌现的。</p>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>启示：</strong>R1-Zero 的"顿悟时刻"证明了一个重要的 AI 原理——<strong>RL 可以在没有人类示范的情况下教会模型复杂的行为</strong>。只要奖励函数设计得当（在数学推理中，奖励就是"答案是否正确"），模型就能自主发现更优的推理策略。这对 AI 对齐研究有深远意义：人类不需要知道"最优策略"是什么，只需要能评判生成的输出。</div>
+    </div>
+    <p><strong>R1-Zero 的局限：</strong>虽然 R1-Zero 学会了推理，但它的输出可读性差——语言混乱，思路跳脱。因此 DeepSeek-R1 在 R1-Zero 的基础上加入了冷启动 SFT 数据（数千条人类标注的 CoT 推理过程），使输出的语言质量大幅提升。最终 R1 将 R1-Zero 的推理能力和 SFT 的语言质量<strong>蒸馏</strong>（Distill）到了多个小模型上（如 DeepSeek-R1-Distill-Qwen-1.5B 等）。</p>
+  </section>
+
+  <!-- 9.9 -->
+  <section class="card" id="s9-9">
+    <h3>9.9 QLoRA — 4-bit 量化微调</h3>
+    <p><strong>QLoRA</strong>（Dettmers et al., 2023）是 LoRA 的扩展，它将模型权重量化到 4-bit（NormalFloat4），然后在量化模型上应用 LoRA。这使得在<strong>24GB 的单 GPU 上微调 70B 参数模型</strong>成为可能。</p>
+    <p>QLoRA 的三个关键创新：</p>
+    <ul>
+      <li><strong>NF4（NormalFloat4）：</strong>一种为神经网络权重专门设计的 4-bit 量化格式。它假设权重服从正态分布，将量化级别集中在均值附近（即权重最密集的区域），从而最大化量化精度。</li>
+      <li><strong>双重量化（Double Quantization）：</strong>对量化常数（scale factor）再进行一次量化——从 FP32 降到 FP8，进一步减少显存占用约 0.5 比特/参数。</li>
+      <li><strong>分页优化器（Paged Optimizer）：</strong>利用 CPU 内存（Unified Memory）来存储优化器状态，在 GPU 显存不足时自动换页到 CPU。这解决了微调时优化器状态（Adam 的 momentum + variance）占用大量显存的问题。</li>
+    </ul>
+    <div class="code-block" data-lang="python">
+    # 使用 bitsandbytes + peft 实践 QLoRA
+
+    import torch
+    import transformers
+    from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+
+    # 4-bit 量化配置
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,          # 双重量化
+        bnb_4bit_quant_type="nf4",                # NormalFloat4
+        bnb_4bit_compute_dtype=torch.bfloat16,    # 计算保持 bf16
+    )
+
+    # 加载 4-bit 量化模型
+    model = AutoModelForCausalLM.from_pretrained(
+        "meta-llama/Llama-2-7b-hf",
+        quantization_config=bnb_config,
+        device_map="auto",
+    )
+
+    # 为 k-bit 训练准备模型
+    model = prepare_model_for_kbit_training(model)
+
+    # 配置 LoRA
+    lora_config = LoraConfig(
+        r=8,
+        lora_alpha=16,
+        target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
+        lora_dropout=0.1,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+
+    # 应用 LoRA
+    model = get_peft_model(model, lora_config)
+
+    print(f"可训练参数: {model.print_trainable_parameters()}")
+
+    # 现在可以在 24GB GPU 上微调 7B 模型了！
+    # 显存占用: 模型 4GB + LoRA 参数 18MB + 优化器 36MB + 梯度 18MB ≈ 4.1GB
+    # 实际还有激活值显存，batch_size=1 时总计约 8-12GB</div>
+    <div class="info-box warn">
+      <span class="icon">⚠️</span>
+      <div><strong>QLoRA 的精度损失：</strong>NF4 量化本身几乎不损失下游任务性能（< 0.5%），但<strong>双重量化</strong>和<strong>计算精度</strong>的选择需要谨慎。如果计算 dtype（<code>bnb_4bit_compute_dtype</code>）设置不正确（如在 NVIDIA V100 上使用 bf16 会 fallback 到 FP32），可能引入额外的精度损失。推荐在 Ampere 架构及以上的 GPU 上使用 bf16 计算。</div>
+    </div>
+  </section>
+
+  <!-- 9.10 -->
+  <section class="card" id="s9-10">
+    <h3>9.10 V4 On-Policy Distillation</h3>
+    <p>DeepSeek-V4 引入了一种名为 <strong>On-Policy Distillation（OPD）</strong>的新型知识蒸馏方法。它的目标是：将<strong>领域专家模型</strong>（Domain Specialist）的知识迁移到一个<strong>通用模型</strong>中。</p>
+    <p><strong>传统蒸馏的问题：</strong>传统方法让通用模型学习专家模型的输出分布（logits 或 soft targets），但"蒸馏"出来的模型往往不如原始专家模型在特定领域表现好。原因在于：学生模型只看到了教师模型的静态输出，而没有参与到教师的"思考过程"。</p>
+    <p><strong>OPD 的创新：</strong></p>
+    <ol>
+      <li><strong>Domain Specialist 训练：</strong>对于每个专业领域（数学、代码、法律、医学等），用该领域的高质量数据微调一个专用专家模型。</li>
+      <li><strong>On-Policy 生成：</strong>通用模型对 prompt 生成多个候选回答，领域专家模型对这组回答进行<strong>排序和修正</strong>。这确保了蒸馏是在"通用模型的分布上"进行（on-policy），而不是在静态数据集上（off-policy）。</li>
+      <li><strong>OPD 合并：</strong>将多个领域的蒸馏信号合并到通用模型中，训练出一个统一的更强模型。</li>
+    </ol>
+    <p><strong>三档推理（V4 的特色）：</strong>DeepSeek-V4 支持三种推理模式，用户可以根据需求选择：</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>模式</th><th>描述</th><th>延迟</th><th>适用场景</th></tr>
+        <tr><td>标准推理</td><td>仅用主模型，快速响应</td><td>低</td><td>日常对话、简单的 Q&A</td></tr>
+        <tr><td>深度推理</td><td>结合 Domain Specialist 的 on-policy 引导</td><td>中</td><td>数学推理、代码生成</td></tr>
+        <tr><td>超级推理</td><td>多专家投票 + 自我反思</td><td>高</td><td>竞赛级数学、复杂代码</td></tr>
+      </table>
+    </div>
+    <p>OPD 的本质是让通用模型在自己的输出上进行学习——这是一种<strong>自举</strong>（bootstrapping）过程。它避免了蒸馏过程中的"分布漂移"（学生模型和教师模型的输出分布不一致导致的性能下降）。</p>
+  </section>
+
+  <!-- 9.11 -->
+  <section class="card" id="s9-11">
+    <h3>9.11 对齐税</h3>
+    <p><strong>对齐税（Alignment Tax）</strong>是指：模型在对齐后变安全了、变温顺了，但在某些能力上<strong>变弱了</strong>。这是一个被广泛观察到但尚未完全解决的现象。</p>
+    <p><strong>典型表现：</strong></p>
+    <ul>
+      <li><strong>数学推理能力下降：</strong>RLHF 倾向于产生"安全的、社会可接受的"回答，但数学推理需要精确性——"安全"和"精确"有时是矛盾的。</li>
+      <li><strong>创造性降低：</strong>对齐后的模型更少"出格"，但也就更少"出彩"。在创意写作任务上，对齐模型的多样性明显下降。</li>
+      <li><strong>过度保守：</strong>模型宁可拒绝回答"可能是敏感"的问题，也不愿冒险给出正确但可能被误解的答案。</li>
+    </ul>
+    <p><strong>SS/OS 评估（Safety-Steeriness vs. Over-Safety）：</strong>安全性和过度安全是两个不同的维度：</p>
+    <ul>
+      <li><strong>SS（Safety-Steeriness）：</strong>模型在确实有害的请求面前是否坚决拒绝。</li>
+      <li><strong>OS（Over-Safety）：</strong>模型在<strong>无害但有一定敏感性</strong>的请求面前是否也过度拒绝。</li>
+    </ul>
+    <p>理想的对齐模型应该在 SS 高（严格拒绝有害请求）的同时 OS 低（不会拒绝无害请求）。但实践中，这两者往往是 trade-off——提高 SS 通常会导致 OS 同步上升。</p>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>减轻对齐税的方法：</strong>1) 将推理问题与安全对齐分开处理——用专门的"推理模式"处理数学/代码等需要精确性的任务；2) 在 RLHF 数据中加入"安全但有力"的边缘案例，让模型学会区分"有害"和"单纯不常见"；3) 使用 per-task 奖励模型，对不同维度的质量分别评估（安全性 vs. 有用性 vs. 创造性）。DeepSeek-V4 的"三档推理"正是为了缓解对齐税而设计的。</div>
+    </div>
+  </section>
+
+  <!-- 9.12 -->
+  <section class="card" id="s9-12">
+    <h3>9.12 本章总结</h3>
+    <p>你已经实现了：</p>
+    <ul>
+      <li>✅ SFT（约 80 行）——可训练的指令微调，只对回答部分计算损失</li>
+      <li>✅ 理解了 Instruction Data 的格式与质量标准（ChatML/ShareGPT）</li>
+      <li>✅ 理解了 RLHF 三步曲——SFT → Reward Model → PPO</li>
+      <li>✅ LoRA（约 50 行）——低秩适配，99% 参数节省</li>
+      <li>✅ DPO（约 30 行核心）——直接偏好优化，无需 RL</li>
+      <li>✅ GRPO（约 60 行）——组相对策略优化，无 Critic</li>
+      <li>✅ R1-Zero 的"顿悟时刻"——纯 RL 自发学会 self-reflection</li>
+      <li>✅ QLoRA——4-bit + LoRA，24GB GPU 微调 70B 模型</li>
+      <li>✅ V4 On-Policy Distillation——三档推理的设计哲学</li>
+      <li>✅ 对齐税——SS/OS 评估与缓解策略</li>
+    </ul>
+    <p>对齐是从"文本续写器"到"有用助手"的<strong>最后一道工序</strong>。它不是通过让模型"变得更聪明"来实现的，而是通过让它学会<strong>按人类的期望行事</strong>。SLF、LoRA、DPO、GRPO 代表着不同的"成本-效果"权衡——SFT 最便宜但能力有限，GRPO 最复杂但效果最好。选择哪种，取决于你的预算、数据和任务要求。</p>
+    <p>下一章，我们将进入<strong>推理优化与前沿</strong>——KV Cache、量化、RAG、Agent——这些技术让 LLM 从"实验室 demo"变成了"生产级产品"。</p>
+    <div class="info-box key">
+      <span class="icon">📚</span>
+      <div><strong>延伸阅读：</strong>
+        <a href="https://arxiv.org/abs/2203.02155" target="_blank">InstructGPT — Ouyang et al. (2022) Training language models to follow instructions with human feedback</a> ·
+        <a href="https://arxiv.org/abs/2106.09685" target="_blank">LoRA — Hu et al. (2021) Low-Rank Adaptation of Large Language Models</a> ·
+        <a href="https://arxiv.org/abs/2305.18290" target="_blank">DPO — Rafailov et al. (2023) Direct Preference Optimization</a> ·
+        <a href="https://arxiv.org/abs/2402.07753" target="_blank">GRPO — DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> ·
+        <a href="https://www.nature.com/articles/s41586-025-08847-8" target="_blank">DeepSeek-R1 Nature 2025 论文</a> ·
+        <a href="https://arxiv.org/abs/2305.14314" target="_blank">QLoRA — Dettmers et al. (2023) Efficient Finetuning of Quantized Language Models</a> ·
+        <a href="https://arxiv.org/abs/2305.11206" target="_blank">LIMA — Zhou et al. (2023) Less Is More for Alignment</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 练习 -->
+  <section class="card">
+    <h3>练习巩固</h3>
+
+    <div class="exercise" data-answer="1" data-explain="SFT 只对回答部分计算损失是因为指令由用户提供，模型不需要学习生成指令。如果对整个序列计算损失，模型会尝试学习生成"用户指令"，这既浪费计算资源，也可能导致分布偏移。">
+      <h4>练习 1：在 SFT 中，为什么只对回答部分（而非整个序列）计算损失？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q1" value="0"> A. 因为指令部分的 token 数量太大</label>
+        <label><input type="radio" name="q1" value="1"> B. 因为指令由用户提供，模型不需要学习生成它</label>
+        <label><input type="radio" name="q1" value="2"> C. 因为回答部分才有正确答案</label>
+        <label><input type="radio" name="q1" value="3"> D. 因为指令部分没有正确答案</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="2" data-explain="LoRA 的核心公式是 W' = W + BA，其中 A 和 B 是低秩矩阵。训练时只更新 A 和 B，W 被冻结。r 是秩（通常 8-16），远小于输入输出维度。">
+      <h4>练习 2：LoRA 的低秩分解指的是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q2" value="0"> A. 将原始权重矩阵分解为两个高秩矩阵的乘积</label>
+        <label><input type="radio" name="q2" value="1"> B. 将激活值分解为低秩表示</label>
+        <label><input type="radio" name="q2" value="2"> C. 将权重更新量 ΔW 分解为两个低秩矩阵 BA 的乘积</label>
+        <label><input type="radio" name="q2" value="3"> D. 将词表分解为低频和高频子集</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="0" data-explain="GRPO 抛弃了 Critic 模型，使用"组内白化"来计算优势函数。对于同一个 prompt 采样的 G 个回答，用它们的奖励均值和标准差来归一化每个回答的奖励。">
+      <h4>练习 3：GRPO 与 PPO 的最大区别是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q3" value="0"> A. GRPO 不需要 Critic 模型，用组内白化的奖励作为优势函数</label>
+        <label><input type="radio" name="q3" value="1"> B. GRPO 使用更大的 batch size</label>
+        <label><input type="radio" name="q3" value="2"> C. GRPO 使用更简单的奖励函数</label>
+        <label><input type="radio" name="q3" value="3"> D. GRPO 不需要参考模型</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="2" data-explain="DPO 的核心数学洞察是：Bradley-Terry 偏好模型的奖励函数可以被表达为策略模型的 closed-form 函数，从而不需要显式训练 Reward Model。DPO 直接最大化偏好回答相对于次优回答的策略概率比值。">
+      <h4>练习 4：DPO 相比 RLHF 的主要优势是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q4" value="0"> A. DPO 不需要任何人类标注数据</label>
+        <label><input type="radio" name="q4" value="1"> B. DPO 的训练速度比 PPO 快 10 倍</label>
+        <label><input type="radio" name="q4" value="2"> C. DPO 不需要训练 Reward Model 和维护 PPO 的 Actor-Critic 架构</label>
+        <label><input type="radio" name="q4" value="3"> D. DPO 可以同时处理偏好数据和指令数据</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="0" data-explain="对齐税是指模型在对齐后变安全了，但在某些能力上变弱了（如数学推理、创造性等）。SS/OS 评估分别衡量"对有害请求的拒绝率"和"对无害请求的过度拒绝率"。">
+      <h4>练习 5："对齐税"（Alignment Tax）指的是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q5" value="0"> A. 对齐后模型变安全了但在某些能力上变弱了</label>
+        <label><input type="radio" name="q5" value="1"> B. 对齐训练需要昂贵的 Reward Model 训练</label>
+        <label><input type="radio" name="q5" value="2"> C. 对齐数据标注成本过高</label>
+        <label><input type="radio" name="q5" value="3"> D. 对齐使模型变得过度自信</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+  </section>
+</article>
+
+<nav class="chapter-nav">
+  <a href="ch08.html" class="btn btn-outline" rel="prev">← 上一章</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
+  <a href="ch10.html" class="btn btn-outline" rel="next">下一章 →</a>
+</nav>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

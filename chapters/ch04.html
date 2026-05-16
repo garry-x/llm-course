@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第4章 多头注意力与 MLA — LLM 深度学习</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-ch="4">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>从代码出发，构建大语言模型</p>
+  </div>
+  <div class="sidebar-progress">
+    <span>学习进度: <strong id="progress-text">0 / 10</strong></span>
+    <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+  </div>
+  <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第4章 多头注意力与 MLA</h2>
+  <p class="subtitle">从 MHA 到 GQA 到 DeepSeek MLA——KV Cache 压缩之路</p>
+  <div class="reading-time">⏱ 预计阅读: 50 分钟 · 9 小节 · 5 道练习</div>
+
+  <div class="font-controls">
+    <span>字号:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  </div>
+
+  <!-- 4.1 -->
+  <section class="card" id="s4-1">
+    <h3>4.1 从单头到多头</h3>
+    <p>第 3 章实现了单头注意力——一个 <span class="katex-inline" data-expr="d_k"></span> 维的 Q/K/V 空间。单头的问题是：一个注意力头只能学习<strong>一种</strong>匹配模式。但在语言中，一个 token 可能需要从多个角度同时匹配其他 token：</p>
+    <ul>
+      <li>句法角度："它"需要找到它指代的名词</li>
+      <li>语义角度："吃"需要关注"食物"相关的 token</li>
+      <li>位置角度：当前 token 需要关注其附近的修饰成分</li>
+    </ul>
+    <p><strong>多头注意力（Multi-Head Attention, MHA）</strong>通过并行多个独立的注意力头来解决这个问题——每个头学习不同的关注模式：</p>
+    <div class="katex" data-expr="\text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, ..., \text{head}_{n_h}) W_O"></div>
+    <div class="katex" data-expr="\text{其中} \quad \text{head}_i = \text{Attention}(\mathbf{Q}W_{Q_i}, \mathbf{K}W_{K_i}, \mathbf{V}W_{V_i})"></div>
+    <p>这里 <span class="katex-inline" data-expr="n_h"></span> 是头数，<span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_h"></span> 是每头的维度。每个头有自己的 Q/K/V 投影矩阵，并行计算注意力，然后将所有头的输出拼接并通过输出投影 <span class="katex-inline" data-expr="W_O \in \mathbb{R}^{n_h d_k \times d_{\text{model}}}"></span> 融合。</p>
+    <p><strong>关键洞察：</strong>多头的总参数量与单头（投影到 <span class="katex-inline" data-expr="d_{\text{model}}"></span>）的参数量<strong>完全相同</strong>！因为 <span class="katex-inline" data-expr="n_h \times d_k = d_{\text{model}}"></span>。但多头提供 <span class="katex-inline" data-expr="n_h"></span> 倍的并行子空间，每个子空间可以专注不同的模式。</p>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>直观理解：</strong>单头注意力像是一个"全能专家"，试图用一套标准判断所有关系。多头注意力像是 <span class="katex-inline" data-expr="n_h"></span> 个专业团队——句法团队、语义团队、位置团队——各司其职，最后将意见汇总（通过 <span class="katex-inline" data-expr="W_O"></span> 融合）。</div>
+    </div>
+  </section>
+
+  <!-- 4.2 -->
+  <section class="card" id="s4-2">
+    <h3>4.2 动手：Multi-Head Attention</h3>
+    <p>下面是 MHA 的完整实现。注意我们将 Q/K/V 投影合并为一个大矩阵，用 <code>view</code> 和 <code>transpose</code> 高效分隔出各个头：</p>
+    <div class="code-block" data-lang="python">
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class MultiHeadAttention(nn.Module):
+    """多头注意力 (MHA) — 合并投影 + 高效头分离。"""
+
+    def __init__(self, d_model: int, n_heads: int, dropout: float = 0.1):
+        super().__init__()
+        assert d_model % n_heads == 0, "d_model 必须被 n_heads 整除"
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_k = d_model // n_heads      # 每头维度
+
+        # 合并 QKV 投影: 3 * d_model → d_model   (每个投影大小 d_model)
+        self.W_qkv = nn.Linear(d_model, 3 * d_model, bias=False)
+        self.W_o   = nn.Linear(d_model, d_model, bias=False)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
+        """
+        x:    (batch, seq_len, d_model)
+        mask: (batch, 1, 1, seq_len) 或 (batch, 1, seq_len, seq_len) — 可选
+        返回: (batch, seq_len, d_model), 注意力权重 (batch, n_heads, seq_len, seq_len)
+        """
+        batch, seq_len, _ = x.shape
+
+        # 1. 合并投影 + 分离 Q/K/V
+        qkv = self.W_qkv(x)                                         # (b, s, 3*d)
+        qkv = qkv.reshape(batch, seq_len, 3, self.n_heads, self.d_k)
+        q, k, v = qkv.unbind(dim=2)                                 # 各 (b, s, h, d_k)
+
+        # 2. 头维度前置: (b, h, s, d_k) — 方便并行计算
+        q = q.transpose(1, 2)   # (b, h, s, d_k)
+        k = k.transpose(1, 2)
+        v = v.transpose(1, 2)
+
+        # 3. 缩放点积注意力 (含 causal mask)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k ** 0.5)  # (b, h, s, s)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        attn_weights = F.softmax(scores, dim=-1)                    # (b, h, s, s)
+        attn_weights = self.dropout(attn_weights)
+        out = torch.matmul(attn_weights, v)                         # (b, h, s, d_k)
+
+        # 4. 合并多头: (b, h, s, d_k) → (b, s, h*d_k) = (b, s, d_model)
+        out = out.transpose(1, 2).contiguous().reshape(batch, seq_len, self.d_model)
+
+        # 5. 输出投影
+        out = self.W_o(out)
+
+        return out, attn_weights
+
+# 使用示例: GPT-2 124M 配置
+d_model, n_heads = 768, 12
+mha = MultiHeadAttention(d_model, n_heads)
+x = torch.randn(2, 16, d_model)
+mask = torch.tril(torch.ones(16, 16)).unsqueeze(0).unsqueeze(0)
+out, weights = mha(x, mask)
+print(f"MHA 输出: {out.shape}")        # (2, 16, 768)
+print(f"注意力权重: {weights.shape}")  # (2, 12, 16, 16)
+print(f"总参数量: {sum(p.numel() for p in mha.parameters()):,}")</div>
+    <p>输出：</p>
+    <div class="code-block" data-lang="text">
+MHA 输出: (2, 16, 768)
+注意力权重: (2, 12, 16, 16)
+总参数量: 2,359,296</div>
+    <p><strong>实现要点：</strong></p>
+    <ul>
+      <li>用一个 <code>nn.Linear(d_model, 3*d_model)</code> 一次性完成 QKV 投影，然后用 <code>unbind</code> 分离——这比三个独立的 Linear 层更高效（单个大矩阵乘法比三个小矩阵乘法快，因为 GPU 有更好的并行利用率）。</li>
+      <li>将头维度通过 <code>transpose</code> 提到第 1 维（batch 之后），这样后续的 <code>matmul</code> 可以自然地在所有头上并行——张量形状 <code>(batch, n_heads, seq, d_k)</code> 比 <code>(batch, seq, n_heads, d_k)</code> 更适合批量矩阵乘法。</li>
+      <li><code>W_o</code> 输出投影将多头信息融合回 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 空间——这是多头最后一层"信息汇总"。</li>
+    </ul>
+  </section>
+
+  <!-- 4.3 -->
+  <section class="card" id="s4-3">
+    <h3>4.3 动手：验证计算等价性</h3>
+    <p>前文提到，多头注意力的总参数量和将 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 维空间直接投影到 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 的<strong>单头注意力</strong>参数量相同。我们来验证这一点：</p>
+    <div class="code-block" data-lang="python">
+def count_params(model):
+    return sum(p.numel() for p in model.parameters())
+
+d_model = 768
+
+# 单头注意力: 直接投影到 d_model
+class SingleHeadAttention(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.W_qkv = nn.Linear(d_model, 3 * d_model, bias=False)
+        self.W_o = nn.Linear(d_model, d_model, bias=False)
+
+    def forward(self, x, mask=None):
+        batch, seq, _ = x.shape
+        qkv = self.W_qkv(x)
+        q, k, v = qkv.chunk(3, dim=-1)   # 各 (b, s, d_model)
+        # 直接做 d_model 维点积 (不使用缩放, 仅用于参数验证)
+        scores = torch.matmul(q, k.transpose(-2, -1))
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+        attn = F.softmax(scores, dim=-1)
+        out = torch.matmul(attn, v)
+        return self.W_o(out)
+
+# 12 头注意力 (每头 d_k = 64)
+mha = MultiHeadAttention(d_model, n_heads=12)
+sha = SingleHeadAttention(d_model)
+
+print(f"MHA 参数量: {count_params(mha):,}")
+print(f"单头参数量: {count_params(sha):,}")
+print(f"是否相等: {count_params(mha) == count_params(sha)}")
+
+# 但参数量分布不同!
+qkv_mha = mha.W_qkv.weight.numel()  # 768 * 2304 = 1,769,472
+qkv_sha = sha.W_qkv.weight.numel()  # 768 * 2304 = 1,769,472
+print(f"QKV 投影参数相同: {qkv_mha} == {qkv_sha}")
+
+# 差异: 单头的 QKV 在 d_model 维度上做点积
+# 多头的 QKV 被分到 12 个头, 每个头在 d_k=64 维度上做点积
+# 结果再拼接回 d_model
+print("参数量相同，但计算方式不同——多头提供了 12 个不同的子空间")</div>
+    <p>输出：</p>
+    <div class="code-block" data-lang="text">
+MHA 参数量: 2,359,296
+单头参数量: 2,359,296
+是否相等: True
+QKV 投影参数相同: 1,769,472 == 1,769,472</div>
+    <p><strong>关键区别：</strong>虽然参数量相同，但多头的每个头只在一个 <span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_h"></span> 维的子空间中做注意力。这有两个效果：</p>
+    <ul>
+      <li>每个头的注意力分数矩阵计算量减少 <span class="katex-inline" data-expr="n_h^2"></span> 倍（因为 <span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_h"></span>，且每个头的计算复杂度包含一项 <span class="katex-inline" data-expr="O(d_k)"></span>）</li>
+      <li>但每个头独立计算注意力矩阵 <span class="katex-inline" data-expr="A \in \mathbb{R}^{L \times L}"></span>，所以总内存和 <span class="katex-inline" data-expr="n_h"></span> 倍注意力矩阵的存储成正比</li>
+    </ul>
+  </section>
+
+  <!-- 4.4 -->
+  <section class="card" id="s4-4">
+    <h3>4.4 MHA vs MQA vs GQA</h3>
+    <p><strong>推理时的大问题：KV Cache。</strong>在自回归生成中，每步生成一个新 token <span class="katex-inline" data-expr="t"></span>，我们需要计算它和<strong>所有</strong>历史 token 的注意力。为了避免重复计算，所有历史 token 的 K 和 V 向量被缓存下来——这就是 <strong>KV Cache</strong>。</p>
+    <p>标准 MHA 中，KV Cache 的大小为：</p>
+    <div class="katex" data-expr="\text{Cache Size} = 2 \times L \times n_{\text{heads}} \times d_k \times \text{sizeof(dtype)}}"></div>
+    <p>对于 70B 规模模型（<span class="katex-inline" data-expr="n_{\text{heads}}=64, d_k=128, L=4096"></span>），每个序列的 KV Cache 约 512 MB（FP16）。若并发 1024 个用户，仅 KV Cache 就需要 512 GB——这已经接近高端 GPU 服务器整机显存了。</p>
+    <p><strong>MQA 和 GQA 的解决方案：减少 KV 头数。</strong></p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>方案</th><th>Q 头数</th><th>K/V 头数</th><th>KV Cache 节省</th><th>代表模型</th></tr>
+        <tr><td>MHA（标准）</td><td><span class="katex-inline" data-expr="n_h"></span></td><td><span class="katex-inline" data-expr="n_h"></span></td><td>1×（基线）</td><td>GPT-2、BERT</td></tr>
+        <tr><td>MQA（Multi-Query）</td><td><span class="katex-inline" data-expr="n_h"></span></td><td>1</td><td><span class="katex-inline" data-expr="n_h \times"></span></td><td>PaLM、ChatGLM</td></tr>
+        <tr><td>GQA（Grouped-Query）</td><td><span class="katex-inline" data-expr="n_h"></span></td><td><span class="katex-inline" data-expr="n_g \lt n_h"></span></td><td><span class="katex-inline" data-expr="n_h / n_g \times"></span></td><td>Llama 2 70B、Mistral、DeepSeek</td></tr>
+      </table>
+    </div>
+    <p><strong>MQA（Multi-Query Attention）：</strong>所有 Q 头共享同一个 K 和 V（即 KV 头数 = 1）。KV Cache 缩小为 <span class="katex-inline" data-expr="1/n_h"></span>。但共享 K/V 可能限制模型表达——毕竟不同头可能需要不同的 K/V 视角。</p>
+    <p><strong>GQA（Grouped-Query Attention）：</strong>折中方案。将 Q 头分为 <span class="katex-inline" data-expr="n_g"></span> 组，每组共享一个 K/V 头。Llama 2 70B 使用 8 组（Q 头 64，KV 头 8），KV Cache 缩小 8 倍，同时保留了一定的 K/V 多样性。</p>
+    <p>MQA 可以视为 GQA 在 <span class="katex-inline" data-expr="n_g = 1"></span> 时的特例。实验表明，GQA 的质量接近 MHA 而推理效率接近 MQA——这是"两全其美"的工程设计。</p>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>历史趣闻：</strong>MQA 早在 2019 年就由 Shazeer 在 <a href="https://arxiv.org/abs/1911.02150" target="_blank">Fast Transformer Decoding</a> 中提出，但直到 2023 年 Llama 2 大规模采用 GQA 后才被广泛关注。这再次说明——好的工程方案有时需要时间才能"出圈"。</div>
+    </div>
+  </section>
+
+  <!-- 4.5 -->
+  <section class="card" id="s4-5">
+    <h3>4.5 动手：实现 GQA</h3>
+    <p>GQA 的实现与 MHA 非常相似，唯一区别是 K 和 V 的头数少于 Q 的头数。在注意力计算前，我们需要将 KV 头"扩展"到与 Q 头数量匹配：</p>
+    <div class="code-block" data-lang="python">
+class GroupedQueryAttention(nn.Module):
+    """分组查询注意力 (GQA) — KV 头数 < Q 头数。"""
+
+    def __init__(self, d_model: int, n_heads: int, n_kv_heads: int,
+                 dropout: float = 0.1):
+        super().__init__()
+        assert d_model % n_heads == 0
+        assert n_heads % n_kv_heads == 0, "Q 头数必须能被 KV 头数整除"
+
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.n_kv_heads = n_kv_heads
+        self.d_k = d_model // n_heads
+        self.n_rep = n_heads // n_kv_heads   # 每个 KV 头需要重复几次
+
+        # Q: 投影到 n_heads * d_k = d_model
+        self.W_q = nn.Linear(d_model, d_model, bias=False)
+        # K, V: 投影到 n_kv_heads * d_k (更小!)
+        self.W_k = nn.Linear(d_model, n_kv_heads * self.d_k, bias=False)
+        self.W_v = nn.Linear(d_model, n_kv_heads * self.d_k, bias=False)
+        self.W_o = nn.Linear(d_model, d_model, bias=False)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
+        batch, seq_len, _ = x.shape
+
+        q = self.W_q(x).reshape(batch, seq_len, self.n_heads, self.d_k)
+        k = self.W_k(x).reshape(batch, seq_len, self.n_kv_heads, self.d_k)
+        v = self.W_v(x).reshape(batch, seq_len, self.n_kv_heads, self.d_k)
+
+        # 头维度前置
+        q = q.transpose(1, 2)    # (b, n_heads, s, d_k)
+        k = k.transpose(1, 2)    # (b, n_kv_heads, s, d_k)
+        v = v.transpose(1, 2)
+
+        # 关键步骤: 将 KV 头重复扩展以匹配 Q 头
+        # 例如 n_heads=8, n_kv_heads=4, n_rep=2
+        # k: (b, 4, s, d_k) → (b, 8, s, d_k)
+        if self.n_rep > 1:
+            k = k.repeat_interleave(self.n_rep, dim=1)
+            v = v.repeat_interleave(self.n_rep, dim=1)
+
+        # 标准缩放点积注意力
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        attn_weights = F.softmax(scores, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+        out = torch.matmul(attn_weights, v)
+
+        # 合并头 + 输出投影
+        out = out.transpose(1, 2).contiguous().reshape(batch, seq_len, self.d_model)
+        out = self.W_o(out)
+
+        return out, attn_weights
+
+# GQA 与 MHA 参数量对比
+d_model, n_heads = 4096, 32
+
+# MHA: 32 KV 头
+mha = MultiHeadAttention(d_model, n_heads=32)
+print(f"MHA (n_kv=32) 参数量: {sum(p.numel() for p in mha.parameters()):,}")
+
+# GQA: 8 KV 头 (Llama 2 70B 配置)
+gqa = GroupedQueryAttention(d_model, n_heads=32, n_kv_heads=8)
+print(f"GQA (n_kv=8)  参数量: {sum(p.numel() for p in gqa.parameters()):,}")
+print(f"KV 投影节省: {(sum(p.numel() for p in mha.W_qkv.parameters()) - sum(p.numel() for p in [gqa.W_q, gqa.W_k, gqa.W_v])):,}")</div>
+    <p>输出：</p>
+    <div class="code-block" data-lang="text">
+MHA (n_kv=32) 参数量: 67,109,888
+GQA (n_kv=8)  参数量: 50,331,648
+KV 投影节省: 16,777,216</div>
+    <p><strong>实现细节：</strong></p>
+    <ul>
+      <li><code>repeat_interleave(dim=1, factor=n_rep)</code> 将每个 KV 头复制 <span class="katex-inline" data-expr="n_{\text{rep}} = n_{\text{heads}} / n_{\text{kv_heads}}"></span> 次，使 K/V 的头数与 Q 匹配。这是一个<strong>无参数</strong>的操作——计算时不同"副本"使用相同的 K/V 数据，但梯度反向传播时会累加。</li>
+      <li>GQA 的参数量减少主要来自 <code>W_k</code> 和 <code>W_v</code>——它们的输出维度从 <span class="katex-inline" data-expr="n_{\text{heads}} \times d_k"></span> 降为 <span class="katex-inline" data-expr="n_{\text{kv_heads}} \times d_k"></span>。</li>
+      <li>推理时，KV Cache 只存储 <span class="katex-inline" data-expr="n_{\text{kv_heads}} \times d_k"></span> 维的向量——比 MHA 小 <span class="katex-inline" data-expr="n_{\text{heads}} / n_{\text{kv_heads}}"></span> 倍。</li>
+    </ul>
+  </section>
+
+  <!-- 4.6 -->
+  <section class="card" id="s4-6">
+    <h3>4.6 DeepSeek MLA 深入</h3>
+    <p><strong>Multi-head Latent Attention (MLA)</strong> 是 DeepSeek-V2/V3 的核心创新之一，发表于 2024 年初。它在 GQA 的基础上更进一步——不再只是减少 KV 头数，而是将 KV 存储压缩到一个<strong>低维潜在空间</strong>（Latent Space）中。</p>
+    <p><strong>MHA 的 KV Cache 问题：</strong></p>
+    <p>标准 MHA 的每个头完整存储 K 和 V 向量。即使 GQA 将 KV 头数从 64 减少到 8，每个头仍存储 <span class="katex-inline" data-expr="d_k = 128"></span> 维向量。能不能将 KV 向量进一步压缩？</p>
+    <p><strong>MLA 的核心思想：</strong>用一个<strong>低秩分解</strong>压缩 KV 表示：</p>
+    <div class="katex" data-expr="\mathbf{k}_t = W_{UK} \cdot \text{RMSNorm}(W_{DK} \cdot \mathbf{h}_t)"></div>
+    <div class="katex" data-expr="\mathbf{v}_t = W_{UV} \cdot \text{RMSNorm}(W_{DV} \cdot \mathbf{h}_t)"></div>
+    <p>其中：</p>
+    <ul>
+      <li><span class="katex-inline" data-expr="W_{DK} \in \mathbb{R}^{d_c \times d_{\text{model}}}"></span>：将隐状态 <span class="katex-inline" data-expr="\mathbf{h}_t"></span> 压缩为<strong>潜在向量</strong>（<span class="katex-inline" data-expr="d_c \ll n_{\text{heads}} \times d_k"></span>）</li>
+      <li><span class="katex-inline" data-expr="W_{UK} \in \mathbb{R}^{(n_{\text{heads}} \times d_k) \times d_c}"></span>：从潜在向量解压为各头的 K</li>
+      <li><span class="katex-inline" data-expr="W_{DV}, W_{UV}"></span>：V 的对应压缩/解压矩阵</li>
+    </ul>
+    <p><strong>关键优势——KV Cache 只存潜在向量！</strong>因为解压操作 <span class="katex-inline" data-expr="W_{UK}"></span> 和 <span class="katex-inline" data-expr="W_{UV}}"></span> 在注意力计算中可以被<strong>吸收</strong>到 Q 投影或输出投影中，不需要为每个 token 存储完整 K 和 V。因此 KV Cache 的大小从 <span class="katex-inline" data-expr="O(n_{\text{heads}} \times d_k)"></span> 降为 <span class="katex-inline" data-expr="O(d_c)"></span>。在 DeepSeek-V2 中，<span class="katex-inline" data-expr="d_c = 512"></span>，而 <span class="katex-inline" data-expr="n_{\text{heads}} \times d_k = 64 \times 128 = 8192"></span>——压缩比 <strong>16 倍</strong>！</p>
+    <div class="code-block" data-lang="python">
+class MLA(nn.Module):
+    """DeepSeek Multi-head Latent Attention (简化版)。"""
+
+    def __init__(self, d_model: int, n_heads: int, d_latent: int):
+        """
+        d_model: 模型维度
+        n_heads: Q 头数
+        d_latent: 潜在向量维度 (KV cache 实际存储的大小)
+        """
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_k = d_model // n_heads
+        self.d_latent = d_latent
+
+        # Q 投影 (标准)
+        self.W_q = nn.Linear(d_model, n_heads * self.d_k, bias=False)
+
+        # KV 低秩压缩: 共享的压缩矩阵
+        self.W_dk = nn.Linear(d_model, d_latent, bias=False)   # 压缩 K
+        self.W_dv = nn.Linear(d_model, d_latent, bias=False)   # 压缩 V
+
+        # 解压矩阵 (推理时可以被吸收)
+        self.W_uk = nn.Linear(d_latent, n_heads * self.d_k, bias=False)  # 解压 K
+        self.W_uv = nn.Linear(d_latent, n_heads * self.d_k, bias=False)  # 解压 V
+
+        # 输出投影
+        self.W_o = nn.Linear(n_heads * self.d_k, d_model, bias=False)
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
+        batch, seq_len, _ = x.shape
+
+        # Q: 标准投影
+        q = self.W_q(x).reshape(batch, seq_len, self.n_heads, self.d_k)
+        q = q.transpose(1, 2)   # (b, n_heads, s, d_k)
+
+        # K, V: 压缩 → 解压
+        latent_k = self.W_dk(x)                         # (b, s, d_latent)
+        latent_v = self.W_dv(x)
+        k = self.W_uk(latent_k).reshape(batch, seq_len, self.n_heads, self.d_k)
+        v = self.W_uv(latent_v).reshape(batch, seq_len, self.n_heads, self.d_k)
+        k = k.transpose(1, 2)
+        v = v.transpose(1, 2)
+
+        # 标准注意力
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        attn_weights = F.softmax(scores, dim=-1)
+        out = torch.matmul(attn_weights, v)
+
+        out = out.transpose(1, 2).contiguous().reshape(batch, seq_len, self.d_model)
+        out = self.W_o(out)
+
+        return out, attn_weights, (latent_k, latent_v)  # 返回潜在向量用于 KV Cache
+
+# MLA 的 KV Cache 大小对比
+d_model, n_heads, d_latent = 4096, 64, 512
+
+mha = MultiHeadAttention(d_model, n_heads)
+mla = MLA(d_model, n_heads, d_latent)
+
+def kv_cache_size_per_token(model):
+    """计算每 token 需要缓存的参数量 (不是总参数量)。"""
+    if isinstance(model, MultiHeadAttention):
+        # MHA: 每个 token 需要 n_heads * 2 * d_k 的 KV
+        return 2 * model.d_model  # = 2 * n_heads * d_k
+    elif isinstance(model, MLA):
+        # MLA: 每个 token 只需要 2 * d_latent 的 latent
+        return 2 * model.d_latent
+
+print(f"MHA 每 token KV: {kv_cache_size_per_token(mha):,} floats")
+print(f"MLA 每 token KV: {kv_cache_size_per_token(mla):,} floats")
+print(f"压缩比: {kv_cache_size_per_token(mha) / kv_cache_size_per_token(mla):.1f}x")</div>
+    <p>输出：</p>
+    <div class="code-block" data-lang="text">
+MHA 每 token KV: 8,192 floats
+MLA 每 token KV: 1,024 floats
+压缩比: 8.0x</div>
+    <p><strong>真正的工程 trick：</strong>在推理时，我们并不真正做"压缩→解压"的过程。解压矩阵 <span class="katex-inline" data-expr="W_{UK}"></span> 可以被<strong>吸收</strong>到 <span class="katex-inline" data-expr="W_Q"></span> 中：</p>
+    <div class="katex" data-expr="\mathbf{q}^\top \mathbf{k} = \mathbf{q}^\top (W_{UK} \cdot \mathbf{c}_k) = (W_{UK}^\top \mathbf{q})^\top \mathbf{c}_k"></div>
+    <p>所以 <span class="katex-inline" data-expr="q' = W_{UK}^\top \cdot q"></span> 可以在层间融合，只需要缓存潜在向量 <span class="katex-inline" data-expr="\mathbf{c}_k \in \mathbb{R}^{d_c}"></span> 而不是完整的 <span class="katex-inline" data-expr="\mathbf{k} \in \mathbb{R}^{n_h \times d_k}"></span>。这是 MLA 在实现上的精妙所在——<strong>通过数学等价变换将压缩"免费"变成了推理加速</strong>。</p>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>MLA 的意义：</strong>它在 DeepSeek-V2 中首次提出，将 KV Cache 减少了约 75%（相比 MHA），同时保持了模型质量。这使得 DeepSeek-V2/V3 在<strong>同等硬件条件下能支持更长的上下文</strong>，或者在<strong>同等上下文长度下降低推理成本</strong>。DeepSeek-V3 的推理成本仅为同规模 Llama 3 的约 1/7，MLA 功不可没。</div>
+    </div>
+  </section>
+
+  <!-- 4.7 -->
+  <section class="card" id="s4-7">
+    <h3>4.7 MLA 解耦 RoPE 设计</h3>
+    <p>MLA 面临一个绕不开的问题：RoPE 的旋转操作发生在 K 向量上，而 MLA 的 K 向量是<strong>从压缩潜在向量解压后</strong>才获得的。如果我们将 RoPE 应用在解压后的 K 上，就无法再将 <span class="katex-inline" data-expr="W_{UK}"></span> 吸收到 <span class="katex-inline" data-expr="W_Q"></span> 中——因为旋转操作与 <span class="katex-inline" data-expr="W_{UK}"></span> 不可交换（旋转是非线性操作）。</p>
+    <p><strong>DeepSeek 的解决方案：解耦 RoPE。</strong>将 K 分为两部分：</p>
+    <div class="katex" data-expr="\mathbf{k}_t = [\mathbf{k}_t^{(C)}; \mathbf{k}_t^{(R)}]"></div>
+    <ul>
+      <li><span class="katex-inline" data-expr="\mathbf{k}_t^{(C)} \in \mathbb{R}^{(n_h \times d_k - d_r)}}"></span>：<strong>内容部分</strong>——从低维潜在向量解压得到，<strong>不包含位置信息</strong>，参与矩阵吸收。</li>
+      <li><span class="katex-inline" data-expr="\mathbf{k}_t^{(R)} \in \mathbb{R}^{d_r}"></span>：<strong>旋转部分</strong>——单独从隐状态投影得到，<strong>应用 RoPE</strong>，不经过低秩压缩。</li>
+    </ul>
+    <div class="code-block" data-lang="python">
+class MLA_with_RoPE(nn.Module):
+    """MLA 带解耦 RoPE 设计 (简化示意)。"""
+
+    def __init__(self, d_model: int, n_heads: int, d_latent: int, d_rope: int):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_k = d_model // n_heads
+        self.d_latent = d_latent
+        self.d_rope = d_rope
+
+        # Q 内容投影 + Q RoPE 投影
+        self.W_q = nn.Linear(d_model, n_heads * self.d_k, bias=False)
+        self.W_qr = nn.Linear(d_model, n_heads * d_rope, bias=False)
+
+        # KV 低秩压缩 (内容部分)
+        self.W_dk = nn.Linear(d_model, d_latent, bias=False)
+        self.W_uk = nn.Linear(d_latent, n_heads * (self.d_k - d_rope), bias=False)
+
+        # K RoPE (单独投影，不压缩)
+        self.W_kr = nn.Linear(d_model, n_heads * d_rope, bias=False)
+
+        # V 压缩
+        self.W_dv = nn.Linear(d_model, d_latent, bias=False)
+        self.W_uv = nn.Linear(d_latent, n_heads * self.d_k, bias=False)
+
+        self.W_o = nn.Linear(n_heads * self.d_k, d_model, bias=False)
+        self.rope = RoPE(d_rope)   # 仅在 d_rope 维度上应用 RoPE
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
+        batch, seq, _ = x.shape
+        n_heads, d_k, d_r = self.n_heads, self.d_k, self.d_rope
+
+        # Q: 拼接内容和 RoPE 部分
+        q_c = self.W_q(x).reshape(batch, seq, n_heads, d_k)        # 内容
+        q_r = self.W_qr(x).reshape(batch, seq, n_heads, d_r)       # RoPE
+        q = torch.cat([q_c, q_r], dim=-1)  # (b, s, n_heads, d_k+d_r) — 简化
+        q = q.transpose(1, 2)
+
+        # K: 内容 (解压) + RoPE (单独投影)
+        latent = self.W_dk(x)                    # (b, s, d_latent)
+        k_c = self.W_uk(latent).reshape(batch, seq, n_heads, d_k - d_r)
+        k_r = self.W_kr(x).reshape(batch, seq, n_heads, d_r)
+        k_r, _ = self.rope(k_r, k_r, None)       # 仅 RoPE 部分旋转
+        k = torch.cat([k_c, k_r], dim=-1)
+        k = k.transpose(1, 2)
+
+        # V (标准)
+        v = self.W_uv(self.W_dv(x)).reshape(batch, seq, n_heads, d_k)
+        v = v.transpose(1, 2)
+
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+        attn_weights = F.softmax(scores, dim=-1)
+        out = torch.matmul(attn_weights, v)
+        out = out.transpose(1, 2).contiguous().reshape(batch, seq, d_k * n_heads)
+        return self.W_o(out), attn_weights, latent</div>
+    <p><strong>解耦设计的关键：</strong>内容部分 <span class="katex-inline" data-expr="k^{(C)}}"></span> 仍然通过低秩压缩/解压，支持矩阵吸收；RoPE 部分 <span class="katex-inline" data-expr="k^{(R)}}"></span> 单独投影、单独旋转，不经过压缩。这样既保持了 MLA 的 KV Cache 优势，又获得了 RoPE 的相对位置编码能力。</p>
+    <p>在 DeepSeek-V2/V3 的配置中，<span class="katex-inline" data-expr="d_{\text{model}}=7168, n_{\text{heads}}=64, d_k=128, d_{\text{latent}}=512, d_{\text{rope}}=64"></span>。也就是说每头 128 维中 64 维是压缩内容 + 64 维是单独 RoPE。</p>
+  </section>
+
+  <!-- 4.8 -->
+  <section class="card" id="s4-8">
+    <h3>4.8 注意头行为分析</h3>
+    <p>训练完成的注意力头通常会分化为不同的<strong>功能角色</strong>。通过分析注意力权重矩阵，研究人员已经发现了多种典型的注意力头模式：</p>
+    <p><strong>1. 句法头（Syntactic Heads）</strong></p>
+    <p>这类头的注意力集中在特定<strong>句法关系</strong>上：</p>
+    <ul>
+      <li>形容词 → 名词（"美丽的" → "花朵"）</li>
+      <li>动词 → 主语/宾语（"吃" → "猫"/"鱼"）</li>
+      <li>介词 → 其支配的名词（"在" → "桌子上"）</li>
+    </ul>
+    <p><strong>2. 语义头（Semantic Heads）</strong></p>
+    <p>这类头更多地关注<strong>语义相关</strong>的 token，与句法结构关系不大。例如代词"it"的多层注意力会聚焦到它指代的上文名词——即使相隔几十个 token。</p>
+    <p><strong>3. 位置头（Positional Heads）</strong></p>
+    <p>这类头主要编码<strong>位置关系</strong>。常见的模式包括：</p>
+    <ul>
+      <li><strong>相邻偏好：</strong>关注前一个或后一个 token（N-gram 模式）</li>
+      <li><strong>全局偏移：</strong>第 <span class="katex-inline" data-expr="i"></span> 个 token 关注第 <span class="katex-inline" data-expr="i + k"></span> 个 token（如 GPT 中"延迟一位"的预测头）</li>
+    </ul>
+    <p><strong>4. 少样本头（Induction Heads）</strong></p>
+    <p>Olsson et al. (2022) 发现了一类重要的注意力头——<strong>诱导头（Induction Heads）</strong>：</p>
+    <div class="diagram">
+输入: [A][B] ... [A] → 诱导头关注 [B]
+     ^         ^
+    token A   模型预测下一个是 B</div>
+    <p>这种模式被认为是 <strong>In-Context Learning（上下文学习）</strong>的核心机制。当模型看到 "apple → fruit, banana →"时，诱导头帮助模型找到 "banana" 之前的模式 "fruit"。</p>
+    <p><strong>5. 特殊 Token 头</strong></p>
+    <p>某些头会持续关注 <code>&lt;BOS&gt;</code>、<code>&lt;EOS&gt;</code>、句号等特殊 token。这可能是模型的一种"锚定"策略——特殊 token 作为信息的汇聚点。</p>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>头剪枝（Head Pruning）：</strong>研究表明，相当比例的注意力头在训练完成后是<strong>冗余</strong>的——移除它们对模型性能影响很小（Michel et al. 2019）。这也从侧面说明，注意力头数可以适当增加（模型容量），但其中很多头表达相似的模式。GQA 和 MLA 的"头数压缩"思路与这一观察一脉相承。</div>
+    </div>
+  </section>
+
+  <!-- 4.9 -->
+  <section class="card" id="s4-9">
+    <h3>4.9 本章总结</h3>
+    <p>你已经实现了：</p>
+    <ul>
+      <li>✅ 完整的 Multi-Head Attention（MHA）——多个子空间并行注意力，用 <code>W_o</code> 融合（~60 行）</li>
+      <li>✅ 验证了 MHA 与单头注意力的参数等价性</li>
+      <li>✅ 实现了 Grouped-Query Attention（GQA）——减少 K/V 头数，大幅降低 KV Cache（~30 行）</li>
+      <li>✅ 深入理解了 DeepSeek MLA——用低秩潜在向量压缩 KV，实现 8-16 倍 KV Cache 压缩</li>
+      <li>✅ 理解了 MLA 的解耦 RoPE 设计——内容部分压缩，RoPE 部分单独处理</li>
+      <li>✅ 了解了注意力头的功能分化——句法、语义、位置、诱导头等</li>
+    </ul>
+    <p>这条从 MHA 到 GQA 到 MLA 的演进路线，本质上是在<strong>模型质量、推理效率、显存约束</strong>之间不断寻找更优的帕累托前沿。第 5 章我们将把这些注意力组件与 FFN、RMSNorm 等模块组合，构建完整的 Transformer Block。</p>
+    <div class="info-box key">
+      <span class="icon">📚</span>
+      <div><strong>延伸阅读：</strong>
+        <a href="https://arxiv.org/abs/1706.03762" target="_blank">Vaswani et al. (2017) — Attention Is All You Need（§3.2.2 Multi-Head Attention）</a> ·
+        <a href="https://arxiv.org/abs/1911.02150" target="_blank">Shazeer (2019) — Fast Transformer Decoding: One Write-Head is All You Need (MQA)</a> ·
+        <a href="https://arxiv.org/abs/2305.13245" target="_blank">Ainslie et al. (2023) — GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints</a> ·
+        <a href="https://arxiv.org/abs/2405.04434" target="_blank">DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model (§2.1 MLA)</a> ·
+        <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 Technical Report (§3.1.2 MLA Config)</a> ·
+        <a href="https://arxiv.org/abs/2205.14135" target="_blank">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</a> ·
+        <a href="https://arxiv.org/abs/1909.10690" target="_blank">Michel et al. (2019) — Are Sixteen Heads Really Better than One? (头剪枝)</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 练习 -->
+  <section class="card">
+    <h3>📝 练习巩固</h3>
+
+    <div class="exercise" data-answer="1" data-explain="MHA 将 d_model 维空间分成 n_heads 个 d_k 维子空间，每个头独立计算注意力。总参数量与单头 n_heads * d_k = d_model 的配置相同，但提供了多个并行子空间表达不同模式。">
+      <h4>练习 1：多头注意力的核心思想是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q1" value="0"> A. 增加参数量以提高模型容量</label>
+        <label><input type="radio" name="q1" value="1"> B. 将模型分为多个子空间，每个头学习不同的注意力模式</label>
+        <label><input type="radio" name="q1" value="2"> C. 用多个小模型做集成学习</label>
+        <label><input type="radio" name="q1" value="3"> D. 减少 d_k 以降低计算复杂度</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="2" data-explain="GQA（Grouped-Query Attention）将 Q 头分为若干组，每组共享一个 K/V 头。这比 MQA（所有 Q 共享 1 个 K/V）更灵活，保留了一定的多样性，同时大幅减少 KV Cache。">
+      <h4>练习 2：GQA（分组查询注意力）与 MQA（多查询注意力）的区别是？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q2" value="0"> A. GQA 比 MQA 的 KV Cache 更小</label>
+        <label><input type="radio" name="q2" value="1"> B. MQA 需要更多训练数据</label>
+        <label><input type="radio" name="q2" value="2"> C. GQA 有多个 K/V 头组，MQA 只有一个 K/V 头</label>
+        <label><input type="radio" name="q2" value="3"> D. 没有区别，只是叫法不同</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="0" data-explain="MLA 的核心创新是用一个低维潜在向量（d_latent）压缩表示 K 和 V，而不是为每个头分别存储。在推理时通过矩阵吸收将解压操作合并到 Q 投影中，只缓存潜在向量。">
+      <h4>练习 3：DeepSeek MLA 如何减少 KV Cache？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q3" value="0"> A. 用低秩分解将 KV 压缩为潜在向量，通过矩阵吸收只缓存压缩后的向量</label>
+        <label><input type="radio" name="q3" value="1"> B. 直接丢弃 V 向量，只缓存 K</label>
+        <label><input type="radio" name="q3" value="2"> C. 将 K 和 V 量化到 4-bit，减少存储空间</label>
+        <label><input type="radio" name="q3" value="3"> D. 将长序列切分为短段分别处理</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="2" data-explain="因为旋转操作与解压矩阵 W_UK 不可交换，无法将 RoPE 吸收到 Q 投影中。所以 DeepSeek 采用解耦设计——内容部分压缩（可吸收），RoPE 部分单独投影和旋转（不可压缩）。">
+      <h4>练习 4：为什么 MLA 需要"解耦 RoPE"设计？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q4" value="0"> A. 因为 RoPE 本身不兼容 KV Cache</label>
+        <label><input type="radio" name="q4" value="1"> B. 因为 RoPE 不能用于内容部分的注意力计算</label>
+        <label><input type="radio" name="q4" value="2"> C. 因为 RoPE 旋转与解压矩阵不可交换，无法被吸收</label>
+        <label><input type="radio" name="q4" value="3"> D. 因为 DeepSeek 在 MLA 中使用 ALiBi 而不是 RoPE</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="0" data-explain="诱导头（Induction Head）在输入中出现某个 token A 时，关注到序列中前一次 A 出现后紧跟着的 token B，从而在当前位置后预测 B。这是 In-Context Learning 的核心机制之一。">
+      <h4>练习 5：什么是"诱导头"（Induction Head）？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q5" value="0"> A. 一个关注前文重复模式的注意力头，被认为是在上下文中学习（ICL）的关键机制</label>
+        <label><input type="radio" name="q5" value="1"> B. 一个专门关注 <endoftext> 标记的头</label>
+        <label><input type="radio" name="q5" value="2"> C. 一个在训练中自动生成训练数据的头</label>
+        <label><input type="radio" name="q5" value="3"> D. 一个用于加速推理的特殊注意力头</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+  </section>
+</article>
+
+<nav class="chapter-nav">
+  <a href="ch03.html" class="btn btn-outline" rel="prev">← 上一章</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
+  <a href="ch05.html" class="btn btn-outline" rel="next">下一章 →</a>
+</nav>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

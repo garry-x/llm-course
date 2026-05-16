@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第7章 训练循环 — LLM 深度学习</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-ch="7">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>从代码出发，构建大语言模型</p>
+  </div>
+  <div class="sidebar-progress">
+    <span>学习进度: <strong id="progress-text">0 / 10</strong></span>
+    <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+  </div>
+  <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第7章 训练循环</h2>
+  <p class="subtitle">实现 AdamW / Muon + FP8 / FP4 + DualPipe——极致的训练效率</p>
+  <div class="reading-time">⏱ 预计阅读: 60 分钟 · 14 小节 · 5 道练习</div>
+
+  <div class="font-controls">
+    <span>字号:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  </div>
+
+  <!-- 7.1 -->
+  <section class="card" id="s7-1">
+    <h3>7.1 语言建模目标</h3>
+    <p>大语言模型的训练目标是 <strong>Next-token Prediction（下一个 Token 预测）</strong>。给定一个 token 序列 <span class="katex-inline" data-expr="(x_1, x_2, ..., x_T)"></span>，模型学习预测每个位置的下一个 token：</p>
+    <div class="math-box">
+      <div class="label">公式 7.1 自回归分解（Autoregressive Factorization）</div>
+      <div class="katex" data-expr="p(\mathbf{x}) = \prod_{t=1}^{T} p(x_t \mid x_{1:t-1})"></div>
+    </div>
+    <p>整个序列的联合概率被分解为每个 token 在给定前文条件下的条件概率的乘积。这就是 <strong>自回归 (Autoregressive)</strong> 的本质——模型的输出依赖于自身的先前输出。</p>
+    <p>训练时，我们最大化训练数据中所有序列的似然，等价于最小化 <strong>负对数似然 (Negative Log-Likelihood, NLL)</strong>：</p>
+    <div class="math-box">
+      <div class="label">公式 7.2 训练目标</div>
+      <div class="katex" data-expr="\mathcal{L} = -\frac{1}{T}\sum_{t=1}^{T} \log p(x_t \mid x_{1:t-1}; \theta)"></div>
+    </div>
+    <p>这个损失函数的物理意义非常直观：<strong>模型在每个位置预测下一个 token 时，将越多的概率质量分配给正确的 token，损失就越低。</strong></p>
+    <p>一个重要的实现细节是因果掩码 (Causal Mask)。训练时我们需要看到整个序列，但 <strong>token t 的预测不能看到 token t 及之后的 token</strong>。这通过注意力机制中的因果掩码实现——上三角矩阵被屏蔽为负无穷。</p>
+    <div class="diagram">
+    因果掩码示意图 (max_seq_len=6):
+
+        x₁  x₂  x₃  x₄  x₅  x₆
+    x₁  ✓   ✗   ✗   ✗   ✗   ✗
+    x₂  ✓   ✓   ✗   ✗   ✗   ✗
+    x₃  ✓   ✓   ✓   ✗   ✗   ✗
+    x₄  ✓   ✓   ✓   ✓   ✗   ✗
+    x₅  ✓   ✓   ✓   ✓   ✓   ✗
+    x₆  ✓   ✓   ✓   ✓   ✓   ✓
+
+    ✓ = 可以关注 (allowed), ✗ = 被屏蔽 (masked)</div>
+  </section>
+
+  <!-- 7.2 -->
+  <section class="card" id="s7-2">
+    <h3>7.2 动手：DataLoader</h3>
+    <p>训练的第一步是将文本数据转换为模型可以消费的格式。数据加载流程如下：</p>
+    <p><strong>文本 → Tokenizer → Token IDs → 分片 → 批量 → 模型</strong></p>
+    <div class="code-block" data-lang="python">
+import torch
+from torch.utils.data import Dataset, DataLoader
+import numpy as np
+
+class TextDataset(Dataset):
+    """文本数据集 — 将 token ID 序列分为输入和目标"""
+
+    def __init__(self, data_path, tokenizer, block_size=1024):
+        """
+        Args:
+            data_path: 文本文件路径
+            tokenizer: BPE tokenizer 实例
+            block_size: 序列长度（GPT-2 默认 1024）
+        """
+        # 读取并编码整个文本
+        with open(data_path, 'r', encoding='utf-8') as f:
+            text = f.read()
+
+        # tokenize 整个语料
+        self.tokens = tokenizer.encode(text)
+        self.block_size = block_size
+
+    def __len__(self):
+        # 每个样本是一个 block_size 长度的序列
+        return len(self.tokens) // self.block_size
+
+    def __getitem__(self, idx):
+        start = idx * self.block_size
+        end = start + self.block_size
+
+        # 输入: [t₁, t₂, ..., t_{n-1}]
+        x = torch.tensor(self.tokens[start:end], dtype=torch.long)
+
+        # 目标: [t₂, t₃, ..., t_n] (右移一位)
+        y = torch.tensor(self.tokens[start+1:end+1], dtype=torch.long)
+
+        return x, y
+
+
+def create_dataloader(data_path, tokenizer, batch_size=8,
+                      block_size=1024, shuffle=True):
+    """创建训练 DataLoader"""
+    dataset = TextDataset(data_path, tokenizer, block_size)
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=2,
+        pin_memory=True,
+        drop_last=True   # 丢弃最后的不足 batch 的数据
+    )
+    return loader
+
+
+# 使用示例
+batch_size = 8
+seq_len = 1024
+dataloader = create_dataloader(
+    data_path='shakespeare.txt',
+    tokenizer=bpe_tokenizer,
+    batch_size=batch_size,
+    block_size=seq_len
+)
+
+x, y = next(iter(dataloader))
+print(f"输入 shape: {x.shape}")    # (8, 1024)
+print(f"目标 shape: {y.shape}")    # (8, 1024)
+# 验证 y 是 x 右移一位
+assert torch.equal(x[:, 1:], y[:, :-1]), "x 和 y 的位移关系不正确"</div>
+    <p><strong>关键设计细节：</strong></p>
+    <ul>
+      <li><strong>右移一位：</strong>对于位置 t 的输入，模型需要预测 t+1 的 token。所以 <code>x[t]</code> 对应 <code>y[t]</code></li>
+      <li><strong>drop_last=True：</strong>保证所有 batch 大小一致，避免最后一个 batch 形状不同导致的问题</li>
+      <li><strong>pin_memory=True：</strong>启用 GPU 训练时的 DMA 传输优化，提升数据加载速度 2-3 倍</li>
+    </ul>
+  </section>
+
+  <!-- 7.3 -->
+  <section class="card" id="s7-3">
+    <h3>7.3 动手：Cross-Entropy Loss</h3>
+    <p>语言建模使用的损失函数是 <strong>交叉熵损失 (Cross-Entropy Loss)</strong>。在 PyTorch 中，<code>nn.CrossEntropyLoss</code> 已经实现了这个功能，但理解其内部机制至关重要：</p>
+    <div class="math-box">
+      <div class="label">公式 7.3 交叉熵 = 负对数似然</div>
+      <div class="katex" data-expr="\text{CE}(\mathbf{p}, \mathbf{q}) = -\sum_{i} p_i \log q_i = -\log q_{\text{target}}"></div>
+    </div>
+    <p>由于真实标签是 one-hot 向量（只有一个正确 token 的概率为 1），交叉熵等价于负对数似然——即模型分配给正确 token 的概率的负对数。</p>
+    <div class="code-block" data-lang="python">
+def cross_entropy_manual(logits, targets):
+    """手动实现交叉熵损失（教学用）
+
+    Args:
+        logits:  (batch, seq_len, vocab_size) — 模型原始输出
+        targets: (batch, seq_len) — 真实 token ID
+    Returns:
+        标量损失
+    """
+    batch, seq_len, vocab_size = logits.shape
+
+    # 1. 将 logits 展平为 2D
+    logits_flat = logits.view(-1, vocab_size)  # (b*s, V)
+    targets_flat = targets.view(-1)            # (b*s,)
+
+    # 2. Softmax 归一化（数值稳定版本）
+    logits_max = logits_flat.max(dim=-1, keepdim=True).values
+    logits_stable = logits_flat - logits_max
+    exp_logits = torch.exp(logits_stable)
+    softmax_probs = exp_logits / exp_logits.sum(dim=-1, keepdim=True)
+
+    # 3. 取目标 token 的概率
+    target_probs = softmax_probs[
+        torch.arange(softmax_probs.size(0)),
+        targets_flat
+    ]
+
+    # 4. 负对数似然
+    nll = -torch.log(target_probs + 1e-8)  # 加小常数防止 log(0)
+
+    # 5. 平均
+    return nll.mean()
+
+
+# 验证与 PyTorch 内置实现一致
+import torch.nn.functional as F
+
+logits = torch.randn(4, 64, 50257)   # 模拟输出
+targets = torch.randint(0, 50257, (4, 64))  # 模拟目标
+
+loss_manual = cross_entropy_manual(logits, targets)
+loss_pytorch = F.cross_entropy(
+    logits.view(-1, 50257),
+    targets.view(-1)
+)
+
+print(f"手动实现: {loss_manual.item():.4f}")
+print(f"PyTorch:   {loss_pytorch.item():.4f}")
+print(f"差异: {abs(loss_manual - loss_pytorch).item():.8f}")
+# 应该接近 0</div>
+  </section>
+
+  <!-- 7.4 -->
+  <section class="card" id="s7-4">
+    <h3>7.4 困惑度 (Perplexity)</h3>
+    <p><strong>困惑度 (Perplexity, PPL)</strong> 是语言模型最常用的评估指标。它衡量模型对下一个 token 预测的"困惑程度"：</p>
+    <div class="math-box">
+      <div class="label">公式 7.4 困惑度</div>
+      <div class="katex" data-expr="\text{PPL}(\mathbf{x}) = \exp\left(-\frac{1}{T}\sum_{t=1}^{T} \log p(x_t \mid x_{1:t-1})\right) = \exp(\mathcal{L})"></div>
+    </div>
+    <p>困惑度就是损失函数的 <strong>指数化</strong>。<code>PPL = exp(loss)</code>。它直观地表示模型在每个位置平均有多少个"候选 token 感到困惑"：</p>
+    <ul>
+      <li><strong>PPL = 1</strong> — 完美模型，总是 100% 确定下一个 token</li>
+      <li><strong>PPL = 50</strong> — 模型在每一步平均在 ~50 个 token 之间犹豫</li>
+      <li><strong>PPL = vocab_size</strong> — 随机猜测（词表 50257 时 PPL ≈ 50257）</li>
+    </ul>
+    <p>实际 LLM 的典型困惑度范围：</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>模型</th><th>参数量</th><th>PPL (WikiText-2)</th></tr>
+        <tr><td>GPT-2 small</td><td>124M</td><td>~25</td></tr>
+        <tr><td>GPT-2 medium</td><td>355M</td><td>~20</td></tr>
+        <tr><td>GPT-2 large</td><td>774M</td><td>~18</td></tr>
+        <tr><td>GPT-2 XL</td><td>1.5B</td><td>~16</td></tr>
+        <tr><td>Llama 2 7B</td><td>7B</td><td>~8</td></tr>
+        <tr><td>Llama 3 70B</td><td>70B</td><td>~5</td></tr>
+      </table>
+    </div>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>注意：</strong>困惑度只衡量模型对<strong>语言统计规律</strong>的拟合程度，并不直接对应生成文本的质量。一个 PPL 很低的模型可能在事实上胡说八道——它只是"很流畅地胡说八道"。这也是为什么 RLHF 和对齐训练是必要的补充。</div>
+    </div>
+  </section>
+
+  <!-- 7.5 -->
+  <section class="card" id="s7-5">
+    <h3>7.5 动手：AdamW 优化器</h3>
+    <p><strong>AdamW</strong> (Loshchilov & Hutter, 2019) 是目前 LLM 训练中最广泛使用的优化器。它将 Adam 的动量机制与 <strong>解耦的权重衰减 (Decoupled Weight Decay)</strong> 结合：</p>
+    <div class="math-box">
+      <div class="label">公式 7.5 AdamW 更新规则</div>
+      <div class="katex" data-expr="\begin{aligned}
+        m_t &= \beta_1 m_{t-1} + (1 - \beta_1) g_t \\
+        v_t &= \beta_2 v_{t-1} + (1 - \beta_2) g_t^2 \\
+        \hat{m}_t &= m_t / (1 - \beta_1^t) \\
+        \hat{v}_t &= v_t / (1 - \beta_2^t) \\
+        \theta_t &= \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} - \eta \lambda \theta_{t-1}
+        \end{aligned}"></div>
+    </div>
+    <p><code>m_t</code> 是一阶动量（梯度的 EMA），<code>v_t</code> 是二阶动量（梯度平方的 EMA）。权重衰减 <span class="katex-inline" data-expr="\lambda"></span> 在 Adam 更新之后<strong>独立</strong>应用，不参与动量计算。</p>
+    <div class="code-block" data-lang="python">
+class AdamW:
+    """AdamW 优化器 — 从零实现
+
+    解耦权重衰减: weight decay 不参与 Adam 的梯度动量计算
+    """
+    def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8,
+                 weight_decay=0.1):
+        self.params = list(params)
+        self.lr = lr
+        self.beta1, self.beta2 = betas
+        self.eps = eps
+        self.weight_decay = weight_decay
+        self.t = 0
+        self.m = [torch.zeros_like(p) for p in self.params]
+        self.v = [torch.zeros_like(p) for p in self.params]
+
+    def step(self, grads=None):
+        self.t += 1
+        for i, p in enumerate(self.params):
+            g = grads[i] if grads is not None else p.grad
+            if g is None:
+                continue
+
+            # 1. 更新动量
+            self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * g
+            self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * g ** 2
+
+            # 2. 偏差修正
+            m_hat = self.m[i] / (1 - self.beta1 ** self.t)
+            v_hat = self.v[i] / (1 - self.beta2 ** self.t)
+
+            # 3. Adam 更新
+            p.data -= self.lr * m_hat / (torch.sqrt(v_hat) + self.eps)
+
+            # 4. 解耦权重衰减（独立于梯度）
+            if self.weight_decay > 0:
+                p.data -= self.lr * self.weight_decay * p.data
+
+
+# 使用 PyTorch 内置 AdamW
+optimizer = torch.optim.AdamW(
+    model.parameters(),
+    lr=3e-4,
+    betas=(0.9, 0.95),
+    eps=1e-8,
+    weight_decay=0.1
+)</div>
+    <p><strong>为什么 AdamW 优于标准 Adam？</strong> 在标准 Adam 中，权重衰减和 <span class="katex-inline" data-expr="L_2"></span> 正则化是等价的——两者都在损失函数中加入 <span class="katex-inline" data-expr="\lambda \|\theta\|^2"></span> 项。但 Adam 的自适应学习率会导致 <span class="katex-inline" data-expr="L_2"></span> 正则化不正确地缩放（大梯度参数的正则化被缩小，小梯度参数的正则化被放大）。AdamW 将权重衰减从自适应学习率中<strong>解耦</strong>，使得正则化效果与梯度大小无关。</p>
+  </section>
+
+  <!-- 7.6 -->
+  <section class="card" id="s7-6">
+    <h3>7.6 学习率调度</h3>
+    <p>现代 LLM 训练通常使用 <strong>Warmup + Cosine Decay</strong> 学习率调度策略：</p>
+    <div class="code-block" data-lang="python">
+def get_cosine_schedule_with_warmup(
+    optimizer, num_warmup_steps, num_training_steps, min_lr_ratio=0.1
+):
+    """带 Warmup 的余弦衰减学习率调度
+
+    Phase 1 — Warmup: lr 从 0 线性增长到 max_lr
+    Phase 2 — Cosine Decay: lr 从 max_lr 余弦衰减到 min_lr
+    """
+    def lr_lambda(current_step):
+        # Warmup 阶段
+        if current_step < num_warmup_steps:
+            return float(current_step) / float(max(1, num_warmup_steps))
+        # Cosine Decay 阶段
+        progress = float(current_step - num_warmup_steps) / float(
+            max(1, num_training_steps - num_warmup_steps)
+        )
+        cosine_decay = 0.5 * (1.0 + torch.cos(torch.tensor(progress * torch.pi)))
+        return max(min_lr_ratio, cosine_decay * (1 - min_lr_ratio) + min_lr_ratio)
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+
+# 使用示例
+total_steps = 100000
+warmup_steps = 1000  # 通常为总步数的 1-5%
+
+scheduler = get_cosine_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=warmup_steps,
+    num_training_steps=total_steps,
+    min_lr_ratio=0.1
+)
+
+# 训练循环中使用
+for step in range(total_steps):
+    loss = train_step()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # 梯度裁剪
+    optimizer.step()
+    scheduler.step()
+    optimizer.zero_grad()
+
+    if step % 100 == 0:
+        current_lr = scheduler.get_last_lr()[0]
+        print(f"Step {step}: lr={current_lr:.6f}, loss={loss.item():.4f}")</div>
+    <p><strong>学习率调度参数的经验法则：</strong></p>
+    <ul>
+      <li><strong>Warmup 步数：</strong>总步数的 1-5%。GPT-3 使用 375M tokens (约 0.1% 总 tokens)，更保守的设置是 1%</li>
+      <li><strong>最大学习率：</strong>GPT-2 124M 使用 3e-4。Hebbian 法则：lr ≈ 3e-4 * sqrt(模型规模/124M)</li>
+      <li><strong>Min LR Ratio：</strong>通常为 0.1 × max_lr。训练结束时学习率平滑降低到最大值的 10%</li>
+      <li><strong>梯度裁剪：</strong>max_norm = 1.0 是标准值，防止梯度爆炸</li>
+    </ul>
+  </section>
+
+  <!-- 7.7 -->
+  <section class="card" id="s7-7">
+    <h3>7.7 混合精度训练</h3>
+    <p><strong>混合精度训练 (Mixed Precision Training)</strong> 使用 FP16/BF16 进行前向和反向传播，同时使用 FP32 维护优化器状态（权重更新）。这种组合可以：</p>
+    <ul>
+      <li><strong>减少显存占用约 50%</strong>（FP16/BF16 需要 FP32 的一半存储空间）</li>
+      <li><strong>加速训练 2-3 倍</strong>（更低的精度允许更大的 batch 和更快的内存传输）</li>
+      <li>几乎不影响模型质量</li>
+    </ul>
+    <p>PyTorch 通过 <code>torch.cuda.amp</code> (Automatic Mixed Precision) 原生支持：</p>
+    <div class="code-block" data-lang="python">
+from torch.cuda.amp import autocast, GradScaler
+
+# GradScaler: 防止 FP16 梯度下溢
+scaler = GradScaler()
+
+def train_step_mixed_precision(model, batch, optimizer):
+    """混合精度训练步骤"""
+    x, y = batch
+    x, y = x.cuda(), y.cuda()
+
+    optimizer.zero_grad()
+
+    # 自动混合精度上下文
+    with autocast(dtype=torch.bfloat16):
+        logits = model(x)
+        loss = F.cross_entropy(
+            logits.view(-1, logits.size(-1)),
+            y.view(-1)
+        )
+
+    # 缩放 loss 并反向传播
+    scaler.scale(loss).backward()
+
+    # 梯度裁剪（在缩放后解缩放前）
+    scaler.unscale_(optimizer)
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+
+    # 更新权重（自动处理缩放）
+    scaler.step(optimizer)
+    scaler.update()
+
+    return loss.item()
+
+
+# BF16 vs FP16 对比
+# BF16: 8 位指数 + 7 位尾数 — 范围大但精度低（适合训练）
+# FP16: 5 位指数 + 10 位尾数 — 范围小但精度高（适合推理）
+
+print(f"BF16 范围: ±3.4×10^38")   # 与 FP32 相同
+print(f"FP16 范围: ±6.5×10^4")    # 容易溢出</div>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>BF16 vs FP16 的选择：</strong>BF16 的范围与 FP32 相同（8 位指数），因此<strong>几乎不会溢出</strong>，不需要 GradScaler。这是 Llama、Mistral、DeepSeek 全部选择 BF16 训练的原因。FP16 的范围小，需要梯度缩放来避免下溢出。NVIDIA H100 GPU 原生支持 BF16 计算（比 FP16 快 2x）。</div>
+    </div>
+  </section>
+
+  <!-- 7.8 -->
+  <section class="card" id="s7-8">
+    <h3>7.8 动手：完整训练循环</h3>
+    <p>现在我们整合所有组件，构建一个完整的训练循环：</p>
+    <div class="code-block" data-lang="python">
+import time
+import math
+from torch.cuda.amp import autocast, GradScaler
+
+def train(model, dataloader, optimizer, scheduler, config):
+    """完整的训练循环
+
+    Args:
+        model:      GPTModel 实例
+        dataloader: PyTorch DataLoader
+        optimizer:  AdamW 优化器
+        scheduler:  学习率调度器
+        config:     训练配置（epochs, log_interval 等）
+    """
+    model.train()
+    device = next(model.parameters()).device
+    scaler = GradScaler(enabled=(config.dtype == 'fp16'))
+    total_steps = len(dataloader) * config.num_epochs
+    step = 0
+
+    for epoch in range(config.num_epochs):
+        epoch_loss = 0.0
+        start_time = time.time()
+
+        for batch_idx, (x, y) in enumerate(dataloader):
+            x, y = x.to(device), y.to(device)
+
+            optimizer.zero_grad()
+
+            # 混合精度前向
+            with autocast(dtype=config.dtype, enabled=config.use_amp):
+                logits = model(x)
+                loss = F.cross_entropy(
+                    logits.view(-1, logits.size(-1)),
+                    y.view(-1)
+                )
+
+            # 反向传播
+            scaler.scale(loss).backward()
+
+            # 梯度裁剪
+            scaler.unscale_(optimizer)
+            grad_norm = torch.nn.utils.clip_grad_norm_(
+                model.parameters(), config.max_grad_norm
+            )
+
+            # 优化器步进
+            scaler.step(optimizer)
+            scaler.update()
+            scheduler.step()
+            step += 1
+
+            epoch_loss += loss.item()
+
+            # 日志
+            if batch_idx % config.log_interval == 0:
+                ppl = math.exp(loss.item())
+                lr = scheduler.get_last_lr()[0]
+                elapsed = time.time() - start_time
+                print(
+                    f"Epoch {epoch+1}/{config.num_epochs} | "
+                    f"Batch {batch_idx}/{len(dataloader)} | "
+                    f"Loss {loss.item():.4f} | "
+                    f"PPL {ppl:.2f} | "
+                    f"LR {lr:.2e} | "
+                    f"GradNorm {grad_norm:.2f} | "
+                    f"Time {elapsed:.1f}s"
+                )
+
+        avg_loss = epoch_loss / len(dataloader)
+        avg_ppl = math.exp(avg_loss)
+        print(f"Epoch {epoch+1} 完成 — "
+              f"平均 Loss: {avg_loss:.4f}, PPL: {avg_ppl:.2f}")
+
+    return model</div>
+    <p>这个训练循环约 60 行核心代码，包含了 LLM 训练的所有关键要素：DataLoader 迭代、混合精度、梯度裁剪、学习率调度、loss/PPL 监控。</p>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>训练循环中的最佳实践：</strong>(1) 在每个 epoch 结束时保存 checkpoint，格式为 <code>model_epoch{N}.pt</code>；(2) 监控梯度范数，如果突然增大可能表示训练不稳定；(3) 定期在验证集上计算 PPL 防止过拟合；(4) 使用 TensorBoard 或 wandb 实时可视化训练曲线。</div>
+    </div>
+  </section>
+
+  <!-- 7.9 -->
+  <section class="card" id="s7-9">
+    <h3>7.9 训练监控</h3>
+    <p>训练过程中需要监控的关键指标：</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>指标</th><th>正常范围</th><th>异常含义</th></tr>
+        <tr><td>Loss</td><td>从 ~10 下降到 ~3-4</td><td>不下降 → 学习率太小或架构有问题</td></tr>
+        <tr><td>PPL</td><td>从 ~22000 下降到 ~20-50</td><td>上升 → 过拟合或数据泄露</td></tr>
+        <tr><td>梯度范数</td><td>0.1 - 10.0</td><td>>100 → 梯度爆炸；<1e-6 → 梯度消失</td></tr>
+        <tr><td>学习率</td><td>从 0 → 3e-4 → 3e-5</td><td>变化不匹配调度器 → 需要检查 scheduler.step()</td></tr>
+        <tr><td>GPU 利用率</td><td>80-100%</td><td><50% → DataLoader 是瓶颈</td></tr>
+        <tr><td>显存占用</td><td>根据模型而定</td><td>超过 GPU 显存 → 减小 batch_size 或 seq_len</td></tr>
+      </table>
+    </div>
+    <div class="code-block" data-lang="python">
+# 使用 wandb 进行训练监控 (可选)
+try:
+    import wandb
+    wandb.init(project="llm-learner", config=config.__dict__)
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
+
+# 在训练循环中记录
+if WANDB_AVAILABLE:
+    wandb.log({
+        'loss': loss.item(),
+        'perplexity': ppl,
+        'learning_rate': lr,
+        'gradient_norm': grad_norm,
+        'epoch': epoch,
+        'step': step
+    })
+
+# 可视化 Loss 曲线 (matplotlib)
+def plot_loss_curve(loss_history):
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(10, 5))
+    plt.plot(loss_history, alpha=0.6, label='Raw Loss')
+    # 平滑曲线
+    window = 50
+    smoothed = [sum(loss_history[i:i+window])/window
+                for i in range(len(loss_history)-window)]
+    plt.plot(range(window, len(loss_history)), smoothed,
+             label=f'Smoothed (window={window})', linewidth=2)
+    plt.xlabel('Step')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()</div>
+  </section>
+
+  <!-- 7.10 -->
+  <section class="card" id="s7-10">
+    <h3>7.10 动手：在 Shakespeare 上训练微型 GPT</h3>
+    <p>让我们将所有组件结合起来——在 Shakespeare 文本上训练一个微型 GPT 模型。这是一个端到端的可运行示例：</p>
+    <div class="code-block" data-lang="python">
+import urllib.request
+import os
+
+# === 0. 准备数据 ===
+url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+data_path = "shakespeare.txt"
+if not os.path.exists(data_path):
+    urllib.request.urlretrieve(url, data_path)
+
+with open(data_path, 'r') as f:
+    text = f.read()
+print(f"数据: {len(text):,} 字符")
+
+# === 1. 字符级分词（简化版：用单个字符作为 token）===
+chars = sorted(list(set(text)))
+vocab_size = len(chars)
+stoi = {ch: i for i, ch in enumerate(chars)}
+itos = {i: ch for i, ch in enumerate(chars)}
+
+def encode(s): return [stoi[c] for c in s]
+def decode(ids): return ''.join([itos[i] for i in ids])
+
+print(f"词表: {vocab_size} 个唯一字符")
+
+# === 2. 配置 ===
+class TrainConfig:
+    d_model = 128          # 小模型
+    n_heads = 4
+    n_layers = 4
+    d_ff = 512
+    vocab_size = vocab_size
+    max_seq_len = 128
+    batch_size = 32
+    lr = 3e-4
+    num_epochs = 10
+    dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+    use_amp = torch.cuda.is_available() and dtype == torch.float16
+    max_grad_norm = 1.0
+    log_interval = 50
+    dropout = 0.1
+
+config = TrainConfig()
+gpt_config = GPTConfig(
+    vocab_size=config.vocab_size,
+    d_model=config.d_model,
+    n_heads=config.n_heads,
+    n_layers=config.n_layers,
+    max_seq_len=config.max_seq_len,
+    dropout=config.dropout,
+    tie_weights=True,
+)
+
+# === 3. 准备数据加载器和模型 ===
+dataset = TextDatasetCustom(text, encode, config.max_seq_len)
+loader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True)
+
+model = GPTModel(gpt_config)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = model.to(device)
+print(f"设备: {device}")
+
+optimizer = torch.optim.AdamW(
+    model.parameters(), lr=config.lr, betas=(0.9, 0.95), weight_decay=0.1
+)
+scheduler = get_cosine_schedule_with_warmup(
+    optimizer, num_warmup_steps=50,
+    num_training_steps=len(loader) * config.num_epochs
+)
+
+# === 4. 训练 ===
+print(f"开始训练 ({config.num_epochs} epochs)...")
+trained_model = train(model, loader, optimizer, scheduler, config)
+
+# === 5. 生成测试 ===
+def generate(model, start_text, max_tokens=200, temperature=1.0):
+    model.eval()
+    tokens = encode(start_text)
+    input_ids = torch.tensor(tokens).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        for _ in range(max_tokens):
+            # 限制到 max_seq_len
+            if input_ids.size(1) > config.max_seq_len:
+                input_ids = input_ids[:, -config.max_seq_len:]
+
+            logits = model(input_ids)
+            logits = logits[0, -1, :] / temperature
+            probs = F.softmax(logits, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)
+            input_ids = torch.cat([input_ids, next_token.unsqueeze(0)], dim=1)
+            tokens.append(next_token.item())
+
+    return decode(tokens)
+
+print("\n=== 生成结果 ===")
+print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
+    <p>这个完整的例子使用了字符级分词（而非 BPE），模型只有 4 层、d_model=128——可以在 CPU 上几分钟内训练完成。它展示了从数据准备到训练再到生成的完整链路。更换为 BPE 分词器和完整 GPT-2 配置后，同样的代码就可以扩展到真正的 124M 模型训练。</p>
+  </section>
+
+  <!-- 7.11 -->
+  <section class="card" id="s7-11">
+    <h3>7.11 DeepSeek Muon 优化器</h3>
+    <p><strong>Muon</strong> 是 DeepSeek-V4/R1 使用的创新优化器，核心思想是<strong>将权重更新矩阵"正交化"</strong>——通过 Newton-Schulz 迭代将梯度矩阵投影到其正交方向，加速收敛。</p>
+    <div class="math-box">
+      <div class="label">公式 7.6 Muon 更新规则</div>
+      <div class="katex" data-expr="\begin{aligned}
+        G_t &= \text{reshape}(\text{grad}_t, \text{matrix_shape}) \\
+        O_t &= \text{NewtonSchulz}(G_t) \quad \text{(正交投影)} \\
+        \theta_t &= \theta_{t-1} - \eta \cdot \text{reshape}(O_t, \text{orig_shape}) - \eta \lambda \theta_{t-1}
+        \end{aligned}"></div>
+    </div>
+    <p><strong>Newton-Schulz 迭代</strong>是计算矩阵极分解（polar decomposition）的一种高效方法：</p>
+    <div class="code-block" data-lang="python">
+def newton_schulz(G, num_iters=5):
+    """Newton-Schulz 迭代 — 将矩阵投影到最近的正交矩阵
+
+    Args:
+        G: 输入矩阵 (m, n)
+        num_iters: 迭代次数（通常 5 次足够）
+    Returns:
+        正交化后的矩阵 (m, n)
+    """
+    m, n = G.shape
+    # 确保是方阵或接近方阵
+    if m != n:
+        # 对非方阵，先进行 SVD 风格的预处理
+        if m > n:
+            GtG = G.T @ G
+            # ... Newton-Schulz on the smaller side
+        else:
+            GGt = G @ G.T
+            # ...
+
+    # Newton-Schulz 迭代: X_{k+1} = X_k (3I - X_k^T X_k) / 2
+    X = G.clone()
+    for _ in range(num_iters):
+        XtX = X.T @ X
+        X = X @ (3 * torch.eye(n, device=X.device) - XtX) / 2
+
+    return X
+
+
+class Muon(torch.optim.Optimizer):
+    """Muon 优化器 — 基于矩阵正交化
+
+    对 >= 2D 的参数进行 Newton-Schulz 正交投影，
+    对 1D 参数（bias, norm 等）使用标准 SGD/AdamW。
+    """
+    def __init__(self, params, lr=1e-3, weight_decay=0.1,
+                 muon_rank_threshold=16, newton_iters=5):
+        defaults = dict(lr=lr, weight_decay=weight_decay)
+        super().__init__(params, defaults)
+        self.muon_rank_threshold = muon_rank_threshold
+        self.newton_iters = newton_iters
+
+    @torch.no_grad()
+    def step(self):
+        for group in self.param_groups:
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+
+                grad = p.grad
+                # 2D+ 参数使用 Muon，其余使用参数无关更新
+                if grad.ndim >= 2 and min(grad.shape) >= self.muon_rank_threshold:
+                    # 正交投影
+                    ortho_grad = newton_schulz(grad, self.newton_iters)
+                    update = ortho_grad
+                else:
+                    # bias/norm: 直接使用梯度
+                    update = grad
+
+                # 权重衰减（解耦）
+                if group['weight_decay'] > 0:
+                    p.data.mul_(1 - group['lr'] * group['weight_decay'])
+
+                # 更新
+                p.data.add_(update, alpha=-group['lr'])</div>
+    <p><strong>为什么 Muon 比 AdamW 更好？</strong></p>
+    <ul>
+      <li><strong>正交化约束：</strong>强制权重矩阵保持好的条件数，防止特征值退化。这相当于隐式地控制了 <strong>表示坍缩 (representation collapse)</strong></li>
+      <li><strong>减少内存：</strong>不需要维护 Adam 的 m_t 和 v_t 动量状态（2 个额外张量），节省约 50% 的优化器显存</li>
+      <li><strong>更快收敛：</strong>DeepSeek-V4 报告 Muon 比 AdamW 在相同 token 预算下达到更低 loss</li>
+    </ul>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>Muon 的适用条件：</strong>Muon 对明确具有矩阵结构的参数（nn.Linear 权重、Embedding 权重）效果最好。bias 和 LayerNorm 的 gamma/beta 是 1D 的，不适合 Muon，应退化为标准更新。DeepSeek-V4 将所有 ≥2D 且两个维度都 ≥16 的参数使用 Muon。</div>
+    </div>
+  </section>
+
+  <!-- 7.12 -->
+  <section class="card" id="s7-12">
+    <h3>7.12 FP8/FP4 混合精度</h3>
+    <p>DeepSeek-V3 是首个成功实现 <strong>大规模 FP8 训练</strong> 的 LLM。而 DeepSeek-V4 更进一步，引入了 FP4 量化感知训练 (QAT)。</p>
+    <div class="math-box">
+      <div class="label">公式 7.7 FP8 量化</div>
+      <div class="katex" data-expr="\text{FP8}(x) = \text{round}(\text{clamp}(x / s, \text{min}, \text{max})) \times s"></div>
+    </div>
+    <p>其中 <span class="katex-inline" data-expr="s"></span> 是缩放因子，<span class="katex-inline" data-expr="\text{min/max}"></span> 是 FP8 的表示范围。</p>
+    <p>FP8 有两种格式：</p>
+    <ul>
+      <li><strong>E4M3</strong> (4 位指数, 3 位尾数) — 范围 ±448，精度约 1 位小数。用于<strong>前向传播的权重和激活</strong></li>
+      <li><strong>E5M2</strong> (5 位指数, 2 位尾数) — 范围 ±57344，精度更低。用于<strong>反向传播的梯度</strong>（梯度需要更大范围）</li>
+    </ul>
+    <p>DeepSeek-V4 的 FP4 QAT：</p>
+    <div class="code-block" data-lang="python">
+class FP4Quantizer:
+    """FP4 量化 — 用于 DeepSeek-V4 QAT
+
+    FP4 只有 16 个可表示的值的。
+    使用 block-wise 量化和可学习的缩放因子。
+    """
+    def __init__(self, block_size=128):
+        self.block_size = block_size
+        # FP4 的 16 个离散水平 (E2M1)
+        self.fp4_levels = torch.tensor([
+            -6.0, -4.0, -2.0, -1.0,
+            -0.5, -0.25, 0.0, 0.25,
+            0.5, 1.0, 2.0, 4.0,
+            6.0, 8.0, 12.0, 16.0
+        ])
+
+    def quantize(self, x, scale=None):
+        """将张量量化为 FP4
+
+        Args:
+            x: 输入张量
+            scale: 缩放因子（可学习）
+        Returns:
+            量化后的张量
+        """
+        orig_shape = x.shape
+        x_flat = x.view(-1)
+
+        # Block-wise 缩放
+        num_blocks = (x_flat.numel() + self.block_size - 1) // self.block_size
+        x_blocks = x_flat.view(num_blocks, -1)
+
+        # 计算每 block 的缩放因子
+        if scale is None:
+            block_scale = x_blocks.abs().max(dim=-1, keepdim=True).values / 15.0
+        else:
+            block_scale = scale
+
+        # 量化: 缩放 → 截断 → 最近邻映射
+        x_scaled = x_blocks / (block_scale + 1e-8)
+        x_clamped = x_scaled.clamp(-16, 16)
+
+        # STE (Straight-Through Estimator) — 前向用量化，反向用直通梯度
+        if self.training:
+            # 前向: 量化；反向: 梯度直通
+            x_q = self._ste_round(x_clamped)
+        else:
+            x_q = torch.round(x_clamped)
+
+        # 映射到最近的 FP4 level
+        indices = x_q.long().clamp(0, 15)
+        x_fp4 = self.fp4_levels[indices.to(self.fp4_levels.device)]
+
+        # 反缩放
+        x_out = (x_fp4 * block_scale).view(orig_shape)
+
+        return x_out
+
+    def _ste_round(self, x):
+        """Straight-Through Estimator: 前向取整，反向恒等"""
+        class _STE(torch.autograd.Function):
+            @staticmethod
+            def forward(ctx, x):
+                return torch.round(x)
+            @staticmethod
+            def backward(ctx, grad_output):
+                return grad_output
+        return _STE.apply(x)</div>
+    <div class="info-box key">
+      <span class="icon">🔑</span>
+      <div><strong>FP8/FP4 的实际收益：</strong>DeepSeek-V3 报告 FP8 训练相比 BF16 训练<strong>节省 50% 显存</strong>，计算速度提升 2 倍。FP4 QAT（DeepSeek-V4）将模型大小进一步减半——一个 671B 的 DeepSeek-V4 在 FP4 下仅需约 ~170GB 存储，可以在单台 8×H100 节点上加载。但 QAT 需要额外的训练阶段来适应量化精度。</div>
+    </div>
+  </section>
+
+  <!-- 7.13 -->
+  <section class="card" id="s7-13">
+    <h3>7.13 DualPipe 流水线并行</h3>
+    <p><strong>DualPipe</strong> 是 DeepSeek-V3 引入的 <strong>流水线并行 (Pipeline Parallelism)</strong> 优化方案。其核心是解决标准流水线并行（如 GPipe、1F1B）中的 <strong>气泡 (bubble)</strong> 问题。</p>
+    <div class="diagram">
+    传统流水线并行 (GPipe) 的气泡:
+    GPU0: [F1][F2][F3]                 [B3][B2][B1]
+    GPU1:      [F1][F2][F3]      [B3][B2][B1]
+    GPU2:           [F1][F2][F3][B3][B2][B1]
+    气泡 (空闲): ████████████████ 约 50% 空闲
+
+    DualPipe 双向流水线:
+    GPU0: [F1→][F2→][F3→][B3←][B2←][B1←]
+    GPU1: [F1→][F2→][B3←][F3→][B2←][B1←]
+    GPU2: [F1→][B3←][B2←][B1←][F2→][F3→]
+    重叠计算: 前向和反向同时推进</div>
+    <p>DualPipe 的关键创新：</p>
+    <ul>
+      <li><strong>双向流水线：</strong>同时从流水线的两端（开始和结束）启动 micro-batch，前向和反向计算在时间上重叠</li>
+      <li><strong>前向/反向通信重叠：</strong>在流水线的一个阶段计算时，同时进行 All-to-All 通信，将 token 路由到正确的专家</li>
+      <li><strong>几乎零气泡：</strong>DeepSeek-V3 报告 DualPipe 的 bubble 率低于 5%，而 GPipe 通常为 30-50%</li>
+    </ul>
+    <div class="code-block" data-lang="python">
+class DualPipeMicroBatch:
+    """DualPipe micro-batch 调度 — 概念示意
+
+    真正的 DualPipe 实现远比此复杂，涉及 4D 并行
+    (数据并行 × 张量并行 × 专家并行 × 流水线并行)
+    """
+    def __init__(self, n_stages, n_microbatches):
+        self.n_stages = n_stages
+        self.n_microbatches = n_microbatches
+
+    def schedule(self):
+        """生成前向/反向调度计划"""
+        schedule = []
+        # 前向阶段（前向 + All-to-All 重叠）
+        for mb in range(self.n_microbatches):
+            for stage in range(self.n_stages):
+                schedule.append({
+                    'type': 'forward',
+                    'mb': mb,
+                    'stage': stage,
+                    'overlap': True  # 与 All-to-All 通信重叠
+                })
+
+        # 反向阶段（反向 + All-to-All 重叠）
+        for mb in reversed(range(self.n_microbatches)):
+            for stage in reversed(range(self.n_stages)):
+                schedule.append({
+                    'type': 'backward',
+                    'mb': mb,
+                    'stage': stage,
+                    'overlap': True
+                })
+
+        return schedule
+
+
+# 通信重叠示例 (PyTorch 中):
+def forward_with_overlap(x, expert_weights):
+    """前向 + All-to-All 通信重叠"""
+    # 启动异步 All-to-All 通信
+    fut = torch.distributed.all_to_all_single(
+        expert_weights, async_op=True
+    )
+
+    # 在通信期间计算本地部分
+    local_result = compute_local(x)
+
+    # 等待通信完成
+    fut.wait()
+
+    # 使用接收到的专家权重
+    final = combine(local_result, expert_weights)
+    return final</div>
+    <div class="info-box tip">
+      <span class="icon">💡</span>
+      <div><strong>DualPipe 的实际效果：</strong>DeepSeek-V3 在 2048 块 H800 GPU 上训练，使用 DualPipe 和专家并行，实现了 54.2% 的模型 FLOPs 利用率 (MFU)。作为对比，Llama 3 405B 在 16384 块 GPU 上的 MFU 约为 38%。高效的并行策略直接转化为更低的训练成本和更短的训练时间。</div>
+    </div>
+  </section>
+
+  <!-- 7.14 -->
+  <section class="card" id="s7-14">
+    <h3>7.14 本章总结</h3>
+    <p>你完成了 LLM 训练循环的完整学习：</p>
+    <ul>
+      <li>✅ <strong>语言建模目标</strong> — 自回归分解与负对数似然</li>
+      <li>✅ <strong>DataLoader</strong> — 文本分片、批量、右移一位</li>
+      <li>✅ <strong>Cross-Entropy Loss</strong> — 手动实现 + 验证等价于负对数似然</li>
+      <li>✅ <strong>Perplexity</strong> — PPL = exp(loss)，评估模型不确定性</li>
+      <li>✅ <strong>AdamW</strong> — 动量 + 自适应学习率 + 解耦权重衰减</li>
+      <li>✅ <strong>学习率调度</strong> — Warmup + Cosine Decay 完整实现</li>
+      <li>✅ <strong>混合精度训练</strong> — FP16/BF16 autocast + GradScaler</li>
+      <li>✅ <strong>完整训练循环 (~120 行)</strong> — forward + backward + step</li>
+      <li>✅ <strong>训练监控</strong> — Loss, PPL, 梯度范数, GPU 利用率</li>
+      <li>✅ <strong>Shakespeare 微型 GPT</strong> — 完整可运行示例</li>
+      <li>✅ <strong>Muon 优化器</strong> — Newton-Schulz 正交投影</li>
+      <li>✅ <strong>FP8/FP4 混合精度</strong> — DeepSeek-V3/V4 量化训练</li>
+      <li>✅ <strong>DualPipe 流水线并行</strong> — 双向流水线消除气泡</li>
+    </ul>
+    <p>训练循环是让模型从随机权重变为有意义的语言理解的引擎。理解优化器、学习率调度、混合精度和并行策略，是训练大规模 LLM 的关键能力。下一章，我们将探索训练好的模型如何生成流畅的文本——进入采样策略和推测解码的世界。</p>
+    <div class="info-box key">
+      <span class="icon">📚</span>
+      <div><strong>延伸阅读：</strong>
+        <a href="https://arxiv.org/abs/1711.05101" target="_blank">Kingma & Ba (2015) — Adam: A Method for Stochastic Optimization</a> ·
+        <a href="https://arxiv.org/abs/1711.05101" target="_blank">Loshchilov & Hutter (2019) — Decoupled Weight Decay Regularization (AdamW)</a> ·
+        <a href="https://arxiv.org/abs/2203.15556" target="_blank">Hoffmann et al. (2022) — Training Compute-Optimal Large Language Models (Chinchilla)</a> ·
+        <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 技术报告 (FP8 训练 §3.3.2, DualPipe §3.3.1)</a> ·
+        <a href="https://arxiv.org/abs/2504.19667" target="_blank">DeepSeek-V4 技术报告 (Muon 优化器, FP4 QAT)</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 练习 -->
+  <section class="card">
+    <h3>练习巩固</h3>
+
+    <div class="exercise" data-answer="2" data-explain="交叉熵损失衡量两个概率分布之间的差异。对于语言建模，真实分布是 one-hot（正确 token 概率为 1），交叉熵简化为负对数似然——模型分配给正确 token 概率的负对数。">
+      <h4>练习 1：语言模型的交叉熵损失等价于什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q71" value="0"> A. 模型预测所有 token 的平均概率</label>
+        <label><input type="radio" name="q71" value="1"> B. 模型输出的熵</label>
+        <label><input type="radio" name="q71" value="2"> C. 正确 token 负对数似然（NLL）</label>
+        <label><input type="radio" name="q71" value="3"> D. 正确 token 的均方误差</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q71')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="1" data-explain="AdamW 将权重衰减从自适应学习率中解耦。在标准 Adam 中，权重衰减（L2 正则化）通过自适应学习率被不正确地缩放。AdamW 先做 Adam 更新，再独立应用权重衰减。">
+      <h4>练习 2：AdamW 与标准 Adam 的关键区别是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q72" value="0"> A. AdamW 不使用动量</label>
+        <label><input type="radio" name="q72" value="1"> B. AdamW 将权重衰减从自适应学习率中解耦</label>
+        <label><input type="radio" name="q72" value="2"> C. AdamW 只适用于小模型</label>
+        <label><input type="radio" name="q72" value="3"> D. AdamW 不使用二阶动量</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q72')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="0" data-explain="BF16 有 8 位指数（与 FP32 相同），所以表示范围与 FP32 一致，几乎不会溢出。因此 BF16 训练不需要 GradScaler。而 FP16 只有 5 位指数，范围小，容易溢出，必须使用 GradScaler。">
+      <h4>练习 3：BF16 混合精度训练相比 FP16 的一个重要优势是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q73" value="0"> A. BF16 的范围与 FP32 相同，通常不需要 GradScaler</label>
+        <label><input type="radio" name="q73" value="1"> B. BF16 比 FP16 精度更高</label>
+        <label><input type="radio" name="q73" value="2"> C. BF16 计算比 FP16 快 4 倍</label>
+        <label><input type="radio" name="q73" value="3"> D. BF16 不需要 GPU 支持</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q73')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="1" data-explain="Muon 通过 Newton-Schulz 迭代将梯度矩阵投影到其最近的正交矩阵。正交化确保权重矩阵保持良好的条件数，防止表示坍缩，相当于隐式控制特征值退化。它不需要像 Adam 那样维护动量状态。">
+      <h4>练习 4：DeepSeek Muon 优化器的核心机制是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q74" value="0"> A. 使用更大的动量 beta 值</label>
+        <label><input type="radio" name="q74" value="1"> B. 对权重梯度进行 Newton-Schulz 正交投影，强制矩阵保持良好条件数</label>
+        <label><input type="radio" name="q74" value="2"> C. 完全移除学习率调度</label>
+        <label><input type="radio" name="q74" value="3"> D. 使用梯度累积替代优化器</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q74')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+
+    <div class="exercise" data-answer="2" data-explain="DualPipe 的核心创新是双向流水线——从流水线的两端同时推进前向和反向计算，使得前向和反向在时间上重叠，大幅减少了空闲气泡。同时在流水线计算时重叠进行 All-to-All 通信。">
+      <h4>练习 5：DualPipe 流水线并行相比 GPipe 的主要改进是什么？</h4>
+      <div class="opts" role="radiogroup">
+        <label><input type="radio" name="q75" value="0"> A. 移除所有通信操作以减少延迟</label>
+        <label><input type="radio" name="q75" value="1"> B. 每个 GPU 上运行多个独立的模型副本</label>
+        <label><input type="radio" name="q75" value="2"> C. 双向流水线 + 前向/反向与 All-to-All 通信重叠，大幅减少气泡</label>
+        <label><input type="radio" name="q75" value="3"> D. 将模型参数复制到所有 GPU 上消除通信</label>
+      </div>
+      <button class="btn btn-primary" onclick="LLM.checkMC(this,'q75')">检查答案</button>
+      <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <div class="feedback"></div>
+    </div>
+  </section>
+</article>
+
+<nav class="chapter-nav">
+  <a href="ch06.html" class="btn btn-outline" rel="prev">← 上一章</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
+  <a href="ch08.html" class="btn btn-outline" rel="next">下一章 →</a>
+</nav>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

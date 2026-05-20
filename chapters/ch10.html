@@ -25,7 +25,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / CSA+HCA / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 16 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -616,10 +616,121 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.11 V2→V4 演进 -->
+<!-- 10.11 vLLM -->
 <!-- ================================================================ -->
 <section class="card" id="s10-11">
-  <h3>10.11 DeepSeek V2→V4 演进路线图——"删减"哲学</h3>
+  <h3>10.11 vLLM——生产级 LLM 推理引擎</h3>
+  <p>如果你要把一个 LLM 部署到生产环境，处理成百上千的并发请求，单靠手写的 KV Cache 和量化是不够的。<strong>vLLM</strong> 是目前最广泛使用的开源 LLM 推理引擎之一，被 OpenAI、Anthropic、Meta 等公司的内部服务所采用或借鉴。</p>
+
+  <h4>核心创新一：PagedAttention</h4>
+  <p>传统 KV Cache 为每个序列分配连续的显存块，就像 OS 中早期的内存管理——连续分配导致<strong>显存碎片化</strong>：一个 128K 序列的 KV Cache 需要连续的大块显存，释放后可能留下无法使用的碎片。PagedAttention 借鉴了<strong>操作系统虚拟内存的分页机制</strong>：</p>
+  <ul>
+    <li>将 KV Cache 切分为固定大小的 <strong>block</strong>（如每 block 16 个 token）</li>
+    <li>Block 之间不需要连续——使用<strong>页表（page table）</strong>映射逻辑位置到物理显存块</li>
+    <li>释放时逐 block 回收，没有碎片</li>
+    <li>不同序列可以<strong>共享相同的 prompt prefix block</strong>（如 system prompt 只存一份）</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>类比：</strong>PagedAttention 之于 KV Cache = 虚拟内存之于物理内存。它把"分配连续显存"的问题变成了"管理页表"的问题，显存利用率从 ~30% 提升到 ~90%+。</div></div>
+
+  <h4>核心创新二：Continuous Batching</h4>
+  <p>传统 batch 处理：等所有请求都完成才开始下一个 batch。问题：一个长序列会阻塞整个 batch，短序列干等。</p>
+  <p>Continuous Batching：<strong>每次前向传播后，完成生成的序列立即退出 batch，新请求立即加入</strong>。不需要等待整个 batch 完成。这就像餐厅的"翻台"——吃完的客人马上离座，排队的客人马上入座，而不是等整桌人都吃完。</p>
+  <p>实现要点：每个 step 执行 "prefill + decode" 混合调度，kernel 需要支持不同的序列长度和张量形状。</p>
+
+  <h4>vLLM 的性能数据</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>指标</th><th>基础实现</th><th>vLLM</th><th>提升</th></tr>
+      <tr><td>显存利用率</td><td>~30%</td><td>~90%</td><td>3x</td></tr>
+      <tr><td>吞吐 (Llama-7B)</td><td>~500 tok/s</td><td>~5000 tok/s</td><td>10x</td></tr>
+      <tr><td>并发请求数</td><td>~10</td><td>~100+</td><td>10x</td></tr>
+    </table>
+  </div>
+
+  <h4>vLLM 的更多优化</h4>
+  <ul>
+    <li><strong>Prefix Caching：</strong>多个请求共享相同的 system prompt 时，其 KV Cache 只计算和存储一次</li>
+    <li><strong>Speculative Decoding 集成：</strong>支持草稿模型预测 + 目标模型验证的推测解码</li>
+    <li><strong>Tensor Parallelism：</strong>支持多 GPU 张量并行，大模型自动切分到多卡</li>
+    <li><strong>量化集成：</strong>原生支持 GPTQ、AWQ、FP8 量化推理</li>
+    <li><strong>Chunked Prefill：</strong>将长 prompt 的 prefill 切分为多个小块，避免 prefill 阻塞 decode</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.12 Triton -->
+<!-- ================================================================ -->
+<section class="card" id="s10-12">
+  <h3>10.12 Triton——GPU 内核编程入门</h3>
+  <p>FlashAttention、vLLM 的内核、量化推理——这些高性能 LLM 推理组件的底层都是用 <strong>Triton</strong> 编写的。Triton 是 OpenAI 开源的 GPU 内核编程语言，目标是<strong>让写 GPU kernel 像写 Python 一样简单</strong>。</p>
+
+  <h4>为什么需要 Triton？</h4>
+  <p>传统 GPU 编程用 CUDA C++，需要手动管理：线程块（thread block）、共享内存（shared memory）、寄存器分配、内存合并（coalescing）、bank conflict。Triton 将这些底层优化抽象为<strong>编译器优化</strong>——你描述"做什么"，Triton 编译器决定"怎么高效做"。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>维度</th><th>CUDA C++</th><th>Triton</th></tr>
+      <tr><td>编程模型</td><td>显式管理线程/block/grid</td><td>声明式，编译器自动分块</td></tr>
+      <tr><td>内存管理</td><td>手动 shared memory / register</td><td>自动缓存层次优化</td></tr>
+      <tr><td>代码量</td><td>~200-500 行 (kernel)</td><td>~30-80 行 (kernel)</td></tr>
+      <tr><td>性能</td><td>理论上限（手写极致优化）</td><td>接近 CUDA 上限（通常 >90%）</td></tr>
+      <tr><td>学习曲线</td><td>陡峭（需要 GPU 架构知识）</td><td>平缓（NumPy 风格）</td></tr>
+    </table>
+  </div>
+
+  <h4>Triton 核心概念：程序 = 块级操作</h4>
+  <p>Triton 的关键抽象是将计算<strong>自动分块（tiling）</strong>到 GPU 的多个 SM（Streaming Multiprocessor）上。你只需指定每个 program instance 处理多大的一块数据，Triton 处理并行化：</p>
+  <div class="code-block" data-lang="python">
+import triton
+import triton.language as tl
+
+@triton.jit
+def vector_add(x_ptr, y_ptr, out_ptr, N, BLOCK_SIZE: tl.constexpr):
+    pid = tl.program_id(0)            # 当前 block ID
+    offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    mask = offsets < N                 # 防止越界
+    x = tl.load(x_ptr + offsets, mask=mask)
+    y = tl.load(y_ptr + offsets, mask=mask)
+    tl.store(out_ptr + offsets, x + y, mask=mask)
+
+# 调用：自动分块并行执行
+vector_add[(N + BLOCK-1)//BLOCK](x, y, out, N, BLOCK=1024)</div>
+  <p>这个 kernel 只有 <strong>5 行有效代码</strong>——但会被 Triton 编译为高度优化的 GPU 机器码，利用所有 SM 并行执行。</p>
+
+  <h4>Triton 在 LLM 中的应用</h4>
+  <p><strong>FlashAttention 的 Triton 实现</strong>是其最著名的应用之一。核心技巧：</p>
+  <ul>
+    <li><strong>Tiling：</strong>将 Q、K、V 切分为小块，在 SRAM 中完成 softmax</li>
+    <li><strong>Online Softmax：</strong>通过维护 running max 和 running sum，分块计算 softmax 而不需要完整矩阵</li>
+    <li><strong>Recomputation：</strong>反向传播时不保存注意力矩阵，而是重新计算</li>
+  </ul>
+  <p>FlashAttention 的 Triton 实现约 100 行，而等效的 CUDA 实现约 300+ 行。Triton 版本不仅更短，而且更容易修改和实验——这正是 Triton 的价值所在。</p>
+
+  <h4>动手：Triton 矩阵乘法</h4>
+  <div class="code-block" data-lang="python">
+@triton.jit
+def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr):
+    pid_m = tl.program_id(0)
+    pid_n = tl.program_id(1)
+    # 当前 block 负责 C[pid_m*BLOCK_M:(pid_m+1)*BLOCK_M, pid_n*BLOCK_N:(pid_n+1)*BLOCK_N]
+    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    offs_k = tl.arange(0, BLOCK_K)
+    # 累加器
+    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+    for k in range(0, K, BLOCK_K):
+        a = tl.load(A + offs_m[:, None] * K + (k + offs_k)[None, :])  # (BLOCK_M, BLOCK_K)
+        b = tl.load(B + (k + offs_k)[:, None] * N + offs_n[None, :])  # (BLOCK_K, BLOCK_N)
+        acc += tl.dot(a, b)
+    tl.store(C + offs_m[:, None] * N + offs_n[None, :], acc)</div>
+  <p>这个 kernel 在 NVIDIA A100 上可以达到 cuBLAS 约 85-90% 的性能——用约 20 行代码。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>学习路径：</strong>先理解 GPU 内存层次（HBM→L2→SRAM→Register），然后从 Triton 的 vector_add 开始，逐步到 matmul、FlashAttention。Triton 的<a href="https://triton-lang.org/main/getting-started/tutorials/01-vector-add.html" target="_blank">官方教程</a>是极佳的起点。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.13 V2→V4 演进 -->
+<!-- ================================================================ -->
+<section class="card" id="s10-13">
+  <h3>10.13 DeepSeek V2→V4 演进路线图——"删减"哲学</h3>
   <p>回顾 DeepSeek 从 V2 到 V4 的演变，可以看到一个清晰的"删减"哲学：</p>
   <div class="table-wrap">
     <table>
@@ -634,10 +745,10 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.12 课程总结 -->
+<!-- 10.14 课程总结 -->
 <!-- ================================================================ -->
-<section class="card" id="s10-12">
-  <h3>10.12 课程总结——你构建了什么</h3>
+<section class="card" id="s10-14">
+  <h3>10.14 课程总结——你构建了什么</h3>
   <div class="table-wrap">
     <table>
       <tr><th>章节</th><th>核心组件</th><th>关键概念</th></tr>

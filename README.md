@@ -86,7 +86,7 @@ PORT=3000 docker compose up -d
 | 7 | **训练循环** — AdamW/Muon + FP8/FP4 + DualPipe | 完整训练脚本 ~120行 | 6+5 |
 | 8 | **文本生成** — 4 种采样策略 + MTP 推测解码 | 文本生成器 ~60行 | 6+5 |
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO + R1 推理 | SFT + LoRA + GRPO ~190行 | 6+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Agent | KV Cache + 量化 ~100行 | 5+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Agent | KV Cache + 量化 + vLLM + Triton ~100行 | 5+5 |
 
 > **总计：52 道编程练习 + 50 道概念练习，约 9 小时学习时间**
 

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 600" fill="none">
+  <defs>
+    <style>
+      text{font-family:system-ui,-apple-system,sans-serif}
+      .bg{fill:#fbf9f5}
+      .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
+      .b2{fill:#fdf5ed;stroke:#b35c22;stroke-width:2}
+      .b3{fill:#e8f0fe;stroke:#7baaf7;stroke-width:2}
+      .t1{fill:#5c554a;font-size:13px}
+      .t2{fill:#1c1c1c;font-size:15px;font-weight:700}
+      .t3{fill:#b35c22;font-size:12px;font-family:'JetBrains Mono','Fira Code',monospace}
+      .ts{fill:#9e968a;font-size:11px}
+      .arr{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
+      .arr2{stroke:#7baaf7;stroke-width:1.5;fill:none;marker-end:url(#ahb);stroke-dasharray:4 3}
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
+    <marker id="ahb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#7baaf7"/></marker>
+  </defs>
+  <rect class="bg" width="780" height="600"/>
+
+  <text class="t2" x="390" y="28" text-anchor="middle" style="font-size:18px">Transformer Block 内部结构 (Pre-Norm)</text>
+
+  <!-- Input -->
+  <rect class="box" x="250" y="48" width="280" height="40"/>
+  <text class="t2" x="390" y="73" text-anchor="middle">输入: x (residual stream)</text>
+
+  <line class="arr" x1="390" y1="88" x2="390" y2="110"/>
+
+  <!-- RMSNorm 1 -->
+  <rect class="b3" x="280" y="110" width="220" height="36"/>
+  <text class="t2" x="390" y="133" text-anchor="middle" style="font-size:13px;fill:#7baaf7">RMSNorm(x)</text>
+
+  <line class="arr" x1="390" y1="146" x2="390" y2="170"/>
+
+  <!-- Masked MHA -->
+  <rect class="box" x="170" y="170" width="440" height="70"/>
+  <text class="t2" x="390" y="192" text-anchor="middle">Masked Multi-Head Self-Attention</text>
+  <text class="t3" x="390" y="212" text-anchor="middle">Q,K,V ← x·W_Q, x·W_K, x·W_V  →  Concat(heads)·W_O</text>
+  <text class="ts" x="390" y="230" text-anchor="middle">多头并行计算注意力, causal mask 防止看到未来 token</text>
+
+  <!-- Residual connection -->
+  <path class="arr2" d="M 250 50 Q 100 50 100 205 Q 100 240 170 240"/>
+  <text class="ts" x="30" y="145" text-anchor="middle">残差连接</text>
+  <text class="ts" x="30" y="158" text-anchor="middle">(输入直接</text>
+  <text class="ts" x="30" y="171" text-anchor="middle">加到输出)</text>
+
+  <line class="arr" x1="390" y1="240" x2="390" y2="260"/>
+
+  <text class="t2" x="450" y="275" text-anchor="start" style="font-size:13px">x = x + MHA(RMSNorm(x))</text>
+  <text class="ts" x="450" y="292" text-anchor="start">把注意力的输出"加回"到原始输入上</text>
+
+  <line class="arr" x1="390" y1="305" x2="390" y2="325"/>
+
+  <!-- RMSNorm 2 -->
+  <rect class="b3" x="280" y="325" width="220" height="36"/>
+  <text class="t2" x="390" y="348" text-anchor="middle" style="font-size:13px;fill:#7baaf7">RMSNorm(x)</text>
+
+  <line class="arr" x1="390" y1="361" x2="390" y2="385"/>
+
+  <!-- FFN -->
+  <rect class="b2" x="170" y="385" width="440" height="70"/>
+  <text class="t2" x="390" y="407" text-anchor="middle">Feed-Forward Network (SwiGLU)</text>
+  <text class="t3" x="390" y="427" text-anchor="middle">SwiGLU(x) = (SiLU(x·W_g) ⊙ x·W_up) · W_down</text>
+  <text class="ts" x="390" y="445" text-anchor="middle">隐藏维度 4×d_model, 存储模型的大部分事实知识</text>
+
+  <line class="arr" x1="390" y1="455" x2="390" y2="480"/>
+
+  <text class="t2" x="450" y="495" text-anchor="start" style="font-size:13px">x = x + FFN(RMSNorm(x))</text>
+  <text class="ts" x="450" y="512" text-anchor="start">第二个残差连接, 梯度畅通无阻</text>
+
+  <!-- Output -->
+  <line class="arr" x1="390" y1="520" x2="390" y2="548"/>
+  <rect class="box" x="250" y="548" width="280" height="40"/>
+  <text class="t2" x="390" y="573" text-anchor="middle">输出: x' (同维度, 进入下一层)</text>
+
+  <!-- Side annotations -->
+  <rect class="box" x="640" y="110" width="125" height="40"/>
+  <text class="t2" x="702" y="125" text-anchor="middle" style="font-size:12px">Pre-Norm</text>
+  <text class="ts" x="702" y="142" text-anchor="middle">先 Norm 再计算</text>
+
+  <rect class="box" x="640" y="165" width="125" height="40"/>
+  <text class="t2" x="702" y="180" text-anchor="middle" style="font-size:12px">Llama/DeepSeek</text>
+  <text class="ts" x="702" y="197" text-anchor="middle">均用此结构</text>
+
+  <rect class="box" x="640" y="325" width="125" height="36"/>
+  <text class="t2" x="702" y="340" text-anchor="middle" style="font-size:12px">RMSNorm</text>
+  <text class="ts" x="702" y="355" text-anchor="middle">比LayerNorm快15%</text>
+
+  <rect class="b2" x="640" y="385" width="125" height="70"/>
+  <text class="t2" x="702" y="405" text-anchor="middle" style="font-size:12px">SwiGLU</text>
+  <text class="ts" x="702" y="422" text-anchor="middle">门控FFN</text>
+  <text class="ts" x="702" y="438" text-anchor="middle">Llama 标配</text>
+  <text class="ts" x="702" y="452" text-anchor="middle">比GELU好</text>
+</svg>

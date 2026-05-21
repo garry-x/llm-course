@@ -81,6 +81,14 @@
 <!-- ================================================================ -->
 <!-- 编程练习 1: LayerNorm -->
 <!-- ================================================================ -->
+<section class="card">
+<div class="svg-diagram" style="max-width:780px">
+  <img src="../images/transformer-block.svg" alt="Transformer Block结构" style="width:100%">
+</div>
+<p class="diagram-caption">图 5-1: Transformer Block 内部结构 (Pre-Norm + RMSNorm + SwiGLU)</p>
+</section>
+
+
 <section class="card" id="s5-2">
   <h3>5.2 编程练习 1：实现 LayerNorm（不用 nn.LayerNorm）</h3>
   <p><strong>层归一化 (Layer Normalization)</strong> 是 Transformer 训练稳定性的基石。与 BatchNorm 不同，LayerNorm 在<strong>特征维度</strong>上做归一化，不依赖 batch 大小——这对变长序列和自回归模型至关重要。</p>

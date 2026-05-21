@@ -720,6 +720,46 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
 <!-- ================================================================ -->
 <!-- 概念练习 -->
 <!-- ================================================================ -->
+<!-- ================================================================ -->
+<!-- 7.15 分布式训练 -->
+<!-- ================================================================ -->
+<section class="card" id="s7-15">
+  <h3>7.15 分布式训练——从单 GPU 到千卡集群</h3>
+  <p>到目前为止，我们假设所有训练都在单个 GPU 上进行。但真实的 LLM 训练（如 Llama 3 405B）需要在<strong>数千个 GPU</strong> 上并行运行数周。分布式训练不是"可选"优化——它是使得大模型训练<strong>成为可能</strong>的前提。</p>
+
+  <h4>三种并行策略</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>策略</th><th>原理</th><th>通信量</th><th>适合场景</th></tr>
+      <tr><td><strong>Data Parallelism</strong></td><td>每 GPU 持完整模型副本，各处理不同 batch 切片</td><td>AllReduce 梯度</td><td>模型能放进单 GPU 时</td></tr>
+      <tr><td><strong>Tensor Parallelism</strong></td><td>将单层权重矩阵切分到多 GPU (如 8 GPUs)</td><td>每层 AllReduce</td><td>单层权重超过单 GPU 显存</td></tr>
+      <tr><td><strong>Pipeline Parallelism</strong></td><td>不同 GPU 负责不同层 (GPU1:层1-4, GPU2:层5-8...)</td><td>层间传递激活值</td><td>模型深度超过单 GPU</td></tr>
+    </table>
+  </div>
+  <p>实际训练中三者<strong>组合使用</strong>。Llama 3 405B: TP=8 × PP=16 × DP=64 = <strong>8192 GPU</strong>。</p>
+
+  <h4>ZeRO (DeepSpeed)</h4>
+  <p>ZeRO 将优化器状态、梯度和模型参数<strong>分片</strong>到多个 GPU 上：</p>
+  <ul>
+    <li><strong>ZeRO-1：</strong>分片优化器状态（AdamW 的 m 和 v）——节省 4× 显存</li>
+    <li><strong>ZeRO-2：</strong>分片梯度 + 优化器状态——节省 8×</li>
+    <li><strong>ZeRO-3：</strong>分片参数 + 梯度 + 优化器状态——节省 N×（N=GPU 数）</li>
+  </ul>
+  <p>ZeRO-3 使 405B 模型可在 128 个 A100 上训练——每个 GPU 仅需 ~3.2B 参数切片。</p>
+
+  <h4>FSDP (PyTorch 原生)</h4>
+  <p>FSDP 是 PyTorch 的 ZeRO-3 等价方案。核心 API：</p>
+  <div class="code-block" data-lang="python">
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
+  <p>前向传播前收集分片参数 (all-gather)，计算完成后<strong>立即释放</strong>，将显存峰值降低到 1/N。</p>
+
+  <h4>DeepSeek DualPipe</h4>
+  <p>传统流水线并行有<strong>气泡（bubble）</strong>——GPU 在等待上游时闲置。DeepSeek V3 的 DualPipe 通过<strong>双向流水线调度</strong>将前向/反向计算与 MoE 通信完全重叠，实现近乎零气泡。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>选型：</strong>单 GPU 够 → DP。装不下 → ZeRO-3/FSDP。超大规模 → TP+PP+ZeRO-3。一行 FSDP 封装即可入门。</div></div>
+</section>
+
+
 <section class="card">
   <h3>概念练习巩固</h3>
 

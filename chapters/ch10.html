@@ -25,7 +25,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / CSA+HCA / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 18 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 19 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -846,6 +846,48 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 <!-- ================================================================ -->
 <!-- 概念练习 -->
 <!-- ================================================================ -->
+<!-- ================================================================ -->
+<!-- 10.17 多模态 LLM -->
+<!-- ================================================================ -->
+<section class="card" id="s10-17">
+  <h3>10.17 多模态 LLM——让模型看见世界</h3>
+  <p>GPT-4V、Claude 3、Gemini——所有顶级 LLM 现在都是<strong>多模态</strong>的。它们不仅能理解文本，还能"看"图像、图表、PDF。</p>
+
+  <h4>核心架构：Vision Encoder + Projection + LLM</h4>
+  <ol>
+    <li><strong>Vision Encoder</strong>（如 ViT/SigLIP）——将图像转换为特征向量序列</li>
+    <li><strong>Projection Layer</strong>（通常 MLP 或 Q-Former）——将视觉特征映射到 LLM token 嵌入空间</li>
+    <li><strong>LLM Backbone</strong>——接收文本 token + 视觉 token 的混合序列</li>
+  </ol>
+  <div class="code-block" data-lang="python">
+# LLaVA 风格多模态 LLM 前向传播（简化）
+def forward(image, text_prompt):
+    vision_tokens = projection(vision_encoder(image))   # (N_patches, d_model)
+    text_tokens   = token_embed(tokenize(text_prompt))  # (T, d_model)
+    input_seq     = torch.cat([vision_tokens, text_tokens], dim=0)
+    return llm(input_seq)</div>
+
+  <h4>关键设计决策</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>决策</th><th>选项</th><th>代表</th></tr>
+      <tr><td>Vision Encoder</td><td>CLIP-ViT / SigLIP / InternViT</td><td>LLaVA-1.5 (CLIP-ViT-L)</td></tr>
+      <tr><td>分辨率</td><td>固定裁剪 / 动态分块 (anyres)</td><td>LLaVA-NeXT (动态 4× 分块)</td></tr>
+      <tr><td>Projection</td><td>简单 MLP / Q-Former</td><td>LLaVA (2-layer MLP)</td></tr>
+      <tr><td>训练</td><td>对齐预训练 + 指令微调</td><td>两阶段标准流程</td></tr>
+    </table>
+  </div>
+
+  <h4>两阶段训练</h4>
+  <p><strong>阶段 1：</strong>冻结 LLM 和 Vision Encoder，只训练 Projection 层——使用图文对数据，教会 Projection 将视觉特征"翻译"为 LLM 能理解的语言。</p>
+  <p><strong>阶段 2：</strong>解冻 LLM，使用多模态指令数据（图文问答、OCR、图表理解）微调——教会模型根据指令关注图像的特定区域。</p>
+
+  <h4>音频与视频</h4>
+  <p>同样的 "Encoder + Projection + LLM" 范式也适用于音频（Whisper → LLM）和视频（帧采样 → ViT → 时序 pooling → LLM）。GPT-4o 的实时语音延迟已低于 300ms。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心洞察：</strong>LLM 不是"语言"模型，而是<strong>序列建模引擎</strong>。只要能将其他模态转化为 token 序列并投影到嵌入空间，LLM 就能"理解"它们。视觉、音频、代码、蛋白质——全是"语言"。</div></div>
+</section>
+
+
 <section class="card">
   <h3>概念练习巩固</h3>
 

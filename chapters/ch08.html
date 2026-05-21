@@ -635,6 +635,36 @@ def speculative_decoding(target_model, draft_model, tokenizer,
 <!-- ================================================================ -->
 <!-- 概念练习 -->
 <!-- ================================================================ -->
+<!-- ================================================================ -->
+<!-- 8.13 结构化解码 -->
+<!-- ================================================================ -->
+<section class="card" id="s8-13">
+  <h3>8.13 结构化解码——JSON 模式与约束生成</h3>
+  <p>在 API 和 Agent 场景中，我们通常需要 LLM 输出<strong>特定格式的结构化数据</strong>（JSON、YAML），而不是自由文本。让 LLM "尽量输出 JSON"是不够的——它偶尔会输出不完整的 JSON 或多余的文本。</p>
+
+  <h4>约束解码原理</h4>
+  <p>约束解码在<strong>采样的每一步</strong>根据目标语法动态修改 logits：将不符合语法的 token 概率设为 -inf，确保生成符合指定格式。</p>
+  <div class="math-box"><div class="label">约束解码</div>
+    <div class="katex" data-expr="	ext{logits}_i' = egin{cases} 	ext{logits}_i & 	ext{token } i 	ext{ 合法} \ -\infty & 	ext{否则} \end{cases}"></div>
+  </div>
+
+  <h4>实现：基于 JSON Schema 的 Token 过滤</h4>
+  <p>以 JSON 为例：将 JSON Schema 编译为<strong>确定性有限自动机（DFA）</strong>。每一步解码时，将词表中每个 token 喂入 DFA 判断是否合法——只有合法 token 可被采样。例如前缀为 <code>{"name":</code> 时，下一个 token 必须是 <code>"</code>。</p>
+
+  <h4>主流工具</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>工具</th><th>原理</th><th>支持引擎</th></tr>
+      <tr><td><strong>Outlines</strong></td><td>JSON Schema → 索引，高效 token 过滤</td><td>vLLM, llama.cpp</td></tr>
+      <tr><td><strong>guidance</strong></td><td>正则自动机，每步过滤 token</td><td>HuggingFace, vLLM</td></tr>
+      <tr><td><strong>OpenAI Structured Outputs</strong></td><td>内置约束解码，100% 可靠</td><td>GPT-4o, GPT-4</td></tr>
+      <tr><td><strong>SGLang</strong></td><td>RadixAttention + 原生约束解码</td><td>SGLang</td></tr>
+    </table>
+  </div>
+  <div class="info-box tip"><span class="icon">💡</span><div>构建 API 或 Agent 时，<strong>务必使用约束解码</strong>——不要依赖 prompt engineering 保证 JSON 格式。outlines + vLLM 是当前开源首选。</div></div>
+</section>
+
+
 <section class="card">
   <h3>概念练习巩固</h3>
 

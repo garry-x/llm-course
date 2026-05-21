@@ -506,6 +506,36 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
 <!-- ================================================================ -->
 <!-- 概念练习 -->
 <!-- ================================================================ -->
+<!-- ================================================================ -->
+<!-- 2.11 提示工程深入 -->
+<!-- ================================================================ -->
+<section class="card" id="s2-11">
+  <h3>2.11 提示工程（Prompt Engineering）深入</h3>
+  <p>在完成 Embedding + RoPE 的理论和实现后，让我们回到 LLM 应用中最实用的技能：<strong>如何写好 prompt</strong>。这不是"技巧"，而是对模型概率分布的精确引导。</p>
+
+  <h4>Zero-Shot vs Few-Shot Prompting</h4>
+  <p><strong>Zero-Shot：</strong>仅给出指令，不给示例。"将以下句子翻译成英文：今天天气很好。"——模型根据指令和自身知识完成。</p>
+  <p><strong>Few-Shot：</strong>在指令前给出 2-5 个示例。"输入→输出"对帮助模型理解任务格式和期望风格。GPT-3 论文的核心发现就是 few-shot 能力——模型不需要微调就能通过示例适应新任务。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么 Few-Shot 有效？</strong>从注意力机制的角度看，few-shot 示例在 KV Cache 中形成了"任务模板"——后续 token 的注意力会自然地参考这些示例的模式。这等价于一种<strong>上下文内的隐式微调</strong>。</div></div>
+
+  <h4>Chain-of-Thought (CoT) Prompting</h4>
+  <p>在 prompt 中加入"让我们一步步思考"（Let's think step by step），引导模型生成<strong>中间推理步骤</strong>而非直接给出答案。这是最简单却最有效的 prompt 技巧之一。</p>
+  <p>CoT 的数学直觉：标准的 next-token prediction 会直接跳到答案 token——但复杂问题需要多步推理。CoT 将推理过程<strong>显式化</strong>为 token 序列，使得模型在生成中间步骤时能看到自己的推理历史，逐步修正和深化。</p>
+
+  <h4>System Prompt 与角色设定</h4>
+  <p>ChatGPT 和 Claude API 将 system prompt 作为独立的消息类型，<strong>优先级高于用户消息</strong>。它设定了模型的"角色"和行为边界。从注意力实现的角度：system prompt 的 token 占据了序列的最开头位置，因为因果注意力中所有后续 token 都可以"看到"前面的 token，system prompt 的影响<strong>贯穿整个对话</strong>。</p>
+
+  <h4>提示工程的核心原则</h4>
+  <div class="info-box tip"><span class="icon">💡</span><div>
+    <strong>1. 明确任务 + 输出格式</strong> —— 不要把 LLM 当成会读心术<br>
+    <strong>2. Few-shot > Zero-shot</strong> —— 2-3 个好示例胜过 100 字描述<br>
+    <strong>3. CoT 对推理任务有效</strong> —— 数学/逻辑/多步问题必加 "Let's think step by step"<br>
+    <strong>4. 越具体越好</strong> —— 给出格式、长度、风格、受众的明确约束<br>
+    <strong>5. System prompt 设置边界</strong> —— 角色、知识范围、安全约束
+  </div></div>
+</section>
+
+
 <section class="card">
   <h3>📝 概念练习巩固</h3>
 

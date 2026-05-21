@@ -6,15 +6,15 @@
 
   var CHAPTERS = [
     {id:1, file:'ch01.html', title:'环境搭建与分词', desc:'实现BPE Tokenizer', sections:10},
-    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding + RoPE', sections:9},
+    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding + RoPE + PromptEng', sections:11},
     {id:3, file:'ch03.html', title:'单头自注意力', desc:'Scaled Dot-Product Attention', sections:10},
     {id:4, file:'ch04.html', title:'多头注意力与MLA', desc:'MHA→GQA→DeepSeek MLA', sections:9},
     {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm+FFN+SwiGLU+mHC', sections:10},
     {id:6, file:'ch06.html', title:'组装完整GPT模型', desc:'GPT-2 124M + DeepSeekMoE', sections:10},
-    {id:7, file:'ch07.html', title:'训练循环', desc:'AdamW/Muon+FP8/FP4+DualPipe', sections:14},
-    {id:8, file:'ch08.html', title:'文本生成', desc:'采样策略+MTP推测解码', sections:11},
+    {id:7, file:'ch07.html', title:'训练循环', desc:'AdamW/Muon+FP8/FP4+DualPipe+分布式', sections:15},
+    {id:8, file:'ch08.html', title:'文本生成', desc:'采样策略+MTP推测解码+约束生成', sections:12},
     {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT/LoRA/DPO/GRPO', sections:12},
-    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache/CSA+HCA/量化/RAG/vLLM/Triton', sections:18}
+    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache/CSA+HCA/量化/RAG/vLLM/Triton', sections:19}
   ];
 
   // ---- State helpers ----

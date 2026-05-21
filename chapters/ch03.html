@@ -25,7 +25,7 @@
 <article class="chapter">
   <h2>第3章 单头自注意力</h2>
   <p class="subtitle">从零实现 Scaled Dot-Product Attention——LLM 一切魔力的源头</p>
-  <div class="reading-time">⏱ 预计阅读: 70 分钟 · 11 小节 · 4 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 75 分钟 · 12 小节 · 4 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -406,8 +406,42 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
 <!-- ================================================================ -->
 <!-- 3.10 总结 -->
 <!-- ================================================================ -->
+<!-- ================================================================ -->
+<!-- 3.10 可微字典 -->
+<!-- ================================================================ -->
 <section class="card" id="s3-10">
-  <h3>3.10 本章总结：你实现了什么</h3>
+  <h3>3.10 注意力作为可微字典查找——更深层的数学理解</h3>
+  <p>注意力机制有一个优雅的数学解释：它是一个<strong>可微的、软性的字典查找（Differentiable Dictionary Lookup）</strong>。</p>
+
+  <h4>类比：字典查找（Hash Table）</h4>
+  <p>传统字典查找：给定一个查询 key，去字典中找到<strong>完全相同</strong>的 key，返回对应的 value。这是硬匹配——要么匹配，要么不匹配。</p>
+  <p>注意力机制的字典查找：给定一个 query 向量，去和<strong>所有</strong> key 做<strong>软匹配</strong>（点积 + softmax），返回所有 value 的<strong>加权平均</strong>。这是软匹配——每个 value 都贡献一点，贡献大小由相似度决定。</p>
+
+  <h4>数学对应</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>概念</th><th>传统字典</th><th>注意力机制</th></tr>
+      <tr><td>查询</td><td>key (精确匹配)</td><td>Query vector Q (软匹配)</td></tr>
+      <tr><td>键</td><td>字典中的 key</td><td>Key vectors K (可学习表示)</td></tr>
+      <tr><td>值</td><td>字典中的 value</td><td>Value vectors V (实际内容)</td></tr>
+      <tr><td>匹配函数</td><td>key == stored_key</td><td>softmax(Q·K^T / √d_k)</td></tr>
+      <tr><td>输出</td><td>单一 value 或 null</td><td>所有 value 的加权和</td></tr>
+    </table>
+  </div>
+
+  <h4>为什么"可微"是关键</h4>
+  <p>如果匹配是硬的（0 或 1），梯度无法传播——你不知道"稍微改变一下匹配度"会如何影响输出。Softmax 将匹配变为<strong>连续的概率分布</strong>，使得梯度可以流畅地从输出传播到 Q、K、V 的投影矩阵 <span class="katex-inline" data-expr="W^Q, W^K, W^V"></span>。这就是为什么注意力能被端到端训练的数学基础。</p>
+
+  <h4>与卷积的对比</h4>
+  <p><strong>卷积（Convolution）：</strong>每个位置只关注<strong>固定窗口</strong>内的邻居。窗口大小是预设的（如 3×3），不随内容改变。计算复杂度 O(n·k²)，k 是窗口大小。</p>
+  <p><strong>注意力（Attention）：</strong>每个位置可以关注<strong>任意距离</strong>的任意位置。信息路径长度恒为 O(1)，但代价是 O(n²) 的计算量。</p>
+  <p>这也解释了为什么 CV 领域在用 ViT 之后仍然保留了卷积的一些特性（如 Swin Transformer 的局部窗口注意力）——对于图像来说，局部性（locality）是一个很强的先验。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：</strong>注意力 = 可微字典查找 = 软性内容寻址。它不是"魔法"，而是<strong>一个优雅地将数据库检索操作变得可导的技巧</strong>。</div></div>
+</section>
+
+
+<section class="card" id="s3-11">
+  <h3>3.11 本章总结：你实现了什么</h3>
   <p>在这一章中，你从零构建了 LLM 的<strong>核心计算引擎</strong>：</p>
   <ul>
     <li>✅ <strong>QKVProjection</strong> —— 将输入投影为查询、键、值三元组</li>

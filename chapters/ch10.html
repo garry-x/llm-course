@@ -25,7 +25,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / CSA+HCA / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 19 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 19 小节 (含1图) · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -35,6 +35,14 @@
 <!-- ================================================================ -->
 <!-- 10.1 推理瓶颈分析 -->
 <!-- ================================================================ -->
+<section class="card">
+<div class="svg-diagram" style="max-width:860px">
+  <img src="../images/gpu-memory.svg" alt="GPU内存层次" style="width:100%">
+</div>
+<p class="diagram-caption">图 10-1: GPU 内存层次 — A100 架构 (LLM 推理视角)</p>
+</section>
+
+
 <section class="card" id="s10-1">
   <h3>10.1 推理瓶颈分析——Roofline 模型视角</h3>
   <p>你已经构建了模型、训练了它、微调了对齐。现在，是时候让它<strong>在实际应用中运行</strong>了。推理优化就是让模型跑得更快、更便宜、支持更长的上下文。</p>

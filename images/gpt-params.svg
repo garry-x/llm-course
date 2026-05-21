@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 540" fill="none">
+  <defs>
+    <style>
+      text{font-family:system-ui,-apple-system,sans-serif}
+      .bg{fill:#fbf9f5}
+      .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
+      .b2{fill:#fdf5ed;stroke:#b35c22;stroke-width:2}
+      .t1{fill:#5c554a;font-size:13px}
+      .t2{fill:#1c1c1c;font-size:15px;font-weight:700}
+      .t3{fill:#b35c22;font-size:12px;font-family:'JetBrains Mono','Fira Code',monospace}
+      .ts{fill:#9e968a;font-size:11px}
+      .bar1{fill:#b35c22;opacity:0.6}
+      .bar2{fill:#7baaf7;opacity:0.6}
+      .bar3{fill:#81c995;opacity:0.6}
+      .bar4{fill:#e08940;opacity:0.6}
+    </style>
+  </defs>
+  <rect class="bg" width="860" height="540"/>
+
+  <text class="t2" x="430" y="28" text-anchor="middle" style="font-size:18px">GPT-2 Small (124M) 参数分解</text>
+
+  <!-- Pie-like bar chart -->
+  <text class="t2" x="30" y="62" text-anchor="start" style="font-size:14px">总参数: 124,393,728</text>
+
+  <!-- Token Embedding: 38.6M (31%) -->
+  <rect class="bar1" x="30" y="78" width="220" height="24" rx="3"/>
+  <text class="t1" x="260" y="94" text-anchor="start">Token Embedding  38.6M (31%)  vocab_size(50257) × d_model(768)</text>
+
+  <!-- Position Embedding: 0.8M (0.6%) -->
+  <rect class="bar1" x="30" y="108" width="5" height="24" rx="3"/>
+  <text class="t1" x="260" y="124" text-anchor="start">Pos Embedding  0.8M (0.6%)  max_len(1024) × d_model(768)</text>
+
+  <!-- Per Block: 7.1M × 12 = 85.2M (68.5%) -->
+  <rect class="bar2" x="30" y="138" width="158" height="24" rx="3"/>
+  <text class="t1" x="260" y="154" text-anchor="start">12× Transformer Block  85.2M (68.5%)  每Block 7.1M</text>
+
+  <!-- Block breakdown -->
+  <rect class="bar2" x="60" y="168" width="90" height="18" rx="2" style="opacity:0.4"/>
+  <text class="ts" x="260" y="182" text-anchor="start">  └ MHA (QKV+Output): 4× (768×768) = 2.36M × 12 = 28.3M</text>
+
+  <rect class="bar2" x="60" y="190" width="68" height="18" rx="2" style="opacity:0.4"/>
+  <text class="ts" x="260" y="204" text-anchor="start">  └ FFN (fc+proj): 2× (768×3072) = 4.7M × 12 = 56.6M</text>
+
+  <!-- LN: negligible -->
+  <rect class="bar3" x="30" y="218" width="1" height="24" rx="3"/>
+  <text class="t1" x="260" y="234" text-anchor="start">LayerNorm  0.04M (0.03%)  2×(γ+β) per block, 几乎不计</text>
+
+  <!-- LM Head -->
+  <rect class="bar4" x="30" y="248" width="1" height="24" rx="3"/>
+  <text class="t1" x="260" y="264" text-anchor="start">LM Head  0M (weight tying with Token Embedding in GPT-2)</text>
+
+  <!-- Key formulas -->
+  <rect class="box" x="30" y="290" width="800" height="120"/>
+  <text class="t2" x="430" y="314" text-anchor="middle">关键计算公式</text>
+  <g font-size="13" font-family="'JetBrains Mono','Fira Code',monospace">
+    <text class="t1" x="50" y="340" text-anchor="start">MHA params = 4 × d_model² = 4 × 768² = 2,359,296</text>
+    <text class="t1" x="50" y="362" text-anchor="start">FFN params  = 2 × d_model × d_ff = 2 × 768 × 3072 = 4,718,592</text>
+    <text class="t1" x="50" y="384" text-anchor="start">Block       = MHA + FFN + LN ≈ 7,080,192</text>
+    <text class="t1" x="50" y="406" text-anchor="start">Total       = Embed + Pos + 12×Block + LN_final = 124,393,728 ✓</text>
+  </g>
+
+  <!-- Scaling comparison -->
+  <rect class="b2" x="30" y="425" width="800" height="100"/>
+  <text class="t2" x="430" y="450" text-anchor="middle">扩展：不同规模的 GPT-2 / Llama 参数对比</text>
+  <g font-size="12">
+    <text class="t1" x="50" y="478" text-anchor="start"><tspan font-weight="700">GPT-2 Small:</tspan>  d=768,  L=12,  d_ff=3072  →  124M  (本课程实现目标)</text>
+    <text class="t1" x="50" y="498" text-anchor="start"><tspan font-weight="700">GPT-2 Medium:</tspan> d=1024, L=24,  d_ff=4096  →  355M</text>
+    <text class="t1" x="50" y="518" text-anchor="start"><tspan font-weight="700">Llama 3 8B:</tspan>   d=4096, L=32,  d_ff=14336 →  8.0B  (GQA + SwiGLU + RMSNorm)</text>
+  </g>
+</svg>

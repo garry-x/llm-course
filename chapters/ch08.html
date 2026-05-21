@@ -58,6 +58,14 @@
 <!-- ================================================================ -->
 <!-- 8.2 为什么贪心解码失败 -->
 <!-- ================================================================ -->
+<section class="card">
+<div class="svg-diagram" style="max-width:940px">
+  <img src="../images/sampling-strategies.svg" alt="采样策略对比" style="width:100%">
+</div>
+<p class="diagram-caption">图 8-1: 四种采样策略对比——从贪心到 Nucleus</p>
+</section>
+
+
 <section class="card" id="s8-2">
   <h3>8.2 为什么贪心解码会失败？——重复陷阱与曝光偏差</h3>
   <p>贪心解码（Greedy Decoding）每一步选择概率最高的 token：<span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})"></span>。它是最简单的策略，但有两个根本缺陷。</p>

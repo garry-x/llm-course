@@ -17,12 +17,9 @@
     {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache/CSA+HCA/量化/RAG/vLLM/Triton', sections:19}
   ];
 
-  // ---- State helpers ----
-  function safeGet(k, fallback){
-    try{ var v=localStorage.getItem(k); return v!==null?JSON.parse(v):fallback }
-    catch(e){ return fallback }
-  }
-  function safeSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)) } catch(e){} }
+  // ---- State helpers (IndexedDB-backed) ----
+  function safeGet(k, fb){ return window.IDB ? IDB.get(k, fb) : (function(){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb} })() }
+  function safeSet(k, v){ if(window.IDB){ IDB.set(k, v) } else { try{ localStorage.setItem(k, JSON.stringify(v)) } catch(e){} } }
 
   var completed = new Set(safeGet('llm-done', []));
   var currentCh = parseInt(document.body.getAttribute('data-ch')||'0');
@@ -449,7 +446,7 @@
     var profiles = getProfiles().filter(function(p){ return p.id!==id });
     saveProfiles(profiles);
     // Clean up notes
-    for(var i=1; i<=10; i++){ try{ localStorage.removeItem('llm-notes-'+id+'-ch'+i) }catch(e){} }
+    for(var i=1; i<=10; i++){ try{ if(window.IDB) IDB.remove('llm-notes-'+id+'-ch'+i); else localStorage.removeItem('llm-notes-'+id+'-ch'+i) }catch(e){} }
     if(activeProfileId===id){ activeProfileId=null; safeSet(ACTIVE_PROFILE_KEY, null) }
     updateProfileUI();
     renderProfileModal();

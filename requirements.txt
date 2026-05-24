@@ -1,0 +1,10 @@
+# LLM 深度学习课程 — Python 依赖
+# 安装: pip install -r requirements.txt
+#
+# 注意: PyTorch 建议从官网安装以获得最佳 CUDA 兼容性
+#       https://pytorch.org/get-started/locally/
+
+torch>=2.0.0
+numpy>=1.24.0
+tqdm>=4.65.0
+transformers>=4.36.0

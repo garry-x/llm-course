@@ -33,12 +33,12 @@
   <section class="hero">
     <div class="hero-tags">
       <span class="hero-tag">🐍 可运行 Python 代码</span>
-      <span class="hero-tag">🧪 每章 5 道练习</span>
+      <span class="hero-tag">🧪 102 道练习 (52 编程 + 50 概念)</span>
       <span class="hero-tag">🤖 融入 DeepSeek V2–V4</span>
       <span class="hero-tag">📱 iPad Pro 优化</span>
     </div>
     <h2>从代码出发，构建大语言模型</h2>
-    <p>10 章 · 118 小节 · 50 道练习<br>从 BPE Tokenizer 到 GRPO 推理对齐，每一行代码都值得自己敲一遍。</p>
+    <p>10 章 · 124 小节 · 102 道练习<br>从 BPE Tokenizer 到 GRPO 推理对齐，每一行代码都值得自己敲一遍。</p>
     <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
   </section>
 
@@ -55,12 +55,12 @@
     </div>
     <div class="dash-card">
       <div class="dash-icon">⏱️</div>
-      <div class="num">~9h</div>
+      <div class="num">~10h</div>
       <div class="label">预计学习时间</div>
     </div>
     <div class="dash-card">
       <div class="dash-icon">🎯</div>
-      <div class="num">50 道</div>
+      <div class="num">102 道</div>
       <div class="label">交互练习</div>
     </div>
   </div>
@@ -73,16 +73,16 @@
 <script>
 (function(){
   var chapters = [
-    {id:1,file:'chapters/ch01.html',title:'环境搭建与分词',desc:'实现BPE Tokenizer——从字符到子词',sections:10},
+    {id:1,file:'chapters/ch01.html',title:'环境搭建与分词',desc:'实现BPE Tokenizer——从字符到子词',sections:13},
     {id:2,file:'chapters/ch02.html',title:'嵌入层与位置编码',desc:'TokenEmbedding + RoPE + PromptEng——让模型理解语义与顺序',sections:11},
-    {id:3,file:'chapters/ch03.html',title:'单头自注意力',desc:'Scaled Dot-Product Attention——LLM的核心计算',sections:10},
-    {id:4,file:'chapters/ch04.html',title:'多头注意力与MLA',desc:'MHA→GQA→DeepSeek MLA——KV Cache压缩之路',sections:9},
-    {id:5,file:'chapters/ch05.html',title:'Transformer Block',desc:'RMSNorm+FFN+SwiGLU+mHC超连接',sections:10},
+    {id:3,file:'chapters/ch03.html',title:'单头自注意力',desc:'Scaled Dot-Product Attention——LLM的核心计算',sections:11},
+    {id:4,file:'chapters/ch04.html',title:'多头注意力与MLA',desc:'MHA→GQA→DeepSeek MLA——KV Cache压缩之路',sections:10},
+    {id:5,file:'chapters/ch05.html',title:'Transformer Block',desc:'RMSNorm+FFN+SwiGLU+mHC超连接',sections:11},
     {id:6,file:'chapters/ch06.html',title:'组装完整GPT模型',desc:'GPT-2 124M + DeepSeekMoE架构',sections:10},
     {id:7,file:'chapters/ch07.html',title:'训练循环',desc:'AdamW/Muon+FP8/FP4+DualPipe+分布式——极致训练效率',sections:15},
     {id:8,file:'chapters/ch08.html',title:'文本生成',desc:'采样策略+MTP推测解码+约束生成——让模型开口说话',sections:12},
-    {id:9,file:'chapters/ch09.html',title:'微调与对齐',desc:'SFT/LoRA/DPO/GRPO——从预训练到有用助手',sections:12},
-    {id:10,file:'chapters/ch10.html',title:'推理优化与前沿',desc:'KV Cache/CSA+HCA/量化/RAG/vLLM/Triton/多模态',sections:19}
+    {id:9,file:'chapters/ch09.html',title:'微调与对齐',desc:'SFT/LoRA/DPO/GRPO——从预训练到有用助手',sections:14},
+    {id:10,file:'chapters/ch10.html',title:'推理优化与前沿',desc:'KV Cache/CSA+HCA/量化/RAG/vLLM/Triton/多模态',sections:17}
   ];
 
   function safeGet(k,d){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d} }

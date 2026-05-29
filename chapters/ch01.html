@@ -25,7 +25,7 @@
 <article class="chapter">
   <h2>第1章 BPE 分词器</h2>
   <p class="subtitle">从零实现 Byte Pair Encoding——LLM 的"第一道门"</p>
-  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 10 小节 · 4 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 13 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -398,10 +398,10 @@ def train(text, vocab_size):
 <!-- 编程练习 4: encode + decode -->
 <!-- ================================================================ -->
 <section class="card" id="s1-11">
-  <h3>1.11 编程练习 4：实现完整的编码与解码</h3>
+  <h3>1.11 编程练习 4-5：实现完整的编码与解码</h3>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 4a：实现 decode</h4>
+    <h4>🖥️ 练习 4：实现 decode</h4>
     <div class="task">
       <p><strong>任务：</strong>实现 <code>decode(ids, vocab)</code>，将 token ID 序列还原为文本。</p>
       <p><strong>要求：</strong></p>
@@ -426,7 +426,7 @@ def decode(ids, vocab):
   </div>
 
   <div class="coding-exercise" style="margin-top:16px">
-    <h4>🖥️ 练习 4b：实现 encode</h4>
+    <h4>🖥️ 练习 5：实现 encode</h4>
     <div class="task">
       <p><strong>任务：</strong>实现 <code>encode(text, merges)</code>，将文本编码为 token ID 序列。</p>
       <p><strong>要求：</strong></p>

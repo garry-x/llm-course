@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/chapters-10-orange" alt="10 chapters">
   <img src="https://img.shields.io/badge/exercises-102_(52编程+50概念)-blue" alt="102 exercises">
-  <img src="https://img.shields.io/badge/sections-135+-yellow" alt="135 sections">
+  <img src="https://img.shields.io/badge/sections-124-yellow" alt="124 sections">
   <img src="https://img.shields.io/badge/DeepSeek-V2→R1→V3→V4-green" alt="DeepSeek">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
   <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker">
@@ -90,7 +90,7 @@ PORT=3000 docker compose up -d
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO + R1 推理 | SFT + LoRA + GRPO ~190行 | 6+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/vLLM/Triton/多模态 | KV Cache + 量化 ~100行 | 5+5 |
 
-> **总计：52 道编程练习 + 50 道概念练习，~135 小节，约 10 小时学习时间**
+> **总计：52 道编程练习 + 50 道概念练习，124 小节，约 10 小时学习时间**
 
 ## DeepSeek 技术融入
 

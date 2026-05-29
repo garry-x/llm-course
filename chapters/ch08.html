@@ -25,7 +25,7 @@
 <article class="chapter">
   <h2>第8章 文本生成</h2>
   <p class="subtitle">采样策略 + DeepSeek MTP 推测解码——从概率到文本的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 13 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 12 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -233,10 +233,10 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
 <!-- 编程练习 3: Top-K and Top-P -->
 <!-- ================================================================ -->
 <section class="card" id="s8-6">
-  <h3>8.6 编程练习 3：实现 Top-K 和 Top-P 采样</h3>
+  <h3>8.6 编程练习 3-4：实现 Top-K 和 Top-P 采样</h3>
 
   <div class="coding-exercise">
-    <h4>练习 3a：Top-K 采样</h4>
+    <h4>练习 3：Top-K 采样</h4>
     <div class="task">
       <p><strong>任务：</strong>实现 <code>generate_topk(model, input_ids, max_new_tokens, k, temperature)</code>。</p>
       <p><strong>要求：</strong></p>
@@ -281,7 +281,7 @@ def generate_topk(model, input_ids, max_new_tokens=100,
   </div>
 
   <div class="coding-exercise" style="margin-top:16px">
-    <h4>练习 3b：Top-P (Nucleus) 采样</h4>
+    <h4>练习 4：Top-P (Nucleus) 采样</h4>
     <div class="task">
       <p><strong>任务：</strong>实现 <code>generate_topp(model, input_ids, max_new_tokens, p, temperature)</code>。</p>
       <p><strong>要求：</strong></p>
@@ -338,11 +338,11 @@ def generate_topp(model, input_ids, max_new_tokens=100,
 <!-- 编程练习 4: Compare Strategies -->
 <!-- ================================================================ -->
 <section class="card" id="s8-7">
-  <h3>8.7 编程练习 4：四种采样策略对比实验</h3>
+  <h3>8.7 编程练习 5：四种采样策略对比实验</h3>
   <p>现在把你实现的四种策略放在一起对比。用同一个 prompt 和同一个模型，观察输出差异。同时用定量指标评估质量。</p>
 
   <div class="coding-exercise">
-    <h4>练习 4：策略对比 + 多样性评估</h4>
+    <h4>练习 5：策略对比 + 多样性评估</h4>
     <div class="task">
       <p><strong>任务：</strong>实现 <code>Generator</code> 类，统一封装四种策略。然后用同一个 prompt 生成文本，计算多样性指标。</p>
       <p><strong>要求：</strong></p>
@@ -467,7 +467,7 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
 <!-- 编程练习 5: Speculative Decoding -->
 <!-- ================================================================ -->
 <section class="card" id="s8-9">
-  <h3>8.9 编程练习 5：实现简化版推测解码</h3>
+  <h3>8.9 编程练习 6：实现简化版推测解码</h3>
   <p><strong>推测解码（Speculative Decoding）</strong>的核心思想非常巧妙：用一个<strong>小模型（草稿模型）</strong>快速生成候选 tokens，然后由<strong>大模型（目标模型）</strong>并行验证这些候选，在<strong>不改变输出分布</strong>的前提下实现 ~1.8x-3x 的加速。</p>
 
   <h4>算法流程</h4>
@@ -483,7 +483,7 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
   </div>
 
   <div class="coding-exercise">
-    <h4>练习 5：实现推测解码</h4>
+    <h4>练习 6：实现推测解码</h4>
     <div class="task">
       <p><strong>任务：</strong>实现 <code>speculative_decoding(target_model, draft_model, tokenizer, input_ids, gamma=4)</code>。</p>
       <p><strong>要求：</strong></p>
@@ -618,10 +618,10 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <li>✅ <strong>自回归生成原理</strong> — Autoregressive decomposition of P(x), Prefilling vs. Decoding</li>
     <li>✅ <strong>编程练习 1：Greedy Decoding</strong> — argmax 策略，暴露重复陷阱和曝光偏差</li>
     <li>✅ <strong>编程练习 2：Temperature Sampling</strong> — 温度控制分布熵，T→0 退化为贪心</li>
-    <li>✅ <strong>编程练习 3a：Top-K Sampling</strong> — 固定 K 截断，缺点是无法自适应</li>
-    <li>✅ <strong>编程练习 3b：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，当前最主流</li>
-    <li>✅ <strong>编程练习 4：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
-    <li>✅ <strong>编程练习 5：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，无损加速</li>
+    <li>✅ <strong>编程练习 3：Top-K Sampling</strong> — 固定 K 截断，缺点是无法自适应</li>
+    <li>✅ <strong>编程练习 4：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，当前最主流</li>
+    <li>✅ <strong>编程练习 5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
+    <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，无损加速</li>
     <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
     <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>
   </ul>

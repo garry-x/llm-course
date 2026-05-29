@@ -572,7 +572,7 @@ print(f"LayerNorm 模块梯度检查: {test_module}")</div>
 <!-- ================================================================ -->
 <section class="card" id="s5-10">
   <h3>5.10 深度理论：DeepSeek V4 mHC 超连接——Birkhoff 约束与 Sinkhorn-Knopp 迭代</h3>
-  <p>DeepSeek-V4 引入的 <strong>mHC (multi-head Hyper-Connections)</strong> 是对传统残差连接的革命性替代。它的核心思想是：<strong>层间连接强度应该是可学习的</strong>，但必须施加数学约束来保证训练稳定。</p>
+  <p>DeepSeek-V4 引入的 <strong>mHC（Manifold-Constrained Hyper-Connections，流形约束超连接）</strong>是对传统残差连接的革命性替代。它在 ByteDance 的 Hyper-Connections（Zhu et al. 2024）基础上，把可学习的层间连接矩阵<strong>约束在流形（Birkhoff polytope）上</strong>——核心思想是：层间连接强度应该可学习，但必须施加数学约束来保证训练稳定。</p>
 
   <h4>传统残差连接的局限</h4>
   <p>残差连接 <span class="katex-inline" data-expr="x' = f(x) + x"></span> 假设每层的贡献是固定的 1:1 比例。但不同层对最终输出的贡献可能不同——有些层可能只需要微调前一层的表示，有些层可能需要大幅修改。</p>
@@ -603,7 +603,7 @@ print(f"LayerNorm 模块梯度检查: {test_module}")</div>
           M = M / (M.sum(dim=-1, keepdim=True) + 1e-6)
           M = M / (M.sum(dim=-2, keepdim=True) + 1e-6)
       return M</div>
-  <p>mHC 的多头特性：多个独立的连接矩阵（头）捕获不同类型的层间依赖，最后取均值。DeepSeek-V4 报告显示，mHC 使得训练 500+ 层纯 Transformer 变得稳定。</p>
+  <p>mHC 的多头特性：多个独立的连接矩阵（头）捕获不同类型的层间依赖，最后取均值。DeepSeek-V4 报告显示，Birkhoff 约束把残差路径的信号放大系数压到约 <strong>1.6×</strong>，从而在 <strong>1.6T 参数</strong>（V4-Pro，激活 49B）规模上仍能稳定训练极深网络。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>直觉：</strong>Sinkhorn-Knopp 迭代的交替归一化在数学上等价于熵正则化的最优传输问题。它找到的"连接权重"在行和列维度上都满足概率分布约束，确保每层"提出"的信息总量和"接收"的信息总量都是守恒的——这正是深层网络稳定训练所需的"能量守恒"性质。</div></div>
 </section>
 

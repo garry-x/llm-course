@@ -25,7 +25,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / CSA+HCA / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 17 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 110 分钟 · 19 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -261,29 +261,27 @@ print(f"DeepSeek-V4 MLA: KV Cache {v4['total_cache_gb']:.2f} GB "
 <!-- 10.5 CSA+HCA Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s10-5">
-  <h3>10.5 DeepSeek V4 CSA+HCA——压缩注意力实现 1M 上下文</h3>
-  <p>DeepSeek-V4 引入了两种新型注意力机制：<strong>压缩滑动注意力（CSA）</strong>和<strong>超压缩全局注意力（HCA）</strong>。</p>
+  <h3>10.5 DeepSeek V3.2→V4：从 DSA 到 CSA+HCA 的稀疏注意力</h3>
+  <p>MLA（第 4 章）压掉了 KV Cache，但注意力计算本身仍是 <span class="katex-inline" data-expr="O(n^2)"></span>。从 <strong>V3.2-Exp</strong>（2025 年末）起，DeepSeek 把矛头对准这里，提出 <strong>DSA（DeepSeek Sparse Attention，可学习稀疏注意力）</strong>；<strong>V4</strong>（2026-04）在其上组合 <strong>CSA + HCA</strong> 两种压缩注意力，让 1M 上下文真正可用。</p>
 
-  <h4>CSA（压缩滑动注意力）</h4>
-  <p>传统滑动窗口的窗口大小固定（如 4096）。CSA 对窗口内的 K/V 进行 <strong>4x 压缩</strong>——用一个小的 MLP 压缩器将 4 个相邻 token 的 K/V 压缩为 1 个表示。这使滑动窗口的"有效感知范围"扩大 4 倍，计算量和 KV Cache 不变。</p>
-  <div class="math-box"><div class="label">公式 10.3 CSA</div>
-    <div class="katex" data-expr="\text{CSA}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Compress}_{4x}(K)^\top}{\sqrt{d}}\right) \cdot \text{Compress}_{4x}(V)"></div>
+  <h4>DSA（V3.2）——可学习的 top-k 稀疏</h4>
+  <p>DSA 用一个轻量索引器为每个 query 给所有候选 KV 打分，只保留 <strong>top-k</strong> 个做精确注意力。复杂度从 <span class="katex-inline" data-expr="O(n^2)"></span> 降到 <span class="katex-inline" data-expr="O(n \cdot k)"></span>（<span class="katex-inline" data-expr="k \ll n"></span>），且"选哪些 KV"是<strong>端到端学习</strong>的，而非固定窗口。</p>
+
+  <h4>CSA（Compressed Sparse Attention，压缩稀疏注意力）</h4>
+  <p>V4 的 CSA 是 DSA 的"压缩版"：先用可学习压缩器把<strong>每 m 个相邻 token 的 KV 压成 1 个条目</strong>，再在这些压缩条目上做 top-k 稀疏选择。注意它<strong>不是固定滑动窗口</strong>——稀疏模式由数据驱动，可跨越长距离。</p>
+  <div class="math-box"><div class="label">公式 10.3 CSA（概念式）</div>
+    <div class="katex" data-expr="\text{CSA}(q_t) = \text{Attn}\Big(q_t,\; \text{TopK}_k\big(\text{Compress}_m(K),\, \text{Compress}_m(V)\big)\Big)"></div>
   </div>
 
-  <h4>HCA（超压缩全局注意力）</h4>
-  <p>将全局序列的 K/V 压缩 <strong>128 倍</strong>——每 128 个 token 的 K/V 被平均池化为 1 个表示。这使得模型能在 1M 上下文上执行全局注意力，计算量仅相当于标准注意力的 1/128。</p>
-  <div class="math-box"><div class="label">公式 10.4 HCA</div>
-    <div class="katex" data-expr="\text{HCA}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Pool}_{128x}(K)^\top}{\sqrt{d}}\right) \cdot \text{Pool}_{128x}(V)"></div>
+  <h4>HCA（Heavily Compressed Attention，超压缩全局注意力）</h4>
+  <p>HCA 走另一条路：对全序列 KV 做<strong>更激进的 128× 压缩</strong>（每 128 个 token 池化为 1 个表示），再在压缩表示上做<strong>稠密</strong>注意力。这给每一层一个廉价的"全局俯瞰"，弥补 CSA 稀疏选择可能漏掉的远端信息。</p>
+  <div class="math-box"><div class="label">公式 10.4 HCA（概念式）</div>
+    <div class="katex" data-expr="\text{HCA}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Pool}_{128\times}(K)^\top}{\sqrt{d}}\right) \cdot \text{Pool}_{128\times}(V)"></div>
   </div>
 
-  <h4>V4 注意力架构全景</h4>
-  <p>V4 同时使用三种注意力，通过可学习的门控组合 <span class="katex-inline" data-expr="\alpha \cdot \text{Local} + \beta \cdot \text{CSA} + \gamma \cdot \text{HCA}"></span>：</p>
-  <ul>
-    <li><strong>局部精确注意力</strong> — 最近 4096 tokens，标准注意力保证精度</li>
-    <li><strong>CSA</strong> — 覆盖 16K 范围（4x 窗口扩充）</li>
-    <li><strong>HCA</strong> — 覆盖整个 1M 上下文（128x 压缩）</li>
-  </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>效果：</strong>总计算量仅为标准 1M 上下文注意力的 27%，使 1M 上下文在 H800 GPU 上实际可用。</div></div>
+  <h4>V4 如何组合：跨层交替</h4>
+  <p>V4 不是把两种注意力简单加权求和，而是<strong>跨 Transformer 层交替</strong>使用 CSA 与 HCA——稀疏精确层负责"看清局部 + 学到的关键远端 token"，超压缩全局层负责"廉价地看全局"。两者配合，使 1M 上下文的单 token 计算量降到 V3.2 的约 <strong>27%</strong>、KV Cache 降到约 <strong>10%</strong>。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>V4 规格（2026-04 发布，MIT 许可开源）：</strong>V4-Pro 1.6T 总参 / 49B 激活，V4-Flash 284B；原生 <strong>1M token 上下文</strong>、384K 最大输出；训练 32T tokens。R1 的推理线也被并入 V4 的"可选思考模式"。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -810,18 +808,99 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.15 V2→V4 演进 -->
+<!-- 10.15 Engram 外部记忆 -->
 <!-- ================================================================ -->
 <section class="card" id="s10-15">
-  <h3>10.15 DeepSeek V2→V4 演进路线图——"删减"哲学</h3>
+  <h3>10.15 Engram——类海马体的 O(1) 外部记忆</h3>
+  <p>RAG（10.8）把知识放在<strong>模型外部</strong>，靠向量检索召回。DeepSeek-V4 把这个思路<strong>内建进模型</strong>：<strong>Engram</strong>（取自神经科学"记忆痕迹"一词）是一套受海马体启发的外部知识库，与主干网络并行，提供 <strong>O(1)</strong> 速度的知识检索。</p>
+
+  <h4>为什么需要它？</h4>
+  <p>注意力代价随上下文增长，把事实性知识全塞进参数或上下文都很贵。Engram 把可枚举的知识条目放进一个<strong>独立、可更新</strong>的库，用<strong>局部敏感哈希（LSH）</strong>建索引——查询向量经同一组哈希函数映射到桶，命中桶内条目即为近邻，无需扫描全库。</p>
+
+  <h4>与 RAG 的区别</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th></th><th>传统 RAG</th><th>Engram (V4)</th></tr>
+      <tr><td>检索时机</td><td>生成前一次性检索</td><td>生成中按需、逐层访问</td></tr>
+      <tr><td>索引</td><td>外部向量库 (ANN)</td><td>模型内建 LSH，O(1) 查桶</td></tr>
+      <tr><td>更新</td><td>重建向量库</td><td>直接写记忆库，无需重训</td></tr>
+      <tr><td>耦合</td><td>松耦合（拼进 prompt）</td><td>与前向传播紧耦合</td></tr>
+    </table>
+  </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>效果：</strong>V4 报告显示，引入 Engram 后多查询 NIAH（大海捞针）准确率从 V3.2 的 84.2% 跃升到 <strong>97.0%</strong>——把"长上下文里精确找事实"这件事做扎实了。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 编程练习 6: LSH 检索 (Engram 风格) -->
+<!-- ================================================================ -->
+<section class="card" id="s10-16">
+  <h3>10.16 编程练习 6：实现 LSH O(1) 检索（Engram 风格）</h3>
+  <p>Engram 的核心，是用 LSH 把"在百万条记忆里找近邻"从 O(N) 降到接近 O(1)。这个练习实现一个最小的<strong>随机超平面 LSH</strong>检索器。</p>
+
+  <div class="coding-exercise">
+    <h4>练习 6：随机超平面 LSH 检索器</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>LSHMemory</code>，用 <code>n_bits</code> 个随机超平面把向量哈希成二进制桶键，支持 <code>add</code> 写入和 <code>query</code> 近邻召回。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>哈希：每个向量与 <code>n_bits</code> 个随机超平面点积，取符号位拼成整数桶键 <span class="katex-inline" data-expr="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i"></span></li>
+        <li><code>add(vec, value)</code>：把 <code>value</code> 存进对应桶</li>
+        <li><code>query(vec)</code>：只在<strong>同桶</strong>条目里做精确最近邻（O(1) 查桶 + 桶内小规模比对）</li>
+        <li>哈希平面在 <code>__init__</code> 固定——同一组函数才能保证相似向量进同桶</li>
+      </ul>
+      <pre># 预期用法
+mem = LSHMemory(dim=64, n_bits=8)
+for v, doc in zip(vectors, docs):
+    mem.add(v, doc)
+hit = mem.query(query_vec)   # 命中同桶近邻，无需扫描全库
+print(hit)</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+import torch
+from collections import defaultdict
+
+class LSHMemory:
+    """随机超平面 LSH——Engram 式 O(1) 近邻检索的最小实现"""
+    def __init__(self, dim, n_bits=8, seed=0):
+        g = torch.Generator().manual_seed(seed)
+        # n_bits 个随机超平面，固定不变
+        self.planes = torch.randn(n_bits, dim, generator=g)
+        self.buckets = defaultdict(list)   # 桶键 -> [(vec, value), ...]
+
+    def _hash(self, x):
+        bits = (self.planes @ x > 0).long()              # 符号位
+        return int((bits * (2 ** torch.arange(len(bits)))).sum())
+
+    def add(self, vec, value):
+        self.buckets[self._hash(vec)].append((vec, value))
+
+    def query(self, vec):
+        cand = self.buckets.get(self._hash(vec), [])
+        if not cand:
+            return None
+        # 只在同桶候选里做精确比对（桶内规模远小于 N）
+        sims = [torch.dot(vec, v) / (vec.norm() * v.norm() + 1e-9) for v, _ in cand]
+        return cand[int(torch.tensor(sims).argmax())][1]</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么是 O(1)？</strong>哈希把全库切成许多小桶，查询只比对命中桶内的少量候选——与库总规模 N 几乎无关。代价是<strong>近似</strong>：相似向量大概率、但不保证进同桶。实践中用<strong>多张哈希表</strong>（multi-probe）取并集来提高召回，这正是 Engram 在百万级记忆上又快又准的关键。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.17 V2→V4 演进 -->
+<!-- ================================================================ -->
+<section class="card" id="s10-17">
+  <h3>10.17 DeepSeek V2→V4 演进路线图——"删减"哲学</h3>
   <p>回顾 DeepSeek 从 V2 到 V4 的演变，可以看到一个清晰的"删减"哲学：</p>
   <div class="table-wrap">
     <table>
       <tr><th>版本</th><th>核心创新</th><th>"删掉"了什么</th></tr>
-      <tr><td><strong>V2</strong></td><td>MLA</td><td><strong>删 KV</strong> — 将 K/V 压缩到低维潜空间，Cache 减少 8-16x</td></tr>
-      <tr><td><strong>V3</strong></td><td>MoE + MTP</td><td><strong>删参数</strong> — 稀疏激活，总参量大但每步只激活 10%</td></tr>
-      <tr><td><strong>R1</strong></td><td>GRPO</td><td><strong>删 Critic</strong> — 组内白化替代价值网络</td></tr>
-      <tr><td><strong>V4</strong></td><td>CSA + HCA + OPD</td><td><strong>删注意力</strong> — 压缩/稀疏化注意力计算，1M 上下文 27% FLOPs</td></tr>
+      <tr><td><strong>V2</strong></td><td>MLA</td><td><strong>删 KV</strong> — K/V 压到低维潜空间，仅缓存共享潜向量</td></tr>
+      <tr><td><strong>V3</strong></td><td>MoE + MTP + FP8</td><td><strong>删参数</strong> — 671B 总参，每步只激活 ~37B（约 5.5%）</td></tr>
+      <tr><td><strong>R1</strong></td><td>GRPO</td><td><strong>删 Critic</strong> — 组内白化替代价值网络，纯 RL 涌现推理</td></tr>
+      <tr><td><strong>V3.2</strong></td><td>DSA</td><td><strong>删注意力(稀疏)</strong> — 可学习 top-k，<span class="katex-inline" data-expr="O(n^2)\to O(n\cdot k)"></span></td></tr>
+      <tr><td><strong>V4</strong></td><td>CSA+HCA + Engram + mHC + Muon</td><td><strong>删注意力(压缩)+加记忆</strong> — 1M 上下文 27% FLOPs / 10% KV；Engram 外部记忆；R1 推理并入"思考模式"（1.6T/49B）</td></tr>
     </table>
   </div>
   <p>每一代的创新都遵循同一个模式：<strong>找到当前架构中最浪费的部分，然后系统性地优化它</strong>。这个趋势的终点可能是完全不用"标准" Transformer——如 Mamba 等状态空间模型试图彻底干掉注意力机制。</p>
@@ -830,8 +909,8 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 <!-- ================================================================ -->
 <!-- 10.16 课程总结 -->
 <!-- ================================================================ -->
-<section class="card" id="s10-16">
-  <h3>10.16 课程总结——你构建了什么</h3>
+<section class="card" id="s10-18">
+  <h3>10.18 课程总结——你构建了什么</h3>
   <div class="table-wrap">
     <table>
       <tr><th>章节</th><th>核心组件</th><th>关键概念</th></tr>
@@ -857,8 +936,8 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 <!-- ================================================================ -->
 <!-- 10.17 多模态 LLM -->
 <!-- ================================================================ -->
-<section class="card" id="s10-17">
-  <h3>10.17 多模态 LLM——让模型看见世界</h3>
+<section class="card" id="s10-19">
+  <h3>10.19 多模态 LLM——让模型看见世界</h3>
   <p>GPT-4V、Claude 3、Gemini——所有顶级 LLM 现在都是<strong>多模态</strong>的。它们不仅能理解文本，还能"看"图像、图表、PDF。</p>
 
   <h4>核心架构：Vision Encoder + Projection + LLM</h4>

@@ -410,7 +410,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
 <!-- ================================================================ -->
 <section class="card" id="s7-9">
   <h3>7.9 DeepSeek Muon 优化器——矩阵正交化的力量</h3>
-  <p><strong>Muon</strong> 是 DeepSeek-V4 使用的创新优化器。它的核心思想与 AdamW 有<strong>根本的不同</strong>：AdamW 试图自适应地调整每个参数的学习率，而 Muon 试图将<strong>梯度矩阵正交化</strong>。</p>
+  <p><strong>Muon</strong>（Keller Jordan, 2024）是 DeepSeek-V4 在 <strong>1.6T 参数</strong>规模上采用的优化器（不是 DeepSeek 原创，但 V4 是其最大规模的工业验证）。它的核心思想与 AdamW 有<strong>根本的不同</strong>：AdamW 试图自适应地调整每个参数的学习率，而 Muon 试图将<strong>动量矩阵正交化</strong>。</p>
 
   <h4>为什么正交化有助于优化？</h4>
   <p>当权重矩阵的特征值分布不均匀时（某些方向的变化幅度远大于其他方向），梯度下降的效率很低——模型在"陡峭"方向上震荡，在"平缓"方向上进展缓慢。Muon 通过 <strong>Newton-Schulz 迭代</strong> 将梯度矩阵投影到最近的正交矩阵：</p>
@@ -420,7 +420,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
   <p>这个迭代快速收敛到 <span class="katex-inline" data-expr="G"></span> 的极分解 <span class="katex-inline" data-expr="G = U \Sigma V^\top \to UV^\top"></span>——即去掉了奇异值 <span class="katex-inline" data-expr="\Sigma"></span>，只保留正交方向。5 次迭代通常就足够收敛。直观理解：它保留了梯度的<strong>方向信息</strong>但丢弃了<strong>幅度信息</strong>——因为幅度已经被学习率控制。</p>
 
   <h4>Muon vs. AdamW 的内存对比</h4>
-  <p>AdamW 需要维护 <span class="katex-inline" data-expr="m_t"></span> 和 <span class="katex-inline" data-expr="v_t"></span> 两个动量状态——每个参数额外 2 个张量。Muon 不需要动量，在训练 70B 模型时节省约 140GB 的优化器显存（70B * 2 bytes * 2 = 280GB for AdamW, Muon 为 0）。</p>
+  <p>AdamW 需要维护 <span class="katex-inline" data-expr="m_t"></span> 和 <span class="katex-inline" data-expr="v_t"></span> 两个状态——每个参数额外 2 个张量。Muon 只维护<strong>一个动量缓冲</strong>（它正交化的是动量、而非原始梯度），因此优化器显存约<strong>减半</strong>。训练 70B 模型时（每个状态按 2 bytes 计）：AdamW 约 <span class="katex-inline" data-expr="70\text{B}\times 2\times 2 = 280"></span> GB，Muon 约 140 GB——节省约 140GB。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>适用条件：</strong>Muon 对明确具有矩阵结构的参数（<code>nn.Linear</code> 权重、<code>nn.Embedding</code> 权重）效果最好。bias 和 LayerNorm 的 gamma/beta 是 1D 的，不适合 Muon，应退化为标准 SGD 或 AdamW。DeepSeek-V4 将所有 ≥2D 且两个维度都 ≥16 的参数使用 Muon。</div></div>
 </section>
 

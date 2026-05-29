@@ -76,7 +76,7 @@
 <div class="svg-diagram" style="max-width:800px">
   <img src="../images/transformer-arch.svg" alt="Transformer/GPT 架构全景图" style="width:100%">
 </div>
-<p class="diagram-caption">图 4-1: Decoder-only Transformer (GPT) 完整架构——从 Token ID 到概率输出</p>
+<p class="diagram-caption">图 4-2: Decoder-only Transformer (GPT) 完整架构——从 Token ID 到概率输出（第 6 章组装预览）</p>
 </section>
 
 
@@ -411,7 +411,7 @@ class GroupedQueryAttention(nn.Module):
       <tr><td><span class="katex-inline" data-expr="d_r"></span></td><td>64</td><td>RoPE 单独投影维度</td></tr>
     </table>
   </div>
-  <p>对比 MHA：KV Cache 从 <span class="katex-inline" data-expr="2 \times 64 \times 128 = 16,384"></span> 降为 <span class="katex-inline" data-expr="2 \times 512 = 1,024"></span>——<strong>16 倍压缩</strong>。</p>
+  <p>对比 MHA：MLA <strong>只缓存一个共享潜在向量</strong> <span class="katex-inline" data-expr="\mathbf{c}^{KV} \in \mathbb{R}^{512}"></span>（K、V 在用时由它分别解压重建），再加解耦 RoPE 键 <span class="katex-inline" data-expr="\mathbf{k}^R \in \mathbb{R}^{64}"></span>，共约 <span class="katex-inline" data-expr="576"></span> 维/token；对比 MHA 的 <span class="katex-inline" data-expr="2 \times 64 \times 128 = 16,384"></span>——<strong>约 28 倍压缩</strong>（DeepSeek 报告约 93% 缩减）。注意：缓存的是 <em>单个</em> 潜向量，不是 K、V 各一份。</p>
 
   <h4>解耦 RoPE 的必要性</h4>
   <p>MLA 面临一个关键问题：RoPE 的旋转操作与解压矩阵不可交换（旋转是非线性操作）。如果将 RoPE 应用在解压后的 K 上，矩阵吸收就不再成立。</p>
@@ -436,7 +436,7 @@ class GroupedQueryAttention(nn.Module):
         <li><strong>KV 解压：</strong>用 <code>W_uk</code> 和 <code>W_uv</code>（均为 <code>nn.Linear(d_latent, n_heads * d_k)</code>）解压为各头的 K 和 V</li>
         <li>注意力计算与 MHA 相同（缩放点积 + softmax）</li>
         <li><code>forward</code> 返回 <code>(output, attn_weights, latent)</code>，其中 <code>latent</code> 是压缩后的潜在向量，模拟 KV Cache 的内容</li>
-        <li>验证：MLA 每 token 的 KV Cache 大小是 <code>2 * d_latent</code>（远小于 MHA 的 <code>2 * n_heads * d_k</code>）</li>
+        <li>验证：MLA 每 token 只缓存<strong>一个共享潜在向量</strong> <code>d_latent</code>（而非 <code>2 * d_latent</code>——K/V 由同一潜向量解压；远小于 MHA 的 <code>2 * n_heads * d_k</code>）</li>
       </ul>
       <pre># 预期用法
 mla = MLA(d_model=4096, n_heads=64, d_latent=512)
@@ -447,8 +447,8 @@ assert latent.shape == (2, 16, 512)
 
 # KV Cache 大小对比
 mha_cache_per_token = 2 * 64 * (4096 // 64)   # = 8192
-mla_cache_per_token = 2 * 512                  # = 1024
-print(f"压缩比: {mha_cache_per_token / mla_cache_per_token:.0f}x")  # 8x</pre>
+mla_cache_per_token = 512                       # 单个共享潜在向量 c^KV (非 2×)
+print(f"压缩比: {mha_cache_per_token / mla_cache_per_token:.0f}x")  # 16x</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
@@ -527,14 +527,14 @@ class MLA(nn.Module):
         <li>返回一个格式化的表格字符串</li>
       </ul>
       <pre># 预期输出 (示例)
-MHA 每 token KV: 16,384 floats (64 KB) → 128K 上下文: 8.0 GB
-GQA 每 token KV:  2,048 floats ( 8 KB) → 128K 上下文: 1.0 GB
-MLA 每 token KV:  1,024 floats ( 4 KB) → 128K 上下文: 0.5 GB
+MHA 每 token KV: 14,336 floats (56 KB) → 128K 上下文: 7.0 GB
+GQA 每 token KV:  1,792 floats ( 7 KB) → 128K 上下文: 0.9 GB
+MLA 每 token KV:    512 floats ( 2 KB) → 128K 上下文: 0.25 GB
 
 对比节省:
   GQA vs MHA: 8.0x
-  MLA vs MHA: 16.0x
-  MLA vs GQA: 2.0x</pre>
+  MLA vs MHA: 28.0x
+  MLA vs GQA: 3.5x</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
@@ -551,8 +551,8 @@ def compute_kv_cache_size(d_model, n_heads, n_kv_heads, d_latent, seq_len):
     gqa_per_token = 2 * n_kv_heads * d_k
     gqa_total = gqa_per_token * seq_len * bytes_per_float
 
-    # MLA: 每 token 缓存 d_latent 的 K_latent + d_latent 的 V_latent
-    mla_per_token = 2 * d_latent
+    # MLA: 每 token 只缓存一个共享潜在向量 c^KV (d_latent), 解压时重建 K 和 V
+    mla_per_token = d_latent
     mla_total = mla_per_token * seq_len * bytes_per_float
 
     def fmt_gb(bytes_):
@@ -593,8 +593,8 @@ compute_kv_cache_size(
     <li>✅ <strong>Multi-Head Attention (MHA)</strong> — 并行 <span class="katex-inline" data-expr="n_h"></span> 个子空间，参数量与单头等价但表达能力更强</li>
     <li>✅ <strong>参数等价性验证</strong> — 从代码上证明 MHA 与单头参数量完全相同</li>
     <li>✅ <strong>Grouped-Query Attention (GQA)</strong> — 减少 KV 头数，在 Llama 2/3 中广泛使用</li>
-    <li>✅ <strong>Multi-head Latent Attention (MLA)</strong> — 低秩压缩 KV 到潜在空间，16 倍 KV Cache 压缩</li>
-    <li>✅ <strong>KV Cache 量化对比</strong> — 128K 上下文下 MHA 8GB vs GQA 1GB vs MLA 0.5GB</li>
+    <li>✅ <strong>Multi-head Latent Attention (MLA)</strong> — 低秩压缩 KV 到潜在空间，仅缓存共享潜向量，约 28 倍 KV Cache 压缩</li>
+    <li>✅ <strong>KV Cache 量化对比</strong> — 128K 上下文下 MHA 7GB vs GQA 0.9GB vs MLA 0.25GB</li>
   </ul>
   <p>这条从 MHA 到 GQA 到 MLA 的演进路线，本质上是在<strong>模型质量、推理效率、显存约束</strong>之间不断寻找更优的平衡点。下一章，我们将把这些注意力组件与 FFN、RMSNorm 等模块组合，构建完整的 Transformer Block。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>

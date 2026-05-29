@@ -10,8 +10,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/chapters-10-orange" alt="10 chapters">
-  <img src="https://img.shields.io/badge/exercises-102_(52编程+50概念)-blue" alt="102 exercises">
-  <img src="https://img.shields.io/badge/sections-124-yellow" alt="124 sections">
+  <img src="https://img.shields.io/badge/exercises-103_(53编程+50概念)-blue" alt="103 exercises">
+  <img src="https://img.shields.io/badge/sections-126-yellow" alt="126 sections">
   <img src="https://img.shields.io/badge/DeepSeek-V2→R1→V3→V4-green" alt="DeepSeek">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
   <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker">
@@ -88,9 +88,9 @@ PORT=3000 docker compose up -d
 | 7 | **训练循环** — AdamW/Muon + FP8/FP4 + 分布式 | 完整训练脚本 ~120行 | 6+5 |
 | 8 | **文本生成** — 采样策略 + MTP 推测解码 + 约束生成 | 文本生成器 ~60行 | 6+5 |
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO + R1 推理 | SFT + LoRA + GRPO ~190行 | 6+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/vLLM/Triton/多模态 | KV Cache + 量化 ~100行 | 5+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Engram/vLLM/Triton/多模态 | KV Cache + 量化 + LSH ~120行 | 6+5 |
 
-> **总计：52 道编程练习 + 50 道概念练习，124 小节，约 10 小时学习时间**
+> **总计：53 道编程练习 + 50 道概念练习，126 小节，约 10 小时学习时间**
 
 ## DeepSeek 技术融入
 
@@ -101,9 +101,11 @@ PORT=3000 docker compose up -d
 | DeepSeekMoE + Aux-Loss-Free | V3 | Ch06 | 671B→37B 稀疏激活，动态偏置负载均衡 |
 | FP8 Mixed Precision + DualPipe | V3 | Ch07 | 首个大规模 FP8 验证，通信计算重叠 |
 | MTP (Multi-Token Prediction) | V3 | Ch08 | 训练/推理双重增益，推测解码 ~1.8x 加速 |
-| CSA + HCA Hybrid Attention | V4 | Ch10 | 4x/128x 压缩，1M 上下文仅 27% FLOPs |
-| mHC (Manifold Hyper-Connections) | V4 | Ch05 | Birkhoff 约束，Sinkhorn-Knopp，谱范数保证 |
-| Muon Optimizer | V4 | Ch07 | 矩阵正交化替代 AdamW，Newton-Schulz 迭代 |
+| DSA (DeepSeek Sparse Attention) | V3.2 | Ch10 | 可学习 top-k 稀疏，O(n²)→O(n·k) |
+| CSA + HCA Hybrid Attention | V4 | Ch10 | 压缩稀疏 + 128× 全局，1M 上下文 27% FLOPs / 10% KV |
+| Engram 外部记忆 | V4 | Ch10 | 类海马体 O(1) 检索 (LSH)，NIAH 84%→97% |
+| mHC (Manifold-Constrained Hyper-Connections) | V4 | Ch05 | Birkhoff 约束，Sinkhorn-Knopp，信号放大 1.6× |
+| Muon Optimizer | V4 | Ch07 | 动量矩阵正交化替代 AdamW，Newton-Schulz 迭代 |
 
 ## 项目结构
 
@@ -165,7 +167,7 @@ llm-learner/
 - Hoffmann et al. (2022) — [Training Compute-Optimal Large Language Models (Chinchilla)](https://arxiv.org/abs/2203.15556)
 
 **DeepSeek 系列：**
-- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · R1 — [GRPO 推理涌现 (Nature 2025)](https://www.nature.com/articles/s41586-025-09095-6) · V4 — [CSA+HCA + mHC](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · V3.2 — DSA 稀疏注意力 · R1 — [GRPO 推理涌现 (Nature 2025)](https://www.nature.com/articles/s41586-025-09422-z) · V4 — [CSA+HCA + Engram + mHC](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
 
 **动手实践：**
 - Andrej Karpathy — [Neural Networks: Zero to Hero](https://www.youtube.com/playlist?list=PLAqhIrjkxBUWIvTOCzB7XwZBt03h4H3kW) · [nanoGPT](https://github.com/karpathy/nanoGPT)

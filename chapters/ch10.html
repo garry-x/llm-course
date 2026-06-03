@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / CSA+HCA / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 110 分钟 · 19 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 120 分钟 · 20 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -713,10 +713,65 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.13 Triton -->
+<!-- 10.13 生产推理服务蓝图 -->
 <!-- ================================================================ -->
 <section class="card" id="s10-13">
-  <h3>10.13 Triton——GPU 内核编程入门</h3>
+  <h3>10.13 生产推理服务蓝图——从模型到 OpenAI-compatible API</h3>
+  <p>推理工程师的最终交付物不是一个能在 Notebook 里跑的模型，而是一个<strong>稳定、可观测、可扩容、成本可控</strong>的在线服务。一个典型 LLM 推理服务可以拆成 7 层：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>层级</th><th>职责</th><th>关键指标</th><th>常见技术</th></tr>
+      <tr><td>API Gateway</td><td>鉴权、限流、路由、请求大小限制</td><td>QPS、429 比例、入站错误率</td><td>Nginx / Envoy / FastAPI</td></tr>
+      <tr><td>Request Router</td><td>按模型、租户、GPU 余量分发请求</td><td>排队时长、路由命中率</td><td>Ray Serve / Kubernetes / 自研调度器</td></tr>
+      <tr><td>Inference Engine</td><td>prefill/decode、batching、KV 管理</td><td>TTFT、TPOT、tokens/s</td><td>vLLM / SGLang / TensorRT-LLM</td></tr>
+      <tr><td>Model Store</td><td>权重、tokenizer、量化版本管理</td><td>加载耗时、版本回滚时间</td><td>HF Hub / S3 / ModelScope</td></tr>
+      <tr><td>Cache</td><td>prefix cache、embedding cache、RAG cache</td><td>cache hit rate、节省 tokens</td><td>Redis / vLLM prefix cache / 向量库</td></tr>
+      <tr><td>Evaluation</td><td>质量、安全、格式和回归测试</td><td>pass rate、拒答率、JSON 有效率</td><td>prompt set / LLM judge / golden tests</td></tr>
+      <tr><td>Observability</td><td>日志、指标、trace、成本归因</td><td>P50/P95/P99、GPU 利用率、$/1M tokens</td><td>Prometheus / Grafana / OpenTelemetry</td></tr>
+    </table>
+  </div>
+
+  <h4>OpenAI-compatible 接口应该支持什么？</h4>
+  <p>生产服务通常需要兼容 <code>/v1/chat/completions</code> 这类接口，因为上层应用、Agent 框架和评测工具都能直接接入。最低功能包括：</p>
+  <ul>
+    <li><strong>非流式与流式输出：</strong>普通 JSON 响应 + Server-Sent Events (SSE) token 流。</li>
+    <li><strong>采样参数：</strong><code>temperature</code>、<code>top_p</code>、<code>max_tokens</code>、<code>stop</code>。</li>
+    <li><strong>结构化输出：</strong>JSON schema / constrained decoding，不能只靠 prompt 约束格式。</li>
+    <li><strong>工具调用：</strong>function/tool schema、tool call 参数校验、工具结果回填。</li>
+    <li><strong>使用量统计：</strong>prompt tokens、completion tokens、total tokens，用于计费和容量规划。</li>
+  </ul>
+
+  <h4>SLO：推理服务应该承诺什么？</h4>
+  <p>不要只看平均延迟。线上用户感知的是尾延迟和稳定性。一个合理的课程级 SLO 示例：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>指标</th><th>定义</th><th>示例目标</th><th>主要优化手段</th></tr>
+      <tr><td>TTFT</td><td>请求到第一个 token 的时间</td><td>P95 &lt; 800 ms</td><td>chunked prefill、prefix cache、路由空闲 GPU</td></tr>
+      <tr><td>TPOT</td><td>每个输出 token 平均耗时</td><td>P95 &lt; 40 ms/token</td><td>batching、量化、GQA/MLA、CUDA graph</td></tr>
+      <tr><td>吞吐</td><td>集群每秒生成 token 数</td><td>按 GPU 成本反推</td><td>continuous batching、提高 batch occupancy</td></tr>
+      <tr><td>可用性</td><td>成功响应比例</td><td>99.9%</td><td>超时、重试、熔断、备用模型</td></tr>
+      <tr><td>格式正确率</td><td>JSON/工具调用可解析比例</td><td>99%+</td><td>约束解码、schema 校验、重试修复</td></tr>
+    </table>
+  </div>
+
+  <h4>上线检查清单</h4>
+  <ul>
+    <li><strong>容量：</strong>测过目标 prompt 长度、输出长度、并发数下的 P50/P95/P99。</li>
+    <li><strong>显存：</strong>计算过模型权重、KV Cache、batch 峰值和安全余量。</li>
+    <li><strong>质量：</strong>有固定回归集，覆盖常见任务、拒答、安全、结构化输出。</li>
+    <li><strong>降级：</strong>GPU 满载时能限流、排队、切小模型或返回明确错误。</li>
+    <li><strong>观测：</strong>每个请求记录 model、tokens、latency、finish_reason、error_code。</li>
+    <li><strong>成本：</strong>能估算每 1M input/output tokens 的 GPU 成本，并按租户归因。</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>推理工程师判断题：</strong>如果用户说“模型很慢”，你不能只回答“换 H100”。先拆 TTFT/TPOT/排队时间，再看瓶颈是 prefill、decode、KV、batch occupancy、网络流式输出，还是 RAG 检索。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>动手项目：</strong>学完本节后进入 <code>projects/inference-engineering-capstone/</code>，运行一个 OpenAI-compatible Chat API。它包含非流式/流式响应、RAG stub、<code>/metrics</code>、压测脚本和固定评测集，是本章蓝图的最小可运行版本。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.14 Triton -->
+<!-- ================================================================ -->
+<section class="card" id="s10-14">
+  <h3>10.14 Triton——GPU 内核编程入门</h3>
   <p>FlashAttention、vLLM 的内核、量化推理——这些高性能 LLM 推理组件的底层都是用 <strong>Triton</strong> 编写的。Triton 是 OpenAI 开源的 GPU 内核编程语言，目标是<strong>让写 GPU kernel 像写 Python 一样简单</strong>。</p>
 
   <h4>为什么需要 Triton？</h4>
@@ -782,10 +837,10 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.14 GPU 内存层次 -->
+<!-- 10.15 GPU 内存层次 -->
 <!-- ================================================================ -->
-<section class="card" id="s10-14">
-  <h3>10.14 GPU 内存层次——理解 Triton 为什么必要</h3>
+<section class="card" id="s10-15">
+  <h3>10.15 GPU 内存层次——理解 Triton 为什么必要</h3>
   <p>写 Triton kernel 之前，必须先理解 GPU 的内存架构。FlashAttention 的"IO 感知"、Triton 的"tiling"、vLLM 的"显存利用率"——这些概念都建立在对以下内存层次的理解上：</p>
   <div class="table-wrap">
     <table>
@@ -820,10 +875,10 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.15 Engram 外部记忆 -->
+<!-- 10.16 Engram 外部记忆 -->
 <!-- ================================================================ -->
-<section class="card" id="s10-15">
-  <h3>10.15 Engram——类海马体的 O(1) 外部记忆</h3>
+<section class="card" id="s10-16">
+  <h3>10.16 Engram——类海马体的 O(1) 外部记忆</h3>
   <p>RAG（10.8）把知识放在<strong>模型外部</strong>，靠向量检索召回。DeepSeek-V4 把这个思路<strong>内建进模型</strong>：<strong>Engram</strong>（取自神经科学"记忆痕迹"一词）是一套受海马体启发的外部知识库，与主干网络并行，提供 <strong>O(1)</strong> 速度的知识检索。</p>
 
   <h4>为什么需要它？</h4>
@@ -845,8 +900,8 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 <!-- ================================================================ -->
 <!-- 编程练习 6: LSH 检索 (Engram 风格) -->
 <!-- ================================================================ -->
-<section class="card" id="s10-16">
-  <h3>10.16 编程练习 6：实现 LSH O(1) 检索（Engram 风格）</h3>
+<section class="card" id="s10-17">
+  <h3>10.17 编程练习 6：实现 LSH O(1) 检索（Engram 风格）</h3>
   <p>Engram 的核心，是用 LSH 把"在百万条记忆里找近邻"从 O(N) 降到接近 O(1)。这个练习实现一个最小的<strong>随机超平面 LSH</strong>检索器。</p>
 
   <div class="coding-exercise">
@@ -900,10 +955,10 @@ class LSHMemory:
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.17 V2→V4 演进 -->
+<!-- 10.18 V2→V4 演进 -->
 <!-- ================================================================ -->
-<section class="card" id="s10-17">
-  <h3>10.17 DeepSeek V2→V4 演进路线图——"删减"哲学</h3>
+<section class="card" id="s10-18">
+  <h3>10.18 DeepSeek V2→V4 演进路线图——"删减"哲学</h3>
   <p>回顾 DeepSeek 从 V2 到 V4 的演变，可以看到一个清晰的"删减"哲学：</p>
   <div class="table-wrap">
     <table>
@@ -919,10 +974,10 @@ class LSHMemory:
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.16 课程总结 -->
+<!-- 10.19 课程总结 -->
 <!-- ================================================================ -->
-<section class="card" id="s10-18">
-  <h3>10.18 课程总结——你构建了什么</h3>
+<section class="card" id="s10-19">
+  <h3>10.19 课程总结——你构建了什么</h3>
   <div class="table-wrap">
     <table>
       <tr><th>章节</th><th>核心组件</th><th>关键概念</th></tr>
@@ -946,10 +1001,10 @@ class LSHMemory:
 <!-- 概念练习 -->
 <!-- ================================================================ -->
 <!-- ================================================================ -->
-<!-- 10.17 多模态 LLM -->
+<!-- 10.20 多模态 LLM -->
 <!-- ================================================================ -->
-<section class="card" id="s10-19">
-  <h3>10.19 多模态 LLM——让模型看见世界</h3>
+<section class="card" id="s10-20">
+  <h3>10.20 多模态 LLM——让模型看见世界</h3>
   <p>GPT-4V、Claude 3、Gemini——所有顶级 LLM 现在都是<strong>多模态</strong>的。它们不仅能理解文本，还能"看"图像、图表、PDF。</p>
 
   <h4>核心架构：Vision Encoder + Projection + LLM</h4>

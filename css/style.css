@@ -644,6 +644,29 @@ td{color:var(--text-secondary)}
 .path-step span{display:block;color:var(--text-secondary);font-size:.82rem;line-height:1.65}
 @media(max-width:959px){.path-grid{grid-template-columns:1fr}}
 
+/* ---- Role competency map ---- */
+.role-path{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:22px 28px;margin:0 0 24px;box-shadow:var(--shadow-card)
+}
+.role-path h3{
+  font-family:var(--font-heading);font-size:1.1rem;font-weight:700;
+  margin-bottom:14px;color:var(--text)
+}
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.role-grid span{
+  display:flex;align-items:center;min-height:42px;padding:8px 12px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text-secondary);font-size:.8rem;background:var(--bg)
+}
+.role-project-link{
+  display:inline-flex;align-items:center;min-height:40px;margin-top:14px;
+  color:var(--accent);font-size:.84rem;font-weight:700;text-decoration:none
+}
+.role-project-link:hover{color:var(--accent-hover);text-decoration:underline}
+@media(max-width:959px){.role-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:639px){.role-grid{grid-template-columns:1fr}}
+
 /* ---- Mark Complete Celebration ---- */
 @keyframes celebrate{
   0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}

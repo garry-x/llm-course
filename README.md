@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/chapters-10-orange" alt="10 chapters">
   <img src="https://img.shields.io/badge/exercises-103_(53编程+50概念)-blue" alt="103 exercises">
-  <img src="https://img.shields.io/badge/sections-126-yellow" alt="126 sections">
+  <img src="https://img.shields.io/badge/sections-127-yellow" alt="127 sections">
   <img src="https://img.shields.io/badge/DeepSeek-V2→R1→V3→V4-green" alt="DeepSeek">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
   <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker">
@@ -41,6 +41,21 @@
 | 第三遍：进阶选读 | Ch09-Ch10 | 微调、对齐、RAG、推理优化和前沿架构 | 先掌握概念地图，再回头补公式和工程细节 |
 
 **最低前置要求：**会 Python 函数、列表/字典、基础矩阵乘法，知道 PyTorch 张量的 `shape`。如果数学推导暂时吃力，先抓住每节的“输入是什么、输出是什么、形状怎么变”。
+
+## 面向 LLM 推理工程师的能力矩阵
+
+如果你的目标是成为 LLM 推理工程师，学习目标不只是“懂 Transformer”，而是能把模型稳定、低成本、可观测地服务给真实用户。课程按以下能力组织：
+
+| 能力 | 对应章节 | 你需要能做什么 |
+|------|----------|----------------|
+| 模型结构读懂 | Ch01-Ch06 | 看懂 tokenizer、attention、KV Cache 来源、logits 输出和参数规模 |
+| 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐和采样质量 |
+| 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、量化、FlashAttention 和显存瓶颈 |
+| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 batching、prefix cache、并发调度 |
+| 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链和失败兜底 |
+| 评测与上线 | Ch09-Ch10 | 设计质量/安全/延迟/成本指标，做压测、回归评估和上线检查 |
+
+**课程最终项目：**[LLM Inference Engineering Capstone](projects/inference-engineering-capstone/) 会带你部署一个 OpenAI-compatible Chat API：支持流式输出、RAG、基础指标、压测报告、P50/P95/P99 延迟和 tokens/s 成本估算。先用 mock engine 跑通服务骨架，再替换为 vLLM / SGLang / TensorRT-LLM / llama.cpp。
 
 ## 快速开始
 
@@ -100,9 +115,9 @@ PORT=3000 docker compose up -d
 | 7 | **训练循环** — AdamW/Muon + FP8/FP4 + 分布式 | 完整训练脚本 ~120行 | 6+5 |
 | 8 | **文本生成** — 采样策略 + MTP 推测解码 + 约束生成 | 文本生成器 ~60行 | 6+5 |
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO + R1 推理 | SFT + LoRA + GRPO ~190行 | 6+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Engram/vLLM/Triton/多模态 | KV Cache + 量化 + LSH ~120行 | 6+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化/RAG/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + LSH + 服务蓝图 | 6+5 |
 
-> **总计：53 道编程练习 + 50 道概念练习，126 小节，约 10 小时学习时间**
+> **总计：53 道编程练习 + 50 道概念练习，127 小节，约 10+ 小时学习时间**
 
 ## DeepSeek 技术融入
 
@@ -130,6 +145,12 @@ llm-learner/
 │   └── app.js                 # 搜索/主题/字号/进度/笔记/TOC/键盘导航
 ├── chapters/                  # 10 章，纯 HTML（~8,000 行）
 │   └── ch01.html ~ ch10.html
+├── projects/
+│   └── inference-engineering-capstone/
+│       ├── app.py             # OpenAI-compatible Chat API + SSE + RAG stub + metrics
+│       ├── benchmark.py       # 并发压测，输出 P50/P95/P99、TTFT/TPOT、tokens/s
+│       ├── evaluate.py        # 固定评测集回归检查
+│       └── eval_cases.jsonl
 ├── images/                    # 12 张 SVG 概念示意图（支持暗色模式）
 │   ├── bpe-pipeline.svg       # BPE 训练与编解码流程
 │   ├── rope-rotation.svg      # RoPE 旋转位置编码原理

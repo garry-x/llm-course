@@ -59,6 +59,23 @@
 
 **毕业验收标准：**如果你想按岗位能力学习，先看 [LLM 推理工程师课程路线与毕业验收](inference-engineer-curriculum.html)（详细 Markdown 版在 [docs/inference-engineer-curriculum.md](docs/inference-engineer-curriculum.md)）。它把章节、练习、Capstone、压测、评测和上线复盘映射到可检查的能力证据。
 
+## 面向 LLM 训练工程师的能力矩阵
+
+如果你的目标是成为 LLM 训练工程师，学习目标要从“能跑一个 loss”推进到“能交付可复现、可恢复、可观测、成本可解释的训练系统”。课程按以下能力补齐：
+
+| 能力 | 对应章节 | 你需要能做什么 |
+|------|----------|----------------|
+| 数据与 Token 预算 | Ch01, Ch07 | 审计样本、重复、长度分布和 token 规模，估算训练 step |
+| 训练循环工程 | Ch06-Ch07 | 组织 PyTorch Dataset/DataLoader、forward、loss、backward、optimizer、scheduler |
+| 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint、resume 和异常排查保护训练 |
+| 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
+| 微调与对齐 | Ch09 | 区分 SFT、LoRA、DPO、GRPO 的数据格式、损失和适用场景 |
+| 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、GPU hours 和 checkpoint 存储 |
+
+**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据审计、训练、验证、checkpoint、resume、metrics、训练规划和一键验收。默认模型很小，CPU 可跑通；有 GPU 时可直接迁移到 CUDA 环境。
+
+**毕业验收标准：**按 [LLM 训练工程师课程路线与毕业验收](training-engineer-curriculum.html)（详细 Markdown 版在 [docs/training-engineer-curriculum.md](docs/training-engineer-curriculum.md)）交付训练报告、指标日志、checkpoint 恢复证明和成本规划。
+
 ## 快速开始
 
 ### Docker 部署（推荐）
@@ -96,6 +113,7 @@ PORT=3000 docker compose up -d
 ```bash
 python verify_course.py               # 校验章节统计、链接、JS/Python 语法和 Capstone 用例
 python verify_course.py --capstone    # 额外运行 Capstone 一键验收
+python verify_course.py --training    # 额外运行 PyTorch 训练工程 Capstone 验收
 ```
 
 ### CLI 命令一览
@@ -149,6 +167,7 @@ python verify_course.py --capstone    # 额外运行 Capstone 一键验收
 llm-learner/
 ├── index.html                # 课程首页：Hero + 仪表板 + 章节目录
 ├── inference-engineer-curriculum.html # 推理工程师毕业验收页
+├── training-engineer-curriculum.html  # 训练工程师毕业验收页
 ├── css/style.css              # 暖色 editorial 风格，暗色/浅色双主题
 ├── js/
 │   ├── db.js                  # IndexedDB 持久化存储层
@@ -156,16 +175,23 @@ llm-learner/
 ├── chapters/                  # 10 章，纯 HTML（~8,000 行）
 │   └── ch01.html ~ ch10.html
 ├── docs/
-│   └── inference-engineer-curriculum.md  # 推理工程师学习路线与毕业验收
+│   ├── inference-engineer-curriculum.md  # 推理工程师学习路线与毕业验收
+│   └── training-engineer-curriculum.md   # 训练工程师学习路线与毕业验收
 ├── projects/
-│   └── inference-engineering-capstone/
-│       ├── acceptance.py      # 一键验收：health + 评测 + 压测 + SLO + 容量估算
-│       ├── app.py             # OpenAI-compatible Chat API + SSE + RAG stub + metrics
-│       ├── benchmark.py       # 并发压测，输出 P50/P95/P99、TTFT/TPOT、tokens/s
-│       ├── capacity_plan.py   # 显存、最大 batch 和每 1M tokens 成本估算
-│       ├── evaluate.py        # 固定评测集回归检查
-│       ├── slo_check.py       # 读取压测 JSON，检查延迟/吞吐/错误率 SLO
-│       └── eval_cases.jsonl
+│   ├── inference-engineering-capstone/
+│   │   ├── acceptance.py      # 一键验收：health + 评测 + 压测 + SLO + 容量估算
+│   │   ├── app.py             # OpenAI-compatible Chat API + SSE + RAG stub + metrics
+│   │   ├── benchmark.py       # 并发压测，输出 P50/P95/P99、TTFT/TPOT、tokens/s
+│   │   ├── capacity_plan.py   # 显存、最大 batch 和每 1M tokens 成本估算
+│   │   ├── evaluate.py        # 固定评测集回归检查
+│   │   ├── slo_check.py       # 读取压测 JSON，检查延迟/吞吐/错误率 SLO
+│   │   └── eval_cases.jsonl
+│   └── training-engineering-capstone/
+│       ├── acceptance.py      # 一键验收：数据审计 + 训练 + resume + 规划
+│       ├── data_audit.py      # 语料行数、重复、长度和字符规模审计
+│       ├── plan_training.py   # step、GPU hours、成本和 checkpoint 存储估算
+│       ├── train.py           # PyTorch tiny LM 训练循环 + checkpoint/resume
+│       └── sample_corpus.txt
 ├── images/                    # 12 张 SVG 概念示意图（支持暗色模式）
 │   ├── bpe-pipeline.svg       # BPE 训练与编解码流程
 │   ├── rope-rotation.svg      # RoPE 旋转位置编码原理

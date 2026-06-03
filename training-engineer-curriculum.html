@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon.png">
+  <link rel="apple-touch-icon" href="images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LLM 训练工程师课程路线与毕业验收 — LLM 深度学习</title>
+<meta name="description" content="LLM 训练工程师学习路线、岗位能力清单、训练工程 Capstone 和毕业验收标准。">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-ch="0">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
+  <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 10</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
+  <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <div id="search-results" class="search-results"></div>
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>LLM 训练工程师课程路线与毕业验收</h2>
+  <p class="subtitle">把模型实现、训练循环、微调对齐和大规模训练优化转换为可检查的岗位能力</p>
+  <div class="reading-time">⏱ 建议复盘: 30 分钟 · 6 项能力 · 8 项毕业验收</div>
+
+  <section class="card">
+    <h3>目标画像</h3>
+    <p>训练工程师的核心产出不是一个 notebook，而是一套可复现、可恢复、可观测、成本可解释的训练系统。完成路线后，你应该能准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复，并解释显存、吞吐、GPU 小时和训练成本之间的关系。</p>
+    <div class="info-box tip"><span class="icon">💡</span><div>详细版路线文档见 <a href="docs/training-engineer-curriculum.md">docs/training-engineer-curriculum.md</a>，最终项目见 <a href="projects/training-engineering-capstone/">training-engineering-capstone</a>。</div></div>
+  </section>
+
+  <section class="card">
+    <h3>能力清单</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>能力</th><th>你需要能做什么</th><th>对应内容</th></tr>
+        <tr><td>数据与 Token 预算</td><td>审计数据、切分 train/val、计算 token budget 和 global batch tokens</td><td>Ch01、Ch07、Training Capstone data_audit.py</td></tr>
+        <tr><td>训练循环与优化</td><td>实现 forward/loss/backward/clipping/optimizer/scheduler，定位 loss spike 和 nan</td><td>Ch07、Training Capstone train.py</td></tr>
+        <tr><td>Checkpoint 与恢复</td><td>保存 latest/best/periodic checkpoint，并从 global step 恢复</td><td>Ch07、Training Capstone acceptance.py</td></tr>
+        <tr><td>监控与实验管理</td><td>记录 loss、ppl、lr、grad_norm、tokens/s、配置和验证集指标</td><td>Ch07、Ch09</td></tr>
+        <tr><td>分布式与低精度</td><td>解释 DDP、FSDP/ZeRO、TP、PP、BF16/FP16/FP8/FP4、MFU</td><td>Ch07 7.10、7.15</td></tr>
+        <tr><td>成本与训练规划</td><td>估算 steps、GPU hours、成本、checkpoint 存储和吞吐需求</td><td>Training Capstone plan_training.py</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>毕业验收</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>验收项</th><th>合格标准</th><th>证据</th></tr>
+        <tr><td>数据审计</td><td>输出样本数、空样本、重复率、长度分布</td><td>data_audit.py 输出</td></tr>
+        <tr><td>训练运行</td><td>跑完整训练并持续记录 metrics</td><td>train.py + metrics.jsonl</td></tr>
+        <tr><td>Checkpoint</td><td>保存 latest checkpoint，并从中断 step 恢复</td><td>acceptance.py resume 检查</td></tr>
+        <tr><td>验证集</td><td>记录 val_loss / perplexity</td><td>metrics.jsonl</td></tr>
+        <tr><td>监控指标</td><td>至少记录 loss、lr、grad_norm、tokens/s</td><td>metrics.jsonl</td></tr>
+        <tr><td>训练规划</td><td>估算 steps、GPU hours、成本、checkpoint 存储</td><td>plan_training.py 输出</td></tr>
+        <tr><td>异常处理</td><td>能说明 nan/loss spike/吞吐下降时的排查顺序</td><td>复盘文档</td></tr>
+        <tr><td>最终验收</td><td>一条命令跑通训练工程闭环</td><td>python acceptance.py</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>最终交付模板</h3>
+    <pre><code>项目名称：
+数据集：
+token 数：
+模型配置：
+训练配置：
+global batch tokens：
+总 step：
+优化器 / scheduler：
+精度：
+checkpoint 策略：
+resume 是否验证：
+train loss：
+val loss / ppl：
+tokens/s：
+GPU hours：
+预计成本：
+主要风险：
+下一步实验：</code></pre>
+  </section>
+
+  <div class="chapter-nav">
+    <a href="index.html">← 返回首页</a>
+    <a href="projects/training-engineering-capstone/">进入训练 Capstone →</a>
+  </div>
+</article>
+</main>
+
+<button id="back-to-top" class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

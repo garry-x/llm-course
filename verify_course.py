@@ -60,7 +60,9 @@ def check_public_stats() -> None:
         (index, f"{EXPECTED_SECTIONS} 小节", "index section total"),
         (index, f"{EXPECTED_EXERCISES} 道", "index exercise total"),
         (index, "inference-engineer-curriculum.html", "index graduation roadmap link"),
+        (index, "training-engineer-curriculum.html", "index training roadmap link"),
         (readme, "projects/inference-engineering-capstone/", "README capstone link"),
+        (readme, "projects/training-engineering-capstone/", "README training capstone link"),
     ]
     for content, needle, label in required:
         if needle not in content:
@@ -96,6 +98,30 @@ def check_capstone_files() -> None:
     if cases < 5:
         fail(f"expected at least 5 capstone eval cases, got {cases}")
     ok(f"capstone files compile and {cases} eval cases are valid")
+
+
+def check_training_capstone_files() -> None:
+    capstone = ROOT / "projects/training-engineering-capstone"
+    required = [
+        "acceptance.py",
+        "data_audit.py",
+        "plan_training.py",
+        "train.py",
+        "sample_corpus.txt",
+        "requirements.txt",
+        "README.md",
+    ]
+    for name in required:
+        if not (capstone / name).exists():
+            fail(f"missing training capstone file: {name}")
+
+    for path in sorted(capstone.glob("*.py")):
+        compile(path.read_text(encoding="utf-8"), str(path), "exec")
+
+    corpus = (capstone / "sample_corpus.txt").read_text(encoding="utf-8")
+    if len(corpus) < 128:
+        fail("training capstone sample corpus is too small")
+    ok("training capstone files compile and sample corpus is present")
 
 
 def check_javascript() -> None:
@@ -136,17 +162,37 @@ def run_capstone_acceptance() -> None:
     ok("capstone acceptance passed")
 
 
+def run_training_acceptance() -> None:
+    result = subprocess.run(
+        [sys.executable, "acceptance.py"],
+        cwd=ROOT / "projects/training-engineering-capstone",
+        text=True,
+        capture_output=True,
+    )
+    if result.stdout:
+        print(result.stdout.rstrip())
+    if result.stderr:
+        print(result.stderr.rstrip(), file=sys.stderr)
+    if result.returncode != 0:
+        fail("training capstone acceptance failed")
+    ok("training capstone acceptance passed")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify course metadata, scripts, and optional capstone acceptance")
-    parser.add_argument("--capstone", action="store_true", help="Run the full Capstone acceptance flow")
+    parser.add_argument("--capstone", action="store_true", help="Run the full inference Capstone acceptance flow")
+    parser.add_argument("--training", action="store_true", help="Run the PyTorch training Capstone acceptance flow")
     args = parser.parse_args()
 
     check_chapter_counts()
     check_public_stats()
     check_capstone_files()
+    check_training_capstone_files()
     check_javascript()
     if args.capstone:
         run_capstone_acceptance()
+    if args.training:
+        run_training_acceptance()
     print("COURSE VERIFY: PASS")
     return 0
 

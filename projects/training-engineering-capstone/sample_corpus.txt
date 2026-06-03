@@ -1,0 +1,7 @@
+LLM training engineering is about reliable systems, not just loss curves.
+We audit data, pack tokens, train models, save checkpoints, and resume safely.
+Every run should record configuration, train loss, validation loss, gradient norm, learning rate, and tokens per second.
+When training fails, inspect data quality, learning rate, precision, batch size, checkpoint state, and hardware throughput.
+A good training engineer can explain model quality, cost, reproducibility, and operational risk.
+LLM training engineering is about reliable systems, not just loss curves.
+Small experiments should still look like production training jobs.

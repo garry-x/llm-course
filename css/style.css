@@ -659,8 +659,9 @@ td{color:var(--text-secondary)}
   border:1px solid var(--border);border-radius:var(--radius-sm);
   color:var(--text-secondary);font-size:.8rem;background:var(--bg)
 }
+.role-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
 .role-project-link{
-  display:inline-flex;align-items:center;min-height:40px;margin-top:14px;
+  display:inline-flex;align-items:center;min-height:40px;
   color:var(--accent);font-size:.84rem;font-weight:700;text-decoration:none
 }
 .role-project-link:hover{color:var(--accent-hover);text-decoration:underline}

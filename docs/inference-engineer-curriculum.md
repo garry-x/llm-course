@@ -32,7 +32,7 @@
 - 能定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率。
 - 能解释 batch size、continuous batching、prefix cache、speculative decoding 对吞吐和延迟的影响。
 
-**对应内容：**Ch08，Ch10 10.1、10.10、10.12、10.13，Capstone `benchmark.py`。
+**对应内容：**Ch08，Ch10 10.1、10.10、10.12、10.13，Capstone `benchmark.py` 与 `slo_check.py`。
 
 ### C. 显存与成本预算
 
@@ -62,7 +62,7 @@
 ### F. 评测与上线
 
 - 能维护固定评测集，覆盖事实、格式、安全、拒答、工具调用和回归问题。
-- 能用压测报告回答“最大并发多少、P95 是否达标、成本是否可接受”。
+- 能用压测报告和 SLO 门禁回答“最大并发多少、P95 是否达标、成本是否可接受”。
 - 能写上线检查清单：限流、超时、降级、监控、日志、告警、回滚。
 
 **对应内容：**Ch09，Ch10 10.13，Capstone `evaluate.py` 与 README 上线清单。
@@ -77,7 +77,7 @@
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出 |
-| 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s | `benchmark.py` 输出 |
+| 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 门禁判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
 | 回归评测 | 固定评测集通过率可复现，失败样例有记录 | `evaluate.py` 输出 |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |
 | 引擎替换 | 至少说明如何把 `MockEngine` 替换为一个真实推理引擎 | 代码 diff 或设计说明 |
@@ -119,6 +119,7 @@ pass rate：
 P50/P95/P99 latency：
 P95 TTFT：
 P95 TPOT：
+SLO 是否通过：
 tokens/s：
 显存峰值：
 主要瓶颈：

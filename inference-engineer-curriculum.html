@@ -54,7 +54,7 @@
       <table>
         <tr><th>能力</th><th>你需要能做什么</th><th>对应内容</th></tr>
         <tr><td>模型结构读懂</td><td>解释 tokenizer、embedding、RoPE、attention、FFN、MoE、LM head 的输入输出 shape</td><td>Ch01-Ch06，Ch10 10.2-10.4</td></tr>
-        <tr><td>推理性能分析</td><td>定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率</td><td>Ch08，Ch10 10.1、10.10、10.12-10.13</td></tr>
+        <tr><td>推理性能分析</td><td>定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率</td><td>Ch08，Ch10 10.1、10.10、10.12-10.13，Capstone benchmark.py / slo_check.py</td></tr>
         <tr><td>显存与成本预算</td><td>估算权重显存、KV Cache、激活峰值、安全余量和 tokens 成本</td><td>Ch04、Ch07、Ch10，Capstone capacity_plan.py</td></tr>
         <tr><td>推理服务实现</td><td>实现 OpenAI-compatible API、非流式响应、SSE 流式响应和 metrics</td><td>Ch10 10.13，Capstone app.py</td></tr>
         <tr><td>RAG 与输出约束</td><td>设计检索命中文档、prompt 注入、引用返回、JSON schema 和失败兜底</td><td>Ch08，Ch10 10.8、10.13</td></tr>
@@ -72,7 +72,7 @@
         <tr><td>结构理解</td><td>能画出从 prompt 到 logits 再到 token 的完整数据流</td><td>一页架构图或文字说明</td></tr>
         <tr><td>显存预算</td><td>能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本</td><td>表格或 capacity_plan.py 输出</td></tr>
         <tr><td>服务运行</td><td>Capstone API 能启动，health、非流式、流式、metrics 可用</td><td>curl 输出</td></tr>
-        <tr><td>压测报告</td><td>至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s</td><td>benchmark.py 输出</td></tr>
+        <tr><td>压测报告</td><td>至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 门禁判定是否达标</td><td>benchmark.py JSON + slo_check.py 输出</td></tr>
         <tr><td>回归评测</td><td>固定评测集通过率可复现，失败样例有记录</td><td>evaluate.py 输出</td></tr>
         <tr><td>优化复盘</td><td>选择一个瓶颈，提出优化前后指标对比</td><td>简短复盘文档</td></tr>
         <tr><td>引擎替换</td><td>至少说明如何把 MockEngine 替换为一个真实推理引擎</td><td>代码 diff 或设计说明</td></tr>
@@ -94,6 +94,7 @@ pass rate：
 P50/P95/P99 latency：
 P95 TTFT：
 P95 TPOT：
+SLO 是否通过：
 tokens/s：
 显存峰值：
 主要瓶颈：

@@ -156,6 +156,7 @@ llm-learner/
 │       ├── benchmark.py       # 并发压测，输出 P50/P95/P99、TTFT/TPOT、tokens/s
 │       ├── capacity_plan.py   # 显存、最大 batch 和每 1M tokens 成本估算
 │       ├── evaluate.py        # 固定评测集回归检查
+│       ├── slo_check.py       # 读取压测 JSON，检查延迟/吞吐/错误率 SLO
 │       └── eval_cases.jsonl
 ├── images/                    # 12 张 SVG 概念示意图（支持暗色模式）
 │   ├── bpe-pipeline.svg       # BPE 训练与编解码流程

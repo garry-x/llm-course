@@ -13,6 +13,7 @@
 | RAG | 能注入检索上下文，记录命中文档 | 响应里返回 `x_retrieved_docs` |
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
+| SLO Check | 将压测 JSON 与延迟/吞吐/错误率目标对比 | `python slo_check.py` 输出 PASS/FAIL |
 | Evaluation | 跑固定评测集，检查 JSON/事实/拒答 | `python evaluate.py` 输出 pass rate |
 | Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
 
@@ -46,7 +47,16 @@ curl -N http://127.0.0.1:8000/v1/chat/completions \
 压测：
 
 ```bash
-python benchmark.py --url http://127.0.0.1:8000 --requests 50 --concurrency 5
+python benchmark.py --url http://127.0.0.1:8000 --requests 50 --concurrency 5 \
+  --json-output benchmark_report.json
+```
+
+SLO 门禁：
+
+```bash
+python slo_check.py --benchmark-json benchmark_report.json \
+  --max-p95-latency-ms 2000 --max-p95-ttft-ms 800 \
+  --max-p95-tpot-ms 40 --min-tokens-per-second 100
 ```
 
 评测：
@@ -78,6 +88,7 @@ python capacity_plan.py \
 ## 上线验收清单
 
 - P95 TTFT、P95 TPOT、P99 total latency 已测。
+- SLO 门禁可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
 - 最大 prompt 长度、最大输出长度、并发上限已测。
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
 - 每 1M tokens 的 GPU 成本已估算，且知道成本对 tokens/s 和 GPU 小时价格的敏感性。

@@ -152,6 +152,7 @@ llm-learner/
 │   └── inference-engineer-curriculum.md  # 推理工程师学习路线与毕业验收
 ├── projects/
 │   └── inference-engineering-capstone/
+│       ├── acceptance.py      # 一键验收：health + 评测 + 压测 + SLO + 容量估算
 │       ├── app.py             # OpenAI-compatible Chat API + SSE + RAG stub + metrics
 │       ├── benchmark.py       # 并发压测，输出 P50/P95/P99、TTFT/TPOT、tokens/s
 │       ├── capacity_plan.py   # 显存、最大 batch 和每 1M tokens 成本估算

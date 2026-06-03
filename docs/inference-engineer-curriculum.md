@@ -76,7 +76,7 @@
 | 章节主线 | Ch01-Ch10 每章至少完成一个编程练习和全部概念练习 | 页面进度或个人笔记 |
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
-| 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出 |
+| 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 门禁判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
 | 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性和工具调用，失败样例有记录 | `evaluate.py` 输出 |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |
@@ -93,7 +93,7 @@
 | 5 | Ch08 | 实现生成、采样、TTFT/TPS 分析 |
 | 6 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测 |
 | 7 | Ch10 | 完成 KV Cache、量化、RAG、benchmark、服务蓝图 |
-| 8 | Capstone | 跑通服务、压测、评测、容量估算，写上线复盘 |
+| 8 | Capstone | 跑通 `acceptance.py`，完成服务、压测、评测、容量估算和上线复盘 |
 
 ## 常见误区
 

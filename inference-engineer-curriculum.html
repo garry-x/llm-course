@@ -71,7 +71,7 @@
         <tr><td>章节主线</td><td>Ch01-Ch10 每章至少完成一个编程练习和全部概念练习</td><td>页面进度或个人笔记</td></tr>
         <tr><td>结构理解</td><td>能画出从 prompt 到 logits 再到 token 的完整数据流</td><td>一页架构图或文字说明</td></tr>
         <tr><td>显存预算</td><td>能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本</td><td>表格或 capacity_plan.py 输出</td></tr>
-        <tr><td>服务运行</td><td>Capstone API 能启动，health、非流式、流式、metrics 可用</td><td>curl 输出</td></tr>
+        <tr><td>服务运行</td><td>Capstone API 能启动，health、非流式、流式、metrics 可用</td><td>curl 输出或 acceptance.py</td></tr>
         <tr><td>压测报告</td><td>至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 门禁判定是否达标</td><td>benchmark.py JSON + slo_check.py 输出</td></tr>
         <tr><td>回归评测</td><td>固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性和工具调用，失败样例有记录</td><td>evaluate.py 输出</td></tr>
         <tr><td>优化复盘</td><td>选择一个瓶颈，提出优化前后指标对比</td><td>简短复盘文档</td></tr>

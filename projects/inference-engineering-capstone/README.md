@@ -18,6 +18,7 @@
 | SLO Check | 将压测 JSON 与延迟/吞吐/错误率目标对比 | `python slo_check.py` 输出 PASS/FAIL |
 | Evaluation | 跑固定评测集，检查 JSON/事实/拒答 | `python evaluate.py` 输出 pass rate |
 | Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
+| Acceptance | 自动启动服务并串联评测、压测、SLO、容量估算 | `python acceptance.py` 输出 ACCEPTANCE |
 
 ## 快速开始
 
@@ -29,6 +30,14 @@ pip install -r requirements.txt
 
 uvicorn app:app --host 127.0.0.1 --port 8000
 ```
+
+一键验收：
+
+```bash
+python acceptance.py --port 8020 --requests 8 --concurrency 2
+```
+
+这条命令会自动启动本地服务，依次执行 health、`evaluate.py`、`benchmark.py`、`slo_check.py` 和 `capacity_plan.py`，最后关闭服务。
 
 非流式请求：
 

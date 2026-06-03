@@ -40,7 +40,7 @@
 - 能比较 FP16、INT8、INT4、FP8/FP4 的收益与风险。
 - 能把 tokens/s、GPU 小时成本、输入/输出 token 单价转换为容量规划指标。
 
-**对应内容：**Ch04 4.9，Ch07，Ch10 10.4、10.6、10.15。
+**对应内容：**Ch04 4.9，Ch07，Ch10 10.4、10.6、10.15，Capstone `capacity_plan.py`。
 
 ### D. 推理服务实现
 
@@ -75,7 +75,7 @@
 |--------|----------|------|
 | 章节主线 | Ch01-Ch10 每章至少完成一个编程练习和全部概念练习 | 页面进度或个人笔记 |
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
-| 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache | 表格或脚本输出 |
+| 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出 |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s | `benchmark.py` 输出 |
 | 回归评测 | 固定评测集通过率可复现，失败样例有记录 | `evaluate.py` 输出 |
@@ -93,7 +93,7 @@
 | 5 | Ch08 | 实现生成、采样、TTFT/TPS 分析 |
 | 6 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测 |
 | 7 | Ch10 | 完成 KV Cache、量化、RAG、benchmark、服务蓝图 |
-| 8 | Capstone | 跑通服务、压测、评测，写上线复盘 |
+| 8 | Capstone | 跑通服务、压测、评测、容量估算，写上线复盘 |
 
 ## 常见误区
 

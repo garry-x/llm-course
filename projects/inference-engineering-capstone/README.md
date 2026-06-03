@@ -14,6 +14,7 @@
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
 | Evaluation | 跑固定评测集，检查 JSON/事实/拒答 | `python evaluate.py` 输出 pass rate |
+| Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
 
 ## 快速开始
 
@@ -54,6 +55,15 @@ python benchmark.py --url http://127.0.0.1:8000 --requests 50 --concurrency 5
 python evaluate.py --url http://127.0.0.1:8000 --cases eval_cases.jsonl
 ```
 
+容量与成本估算：
+
+```bash
+python capacity_plan.py \
+  --params-b 8 --layers 32 --kv-heads 8 --head-dim 128 \
+  --context 8192 --batch-size 16 --gpu-memory-gb 80 \
+  --tokens-per-second 5000 --gpu-hour-cost 2.5
+```
+
 ## 替换真实推理引擎
 
 从 `app.py` 的 `MockEngine.generate()` 开始替换：
@@ -70,6 +80,7 @@ python evaluate.py --url http://127.0.0.1:8000 --cases eval_cases.jsonl
 - P95 TTFT、P95 TPOT、P99 total latency 已测。
 - 最大 prompt 长度、最大输出长度、并发上限已测。
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
+- 每 1M tokens 的 GPU 成本已估算，且知道成本对 tokens/s 和 GPU 小时价格的敏感性。
 - RAG 命中率、JSON 格式正确率、安全拒答率有固定回归集。
 - 指标能按模型、租户、状态码、错误类型聚合。
 - 限流、超时、降级和错误响应格式明确。

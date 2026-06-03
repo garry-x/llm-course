@@ -20,6 +20,17 @@ class Message(BaseModel):
     content: str
 
 
+class ToolFunction(BaseModel):
+    name: str
+    description: str = ""
+    parameters: dict = Field(default_factory=dict)
+
+
+class ToolSpec(BaseModel):
+    type: Literal["function"] = "function"
+    function: ToolFunction
+
+
 class ChatRequest(BaseModel):
     model: str = "mock-llm"
     messages: list[Message]
@@ -29,6 +40,8 @@ class ChatRequest(BaseModel):
     stream: bool = False
     use_rag: bool = True
     response_format: ResponseFormat = Field(default_factory=ResponseFormat)
+    tools: list[ToolSpec] = Field(default_factory=list)
+    tool_choice: Literal["auto", "none"] = "auto"
 
 
 @dataclass
@@ -126,6 +139,49 @@ def build_mock_response(response_format: ResponseFormat) -> str:
     )
 
 
+def build_tool_call(req: ChatRequest, user_text: str) -> dict | None:
+    if req.tool_choice == "none" or not req.tools:
+        return None
+
+    lowered = user_text.lower()
+    should_call = any(token in lowered for token in ["工具", "tool", "capacity", "容量", "显存", "成本"])
+    if not should_call:
+        return None
+
+    tool = req.tools[0]
+    name = tool.function.name
+    if name == "capacity_plan":
+        arguments = {"params_b": 8, "context": 8192, "gpu_memory_gb": 80}
+    else:
+        arguments = {"query": user_text[:80]}
+
+    return {
+        "id": "call_" + uuid.uuid4().hex[:12],
+        "type": "function",
+        "function": {
+            "name": name,
+            "arguments": json.dumps(arguments, ensure_ascii=False),
+        },
+    }
+
+
+def execute_tool_call(tool_call: dict) -> dict:
+    name = tool_call["function"]["name"]
+    arguments = json.loads(tool_call["function"]["arguments"])
+    if name == "capacity_plan":
+        result = {
+            "summary": "8B FP16 model with 8K context fits in an 80GB GPU for the demo batch.",
+            "estimated_total_gb": 37.25,
+            "next_action": "run capacity_plan.py with production parameters",
+        }
+    else:
+        result = {
+            "summary": "mock tool executed",
+            "echo": arguments,
+        }
+    return {"name": name, "arguments": arguments, "result": result}
+
+
 async def collect_generation(max_tokens: int, response_format: ResponseFormat) -> tuple[str, float, float, int]:
     start = time.perf_counter()
     first_at = None
@@ -165,6 +221,39 @@ async def chat_completions(req: ChatRequest):
 
     metrics.request_count += 1
     metrics.prompt_tokens += prompt_tokens
+
+    tool_call = build_tool_call(req, user_text)
+    if tool_call:
+        tool_result = execute_tool_call(tool_call)
+        content = ""
+        completion_tokens = count_tokens(json.dumps(tool_call, ensure_ascii=False))
+        metrics.ttft_ms.append(0)
+        metrics.tpot_ms.append(0)
+        metrics.completion_tokens += completion_tokens
+        return JSONResponse({
+            "id": request_id,
+            "object": "chat.completion",
+            "created": created,
+            "model": req.model,
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": content,
+                    "tool_calls": [tool_call],
+                },
+                "finish_reason": "tool_calls",
+            }],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            },
+            "x_retrieved_docs": docs,
+            "x_tool_results": [tool_result],
+            "x_metrics": {"ttft_ms": 0, "tpot_ms": 0},
+            "x_valid_json": None,
+        })
 
     if req.stream:
         async def stream() -> AsyncIterator[str]:

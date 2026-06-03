@@ -23,6 +23,8 @@ def main(url: str, cases_path: str) -> None:
                     "max_tokens": case.get("max_tokens", 128),
                     "use_rag": case.get("use_rag", True),
                     "response_format": case.get("response_format", {"type": "text"}),
+                    "tools": case.get("tools", []),
+                    "tool_choice": case.get("tool_choice", "auto"),
                 },
             )
             ok = resp.status_code == 200
@@ -32,6 +34,9 @@ def main(url: str, cases_path: str) -> None:
                 ok = ok and needle in content
             for needle in case.get("must_retrieve", []):
                 ok = ok and any(needle in doc for doc in data.get("x_retrieved_docs", []))
+            for name in case.get("must_call_tool", []):
+                calls = data.get("choices", [{}])[0].get("message", {}).get("tool_calls", [])
+                ok = ok and any(call.get("function", {}).get("name") == name for call in calls)
             if case.get("must_be_json"):
                 try:
                     parsed = json.loads(content)

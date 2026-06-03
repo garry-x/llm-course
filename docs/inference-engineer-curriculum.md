@@ -54,10 +54,10 @@
 ### E. RAG、工具调用与输出约束
 
 - 能解释 RAG 解决知识更新和可追溯问题，但不等于模型推理能力增强。
-- 能设计检索命中文档、prompt 注入、引用返回、结构化 JSON 响应和失败兜底。
+- 能设计检索命中文档、prompt 注入、引用返回、结构化 JSON 响应、工具 schema 和失败兜底。
 - 能说明 JSON schema / constrained decoding 比“请输出 JSON”的 prompt 更可靠。
 
-**对应内容：**Ch08 约束生成，Ch10 10.8、10.13，Capstone RAG stub 与 `response_format`。
+**对应内容：**Ch08 约束生成，Ch10 10.8、10.13，Capstone RAG stub、`response_format` 与 `tools`。
 
 ### F. 评测与上线
 
@@ -78,7 +78,7 @@
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出 |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 门禁判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
-| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中和 JSON 格式正确性，失败样例有记录 | `evaluate.py` 输出 |
+| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性和工具调用，失败样例有记录 | `evaluate.py` 输出 |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |
 | 引擎替换 | 至少说明如何把 `MockEngine` 替换为一个真实推理引擎 | 代码 diff 或设计说明 |
 

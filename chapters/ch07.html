@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：先让 loss 下降，再研究训练优化</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>训练的主线只有四步：取一段 token、让模型预测下一个 token、用交叉熵计算错误、反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练是大规模优化专题，第一遍可作为“知道为什么需要它们”。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>第 6 章 GPTModel、交叉熵、optimizer 的基本概念。</li>
+    <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity 变化的训练循环。</li>
+    <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 7.1 LM as MLE -->
 <section class="card">
@@ -695,7 +705,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
 <!-- 7.14 总结 -->
 <!-- ================================================================ -->
 <section class="card" id="s7-14">
-  <h3>7.14 本章总结</h3>
+  <h3>7.14 单机训练主线总结</h3>
   <p>你完成了 LLM 训练循环的完整学习：</p>
   <ul>
     <li>✅ <strong>MLE 框架</strong> — 语言建模 = 最大化对数似然 = 最小化交叉熵 = 最小化 KL 散度</li>

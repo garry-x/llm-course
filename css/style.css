@@ -626,6 +626,24 @@ td{color:var(--text-secondary)}
 .chapter-item:nth-child(10){animation-delay:.5s}
 @keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
 
+/* ---- Beginner learning path ---- */
+.learning-path{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px 28px;margin:0 0 24px;box-shadow:var(--shadow-card)
+}
+.learning-path h3{
+  font-family:var(--font-heading);font-size:1.15rem;font-weight:700;
+  margin-bottom:14px;color:var(--text)
+}
+.path-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.path-step{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:14px 16px;min-height:112px
+}
+.path-step strong{display:block;color:var(--accent);font-size:.9rem;margin-bottom:6px}
+.path-step span{display:block;color:var(--text-secondary);font-size:.82rem;line-height:1.65}
+@media(max-width:959px){.path-grid{grid-template-columns:1fr}}
+
 /* ---- Mark Complete Celebration ---- */
 @keyframes celebrate{
   0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}

@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：把注意力当成“可微检索”</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>不要先背公式。先记住 Q 是“我要找什么”，K 是“我有什么标签”，V 是“真正取回的信息”。本章最重要的是看懂 <code>Q @ K.T</code> 得到权重，再用权重加权 <code>V</code>。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>矩阵乘法、softmax、张量最后一维的含义。</li>
+    <li><strong>本章产出：</strong>单头 Scaled Dot-Product Attention 和 Causal Mask。</li>
+    <li><strong>完成标准：</strong>你能解释为什么生成第 t 个 token 时不能看未来 token。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 3.1 为什么需要注意力 -->
 <!-- ================================================================ -->

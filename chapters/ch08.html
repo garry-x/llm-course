@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：生成就是“反复选下一个 token”</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先掌握贪心、temperature、top-k、top-p 这四种采样方式。推测解码、MTP 和 Attention Sink 是推理加速/长上下文优化，第一次学习时重点理解动机，不必追求一次写出工业级实现。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>第 6 章 logits、softmax、概率采样。</li>
+    <li><strong>本章产出：</strong>一个能用不同采样策略生成文本的 Generator。</li>
+    <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 8.1 自回归生成原理 -->
 <!-- ================================================================ -->
@@ -637,10 +647,10 @@ def speculative_decoding(target_model, draft_model, tokenizer,
 <!-- 概念练习 -->
 <!-- ================================================================ -->
 <!-- ================================================================ -->
-<!-- 8.13 结构化解码 -->
+<!-- 8.12 结构化解码 -->
 <!-- ================================================================ -->
-<section class="card" id="s8-13">
-  <h3>8.13 结构化解码——JSON 模式与约束生成</h3>
+<section class="card" id="s8-12">
+  <h3>8.12 结构化解码——JSON 模式与约束生成</h3>
   <p>在 API 和 Agent 场景中，我们通常需要 LLM 输出<strong>特定格式的结构化数据</strong>（JSON、YAML），而不是自由文本。让 LLM "尽量输出 JSON"是不够的——它偶尔会输出不完整的 JSON 或多余的文本。</p>
 
   <h4>约束解码原理</h4>

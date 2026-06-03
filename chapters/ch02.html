@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：关注“查表”和“位置信息”</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先把 <code>nn.Embedding</code> 理解成“用 token id 查一行向量”，再理解为什么 Transformer 不知道顺序，所以必须加入位置编码。RoPE 的矩阵推导可以第二遍再细看。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>张量形状、矩阵查表、sin/cos 的基本概念。</li>
+    <li><strong>本章产出：</strong>TokenEmbedding、Sinusoidal 位置编码和 RoPE。</li>
+    <li><strong>完成标准：</strong>你能跟踪形状从 <code>[batch, seq]</code> 变成 <code>[batch, seq, d_model]</code>。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 2.1 One-Hot vs 稠密嵌入 -->
 <section class="card">

@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：先完成一条前向传播链路</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>目标不是一次理解 GPT-2 的全部历史细节，而是把前几章组件接成 <code>token ids -> logits</code>。DeepSeekMoE 是容量扩展案例，第一次学习可以先完成 GPTModel 主线，再回来看路由器。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>Embedding、TransformerBlock、线性层输出 logits。</li>
+    <li><strong>本章产出：</strong>一个能接收 token 序列并输出下一 token logits 的 GPTModel。</li>
+    <li><strong>完成标准：</strong>你能解释 <code>logits.shape == [batch, seq, vocab_size]</code> 为什么是语言模型的最终输出。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 6.1 架构全景 -->
 <!-- ================================================================ -->

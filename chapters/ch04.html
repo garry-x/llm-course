@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：先学 MHA，再把 GQA/MLA 当作压缩技巧</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>多头注意力只是把一个大向量拆成多个小头并行做第 3 章的注意力。GQA 和 MLA 是推理时为了少存 KV Cache 的工程优化，第一次学习时先理解“为什么要省 KV”，实现细节可以放到第二遍。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>第 3 章 Q/K/V、reshape、transpose。</li>
+    <li><strong>本章产出：</strong>MultiHeadAttention、GQA 和简化版 MLA。</li>
+    <li><strong>完成标准：</strong>你能画出 Q 头很多、K/V 头较少时缓存如何变小。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 4.1 从单头到多头 -->
 <section class="card">

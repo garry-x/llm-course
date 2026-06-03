@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：先把“文字如何变成数字”想清楚</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>本章只要求你理解三个问题：token 是什么、BPE 为什么反复合并高频 pair、编码/解码为什么可逆。信息论、Zipf 定律和 PMI 可以先当作解释直觉，不需要第一次就完全掌握。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>Python 列表、字典、字符串/bytes、简单循环。</li>
+    <li><strong>本章产出：</strong>一个能训练、编码、解码的最小 BPE Tokenizer。</li>
+    <li><strong>完成标准：</strong>你能说清楚一段文本如何变成 token ID，以及 token ID 如何还原成文本。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 1.1 课程概览 -->
 <!-- ================================================================ -->
@@ -531,7 +541,7 @@ def encode(text, merges):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="3" data-explain="从信息论看，BPE 在词表大小和序列长度之间做权衡。大数据表的嵌入矩阵参数量大但序列短（推理快）；小词表参数量小但序列长（推理慢）。BPE 通过子词折中了两者。">
+  <div class="exercise" data-answer="3" data-explain="从信息论看，BPE 在词表大小和序列长度之间做权衡。大词表的嵌入矩阵参数量大但序列短（推理快）；小词表参数量小但序列长（推理慢）。BPE 通过子词折中了两者。">
     <h4>练习 2：从信息论视角看，BPE 的"子词"级别分词解决了什么核心矛盾？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q2" value="0"> A. 一词多义问题</label>

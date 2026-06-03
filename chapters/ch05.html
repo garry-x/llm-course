@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：把 Block 看成 Attention + FFN + 残差</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>Transformer Block 不是新魔法，而是把注意力层、前馈网络、归一化和残差连接组合起来。mHC 属于前沿扩展，第一次学习只要知道它试图改进残差路径的稳定性。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>第 3-4 章注意力输出、PyTorch Module、残差相加。</li>
+    <li><strong>本章产出：</strong>LayerNorm/RMSNorm、SwiGLU FFN、TransformerBlock。</li>
+    <li><strong>完成标准：</strong>你能说明为什么 Block 输入和输出都保持 <code>[batch, seq, d_model]</code>。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 5.1 Decoder-only 全景图 -->
 <!-- ================================================================ -->

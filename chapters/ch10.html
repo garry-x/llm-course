@@ -33,6 +33,16 @@
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
   </div>
 
+<section class="card">
+  <h3>本章怎么学：把工程优化按瓶颈分类</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>推理优化不是一堆孤立名词。KV Cache 解决重复计算，量化解决显存/带宽，FlashAttention 解决注意力 IO，RAG 解决知识更新，vLLM 解决服务吞吐。DeepSeek V3.2/V4、Triton、Engram 和多模态属于前沿地图，第一次学习先建立分类。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试和 LSH 检索示例。</li>
+    <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
+  </ul>
+</section>
+
 <!-- ================================================================ -->
 <!-- 10.1 推理瓶颈分析 -->
 <!-- ================================================================ -->

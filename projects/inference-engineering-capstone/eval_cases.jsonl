@@ -1,3 +1,4 @@
 {"name":"kv_cache_retrieval","prompt":"KV Cache 为什么能降低解码成本？","must_retrieve":["KV Cache"],"must_contain":["推理工程"]}
 {"name":"latency_terms","prompt":"TTFT 和 TPOT 有什么区别？","must_retrieve":["TTFT"],"must_contain":["TTFT"]}
 {"name":"serving_checklist","prompt":"推理服务上线前要检查哪些指标？","must_retrieve":["Continuous batching"],"must_contain":["优化策略"]}
+{"name":"json_response_format","prompt":"用 JSON 给出推理服务验收结果","response_format":{"type":"json_object"},"max_tokens":256,"must_be_json":true,"must_have_json_keys":["answer","metrics","next_action"]}

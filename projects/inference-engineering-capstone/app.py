@@ -11,6 +11,10 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 
+class ResponseFormat(BaseModel):
+    type: Literal["text", "json_object"] = "text"
+
+
 class Message(BaseModel):
     role: Literal["system", "user", "assistant", "tool"]
     content: str
@@ -24,6 +28,7 @@ class ChatRequest(BaseModel):
     max_tokens: int = Field(128, ge=1, le=2048)
     stream: bool = False
     use_rag: bool = True
+    response_format: ResponseFormat = Field(default_factory=ResponseFormat)
 
 
 @dataclass
@@ -80,12 +85,8 @@ class SimpleRAG:
 
 
 class MockEngine:
-    async def generate(self, prompt: str, max_tokens: int) -> AsyncIterator[str]:
-        text = (
-            "这是一个推理工程 mock 响应。"
-            "真实系统应替换为 vLLM/SGLang/TensorRT-LLM/llama.cpp。"
-            "先拆 TTFT、TPOT、吞吐、显存和错误率，再决定优化策略。"
-        )
+    async def generate(self, max_tokens: int, response_format: ResponseFormat) -> AsyncIterator[str]:
+        text = build_mock_response(response_format)
         tokens = text[:max_tokens]
         for ch in tokens:
             await asyncio.sleep(0.003)
@@ -108,11 +109,28 @@ def build_prompt(req: ChatRequest, docs: list[str]) -> str:
     return f"Context:\n{context}\n\nMessages:\n{messages}\nassistant:"
 
 
-async def collect_generation(prompt: str, max_tokens: int) -> tuple[str, float, float, int]:
+def build_mock_response(response_format: ResponseFormat) -> str:
+    if response_format.type == "json_object":
+        return json.dumps(
+            {
+                "answer": "这是一个结构化推理服务响应。",
+                "metrics": ["TTFT", "TPOT", "tokens_per_second"],
+                "next_action": "run_benchmark_and_slo_check",
+            },
+            ensure_ascii=False,
+        )
+    return (
+        "这是一个推理工程 mock 响应。"
+        "真实系统应替换为 vLLM/SGLang/TensorRT-LLM/llama.cpp。"
+        "先拆 TTFT、TPOT、吞吐、显存和错误率，再决定优化策略。"
+    )
+
+
+async def collect_generation(max_tokens: int, response_format: ResponseFormat) -> tuple[str, float, float, int]:
     start = time.perf_counter()
     first_at = None
     chunks = []
-    async for token in engine.generate(prompt, max_tokens):
+    async for token in engine.generate(max_tokens, response_format):
         if first_at is None:
             first_at = time.perf_counter()
         chunks.append(token)
@@ -153,7 +171,7 @@ async def chat_completions(req: ChatRequest):
             start = time.perf_counter()
             first_at = None
             completion = 0
-            async for token in engine.generate(prompt, req.max_tokens):
+            async for token in engine.generate(req.max_tokens, req.response_format):
                 if first_at is None:
                     first_at = time.perf_counter()
                     metrics.ttft_ms.append((first_at - start) * 1000)
@@ -174,7 +192,14 @@ async def chat_completions(req: ChatRequest):
 
         return StreamingResponse(stream(), media_type="text/event-stream")
 
-    content, ttft, tpot, completion_tokens = await collect_generation(prompt, req.max_tokens)
+    content, ttft, tpot, completion_tokens = await collect_generation(req.max_tokens, req.response_format)
+    valid_json = None
+    if req.response_format.type == "json_object":
+        try:
+            json.loads(content)
+            valid_json = True
+        except json.JSONDecodeError:
+            valid_json = False
     metrics.ttft_ms.append(ttft)
     metrics.tpot_ms.append(tpot)
     metrics.completion_tokens += completion_tokens
@@ -195,4 +220,5 @@ async def chat_completions(req: ChatRequest):
         },
         "x_retrieved_docs": docs,
         "x_metrics": {"ttft_ms": ttft, "tpot_ms": tpot},
+        "x_valid_json": valid_json,
     })

@@ -11,6 +11,7 @@
 | API | `POST /v1/chat/completions`，兼容 OpenAI 风格请求/响应 | `curl` 能返回 `choices[0].message.content` |
 | Streaming | `stream=true` 返回 SSE token 流 | 客户端逐 chunk 收到 `data: ...` |
 | RAG | 能注入检索上下文，记录命中文档 | 响应里返回 `x_retrieved_docs` |
+| Structured Output | `response_format={"type":"json_object"}` 返回可解析 JSON | `evaluate.py` 检查 JSON key |
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
 | SLO Check | 将压测 JSON 与延迟/吞吐/错误率目标对比 | `python slo_check.py` 输出 PASS/FAIL |
@@ -42,6 +43,14 @@ curl -s http://127.0.0.1:8000/v1/chat/completions \
 curl -N http://127.0.0.1:8000/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"mock-llm","stream":true,"messages":[{"role":"user","content":"什么是 TTFT?"}],"max_tokens":32}'
+```
+
+结构化 JSON 请求：
+
+```bash
+curl -s http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"mock-llm","response_format":{"type":"json_object"},"messages":[{"role":"user","content":"输出推理服务验收结果"}],"max_tokens":256}'
 ```
 
 压测：

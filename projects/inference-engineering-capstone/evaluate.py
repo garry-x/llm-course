@@ -22,6 +22,7 @@ def main(url: str, cases_path: str) -> None:
                     "messages": [{"role": "user", "content": case["prompt"]}],
                     "max_tokens": case.get("max_tokens", 128),
                     "use_rag": case.get("use_rag", True),
+                    "response_format": case.get("response_format", {"type": "text"}),
                 },
             )
             ok = resp.status_code == 200
@@ -31,6 +32,14 @@ def main(url: str, cases_path: str) -> None:
                 ok = ok and needle in content
             for needle in case.get("must_retrieve", []):
                 ok = ok and any(needle in doc for doc in data.get("x_retrieved_docs", []))
+            if case.get("must_be_json"):
+                try:
+                    parsed = json.loads(content)
+                except json.JSONDecodeError:
+                    parsed = {}
+                    ok = False
+                for key in case.get("must_have_json_keys", []):
+                    ok = ok and key in parsed
             passed += int(ok)
             details.append({"name": case["name"], "passed": ok})
 

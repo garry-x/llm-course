@@ -91,6 +91,13 @@ PORT=3000 docker compose up -d
 ./serve.sh serve -p 3000      # 指定端口
 ```
 
+### 课程验证
+
+```bash
+python verify_course.py               # 校验章节统计、链接、JS/Python 语法和 Capstone 用例
+python verify_course.py --capstone    # 额外运行 Capstone 一键验收
+```
+
 ### CLI 命令一览
 
 | 命令 | 说明 | 支持 `-p` |
@@ -175,6 +182,7 @@ llm-learner/
 ├── Dockerfile                 # nginx:alpine, gzip, ARG LISTEN_PORT
 ├── docker-compose.yml         # 一键部署，PORT 环境变量可配
 ├── .dockerignore
+├── verify_course.py           # 课程级验证入口
 ├── serve.sh                   # CLI: serve + docker-build/up/down/logs/restart
 └── README.md
 ```

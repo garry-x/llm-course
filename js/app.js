@@ -5,16 +5,16 @@
   'use strict';
 
   var CHAPTERS = [
-    {id:1, file:'ch01.html', title:'环境搭建与分词', desc:'实现BPE Tokenizer', sections:10},
-    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding + RoPE + PromptEng', sections:11},
-    {id:3, file:'ch03.html', title:'单头自注意力', desc:'Scaled Dot-Product Attention', sections:10},
-    {id:4, file:'ch04.html', title:'多头注意力与MLA', desc:'MHA→GQA→DeepSeek MLA', sections:9},
-    {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm+FFN+SwiGLU+mHC', sections:10},
-    {id:6, file:'ch06.html', title:'组装完整GPT模型', desc:'GPT-2 124M + DeepSeekMoE', sections:10},
-    {id:7, file:'ch07.html', title:'训练循环', desc:'AdamW/Muon+FP8/FP4+DualPipe+分布式', sections:15},
-    {id:8, file:'ch08.html', title:'文本生成', desc:'采样策略+MTP推测解码+约束生成', sections:12},
-    {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT/LoRA/DPO/GRPO', sections:12},
-    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache/CSA+HCA/量化/RAG/vLLM/Triton', sections:19}
+    {id:1, file:'ch01.html', title:'环境搭建与分词', desc:'实现BPE Tokenizer——从字符到子词', sections:13},
+    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding + RoPE + PromptEng——让模型理解语义与顺序', sections:11},
+    {id:3, file:'ch03.html', title:'单头自注意力', desc:'Scaled Dot-Product Attention——LLM的核心计算', sections:11},
+    {id:4, file:'ch04.html', title:'多头注意力与MLA', desc:'MHA→GQA→DeepSeek MLA——KV Cache压缩之路', sections:10},
+    {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm+FFN+SwiGLU+mHC超连接', sections:11},
+    {id:6, file:'ch06.html', title:'组装完整GPT模型', desc:'GPT-2 124M + DeepSeekMoE架构', sections:10},
+    {id:7, file:'ch07.html', title:'训练循环', desc:'AdamW/Muon+FP8/FP4+DualPipe+分布式——极致训练效率', sections:15},
+    {id:8, file:'ch08.html', title:'文本生成', desc:'采样策略+MTP推测解码+约束生成——让模型开口说话', sections:12},
+    {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT/LoRA/DPO/GRPO——从预训练到有用助手', sections:14},
+    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache/CSA+HCA/Engram/量化/RAG/vLLM/Triton/多模态', sections:19}
   ];
 
   // ---- State helpers (IndexedDB-backed) ----
@@ -24,6 +24,22 @@
   var completed = new Set(safeGet('llm-done', []));
   var currentCh = parseInt(document.body.getAttribute('data-ch')||'0');
 
+  function chapterHref(ch){
+    return currentCh === 0 ? 'chapters/' + ch.file : ch.file;
+  }
+
+  function chaptersWithHref(){
+    return CHAPTERS.map(function(ch){
+      return {
+        id: ch.id,
+        file: chapterHref(ch),
+        title: ch.title,
+        desc: ch.desc,
+        sections: ch.sections
+      };
+    });
+  }
+
   // ---- Sidebar rendering ----
   function renderSidebar(){
     var nav = document.getElementById('sidebar-nav');
@@ -31,7 +47,7 @@
     var html = '';
     CHAPTERS.forEach(function(ch){
       var cls = (ch.id===currentCh?'active ':'')+(completed.has(ch.id)?'completed ':'');
-      html += '<a href="'+ch.file+'" class="'+cls.trim()+'"'+
+      html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'"'+
         (ch.id===currentCh?' aria-current="page"':'')+'>'+
         '<span class="ch-num">'+ch.id+'</span> '+ch.title+'</a>';
     });
@@ -47,6 +63,11 @@
     txt.textContent = completed.size+' / '+CHAPTERS.length;
   }
 
+  function updateCompleteButton(){
+    var btn = document.getElementById('mark-complete');
+    if(btn) btn.textContent = completed.has(currentCh) ? '✅ 已完成 (点击取消)' : '✓ 标记完成';
+  }
+
   // ---- Mark chapter complete (toggle) ----
   function markComplete(){
     if(completed.has(currentCh)) completed.delete(currentCh);
@@ -54,9 +75,9 @@
     safeSet('llm-done', [...completed]);
     updateProgress();
     renderSidebar();
+    updateCompleteButton();
     var btn = document.getElementById('mark-complete');
     if(btn){
-      btn.textContent = completed.has(currentCh) ? '✅ 已完成 (点击取消)' : '✓ 标记完成';
       if(completed.has(currentCh)){
         btn.classList.add('celebrate');
         setTimeout(function(){ btn.classList.remove('celebrate'); }, 500);
@@ -282,8 +303,9 @@
   // ---- Search ----
   var searchIdx = [];
   function buildSearchIdx(){
+    searchIdx = [];
     CHAPTERS.forEach(function(ch){
-      searchIdx.push({id:ch.id, file:ch.file, title:ch.title, desc:ch.desc});
+      searchIdx.push({id:ch.id, file:chapterHref(ch), title:ch.title, desc:ch.desc});
     });
   }
   function handleSearch(val){
@@ -313,6 +335,7 @@
     initFontSize();
     renderSidebar();
     updateProgress();
+    updateCompleteButton();
     initBackToTop();
     initKeyboardNav();
     initSidebarToggle();
@@ -321,7 +344,7 @@
     initReadingBar();
     buildSearchIdx();
     // Bind search
-    var searchBox = document.getElementById('search-box');
+    var searchBox = document.getElementById('search-box') || document.querySelector('.search-box');
     if(searchBox) searchBox.addEventListener('input', function(){ handleSearch(this.value); });
     // KaTeX
     if(window.katex){
@@ -364,14 +387,19 @@
     updateProfileUI();
   }
 
+  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
+  function escapeJsString(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r') }
+  function safeColor(c){ return /^#[0-9a-fA-F]{6}$/.test(String(c)) ? c : '#b35c22' }
+
   function updateProfileUI(){
     var area = document.getElementById('profile-area');
     if(!area) return;
     var profile = getActiveProfile();
     if(profile){
+      var safeName = escapeHtml(profile.name);
       area.innerHTML = '<button class="profile-btn" onclick="LLM.openProfileModal()">'+
-        '<span class="profile-avatar" style="background:'+profile.color+'">'+profile.name[0].toUpperCase()+'</span>'+
-        '<span class="profile-name">'+profile.name+'</span>'+
+        '<span class="profile-avatar" style="background:'+safeColor(profile.color)+'">'+safeName.charAt(0).toUpperCase()+'</span>'+
+        '<span class="profile-name">'+safeName+'</span>'+
         '<span style="font-size:.65rem;opacity:.5">▼</span></button>';
     } else {
       area.innerHTML = '<button class="profile-btn" onclick="LLM.openProfileModal()" style="justify-content:center">'+
@@ -406,10 +434,12 @@
     if(profiles.length > 0){
       html += '<div class="profile-list">';
       profiles.forEach(function(p){
-        html += '<div class="profile-list-item'+(current&&current.id===p.id?' active':'')+'" onclick="LLM.selectProfile(\''+p.id+'\')">'+
-          '<span class="profile-avatar" style="background:'+p.color+';width:28px;height:28px;font-size:.7rem">'+p.name[0].toUpperCase()+'</span>'+
-          '<span>'+p.name+'</span>'+
-          '<button class="del-btn" onclick="event.stopPropagation();LLM.deleteProfile(\''+p.id+'\')">✕</button></div>';
+        var safeName = escapeHtml(p.name);
+        var safeId = escapeJsString(p.id);
+        html += '<div class="profile-list-item'+(current&&current.id===p.id?' active':'')+'" onclick="LLM.selectProfile(\''+safeId+'\')">'+
+          '<span class="profile-avatar" style="background:'+safeColor(p.color)+';width:28px;height:28px;font-size:.7rem">'+safeName.charAt(0).toUpperCase()+'</span>'+
+          '<span>'+safeName+'</span>'+
+          '<button class="del-btn" onclick="event.stopPropagation();LLM.deleteProfile(\''+safeId+'\')">✕</button></div>';
       });
       html += '</div>';
     }
@@ -510,8 +540,6 @@
     if(toggleBtn) toggleBtn.classList.toggle('has-notes', hasNotes);
   }
 
-  function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
-
   function toggleNotes(){
     var panel = document.getElementById('notes-panel');
     if(!panel) return;
@@ -577,7 +605,8 @@
     deleteProfile: deleteProfile,
     toggleNotes: toggleNotes,
     addNote: addNote,
-    deleteNote: deleteNote
+    deleteNote: deleteNote,
+    getChapters: chaptersWithHref
   };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);

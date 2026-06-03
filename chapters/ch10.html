@@ -16,7 +16,8 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
   <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 10</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
-  <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <div id="search-results" class="search-results"></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
 </aside>
@@ -282,6 +283,7 @@ print(f"DeepSeek-V4 MLA: KV Cache {v4['total_cache_gb']:.2f} GB "
   <h4>V4 如何组合：跨层交替</h4>
   <p>V4 不是把两种注意力简单加权求和，而是<strong>跨 Transformer 层交替</strong>使用 CSA 与 HCA——稀疏精确层负责"看清局部 + 学到的关键远端 token"，超压缩全局层负责"廉价地看全局"。两者配合，使 1M 上下文的单 token 计算量降到 V3.2 的约 <strong>27%</strong>、KV Cache 降到约 <strong>10%</strong>。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>V4 规格（2026-04 发布，MIT 许可开源）：</strong>V4-Pro 1.6T 总参 / 49B 激活，V4-Flash 284B；原生 <strong>1M token 上下文</strong>、384K 最大输出；训练 32T tokens。R1 的推理线也被并入 V4 的"可选思考模式"。</div></div>
+  <div class="info-box tip"><span class="icon">📚</span><div><strong>来源说明：</strong>DSA 参考 <a href="https://api-docs.deepseek.com/news/news250929" target="_blank">DeepSeek V3.2-Exp 发布说明</a>；V4-Pro 规格、CSA+HCA、Engram 与 mHC 参考 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro" target="_blank">DeepSeek-V4-Pro 模型卡</a>。阅读这些前沿段落时，请把它们视为<strong>模型技术报告/模型卡驱动的工程案例</strong>，与前 1-8 章的基础 Transformer 原理区分开来。</div></div>
 </section>
 
 <!-- ================================================================ -->

@@ -16,7 +16,8 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
   <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 10</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
-  <input type="search" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <div id="search-results" class="search-results"></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
 </aside>
@@ -838,7 +839,8 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <a href="https://arxiv.org/abs/2203.02155" target="_blank">InstructGPT — Ouyang et al. (2022)</a> ·
     <a href="https://arxiv.org/abs/2106.09685" target="_blank">LoRA — Hu et al. (2021)</a> ·
     <a href="https://arxiv.org/abs/2305.18290" target="_blank">DPO — Rafailov et al. (2023)</a> ·
-    <a href="https://arxiv.org/abs/2402.07753" target="_blank">DeepSeek-R1 — GRPO</a> ·
+    <a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1 — GRPO/RL 推理</a> ·
+    <a href="https://www.nature.com/articles/s41586-025-09422-z" target="_blank">DeepSeek-R1 — Nature 2025</a> ·
     <a href="https://arxiv.org/abs/2305.14314" target="_blank">QLoRA — Dettmers et al. (2023)</a></div></div>
 </section>
 

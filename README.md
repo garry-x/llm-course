@@ -149,7 +149,7 @@ llm-learner/
 | 🎨 **暗色/浅色双主题** | CSS 变量驱动，一键切换，localStorage 持久化 |
 | 📝 **编程练习驱动** | 每章 4-6 道编程题，参考解答可折叠（`LLM.toggleSolution`） |
 | 📐 **KaTeX 数学渲染** | 内联 + 块级公式，渲染失败红色降级显示 LaTeX 源码 |
-| 🔍 **全文搜索** | 侧边栏按章节标题/描述实时过滤 |
+| 🔍 **章节搜索** | 侧边栏按章节标题/描述实时过滤 |
 | 📑 **自动目录生成** | JS 读取 `section.card` 生成 TOC，scroll 高亮当前小节 |
 | 📊 **阅读进度条** | 顶部 3px 渐变，GPU 合成（`transform: scaleX` + rAF 节流） |
 | 📋 **代码复制** | Clipboard API + `execCommand` HTTP 回退，📋→✓ 反馈 |
@@ -167,7 +167,7 @@ llm-learner/
 - Hoffmann et al. (2022) — [Training Compute-Optimal Large Language Models (Chinchilla)](https://arxiv.org/abs/2203.15556)
 
 **DeepSeek 系列：**
-- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · V3.2 — DSA 稀疏注意力 · R1 — [GRPO 推理涌现 (Nature 2025)](https://www.nature.com/articles/s41586-025-09422-z) · V4 — [CSA+HCA + Engram + mHC](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · V3.2 — [DSA 稀疏注意力](https://api-docs.deepseek.com/news/news250929) · R1 — [GRPO 推理涌现 (Nature 2025)](https://www.nature.com/articles/s41586-025-09422-z) · V4 — [CSA+HCA + Engram + mHC](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
 
 **动手实践：**
 - Andrej Karpathy — [Neural Networks: Zero to Hero](https://www.youtube.com/playlist?list=PLAqhIrjkxBUWIvTOCzB7XwZBt03h4H3kW) · [nanoGPT](https://github.com/karpathy/nanoGPT)

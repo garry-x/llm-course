@@ -1081,6 +1081,22 @@ def forward(image, text_prompt):
 
   <h4>音频与视频</h4>
   <p>同样的 "Encoder + Projection + LLM" 范式也适用于音频（如语音编码器 → LLM）和视频（帧采样 → 视觉编码器 → 时序 pooling → LLM）。实时语音系统的端到端延迟取决于音频分块、编码器、LLM 解码、网络和播放缓冲；课程报告应记录实测环境，而不是引用一个脱离配置的固定毫秒数。</p>
+
+  <h4>多模态的成本与失败模式</h4>
+  <p>图像不是“免费附加信息”。一张图像会变成几十到数千个视觉 token，分辨率越高、patch 越细、裁剪越多，LLM 看到的序列越长，prefill 延迟和 KV Cache 成本也越高。多图、多页 PDF 或视频帧会把这个问题进一步放大。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>任务</th><th>关键能力</th><th>常见失败</th><th>评价方式</th></tr>
+      <tr><td>图像问答</td><td>识别主体、属性、关系</td><td>把常识补全当成视觉事实</td><td>VQA accuracy、人工错误分类</td></tr>
+      <tr><td>OCR / 文档理解</td><td>读取文字、表格和布局</td><td>漏字、错列、单位或小数点错误</td><td>字符/字段准确率、表格结构匹配</td></tr>
+      <tr><td>图表理解</td><td>坐标轴、图例、趋势和数值估计</td><td>读错轴、忽略单位、过度精确</td><td>数值误差、趋势判断准确率</td></tr>
+      <tr><td>视觉定位</td><td>把回答绑定到图中区域</td><td>回答正确但位置依据错误</td><td>bounding box IoU、pointing accuracy</td></tr>
+      <tr><td>视频理解</td><td>时间顺序、动作和事件变化</td><td>关键帧遗漏、时间先后混淆</td><td>事件顺序准确率、片段召回率</td></tr>
+    </table>
+  </div>
+
+  <h4>多模态实验怎么写</h4>
+  <p>多模态报告至少应分开说明输入设置和模型输出：图像分辨率、裁剪策略、视觉 token 数、prompt、max output tokens、是否允许 OCR 工具、是否多轮追问。质量指标也要按任务拆开：VQA 不能替代 OCR，OCR 不能替代图表数值推理，图表推理也不能证明模型有可靠视觉定位。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心洞察：</strong>LLM 可以被看作强大的序列建模骨干。只要其他模态能被编码为合适的 token 或向量序列，并且训练数据提供跨模态对齐信号，模型就可以学习在视觉、音频、代码等输入上执行任务；这不等于任意模态天然都等同于自然语言。</div></div>
 </section>
 

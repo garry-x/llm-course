@@ -33,6 +33,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 KV cache 显存、量化误差、RAG chunk/overlap、RAG 失败分解、TTFT/TPOT/tokens/s 和 SLO 的上线意义 |
+| Written questions | 35 | 推导 KV cache 显存、量化误差、RAG chunk/overlap、RAG 失败分解、多模态 token 成本、TTFT/TPOT/tokens/s 和 SLO 的上线意义 |
 | Programming parts | 55 | 实现 KV cache、显存估算、INT8 量化、RAG/LSH 和 benchmark 指标汇总 |
-| Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界和前沿 benchmark 来源边界 |
+| Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、多模态失败模式和前沿 benchmark 来源边界 |

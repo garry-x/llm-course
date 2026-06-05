@@ -6869,6 +6869,8 @@ def check_recitation_worksheet_pack() -> None:
 
 def check_assessment_item_bank_ledger() -> None:
     text = read("docs/assessment-item-bank-ledger.md")
+    derivation_audit = read("docs/mathematical-derivation-audit.md")
+    review_pack = read("docs/midterm-final-review-pack.md")
     issues = []
 
     for marker in [
@@ -6952,6 +6954,17 @@ def check_assessment_item_bank_ledger() -> None:
                 issues.append(f"{item_id} missing {field_name}")
         if exposure_level not in exposure_levels:
             issues.append(f"{item_id} has invalid exposure level: {exposure_level}")
+        for der_id in re.findall(r"\bDER-\d{2}\b", learning_objective):
+            if not re.search(rf"\|\s*{re.escape(der_id)}\s*\|", derivation_audit):
+                issues.append(f"{item_id} references unknown derivation id: {der_id}")
+        if "Midterm Review Q" in source_material or "Final Review Q" in source_material:
+            issues.append(f"{item_id} uses noncanonical review question label: {source_material}")
+        for midterm_question in re.findall(r"Midterm 题\s*([1-5])", source_material):
+            if f"### 题 {midterm_question}：" not in review_pack:
+                issues.append(f"{item_id} references missing midterm question: 题 {midterm_question}")
+        for final_question in re.findall(r"Final 题\s*([A-E])", source_material):
+            if f"### 题 {final_question}：" not in review_pack:
+                issues.append(f"{item_id} references missing final review question: 题 {final_question}")
 
     for expected_id in [
         "QC-W1-BPE-01",

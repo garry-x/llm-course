@@ -72,6 +72,27 @@ def ngram_overlap_rate(train_token_ids, eval_token_ids, n=8):
     return overlap / len(eval_grams)
 
 
+def global_batch_tokens(micro_batch_size, seq_len, grad_accum_steps=1, data_parallel_size=1):
+    values = [micro_batch_size, seq_len, grad_accum_steps, data_parallel_size]
+    if any(value <= 0 for value in values):
+        raise ValueError("batch size, seq_len, grad accumulation, and data parallel size must be positive")
+    return int(micro_batch_size * seq_len * grad_accum_steps * data_parallel_size)
+
+
+def training_steps_for_token_budget(token_budget, global_batch_tokens_value):
+    if token_budget <= 0:
+        raise ValueError("token_budget must be positive")
+    if global_batch_tokens_value <= 0:
+        raise ValueError("global_batch_tokens_value must be positive")
+    return math.ceil(token_budget / global_batch_tokens_value)
+
+
+def dense_lm_training_flops(num_params, train_tokens):
+    if num_params <= 0 or train_tokens <= 0:
+        raise ValueError("num_params and train_tokens must be positive")
+    return 6 * int(num_params) * int(train_tokens)
+
+
 def cross_entropy_manual(logits, targets):
     batch, seq_len, vocab_size = logits.shape
     logits_flat = logits.reshape(batch * seq_len, vocab_size)

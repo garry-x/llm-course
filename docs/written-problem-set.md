@@ -64,7 +64,7 @@
 2. 推导单样本 cross entropy 对 logits 的梯度 `p_i - 1[i=y]`。
 3. 设 tied LM head 为 `z_t = h_t E^T`，说明 CE 梯度如何更新正确 token、错误 token 的 output embedding 行，以及它如何继续传回 Transformer hidden state。
 4. 解释 AdamW 中“解耦权重衰减”和 L2 regularization 的区别，并说明 warmup + cosine decay 的作用。
-5. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16` 和训练预算 `D=20B tokens`，计算 global batch tokens 与训练 step 数，并说明这会如何影响 learning rate schedule 与 checkpoint 间隔。
+5. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16`、训练预算 `D=20B tokens` 和 dense LM 参数量 `N=1B`，计算 global batch tokens、训练 step 数和近似训练 FLOPs，并说明这会如何影响 learning rate schedule、checkpoint 间隔与 GPU hours。
 6. 给定 train token 序列和 eval token 序列，计算 n-gram repetition rate 与 train/eval overlap rate，并说明它们如何影响 val loss 和泛化判断。
 7. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。
 8. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。

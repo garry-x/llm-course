@@ -308,16 +308,19 @@ Quick check：
 核心推导：
 
 - global batch tokens、steps、tokens/s、GPU hours 的关系。
+- dense LM 近似训练 FLOPs：`6 * params * train_tokens`。
 - checkpoint storage 与保存频率的成本。
 
 课堂 demo：
 
 - 跑 training capstone 的 tiny train + resume。
+- 手算 20B token 预算下的 step count 与 dense LM FLOPs。
 - 修改 learning rate 观察 loss 异常。
 
 Quick check：
 
 - resume 时只恢复 model 权重够不够？
+- token budget 翻倍时，step count、FLOPs 和 GPU hours 分别怎样变化？
 - tokens/s 下降可能来自哪些非模型原因？
 
 课后产出：

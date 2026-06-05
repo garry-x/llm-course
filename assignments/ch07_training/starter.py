@@ -31,6 +31,18 @@ def ngram_overlap_rate(train_token_ids, eval_token_ids, n=8):
     raise NotImplementedError
 
 
+def global_batch_tokens(micro_batch_size, seq_len, grad_accum_steps=1, data_parallel_size=1):
+    raise NotImplementedError
+
+
+def training_steps_for_token_budget(token_budget, global_batch_tokens_value):
+    raise NotImplementedError
+
+
+def dense_lm_training_flops(num_params, train_tokens):
+    raise NotImplementedError
+
+
 def cross_entropy_manual(logits, targets):
     raise NotImplementedError
 

@@ -86,6 +86,36 @@ class TestDataDiagnostics(unittest.TestCase):
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
+class TestTrainingBudget(unittest.TestCase):
+    def test_global_batch_tokens_and_steps_match_token_budget(self):
+        global_tokens = submission.global_batch_tokens(
+            micro_batch_size=4,
+            seq_len=2048,
+            grad_accum_steps=8,
+            data_parallel_size=16,
+        )
+        self.assertEqual(global_tokens, 1_048_576)
+        self.assertEqual(
+            submission.training_steps_for_token_budget(20_000_000_000, global_tokens),
+            19_074,
+        )
+
+    def test_dense_lm_training_flops_uses_six_nd_rule(self):
+        self.assertEqual(
+            submission.dense_lm_training_flops(num_params=1_000_000_000, train_tokens=20_000_000_000),
+            120_000_000_000_000_000_000,
+        )
+
+    def test_training_budget_rejects_non_positive_values(self):
+        with self.assertRaises(ValueError):
+            submission.global_batch_tokens(0, 2048)
+        with self.assertRaises(ValueError):
+            submission.training_steps_for_token_budget(1000, 0)
+        with self.assertRaises(ValueError):
+            submission.dense_lm_training_flops(0, 1000)
+
+
+@unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
 class TestLossOptimizerScheduler(unittest.TestCase):
     def test_cross_entropy_matches_pytorch_for_large_logits(self):
         torch.manual_seed(0)

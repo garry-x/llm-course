@@ -38,12 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>Transformer Block 不是新魔法，而是把注意力层、前馈网络、归一化和残差连接组合起来。mHC 属于前沿扩展，第一次学习只要知道它试图改进残差路径的稳定性。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 3-4 章注意力输出、PyTorch Module、残差相加。</li>
-    <li><strong>学习目标：</strong>解释 Transformer Block 的残差路径、归一化位置、FFN/SwiGLU 的容量作用，以及 Pre-Norm 稳定深层训练的原因。</li>
+    <li><strong>学习目标：</strong>解释 Transformer Block 的残差路径、归一化位置、FFN/SwiGLU 的容量作用、资源预算，以及 Pre-Norm 稳定深层训练的原因。</li>
     <li><strong>课前阅读：</strong>阅读 LayerNorm、RMSNorm、SwiGLU 的核心公式，并复习残差网络和梯度传播。</li>
     <li><strong>课后阅读：</strong>比较 Post-Norm、Pre-Norm、RMSNorm、DeepNorm/超连接思路在训练稳定性上的差异。</li>
-    <li><strong>本章产出：</strong>LayerNorm/RMSNorm、SwiGLU FFN、TransformerBlock。</li>
+    <li><strong>本章产出：</strong>LayerNorm/RMSNorm、SwiGLU FFN、TransformerBlock 和 block 资源估算。</li>
     <li><strong>完成标准：</strong>你能说明为什么 Block 输入和输出都保持 <code>[batch, seq, d_model]</code>。</li>
-    <li><strong>练习产出：</strong>提交 Block 实现、梯度检查、归一化 ablation，以及 FFN 参数量/激活维度分析；配套作业见 <a href="../assignments/ch05_block/">assignments/ch05_block/</a>。</li>
+    <li><strong>练习产出：</strong>提交 Block 实现、梯度检查、归一化 ablation，以及 FFN 参数量、FLOPs、激活显存分析；配套作业见 <a href="../assignments/ch05_block/">assignments/ch05_block/</a>。</li>
   </ul>
 </section>
 
@@ -467,6 +467,23 @@ print(f"比例: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for
   </div>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>设计结论：</strong>SwiGLU 不是“多一个矩阵所以更强”这么简单。它是在接近相同参数预算下，用门控乘法增加 token 条件化表达；MoE 则是在系统复杂度更高的前提下，把 FFN 容量扩展到多个稀疏专家。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 5.6C Block 资源估算 -->
+<!-- ================================================================ -->
+<section class="card" id="s5-6c">
+  <h3>5.6C 单个 Transformer Block 的参数、FLOPs 与激活显存</h3>
+  <p>只会写出 <code>TransformerBlock.forward</code> 还不够。训练工程里必须能估算一个 block 为什么贵：参数主要来自投影矩阵，FLOPs 主要来自矩阵乘法和 attention 的二次项，训练激活显存还会保存 Q/K/V、FFN 中间值和 attention scores。</p>
+
+  <h4>参数量近似</h4>
+  <p>对一个 Pre-Norm block，忽略 bias，MHA 的 Q/K/V/O 投影约为 <span class="katex-inline" data-expr="4d_{\text{model}}^2" aria-label="4d_{\text{model}}^2" role="img"></span>。SwiGLU 有三块矩阵，约为 <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}}" aria-label="3d_{\text{model}}d_{\text{ff}}" role="img"></span>。两个 RMSNorm 只有 <span class="katex-inline" data-expr="2d_{\text{model}}" aria-label="2d_{\text{model}}" role="img"></span> 个可学习缩放参数。</p>
+
+  <h4>FLOPs 与激活显存</h4>
+  <p>课程作业中的 <code>estimate_block_resources</code> 使用常见矩阵乘法约定：一次 <code>[m,k] @ [k,n]</code> 约为 <span class="katex-inline" data-expr="2mkn" aria-label="2mkn" role="img"></span> FLOPs。它分别估算 QKV 投影、attention score、attention value mixing、输出投影和 SwiGLU 三个线性层的主要 FLOPs。</p>
+  <p>激活显存估算包含主要张量：Q/K/V、SwiGLU 的 gate/value 中间激活、attention scores 以及残差流。attention scores 的大小是 <span class="katex-inline" data-expr="B \times H \times T^2" aria-label="B \times H \times T^2" role="img"></span>，这就是为什么长序列训练比短序列训练贵得多。FlashAttention 可以避免完整物化 attention matrix，但普通教学实现会显式保存它。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>使用边界：</strong>这是课程级量级估算，不包含 kernel fusion、optimizer state、activation checkpointing、dropout mask、通信、allocator 碎片或具体硬件效率。它的作用是让学生能解释“哪个项随 T 二次增长，哪个项随 d_model 和 d_ff 增长”。</div></div>
 </section>
 
 <!-- ================================================================ -->

@@ -73,3 +73,8 @@ class TransformerBlock(nn.Module):
 
 def count_params(model):
     raise NotImplementedError
+
+
+def estimate_block_resources(batch_size, seq_len, d_model, n_heads, d_ff=None, dtype_bytes=2):
+    """Estimate parameters, major FLOPs, and activation memory for one Transformer block."""
+    raise NotImplementedError

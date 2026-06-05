@@ -183,15 +183,18 @@ Quick check：
 
 - LayerNorm 的 mean/variance 依赖输入，反向传播存在跨 feature 耦合。
 - Pre-Norm residual 为深层模型提供更直接的梯度路径。
+- 单个 block 的参数、FLOPs 和激活显存主项。
 
 课堂 demo：
 
 - 对接近零方差输入测试 LayerNorm/RMSNorm 的 `eps`。
 - 单步 forward 一个 Transformer block，检查梯度是否流到所有子模块。
+- 用 `estimate_block_resources` 比较 `T=512` 与 `T=4096` 时 attention score 显存的变化。
 
 Quick check：
 
 - RMSNorm 是否会减去均值？
+- 参数量、activation memory 和 optimizer state 是同一件事吗？
 - MLA cache 低维是否意味着 attention 计算免费？
 
 课后产出：

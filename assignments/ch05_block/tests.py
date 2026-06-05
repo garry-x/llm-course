@@ -115,5 +115,36 @@ class TestTransformerBlock(unittest.TestCase):
         self.assertEqual(block.attention.n_heads, 5)
 
 
+class TestBlockResourceEstimates(unittest.TestCase):
+    def test_estimates_params_flops_and_activation_memory(self):
+        result = submission.estimate_block_resources(
+            batch_size=2,
+            seq_len=4,
+            d_model=8,
+            n_heads=2,
+            d_ff=16,
+            dtype_bytes=2,
+        )
+        self.assertEqual(result["d_head"], 4)
+        self.assertEqual(result["attention_params"], 4 * 8 * 8)
+        self.assertEqual(result["swiglu_params"], 3 * 8 * 16)
+        self.assertEqual(result["norm_params"], 16)
+        self.assertEqual(result["total_params"], 256 + 384 + 16)
+        self.assertEqual(result["qkv_flops"], 2 * 8 * 8 * 24)
+        self.assertEqual(result["attention_score_flops"], 2 * 2 * 2 * 4 * 4 * 4)
+        self.assertEqual(result["attention_value_flops"], 2 * 2 * 2 * 4 * 4 * 4)
+        self.assertEqual(result["output_proj_flops"], 2 * 8 * 8 * 8)
+        self.assertEqual(result["swiglu_flops"], 2 * 8 * 8 * 16 * 3)
+        expected_scores_bytes = 2 * 2 * 4 * 4 * 2
+        self.assertEqual(result["attention_scores_bytes"], expected_scores_bytes)
+        self.assertGreater(result["activation_bytes"], expected_scores_bytes)
+
+    def test_estimates_reject_invalid_shapes(self):
+        with self.assertRaises(ValueError):
+            submission.estimate_block_resources(1, 4, 7, 2)
+        with self.assertRaises(ValueError):
+            submission.estimate_block_resources(0, 4, 8, 2)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

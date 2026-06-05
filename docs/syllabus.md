@@ -33,7 +33,7 @@
 |------|------|------|----------|
 | 表示层 | Week 1 | Ch01-Ch02 | BPE、token id、embedding lookup、位置编码、RoPE |
 | 注意力核心 | Week 2 | Ch03 | Q/K/V、scaled dot-product attention、causal mask、softmax 行为 |
-| Transformer 组件 | Week 3 | Ch04-Ch05 | MHA、GQA、MLA、LayerNorm/RMSNorm、FFN、SwiGLU、residual path |
+| Transformer 组件 | Week 3 | Ch04-Ch05 | MHA、GQA、MLA、LayerNorm/RMSNorm、FFN、SwiGLU、residual path、block 资源估算 |
 | GPT 组装 | Week 4 | Ch06 | GPTModel、LM head、weight tying、参数量估算、MoE router |
 | 训练闭环 | Week 5 | Ch07 | MLE、cross entropy、PPL、AdamW、scheduler、checkpoint、分布式训练概念 |
 | 生成方法 | Week 6 | Ch08 | greedy、temperature、top-k/top-p、speculative decoding、structured decoding |

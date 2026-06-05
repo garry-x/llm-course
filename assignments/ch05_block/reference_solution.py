@@ -143,3 +143,51 @@ class TransformerBlock(nn.Module):
 
 def count_params(model):
     return sum(p.numel() for p in model.parameters())
+
+
+def estimate_block_resources(batch_size, seq_len, d_model, n_heads, d_ff=None, dtype_bytes=2):
+    if batch_size <= 0 or seq_len <= 0 or d_model <= 0 or n_heads <= 0 or dtype_bytes <= 0:
+        raise ValueError("batch_size, seq_len, d_model, n_heads, and dtype_bytes must be positive")
+    if d_model % n_heads != 0:
+        raise ValueError("d_model must be divisible by n_heads")
+    d_ff = d_ff or int(d_model * 8 / 3)
+    if d_ff <= 0:
+        raise ValueError("d_ff must be positive")
+
+    d_head = d_model // n_heads
+    attention_params = 4 * d_model * d_model
+    swiglu_params = 3 * d_model * d_ff
+    norm_params = 2 * d_model
+    total_params = attention_params + swiglu_params + norm_params
+
+    tokens = batch_size * seq_len
+    qkv_flops = 2 * tokens * d_model * (3 * d_model)
+    attention_score_flops = 2 * batch_size * n_heads * seq_len * seq_len * d_head
+    attention_value_flops = 2 * batch_size * n_heads * seq_len * seq_len * d_head
+    output_proj_flops = 2 * tokens * d_model * d_model
+    swiglu_flops = 2 * tokens * d_model * d_ff * 3
+    total_flops = qkv_flops + attention_score_flops + attention_value_flops + output_proj_flops + swiglu_flops
+
+    hidden_activation_bytes = tokens * d_model * dtype_bytes
+    qkv_activation_bytes = tokens * 3 * d_model * dtype_bytes
+    ffn_activation_bytes = tokens * 2 * d_ff * dtype_bytes
+    attention_scores_bytes = batch_size * n_heads * seq_len * seq_len * dtype_bytes
+    residual_stream_bytes = 2 * hidden_activation_bytes
+    activation_bytes = qkv_activation_bytes + ffn_activation_bytes + attention_scores_bytes + residual_stream_bytes
+
+    return {
+        "d_head": d_head,
+        "attention_params": attention_params,
+        "swiglu_params": swiglu_params,
+        "norm_params": norm_params,
+        "total_params": total_params,
+        "qkv_flops": qkv_flops,
+        "attention_score_flops": attention_score_flops,
+        "attention_value_flops": attention_value_flops,
+        "output_proj_flops": output_proj_flops,
+        "swiglu_flops": swiglu_flops,
+        "total_flops": total_flops,
+        "attention_scores_bytes": attention_scores_bytes,
+        "activation_bytes": activation_bytes,
+        "activation_mb": activation_bytes / (1024**2),
+    }

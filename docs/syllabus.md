@@ -88,17 +88,17 @@
 
 | 时间 | 交付 |
 |------|------|
-| 第 5 周 | 项目提案：数据、模型规模、训练预算、风险 |
-| 第 7 周 | 初版：数据分析、训练日志、checkpoint/resume |
-| 第 10 周 | 最终报告：ablation、错误分析、成本估算、复现命令 |
+| 第 5 周 | 项目提案：研究问题、baseline、数据、模型规模、训练预算、风险 |
+| 第 7 周 | Milestone：数据分析、训练日志、checkpoint/resume、初步失败案例 |
+| 第 10 周 | 最终报告：ablation、错误分析、成本估算、结论边界、复现命令 |
 
 推理工程 Capstone：
 
 | 时间 | 交付 |
 |------|------|
-| 第 8 周 | 项目提案：API 设计、评测集、SLO、容量目标 |
-| 第 9 周 | 初版：OpenAI-compatible API、评测、benchmark、SLO |
-| 第 10 周 | 最终报告：P50/P95/P99、TTFT/TPOT、RAG/JSON/tool 回归、成本估算 |
+| 第 8 周 | 项目提案：服务场景、research question、baseline、评测集、SLO、容量目标 |
+| 第 9 周 | Milestone：OpenAI-compatible API、评测、benchmark、SLO、初步失败案例 |
+| 第 10 周 | 最终报告：P50/P95/P99、TTFT/TPOT、RAG/JSON/tool 回归、成本估算和结论边界 |
 
 ## 协作与 AI 工具
 

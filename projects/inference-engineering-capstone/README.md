@@ -20,6 +20,26 @@
 | Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
 | Acceptance | 自动启动服务并串联评测、压测、SLO、容量估算 | `python acceptance.py` 输出 ACCEPTANCE |
 
+## 项目问题设计
+
+这个 capstone 的重点不是“启动一个 API”，而是回答一个推理工程问题。建议从以下方向选择一个主问题：
+
+| 研究问题 | 比较对象 | 主要指标 | 常见结论边界 |
+|----------|----------|----------|--------------|
+| RAG 是否改善固定问答集 | no-RAG vs RAG top-k=3/8 | pass rate、检索命中、TTFT、prompt tokens | 检索库小不代表真实知识库表现 |
+| 结构化输出策略是否可靠 | prompt-only JSON vs JSON mode / retry | JSON 有效率、重试次数、latency | MockEngine 的格式稳定性不能代表真实模型 |
+| 并发增加如何影响尾延迟 | concurrency 1/2/5/10 | P50/P95/P99、tokens/s、error rate | 本地 CPU 网络开销与 GPU serving 不同 |
+| 容量规划对上下文长度多敏感 | context 4K/8K/32K | KV Cache GB、max batch、$/1M tokens | 估算公式不包含全部 runtime overhead |
+| 多模态输入如何改变服务成本 | 文本请求 vs 图像/文档请求的视觉 token 预算 | prefill tokens、TTFT、KV Cache、任务 pass rate | 视觉 encoder 和裁剪策略会显著改变结果 |
+
+建议把项目拆成三个阶段：
+
+| 阶段 | 交付 |
+|------|------|
+| Proposal | 写出服务场景、SLO、baseline、评测集、容量假设 |
+| Milestone | 跑通 API、评测、压测和容量估算，给出第一版失败案例 |
+| Final Report | 补充 ablation、尾延迟分析、成本估算、降级方案和结论边界 |
+
 ## 快速开始
 
 ```bash
@@ -133,3 +153,4 @@ python capacity_plan.py \
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
 - RAG、JSON structured output、tool calling 的回归用例。
 - 超时、限流、降级、格式错误和安全拒答策略。
+- 明确说明你的研究问题、baseline、workload、结论适用条件，以及哪些结果只在 MockEngine / 本地 CPU 下成立。

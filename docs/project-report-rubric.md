@@ -16,6 +16,18 @@
 | 数据与伦理 | 8 | 说明数据来源、许可证、隐私、偏见、污染、安全边界和残余风险 |
 | 贡献说明 | 6 | 团队项目有贡献声明，自定义项目说明外部协助和使用的外部库或模型 |
 
+## Proposal / Milestone / Final Report 结构
+
+高校课程项目不应等到最后一周才写报告。建议按三个阶段推进：
+
+| 阶段 | 核心问题 | 应包含内容 |
+|------|----------|------------|
+| Proposal | 你要回答什么问题，为什么这个问题值得做 | 研究问题、baseline、数据来源、指标、资源预算、主要风险 |
+| Milestone | 当前已经跑通什么，哪里还不确定 | 已完成模块、初步结果、失败案例、下一步 ablation、时间和算力调整 |
+| Final Report | 你的结论在什么条件下成立 | 方法、实验设置、结果表、错误分析、成本、局限、复现命令和引用 |
+
+一个合格项目至少要有一个清晰比较对象。例如：no-RAG vs RAG、greedy vs top-p、small context vs long context、LoRA rank 4 vs rank 16、MockEngine vs vLLM。没有 baseline 的项目只能说明“系统能跑”，不能说明方法选择是否合理。
+
 ## 训练工程加分检查
 
 - 数据分析覆盖长度分布、重复、异常样本和 token 预算。
@@ -23,6 +35,7 @@
 - checkpoint resume 后 step 单调增加，配置和优化器状态被恢复。
 - 报告说明 loss spike、NaN、过拟合或吞吐下降的排查顺序。
 - 若比较训练设置，至少报告 seed sensitivity、validation split variance 或 single_seed_limit。
+- 训练实验应提出一个可回答问题，例如“更长 seq_len 是否改善 val PPL 但降低 tokens/s”或“较高学习率是否更快下降但更容易 loss spike”。
 
 ## 推理工程加分检查
 
@@ -31,6 +44,7 @@
 - RAG/JSON/tool calling 至少有固定回归用例。
 - 报告说明超时、限流、降级、格式错误和安全拒答的处理策略。
 - latency、tokens/s 或 pass rate 的比较必须记录 workload、warmup、concurrency 和置信区间或 repeated-run 方差。
+- 推理实验应提出一个可回答问题，例如“top-k 检索从 3 增到 8 是否提高 pass rate 但恶化 TTFT”或“JSON 约束是否提高格式正确率但增加重试成本”。
 
 ## 默认最终项目加分检查
 

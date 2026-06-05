@@ -15,6 +15,25 @@
 | Planning | 估算 steps、GPU hours、成本、checkpoint 存储 | `python plan_training.py` |
 | Acceptance | 串联数据分析、训练、resume、规划和指标检查 | `python acceptance.py` 输出 `ACCEPTANCE: PASS` |
 
+## 项目问题设计
+
+这个 capstone 不只是“把训练脚本跑通”。报告需要回答一个明确的训练工程问题，并用实验支持结论。可选方向：
+
+| 研究问题 | 比较对象 | 主要指标 | 常见结论边界 |
+|----------|----------|----------|--------------|
+| 学习率如何影响收敛和稳定性 | `lr=1e-3` vs `3e-4` | train/val loss、grad_norm、NaN/loss spike | tiny corpus 上的最优 lr 不能外推到大模型 |
+| 序列长度如何影响质量和吞吐 | `seq_len=64` vs `128` | val PPL、tokens/s、显存/内存 | 字符级模型和 BPE 模型的长度含义不同 |
+| batch size / grad accumulation 如何影响曲线 | 小 batch vs 等效大 batch | loss 方差、tokens/s、step time | CPU baseline 的吞吐结论不能直接外推 GPU |
+| dropout 或 weight decay 是否缓解过拟合 | 正则开/关 | train-val gap、val loss | 数据很小时方差可能大于真实差异 |
+
+建议把项目拆成三个阶段：
+
+| 阶段 | 交付 |
+|------|------|
+| Proposal | 写出研究问题、baseline、数据、训练预算、主要风险 |
+| Milestone | 跑通一次训练和 resume，给出第一版曲线与失败案例 |
+| Final Report | 补充 ablation、错误分析、成本估算、结论边界和复现命令 |
+
 ## 快速开始
 
 ```bash
@@ -79,3 +98,4 @@ python plan_training.py \
 - checkpoint resume 产出：恢复后 step 单调增加，配置和优化器状态被恢复。
 - 至少一个 ablation，例如学习率、batch size、seq_len 或 dropout。
 - loss spike、NaN、过拟合或吞吐下降的排查记录。
+- 明确说明你的研究问题、baseline、结论适用条件，以及哪些结果只在 tiny corpus / CPU baseline 下成立。

@@ -55,6 +55,20 @@ def attention_logits_gradient(attn_weights, values, grad_output):
     return attn_weights * (grad_attn - expected_grad)
 
 
+def attention_entropy(attn_weights, eps=1e-12):
+    if attn_weights.dim() < 1:
+        raise ValueError("attn_weights must have at least one dimension")
+    probs = attn_weights.clamp_min(eps)
+    return -(attn_weights * probs.log()).sum(dim=-1)
+
+
+def attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes=2):
+    values = [batch_size, n_heads, seq_len, dtype_bytes]
+    if any(value <= 0 for value in values):
+        raise ValueError("batch_size, n_heads, seq_len, and dtype_bytes must be positive")
+    return int(batch_size * n_heads * seq_len * seq_len * dtype_bytes)
+
+
 def create_causal_mask(seq_len):
     """Return a boolean lower-triangular causal mask."""
     return torch.ones(seq_len, seq_len).tril().bool()

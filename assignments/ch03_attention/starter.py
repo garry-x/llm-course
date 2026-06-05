@@ -30,6 +30,16 @@ def attention_logits_gradient(attn_weights, values, grad_output):
     raise NotImplementedError
 
 
+def attention_entropy(attn_weights, eps=1e-12):
+    """Return Shannon entropy over the key dimension for attention weights."""
+    raise NotImplementedError
+
+
+def attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes=2):
+    """Return bytes needed to materialize a dense [B,H,T,T] attention score tensor."""
+    raise NotImplementedError
+
+
 def create_causal_mask(seq_len):
     """Return a boolean lower-triangular causal mask."""
     raise NotImplementedError

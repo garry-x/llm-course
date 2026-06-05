@@ -267,6 +267,7 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <h4>√dₖ 与温度的等价性</h4>
   <p>除以 √dₖ 等价于在注意力 logits 上使用温度 <span class="katex-inline" data-expr="\tau = \sqrt{d_k}" aria-label="\tau = \sqrt{d_k}" role="img"></span>。在 Q/K 各维近似独立、方差约为 1 的初始化假设下，未缩放点积的方差会随 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 增长；缩放后 logits 的量级回到较稳定范围，避免 softmax 过早饱和。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：√dₖ 是一个<em>logit 尺度控制机制</em>。</strong>它不改变同一 query 下各 key 的相对排序（因为除以正数是单调变换），但会改变 softmax 分布的尖锐程度和梯度尺度。它有助于训练稳定，但不能保证所有层、所有数据分布下梯度都“始终有效”。</div></div>
+  <p>Ch03 作业中的 <code>attention_entropy(attn_weights)</code> 用 <span class="katex-inline" data-expr="H(p)=-\sum_i p_i\log p_i" aria-label="H(p)=-\sum_i p_i\log p_i" role="img"></span> 量化注意力分布的尖锐程度。one-hot attention 的熵接近 0，均匀关注 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 个位置时熵为 <span class="katex-inline" data-expr="\log T" aria-label="\log T" role="img"></span>。这不是“好坏分数”，而是判断 softmax 是否过早饱和的一个数值信号。</p>
 
   <h4>从输出梯度传回 attention logits</h4>
   <p>对单个 query，attention 输出为 <span class="katex-inline" data-expr="\mathbf{o}=\sum_i p_i\mathbf{v}_i" aria-label="\mathbf{o}=\sum_i p_i\mathbf{v}_i" role="img"></span>，其中 <span class="katex-inline" data-expr="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" aria-label="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" role="img"></span>。若上游梯度为 <span class="katex-inline" data-expr="\mathbf{g}=\partial L/\partial \mathbf{o}" aria-label="\mathbf{g}=\partial L/\partial \mathbf{o}" role="img"></span>，则先有：</p>
@@ -442,6 +443,7 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
     <li>FP16 下：32 GB 显存——仅为了存储注意力分数</li>
     <li>这与嵌入层（d×n）和 FFN（4d²）的 O(n) 内存开销形成了鲜明对比</li>
   </ul>
+  <p>作业函数 <code>attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes)</code> 对应 dense attention score 张量 <code>[B,H,T,T]</code> 的物化成本：<span class="katex-inline" data-expr="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" aria-label="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" role="img"></span>。它只估算 score 矩阵本身，不包含 Q/K/V、softmax 输出、dropout mask、activation checkpoint 或 FlashAttention 的重计算策略。</p>
 
   <h4>FlashAttention：IO 感知的解决方案</h4>
   <p>FlashAttention（Dao et al., 2022）的核心洞见：在许多实际 GPU 配置中，attention 的性能瓶颈不只是 FLOPs，还包括 HBM（高带宽显存）和 SRAM（片上缓存）之间的数据搬运。传统实现会物化完整注意力矩阵，而 FlashAttention 用 tiling 技术将计算切分为小块，在 SRAM 中完成 softmax——全程不将完整的注意力矩阵写入 HBM。</p>

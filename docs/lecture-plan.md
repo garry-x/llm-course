@@ -96,18 +96,22 @@ Quick check：
 
 - 若 `q_i,k_i` 方差为 1，则 `Var(q^T k)=d_k`。
 - softmax Jacobian `J_ij=p_i(delta_ij-p_j)`。
+- attention entropy `-sum p log p` 衡量分布尖锐程度。
 - self-attention 时间复杂度 `O(BHT^2D)`。
+- dense attention score memory `B * H * T^2 * dtype_bytes`。
 
 课堂 demo：
 
 - 手写一个小矩阵 attention，并与 PyTorch 输出对齐。
 - 改变 `d_k`，观察未 scaling logits 的 softmax 饱和。
+- 计算 one-hot 与 uniform attention 的 entropy。
 - 对单个 query 比较手算 `attention_logits_gradient` 与 autograd。
 
 Quick check：
 
 - score shape 为什么是 `[B, H, T_q, T_k]`？
 - scaling 放在 softmax 前还是后？
+- attention entropy 低是否一定说明模型解释更可靠？
 - softmax 的 Jacobian 为什么不是对角矩阵？
 
 课后产出：

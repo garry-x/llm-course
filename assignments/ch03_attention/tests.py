@@ -100,6 +100,26 @@ class TestAttentionBackwardMath(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.attention_logits_gradient(torch.randn(2), torch.randn(2, 3), torch.randn(4))
 
+    def test_attention_entropy_measures_sharpness(self):
+        peaked = torch.tensor([[1.0, 0.0, 0.0]])
+        uniform = torch.tensor([[1 / 3, 1 / 3, 1 / 3]])
+        self.assertTrue(torch.allclose(submission.attention_entropy(peaked), torch.zeros(1), atol=1e-6))
+        self.assertTrue(
+            torch.allclose(
+                submission.attention_entropy(uniform),
+                torch.tensor([math.log(3)]),
+                atol=1e-6,
+            )
+        )
+
+    def test_attention_score_memory_bytes_counts_bhtt_tensor(self):
+        self.assertEqual(
+            submission.attention_score_memory_bytes(batch_size=2, n_heads=4, seq_len=8, dtype_bytes=2),
+            2 * 4 * 8 * 8 * 2,
+        )
+        with self.assertRaises(ValueError):
+            submission.attention_score_memory_bytes(batch_size=1, n_heads=4, seq_len=0)
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch03 attention tests")
 class TestCausalAttention(unittest.TestCase):

@@ -202,6 +202,7 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
     <div class="katex" data-expr="\text{Var}(x^{(l)}) = \text{Var}(x^{(l-1)}) + \text{Var}(f^{(l)}(\text{LN}(x^{(l-1)})))" aria-label="\text{Var}(x^{(l)}) = \text{Var}(x^{(l-1)}) + \text{Var}(f^{(l)}(\text{LN}(x^{(l-1)})))" role="img"></div>
   </div>
   <p>在 Post-Norm 中，归一化在残差连接之后，<span class="katex-inline" data-expr="\text{Var}(x^{(l)}) = 1" aria-label="\text{Var}(x^{(l)}) = 1" role="img"></span>（被归一化强制固定），但每个子层输出的方差 <span class="katex-inline" data-expr="\text{Var}(f^{(l)}(x^{(l-1)}))" aria-label="\text{Var}(f^{(l)}(x^{(l-1)}))" role="img"></span> 需要精细控制。在 Pre-Norm 中，残差流的方差会逐层增大（这是正常的——深层需要有更大的表示范围），而不是被强制截断。</p>
+  <p>一个最小的手算模型是把每层子层线性化为局部斜率 <code>f'</code>，把 norm 线性化为局部斜率 <code>n'</code>。Pre-Norm 的残差层近似梯度因子是 <code>1 + f' n'</code>，因为 identity shortcut 不经过 norm；Post-Norm 的近似因子是 <code>n'(1 + f')</code>，norm 直接压在 shortcut 之后。Ch05 作业中的 <code>residual_gradient_path_factors</code> 用这个标量模型让学生手算多层梯度因子；它是局部诊断，不是对任意深度训练稳定性的完整证明。</p>
 
   <div class="table-wrap">
     <table>
@@ -214,7 +215,7 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
     </table>
   </div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键结论：</strong>Pre-Norm 的成功可以归结为"<strong>归一化隔离</strong>"——每个子层的输入被独立归一化，而残差分支保留未归一化的信息通道。这有助于深层网络的梯度传播，但不是对任意深度、任意学习率都稳定的保证。Post-Norm 将归一化放在残差连接之后，通常需要更谨慎地处理初始化、warmup 和残差尺度。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键结论：</strong>Pre-Norm 的成功可以归结为"<strong>归一化隔离</strong>"——每个子层的输入被独立归一化，而残差分支保留未归一化的信息通道。这有助于深层网络的梯度传播，但不是对任意深度、任意学习率都稳定的保证。Post-Norm 将归一化放在残差连接之后，通常需要更谨慎地处理初始化、warmup 和残差尺度。作业中的梯度因子函数对应这个局部线性化解释。</div></div>
 </section>
 
 <!-- ================================================================ -->

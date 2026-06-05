@@ -63,6 +63,11 @@ def ffn_parameter_counts(d_model, gelu_hidden=None, swiglu_hidden=None):
     raise NotImplementedError
 
 
+def residual_gradient_path_factors(sublayer_slopes, norm_slopes, mode="pre"):
+    """Return per-layer and total gradient factors in a scalar residual block model."""
+    raise NotImplementedError
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, n_heads, dropout=0.0):
         super().__init__()

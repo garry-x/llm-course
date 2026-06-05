@@ -118,6 +118,26 @@ def ffn_parameter_counts(d_model, gelu_hidden=None, swiglu_hidden=None):
     }
 
 
+def residual_gradient_path_factors(sublayer_slopes, norm_slopes, mode="pre"):
+    if mode not in {"pre", "post"}:
+        raise ValueError("mode must be 'pre' or 'post'")
+    if len(sublayer_slopes) != len(norm_slopes):
+        raise ValueError("sublayer_slopes and norm_slopes must have equal length")
+    if not sublayer_slopes:
+        raise ValueError("at least one layer is required")
+
+    factors = []
+    for sublayer_slope, norm_slope in zip(sublayer_slopes, norm_slopes):
+        sublayer_slope = float(sublayer_slope)
+        norm_slope = float(norm_slope)
+        if mode == "pre":
+            factors.append(1.0 + sublayer_slope * norm_slope)
+        else:
+            factors.append(norm_slope * (1.0 + sublayer_slope))
+    total = math.prod(factors)
+    return {"mode": mode, "factors": factors, "total": total}
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, n_heads, dropout=0.0):
         super().__init__()

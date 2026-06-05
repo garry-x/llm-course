@@ -197,7 +197,7 @@ Quick check：
 核心推导：
 
 - LayerNorm 的 mean/variance 依赖输入，反向传播存在跨 feature 耦合。
-- Pre-Norm residual 为深层模型提供更直接的梯度路径。
+- Pre-Norm residual 为深层模型提供更直接的梯度路径；局部线性化下可比较 `1 + f'n'` 与 `n'(1+f')`。
 - 4x GELU FFN 的 bias-free 参数量为 `8*d_model^2`；SwiGLU 三矩阵参数量为 `3*d_model*d_ff`，同预算得到 `d_ff = 8/3*d_model`。
 - 单个 block 的参数、FLOPs 和激活显存主项。
 
@@ -205,6 +205,7 @@ Quick check：
 
 - 对接近零方差输入测试 LayerNorm/RMSNorm 的 `eps`。
 - 用 `d_model=24` 手算并运行 GELU FFN 与 SwiGLU 的参数预算。
+- 手算 Pre-Norm/Post-Norm 线性化残差梯度因子。
 - 单步 forward 一个 Transformer block，检查梯度是否流到所有子模块。
 - 用 `estimate_block_resources` 比较 `T=512` 与 `T=4096` 时 attention score 显存的变化。
 

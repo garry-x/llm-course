@@ -107,6 +107,25 @@ class TestFeedForward(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.ffn_parameter_counts(8, swiglu_hidden=0)
 
+    def test_residual_gradient_path_factors_compare_pre_and_post_norm(self):
+        sublayer_slopes = [0.2, -0.1, 0.3]
+        norm_slopes = [0.5, 0.5, 0.5]
+        pre = submission.residual_gradient_path_factors(sublayer_slopes, norm_slopes, mode="pre")
+        post = submission.residual_gradient_path_factors(sublayer_slopes, norm_slopes, mode="post")
+        self.assertEqual(pre["factors"], [1.1, 0.95, 1.15])
+        self.assertEqual(post["factors"], [0.6, 0.45, 0.65])
+        self.assertAlmostEqual(pre["total"], 1.1 * 0.95 * 1.15)
+        self.assertAlmostEqual(post["total"], 0.6 * 0.45 * 0.65)
+        self.assertGreater(abs(pre["total"]), abs(post["total"]))
+
+    def test_residual_gradient_path_factors_reject_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.residual_gradient_path_factors([0.1], [1.0], mode="middle")
+        with self.assertRaises(ValueError):
+            submission.residual_gradient_path_factors([0.1, 0.2], [1.0])
+        with self.assertRaises(ValueError):
+            submission.residual_gradient_path_factors([], [])
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch05 block tests")
 class TestTransformerBlock(unittest.TestCase):

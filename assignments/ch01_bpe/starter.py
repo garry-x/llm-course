@@ -45,3 +45,8 @@ class BPETokenizer:
 def tokenizer_report(tokenizer, texts, vocab_size=None, d_model=None):
     """Return token-count, round-trip, and embedding-budget statistics for texts."""
     raise NotImplementedError
+
+
+def tokenizer_group_report(tokenizer, groups, vocab_size=None, d_model=None):
+    """Return per-group token-cost statistics and cross-group disparity."""
+    raise NotImplementedError

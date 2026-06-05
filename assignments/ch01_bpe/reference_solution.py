@@ -92,3 +92,28 @@ def tokenizer_report(tokenizer, texts, vocab_size=None, d_model=None):
     if vocab_size is not None and d_model is not None:
         result["embedding_params"] = int(vocab_size) * int(d_model)
     return result
+
+
+def tokenizer_group_report(tokenizer, groups, vocab_size=None, d_model=None):
+    if not groups:
+        raise ValueError("groups must not be empty")
+
+    group_reports = {}
+    for name, texts in groups.items():
+        if not texts:
+            raise ValueError("each group must contain at least one text")
+        group_reports[name] = tokenizer_report(tokenizer, texts, vocab_size=vocab_size, d_model=d_model)
+
+    rates = {
+        name: report["tokens_per_character"]
+        for name, report in group_reports.items()
+    }
+    max_group = max(rates, key=rates.get)
+    min_group = min(rates, key=rates.get)
+    min_rate = rates[min_group]
+    return {
+        "groups": group_reports,
+        "max_tokens_per_character_group": max_group,
+        "min_tokens_per_character_group": min_group,
+        "tokens_per_character_disparity": float("inf") if min_rate == 0 else rates[max_group] / min_rate,
+    }

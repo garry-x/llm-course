@@ -536,7 +536,7 @@ def encode(text, merges):
 
   <h4>一个小实验</h4>
   <p>选取英文、中文、代码、数学公式和 emoji/混合文本各 100 条，分别用不同 vocab size 或不同 tokenizer 编码，报告平均 token 数、P95 token 数、round-trip 是否成功，以及 embedding 参数量 <span class="katex-inline" data-expr="V \times d_{\text{model}}" aria-label="V \times d_{\text{model}}" role="img"></span>。如果中文平均 token 数是英文的 2-3 倍，那么同样 8K context 对中文用户的有效文本容量就更小；这不是模型能力问题，而是分词器成本问题。</p>
-  <p>Ch01 作业中的 <code>tokenizer_report(tokenizer, texts, vocab_size, d_model)</code> 对应这个实验的最小版本：它统计 <code>avg_tokens</code>、<code>p95_tokens</code>、<code>tokens_per_character</code>、<code>round_trip_success_rate</code> 和 <code>embedding_params</code>。学生应该用同一个文本集合比较不同 vocab size，而不是只报告“能 encode/decode”。</p>
+  <p>Ch01 作业中的 <code>tokenizer_report(tokenizer, texts, vocab_size, d_model)</code> 对应这个实验的最小版本：它统计 <code>avg_tokens</code>、<code>p95_tokens</code>、<code>tokens_per_character</code>、<code>round_trip_success_rate</code> 和 <code>embedding_params</code>。进一步的 <code>tokenizer_group_report(tokenizer, groups, vocab_size, d_model)</code> 会按英文、中文、代码、数学或 emoji 等分组分别报告 token 成本，并计算最高/最低 <code>tokens_per_character</code> 的 disparity。学生应该用同一个文本集合比较不同 vocab size，而不是只报告“能 encode/decode”或一个全局平均数。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tokenizer 是模型架构的一部分。它决定“文本长度”在模型眼里是多少，也决定 embedding、attention 和 KV Cache 的实际成本。</div></div>
 </section>

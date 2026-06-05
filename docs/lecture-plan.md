@@ -29,12 +29,12 @@
 
 - BPE 每次 merge 对序列长度和 vocab size 的影响。
 - 贪心 merge 与全局最优压缩之间的差距。
-- tokenizer 成本指标：tokens/character、P95 token count、embedding params。
+- tokenizer 成本指标：tokens/character、P95 token count、embedding params、分组 token cost disparity。
 
 课堂 demo：
 
 - 在小语料上手算 3 次 merge。
-- 对中英/代码/emoji 样本运行 tokenizer report。
+- 对中英/代码/emoji 样本运行 tokenizer report 和 group report。
 - 运行 `assignments/ch01_bpe/tests.py`，定位 `_get_stats` 与 `_merge` 的失败原因。
 
 Quick check：

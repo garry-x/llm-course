@@ -110,6 +110,39 @@ class TestTokenizerReport(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.tokenizer_report(tokenizer, [])
 
+    def test_tokenizer_group_report_compares_language_or_domain_costs(self):
+        tokenizer = submission.BPETokenizer()
+        groups = {
+            "english": ["hello world", "lower cost"],
+            "cjk": ["世界你好", "语言模型"],
+            "code": ["x = a + b", "def f(x): return x"],
+        }
+        tokenizer.train(" ".join(text for texts in groups.values() for text in texts), vocab_size=280)
+        report = submission.tokenizer_group_report(tokenizer, groups, vocab_size=280, d_model=16)
+
+        self.assertEqual(set(report["groups"]), set(groups))
+        for name, texts in groups.items():
+            expected = submission.tokenizer_report(tokenizer, texts, vocab_size=280, d_model=16)
+            self.assertEqual(report["groups"][name]["total_tokens"], expected["total_tokens"])
+            self.assertEqual(report["groups"][name]["embedding_params"], 280 * 16)
+
+        rates = {
+            name: group_report["tokens_per_character"]
+            for name, group_report in report["groups"].items()
+        }
+        max_group = max(rates, key=rates.get)
+        min_group = min(rates, key=rates.get)
+        self.assertEqual(report["max_tokens_per_character_group"], max_group)
+        self.assertEqual(report["min_tokens_per_character_group"], min_group)
+        self.assertAlmostEqual(report["tokens_per_character_disparity"], rates[max_group] / rates[min_group])
+
+    def test_tokenizer_group_report_rejects_empty_groups(self):
+        tokenizer = submission.BPETokenizer()
+        with self.assertRaises(ValueError):
+            submission.tokenizer_group_report(tokenizer, {})
+        with self.assertRaises(ValueError):
+            submission.tokenizer_group_report(tokenizer, {"empty": []})
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

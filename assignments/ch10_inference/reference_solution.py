@@ -199,6 +199,58 @@ def rerank_documents(query, candidates, scorer, top_k=None):
     return reranked[:top_k] if top_k is not None else reranked
 
 
+def maximal_marginal_relevance(query_embedding, doc_embeddings, doc_ids=None, top_k=3, lambda_mult=0.5):
+    if top_k <= 0:
+        raise ValueError("top_k must be positive")
+    if not 0.0 <= lambda_mult <= 1.0:
+        raise ValueError("lambda_mult must be in [0, 1]")
+    if query_embedding.dim() != 1:
+        raise ValueError("query_embedding must be a 1D tensor")
+    if doc_embeddings.dim() != 2:
+        raise ValueError("doc_embeddings must be a 2D tensor")
+    if doc_embeddings.size(0) == 0:
+        raise ValueError("doc_embeddings must contain at least one document")
+    if doc_embeddings.size(1) != query_embedding.numel():
+        raise ValueError("document embedding width must match query embedding length")
+    if doc_ids is not None and len(doc_ids) != doc_embeddings.size(0):
+        raise ValueError("doc_ids length must match number of documents")
+
+    ids = list(range(doc_embeddings.size(0))) if doc_ids is None else list(doc_ids)
+    query = F.normalize(query_embedding.float().unsqueeze(0), p=2, dim=1).squeeze(0)
+    docs = F.normalize(doc_embeddings.float(), p=2, dim=1)
+    query_sims = docs @ query
+    doc_sims = docs @ docs.t()
+
+    selected = []
+    selected_indices = []
+    remaining = list(range(doc_embeddings.size(0)))
+    top_k = min(top_k, len(remaining))
+
+    while remaining and len(selected) < top_k:
+        best = None
+        for idx in remaining:
+            redundancy = 0.0
+            if selected_indices:
+                redundancy = float(doc_sims[idx, selected_indices].max().item())
+            score = lambda_mult * float(query_sims[idx].item()) - (1.0 - lambda_mult) * redundancy
+            candidate = (score, -idx, idx, redundancy)
+            if best is None or candidate > best:
+                best = candidate
+        score, _neg_idx, idx, redundancy = best
+        selected.append(
+            {
+                "doc_id": ids[idx],
+                "index": idx,
+                "score": score,
+                "query_similarity": float(query_sims[idx].item()),
+                "diversity_penalty": redundancy,
+            }
+        )
+        selected_indices.append(idx)
+        remaining.remove(idx)
+    return selected
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         if overlap >= chunk_size:

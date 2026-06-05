@@ -65,6 +65,11 @@ def rerank_documents(query, candidates, scorer, top_k=None):
     raise NotImplementedError
 
 
+def maximal_marginal_relevance(query_embedding, doc_embeddings, doc_ids=None, top_k=3, lambda_mult=0.5):
+    """Select relevant but non-redundant documents with MMR."""
+    raise NotImplementedError
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         raise NotImplementedError

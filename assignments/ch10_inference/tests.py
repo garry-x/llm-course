@@ -191,6 +191,25 @@ class TestRetrievalMetrics(unittest.TestCase):
         self.assertEqual(reranked[0]["original_rank"], 2)
         self.assertEqual(reranked[0]["score"], 2.0)
 
+    def test_mmr_trades_query_similarity_against_redundancy(self):
+        query = torch.tensor([1.0, 0.0])
+        docs = torch.tensor(
+            [
+                [1.0, 0.0],
+                [0.9, 0.1],
+                [0.4, 0.8],
+            ]
+        )
+        selected = submission.maximal_marginal_relevance(
+            query,
+            docs,
+            doc_ids=["exact", "near_duplicate", "diverse"],
+            top_k=2,
+            lambda_mult=0.4,
+        )
+        self.assertEqual([item["doc_id"] for item in selected], ["exact", "diverse"])
+        self.assertGreater(selected[1]["diversity_penalty"], 0.0)
+
     def test_reranking_helpers_reject_invalid_inputs(self):
         with self.assertRaises(ValueError):
             submission.reciprocal_rank_fusion([], k=60)
@@ -198,6 +217,12 @@ class TestRetrievalMetrics(unittest.TestCase):
             submission.reciprocal_rank_fusion([["doc"]], k=0)
         with self.assertRaises(ValueError):
             submission.rerank_documents("q", [("doc", "text")], lambda _q, _d: 1.0, top_k=0)
+        with self.assertRaises(ValueError):
+            submission.maximal_marginal_relevance(torch.ones(2), torch.ones(2, 2), top_k=0)
+        with self.assertRaises(ValueError):
+            submission.maximal_marginal_relevance(torch.ones(2), torch.ones(2, 2), lambda_mult=1.5)
+        with self.assertRaises(ValueError):
+            submission.maximal_marginal_relevance(torch.ones(2), torch.ones(2, 3))
 
 
 class BagOfWordsEmbedder:

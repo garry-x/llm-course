@@ -617,6 +617,7 @@ Quick check：
 - quantization scale、dequantization error 和 ranking 误差。
 - RAG retrieval metrics：Recall@k、reciprocal rank 与 nDCG@k。
 - RRF 融合 dense/BM25 排序；rerank 改善前排相关性但会增加延迟。
+- MMR 在 query 相关性和 chunk 去冗余之间做贪心折中。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
 课堂 demo：
@@ -626,12 +627,14 @@ Quick check：
 - 给定 chosen/rejected reranker scores，手算 pairwise loss 和排序准确率。
 - 给定 retrieved/relevant ids 与 graded relevance，手算 Recall@k、reciprocal rank 和 nDCG@k。
 - 给定 dense/BM25 排序，手算 RRF 分数，再用 reranker 分数调整 top-k。
+- 给定 query-doc 和 doc-doc 相似度，手算 MMR 选择顺序。
 - 对 per-channel INT8 权重做 roundtrip。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 
 Quick check：
 
 - RAG 失败一定是模型生成错了吗？
+- 为什么 top-k 最相似 chunk 可能不是最好的 prompt context？
 - INT8 降低的是权重显存、KV cache 还是两者？
 - 一个多模态模型 VQA 分数高，是否能推出 OCR 或视觉定位可靠？
 

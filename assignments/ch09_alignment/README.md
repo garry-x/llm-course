@@ -33,6 +33,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch09_alignment/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 SFT mask、LoRA 参数量、DPO log-ratio、偏好数据偏差、GRPO 组内白化和奖励漏洞边界 |
+| Written questions | 35 | 推导 SFT mask、LoRA 参数量、DPO log-ratio、偏好数据偏差、GRPO 组内白化、奖励漏洞边界和对齐评估协议 |
 | Programming parts | 55 | 实现 SFT dataset/loss、sequence log prob、LoRA、DPO loss 和 GRPO advantages |
-| Analysis / style | 10 | 区分数据格式、目标函数、reference model、偏好数据偏差、奖励漏洞和安全边界 |
+| Analysis / style | 10 | 区分数据格式、目标函数、reference model、偏好数据偏差、helpfulness/honesty/harmlessness、过度拒答和能力回归 |

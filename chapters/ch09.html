@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第9章 微调与对齐</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO——从预训练到有用助手的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 15 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 16 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -730,6 +730,45 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 9.10A 对齐评估协议 -->
+<!-- ================================================================ -->
+<section class="card" id="s9-10a">
+  <h3>9.10A 对齐评估协议：不能只看 Preference Accuracy</h3>
+  <p>DPO 或 GRPO 训练日志里的 preference accuracy、reward mean、KL 值只说明模型在训练目标上发生了变化，不等于模型已经成为更好的助手。高校课程里需要把<strong>目标函数</strong>和<strong>评估问题</strong>分开：训练优化的是一个代理目标，最终关心的是 helpful、honest、harmless 以及原有能力是否退化。</p>
+
+  <h4>为什么单一 win rate 不够</h4>
+  <ul>
+    <li><strong>偏好胜率会混入风格偏差：</strong>更长、更礼貌、更自信的回答容易赢，但未必更正确。</li>
+    <li><strong>安全分数可能掩盖过度拒答：</strong>模型拒绝危险请求是进步，拒绝正常医学科普、法律常识或历史问题则是能力损失。</li>
+    <li><strong>奖励模型可能被利用：</strong>模型学会触发奖励模型偏好的措辞，而不是解决用户任务。</li>
+    <li><strong>对齐会改变基础能力：</strong>数学、代码、多轮跟随、长上下文和多语言能力都可能在对齐后下降。</li>
+  </ul>
+
+  <h4>评估矩阵</h4>
+  <table>
+    <thead><tr><th>维度</th><th>要回答的问题</th><th>常用指标</th><th>典型失败模式</th></tr></thead>
+    <tbody>
+      <tr><td>Helpfulness</td><td>是否真正完成用户任务</td><td>任务成功率、pairwise win rate、人工偏好</td><td>回答很流畅但没有解决问题</td></tr>
+      <tr><td>Honesty</td><td>不知道时是否承认不确定</td><td>事实题准确率、校准误差、引用可追溯性</td><td>幻觉、编造来源、过度自信</td></tr>
+      <tr><td>Harmlessness</td><td>危险请求是否被拒绝或安全改写</td><td>不安全完成率、安全拒答率</td><td>给出可执行伤害步骤</td></tr>
+      <tr><td>Over-refusal</td><td>正常请求是否被错误拒绝</td><td>良性请求完成率、误拒率</td><td>把普通科普、创作或分析误判为危险</td></tr>
+      <tr><td>Capability retention</td><td>原有能力是否保留</td><td>数学/代码/阅读理解/多语言任务分数</td><td>对齐后更安全但更不会做题</td></tr>
+      <tr><td>Style control</td><td>是否按要求控制长度、语气和格式</td><td>格式遵循率、长度分布、冗余率</td><td>模板化、啰嗦、拒绝解释过多</td></tr>
+    </tbody>
+  </table>
+
+  <h4>一个最小但系统的评估设计</h4>
+  <ol>
+    <li><strong>固定比较对象：</strong>至少比较 base、SFT、DPO/GRPO 三个 checkpoint，生成参数固定，例如 temperature、top-p、max tokens 和 system prompt 保持一致。</li>
+    <li><strong>按切片组织 prompt：</strong>通用问答、数学、代码、长上下文、多语言、安全危险请求、良性敏感请求各自成组，避免一个总分掩盖局部退化。</li>
+    <li><strong>同时记录自动指标和人工判断：</strong>有标准答案的任务用准确率；开放任务用 pairwise preference；安全任务区分“应该拒答”和“不该拒答”。</li>
+    <li><strong>报告失败类型：</strong>把错误归到幻觉、误拒、未遵循指令、能力退化、奖励漏洞或风格偏差，而不只报告平均分。</li>
+  </ol>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>对齐评估不是问“模型更像偏好数据了吗”，而是问“模型是否更可靠地帮助用户，同时在危险场景中保持边界，并且没有显著牺牲已有能力”。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 9.11 V4 On-Policy Distillation -->
 <!-- ================================================================ -->
 <section class="card" id="s9-11">
@@ -881,6 +920,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>GRPO 组内白化</strong> — 无需 Critic 的策略优化</li>
     <li>✅ <strong>编程练习 4：GRPO 优势估计</strong> — 组内白化 + PPO-clip + KL</li>
     <li>✅ <strong>编程练习 5：DPO vs GRPO 对比</strong> — 收敛速度与准确率</li>
+    <li>✅ <strong>对齐评估协议</strong> — 同时看 helpfulness、honesty、harmlessness、过度拒答和能力保留</li>
     <li>✅ <strong>编程练习 6：LoRA 合并推理</strong> — 适配器加载与合并</li>
     <li>✅ <strong>V4 OPD + 三档推理</strong> — on-policy 蒸馏</li>
     <li>✅ <strong>对齐税</strong> — SS/OS 评估与缓解策略</li>

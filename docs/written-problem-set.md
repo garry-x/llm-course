@@ -78,6 +78,7 @@
 3. 给定一组 chosen/rejected 回答，指出可能的长度偏差、风格偏差或标注者分歧，并说明这些偏差如何影响 DPO 或 RLHF。
 4. 说明 GRPO 组内白化如何减少不同 prompt reward scale 的影响，以及它不能解决哪些 reward hacking 问题。
 5. 比较 LoRA rank、alpha、target modules 对训练参数量、表达能力和合并推理的影响。
+6. 设计一个评估 DPO 模型是否优于 SFT/reference 的方案：至少包含 helpfulness、事实性、安全拒答、过度拒答和数学/代码能力保留，并解释为什么 preference win rate 不能单独作为结论。
 
 ## Ch10 Inference / RAG / Serving
 

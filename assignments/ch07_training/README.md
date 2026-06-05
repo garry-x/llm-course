@@ -34,4 +34,4 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 |------|:--:|------|
 | Written questions | 35 | 推导交叉熵、perplexity、AdamW 偏置修正、warmup+cosine 边界和 grad clipping 的诊断意义 |
 | Programming parts | 55 | 实现 dataset/dataloader、稳定 cross entropy、AdamW、scheduler 和训练循环 |
-| Analysis / style | 10 | 用训练日志解释 loss spike、NaN、grad_norm、tokens/s 和 resume 行为 |
+| Analysis / style | 10 | 用训练日志解释 loss spike、NaN、grad_norm、train/val 分叉、tokens/s 和 resume 行为 |

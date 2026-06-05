@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第7章 训练循环</h2>
   <p class="subtitle">从 MLE 到 AdamW/Muon + FP8/FP4 + DualPipe——极致的训练效率</p>
-  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 16 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 17 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -609,6 +609,40 @@ def train(model, dataloader, optimizer, scheduler, config,
 </section>
 
 <!-- ================================================================ -->
+<!-- 7.11A 训练日志诊断 -->
+<!-- ================================================================ -->
+<section class="card" id="s7-11a">
+  <h3>7.11A 如何读训练日志：从 loss 曲线到系统瓶颈</h3>
+  <p>能让 loss 下降只是训练工程的起点。高校级课程需要学生能解释<strong>为什么</strong>曲线这样变化：哪些现象是正常随机波动，哪些说明优化器、数据、数值精度或系统吞吐出了问题。训练日志至少应同时记录 <code>train_loss</code>、<code>val_loss</code>、<code>lr</code>、<code>grad_norm</code>、<code>tokens/s</code> 和 step。</p>
+
+  <h4>先区分三类问题</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>现象</th><th>更可能来自</th><th>第一步检查</th><th>常见处理</th></tr>
+      <tr><td>train loss 和 val loss 同时平滑下降</td><td>正常学习</td><td>确认 lr、batch tokens 和 eval split 固定</td><td>继续训练，观察是否进入平台期</td></tr>
+      <tr><td>train loss 下降、val loss 上升</td><td>过拟合、数据太小或开发集分布不同</td><td>比较 train/val 数据来源和重复样本</td><td>增加数据、正则化、早停或调整 mixture</td></tr>
+      <tr><td>loss 突然 spike 但随后恢复</td><td>异常 batch、过大学习率、混合精度尺度变化</td><td>定位该 step 的样本、lr 和 grad_norm</td><td>降低 max_lr、增强 clipping、过滤异常样本</td></tr>
+      <tr><td>loss 变成 NaN/Inf</td><td>数值溢出、FP16 scaler、logits 爆炸或无效数据</td><td>检查 logits、grad_norm、输入 token 是否越界</td><td>回退 checkpoint，降低 lr，切 BF16 或修正 loss mask</td></tr>
+      <tr><td>grad_norm 长期接近 0</td><td>学习率过低、梯度被错误清零、loss mask 错误</td><td>确认 labels 非全 -100，参数 requires_grad=True</td><td>修正 mask/冻结设置，提高 lr 或检查 backward</td></tr>
+      <tr><td>tokens/s 突然下降</td><td>IO、数据加载、显存碎片、通信或评测插入</td><td>比较 dataloader time、GPU utilization 和 batch shape</td><td>增加 num_workers、预取数据、固定 shape、减少同步日志</td></tr>
+    </table>
+  </div>
+
+  <h4>Grad norm 应该怎么解释</h4>
+  <p><code>grad_norm</code> 不是越小越好，也不是越大越好。它是当前 batch 对参数提出的更新强度。结合学习率看更有意义：高 <code>grad_norm</code> + 高 lr 容易造成 spike；高 <code>grad_norm</code> 但被 clipping 稳定截断，可能只是偶发 hard batch；低 <code>grad_norm</code> + loss 不降，常见于学习率太低、mask 错误或模型路径断开。</p>
+
+  <h4>一个实用的排查顺序</h4>
+  <ol>
+    <li><strong>先查数据和 label shift：</strong><code>x[:, 1:] == y[:, :-1]</code> 是否成立，padding/ignore_index 是否正确，是否有空样本、极长样本或重复污染。</li>
+    <li><strong>再查数值：</strong>logits、loss、grad_norm 是否有限；FP16 下 scaler 是否频繁跳变；BF16 是否更稳定。</li>
+    <li><strong>再查优化器：</strong>lr schedule 是否在 warmup 边界跳变，AdamW 权重衰减是否作用到 norm/bias，gradient clipping 是否在 unscale 之后。</li>
+    <li><strong>最后查系统：</strong>tokens/s 的瓶颈是在数据加载、前向/反向、optimizer step、评测还是 checkpoint 写盘。</li>
+  </ol>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>课程要求：</strong>训练报告不能只贴一张 loss 曲线。至少要说明曲线的阶段、一次异常波动的可能原因、train/val 是否分叉、吞吐瓶颈在哪里，以及你改变哪个因素后曲线如何变化。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 编程练习 6: Shakespeare Training -->
 <!-- ================================================================ -->
 <section class="card" id="s7-12">
@@ -777,6 +811,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     <li>✅ <strong>编程练习 3：AdamW</strong> — 动量 + 自适应学习率 + 解耦权重衰减</li>
     <li>✅ <strong>编程练习 4：Warmup + Cosine Decay</strong> — 学习率调度器</li>
     <li>✅ <strong>编程练习 5：完整训练循环</strong> — forward + backward + AMP + clipping + logging</li>
+    <li>✅ <strong>训练日志诊断</strong> — 用 loss、val loss、grad_norm 和 tokens/s 区分优化、数据、数值和系统问题</li>
     <li>✅ <strong>编程练习 6：Shakespeare 实战</strong> — 端到端训练 + 生成 + 绘图</li>
     <li>✅ <strong>Muon 优化器</strong> — Newton-Schulz 正交投影的理论</li>
     <li>✅ <strong>FP8/FP4</strong> — Block-wise 缩放、E4M3/E5M2、QAT</li>

@@ -3515,6 +3515,11 @@ def check_course_evidence_manifest_script() -> None:
         "docs/classic-nlp-deep-dive-module.md",
         "docs/nlp-evaluation-coverage.md",
         "Classic NLP Deep-Dive Teaching Module",
+        "docs/syllabus.md",
+        "docs/lecture-plan.md",
+        "docs/reading-list.md",
+        "docs/written-problem-set.md",
+        "docs/instructor-solution-guide.md",
         "frontier_source_evidence",
         "expected_marker_count",
         "38",
@@ -3548,6 +3553,13 @@ def check_course_evidence_manifest_script() -> None:
         fail(f"course evidence manifest missing files: {manifest['missing_required_files']}")
     if manifest.get("missing_required_markers"):
         fail(f"course evidence manifest missing markers: {manifest['missing_required_markers']}")
+
+    manifest_paths = {entry.get("path") for entry in manifest.get("required_evidence_files", [])}
+    missing_course_docs = sorted(
+        path for path in COURSE_DOCS if path.startswith("docs/") and path not in manifest_paths
+    )
+    if missing_course_docs:
+        fail(f"course evidence manifest missing COURSE_DOCS entries: {missing_course_docs[:10]}")
 
     benchmark = manifest.get("course_benchmark", {})
     if benchmark.get("url") != "https://web.stanford.edu/class/cs224n/":

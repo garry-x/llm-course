@@ -220,6 +220,46 @@ def pass_at_k(num_samples, num_correct, k):
     return 1.0 - probability_all_k_fail
 
 
+def self_consistency_vote(outputs, answer_extractor=None, token_counts=None):
+    if not outputs:
+        raise ValueError("outputs must be non-empty")
+    if token_counts is not None and len(token_counts) != len(outputs):
+        raise ValueError("token_counts must have the same length as outputs")
+    if token_counts is not None and any(count < 0 for count in token_counts):
+        raise ValueError("token_counts must be non-negative")
+
+    if answer_extractor is None:
+        answer_extractor = lambda text: str(text).strip()
+
+    counts = {}
+    first_seen = {}
+    answers = []
+    for idx, output in enumerate(outputs):
+        answer = str(answer_extractor(output)).strip()
+        answers.append(answer)
+        counts[answer] = counts.get(answer, 0) + 1
+        first_seen.setdefault(answer, idx)
+
+    vote_counts = sorted(
+        counts.items(),
+        key=lambda item: (-item[1], first_seen[item[0]]),
+    )
+    best_answer, best_count = vote_counts[0]
+    total_tokens = sum(token_counts) if token_counts is not None else None
+    mean_tokens = (total_tokens / len(outputs)) if token_counts is not None else None
+
+    return {
+        "answer": best_answer,
+        "count": best_count,
+        "vote_fraction": best_count / len(outputs),
+        "num_samples": len(outputs),
+        "answers": answers,
+        "vote_counts": vote_counts,
+        "total_tokens": total_tokens,
+        "mean_tokens": mean_tokens,
+    }
+
+
 def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
     if input_ids.size(0) != 1:
         raise ValueError("beam_search currently supports batch size 1")

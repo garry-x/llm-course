@@ -547,7 +547,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   </div>
 
   <h4>为什么它不同于普通 sampling</h4>
-  <p>普通 top-p 或 temperature 主要控制输出分布的熵；reasoning 生成关心的是<strong>搜索空间</strong>。同一个问题可以生成多条推理路径，每条路径都有自己的中间状态和最终答案。对有标准答案的任务，评价重点不是 distinct-n，而是 pass@k、majority vote accuracy、verifier accuracy、平均输出 token 数和单位正确答案成本。Ch08 作业中的 <code>pass_at_k</code> 使用 <code>1 - C(n-c,k)/C(n,k)</code> 估计从 <code>n</code> 个样本中抽取 <code>k</code> 个至少命中一个正确答案的概率。</p>
+  <p>普通 top-p 或 temperature 主要控制输出分布的熵；reasoning 生成关心的是<strong>搜索空间</strong>。同一个问题可以生成多条推理路径，每条路径都有自己的中间状态和最终答案。对有标准答案的任务，评价重点不是 distinct-n，而是 pass@k、majority vote accuracy、verifier accuracy、平均输出 token 数和单位正确答案成本。Ch08 作业中的 <code>pass_at_k</code> 使用 <code>1 - C(n-c,k)/C(n,k)</code> 估计从 <code>n</code> 个样本中抽取 <code>k</code> 个至少命中一个正确答案的概率；<code>self_consistency_vote</code> 则要求你显式定义 final-answer extractor，把多条候选输出聚合成 vote distribution，并同时报告总生成 token 数和平均 token 数。</p>
 
   <h4>计算预算怎么报告</h4>
   <p>如果一个方法把准确率从 60% 提到 72%，但每题从 1 次生成变成 32 次生成，就不能只报告准确率。至少要同时报告：</p>
@@ -743,7 +743,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <li>✅ <strong>编程练习 4：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，开放式生成常用策略之一</li>
     <li>✅ <strong>编程练习 5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
     <li>✅ <strong>生成评估边界</strong> — 区分多样性、质量、事实性、延迟和任务完成率</li>
-    <li>✅ <strong>推理式生成</strong> — CoT、self-consistency、best-of-N、verifier 和 test-time compute 取舍</li>
+    <li>✅ <strong>推理式生成</strong> — CoT、self-consistency voting、pass@k、best-of-N、verifier 和 test-time compute 取舍</li>
     <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，理解分布保持加速的适用条件</li>
     <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
     <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>

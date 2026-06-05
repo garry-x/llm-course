@@ -73,6 +73,11 @@ def pass_at_k(num_samples, num_correct, k):
     raise NotImplementedError
 
 
+def self_consistency_vote(outputs, answer_extractor=None, token_counts=None):
+    """Aggregate multiple reasoning samples by majority vote over extracted final answers."""
+    raise NotImplementedError
+
+
 def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
     """Run beam search for a single prompt and return (best_sequence, beam_table)."""
     raise NotImplementedError

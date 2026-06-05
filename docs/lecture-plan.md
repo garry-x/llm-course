@@ -403,13 +403,14 @@ Quick check：
 
 - speculative decoding 加速受 `draft_cost`、`accept_rate`、verify batch size 共同影响。
 - self-consistency、best-of-N 和 verifier reranking 的准确率/成本权衡。
+- self-consistency 需要定义 final-answer extractor；多数投票报告 vote distribution，不能只报告最后选出的答案。
 - pass@k：从 `n` 个样本中有 `c` 个正确时，估计抽取 `k` 个至少命中一次的概率。
 - 约束生成把无效 token mask 到候选集之外。
 
 课堂 demo：
 
 - 运行 speculative decoding toy model，记录接受率。
-- 对同一数学题采样多条推理路径，比较 single-sample、majority vote 和 best-of-N。
+- 对同一数学题采样多条推理路径，抽取最终答案，比较 single-sample、majority vote 和 best-of-N。
 - 给定 `n,c,k` 手算 pass@k，并讨论它和单样本准确率的差异。
 - 构造 JSON 输出失败和修复策略。
 
@@ -421,7 +422,7 @@ Quick check：
 
 课后产出：
 
-- A6 speculative decoding 输出统计。
+- A6 self-consistency vote 和 speculative decoding 输出统计。
 - 阅读复盘：speculative decoding 或 self-consistency 的失败条件。
 
 ## Week 7 Lecture 13: SFT、LoRA 与 Parameter-Efficient Tuning

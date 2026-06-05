@@ -181,6 +181,43 @@ class TestBeamSearch(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.pass_at_k(5, 1, 6)
 
+    def test_self_consistency_vote_aggregates_extracted_answers_and_cost(self):
+        outputs = [
+            "path one\nanswer=42",
+            "path two\nanswer=41",
+            "path three\nanswer=42",
+        ]
+
+        def extract_answer(text):
+            return text.rsplit("=", 1)[-1]
+
+        report = submission.self_consistency_vote(
+            outputs,
+            answer_extractor=extract_answer,
+            token_counts=[12, 15, 18],
+        )
+        self.assertEqual(report["answer"], "42")
+        self.assertEqual(report["count"], 2)
+        self.assertEqual(report["num_samples"], 3)
+        self.assertAlmostEqual(report["vote_fraction"], 2 / 3)
+        self.assertEqual(report["answers"], ["42", "41", "42"])
+        self.assertEqual(report["vote_counts"], [("42", 2), ("41", 1)])
+        self.assertEqual(report["total_tokens"], 45)
+        self.assertEqual(report["mean_tokens"], 15)
+
+    def test_self_consistency_vote_ties_use_first_seen_answer(self):
+        report = submission.self_consistency_vote(["A", "B", "B", "A"])
+        self.assertEqual(report["answer"], "A")
+        self.assertEqual(report["vote_counts"], [("A", 2), ("B", 2)])
+
+    def test_self_consistency_vote_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.self_consistency_vote([])
+        with self.assertRaises(ValueError):
+            submission.self_consistency_vote(["A"], token_counts=[1, 2])
+        with self.assertRaises(ValueError):
+            submission.self_consistency_vote(["A"], token_counts=[-1])
+
     def test_beam_search_keeps_multiple_candidates_and_reports_scores(self):
         model = BeamToyModel()
         prompt = torch.tensor([[0]])

@@ -69,6 +69,7 @@
 2. 手算一个 5 token 词表的 top-p nucleus：给定概率 `[0.40, 0.25, 0.20, 0.10, 0.05]`，当 `p=0.7` 和 `p=0.9` 时各保留哪些 token。
 3. 说明 beam search 为什么常需要长度惩罚，并比较它与 sampling 在开放式生成任务中的适用场景。
 4. 解释 speculative decoding 的接受率如何影响吞吐，为什么 draft model 过弱或过强都可能不划算。
+5. 设计一个比较 greedy、top-p 和 temperature sampling 的小实验：写出 prompt 集、随机种子、输出长度、distinct-n、重复率、任务正确率或人工偏好指标，并说明每个指标的局限。
 
 ## Ch09 Fine-tuning / Alignment
 

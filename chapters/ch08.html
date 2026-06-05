@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第8章 文本生成</h2>
   <p class="subtitle">采样策略 + DeepSeek MTP 推测解码——从概率到文本的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 12 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 13 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -461,6 +461,46 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
 </section>
 
 <!-- ================================================================ -->
+<!-- 8.7A 生成评估边界 -->
+<!-- ================================================================ -->
+<section class="card" id="s8-7a">
+  <h3>8.7A 如何评价生成策略：多样性不是质量，低重复也不是正确</h3>
+  <p>比较 decoding 策略时，最常见的错误是只看一两个样例，或者只报告 distinct-n。生成质量是多目标问题：同一个策略可能提高多样性，同时降低事实性、格式稳定性或可复现性。严谨实验需要把<strong>任务类型、采样参数、随机种子、输出长度和评价指标</strong>固定下来。</p>
+
+  <h4>指标分别回答什么问题</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>指标/方法</th><th>主要回答</th><th>不能说明</th><th>适用场景</th></tr>
+      <tr><td>distinct-1 / distinct-2</td><td>输出 n-gram 多样性和重复程度</td><td>事实正确、逻辑连贯或任务完成</td><td>开放式生成、退化重复分析</td></tr>
+      <tr><td>重复率 / self-BLEU</td><td>模型是否在样本内或样本间重复</td><td>高重复是否一定错误</td><td>长文本、故事、对话生成</td></tr>
+      <tr><td>exact match / F1 / pass@k</td><td>是否完成有明确答案的任务</td><td>开放式文本的风格和偏好</td><td>QA、抽取、代码、数学短答</td></tr>
+      <tr><td>人工偏好或 pairwise ranking</td><td>人类更喜欢哪种输出</td><td>偏好原因是否来自事实性、风格还是长度</td><td>对话、摘要、创意写作</td></tr>
+      <tr><td>延迟与成本指标</td><td>TTFT、TPOT、tokens/s、每 1M tokens 成本</td><td>语义质量</td><td>服务部署和策略调参</td></tr>
+    </table>
+  </div>
+
+  <h4>为什么要做参数 sweep</h4>
+  <p>Temperature、top-k 和 top-p 不是孤立开关。较高 temperature 通常增加熵；较低 top-p 会截断尾部；二者组合后可能互相抵消或放大。一个合理实验应在同一 prompt 集上比较多组参数，例如：</p>
+  <div class="code-block" data-lang="text">
+temperature in {0.2, 0.7, 1.0}
+top_p       in {0.8, 0.9, 0.95}
+max_tokens  fixed
+seeds       at least 3
+metrics     distinct-2, repetition rate, task score, latency</div>
+  <p>如果只用一个 prompt、一个 seed、一个样例输出下结论，通常不足以说明策略优劣。开放式生成还应保存失败样例：重复循环、提前停止、跑题、事实错误、格式破坏和过度保守都属于不同失败模式。</p>
+
+  <h4>策略选择的实际判断</h4>
+  <ul>
+    <li><strong>代码、数学、抽取：</strong>优先低温或 beam / pass@k；多样性不是主要目标，正确性和可复现性更重要。</li>
+    <li><strong>创意写作、头脑风暴：</strong>可提高 temperature/top-p，但需要监控重复、跑题和安全边界。</li>
+    <li><strong>结构化输出：</strong>采样策略不能替代 schema 约束；应优先使用结构化解码或输出校验。</li>
+    <li><strong>在线服务：</strong>需要同时看质量和 TPOT/吞吐；高 top-p 可能增加输出长度和后处理失败率。</li>
+  </ul>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>实验结论写法：</strong>不要写“top-p 最好”。应写“在某个 prompt 集、长度上限、温度、top-p、随机种子和指标下，top-p=0.9 相比 greedy 降低重复率但增加输出方差；人工检查中某些样例更发散”。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 8.8 MTP Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s8-8">
@@ -641,6 +681,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <li>✅ <strong>编程练习 3：Top-K Sampling</strong> — 固定 K 截断，缺点是无法自适应</li>
     <li>✅ <strong>编程练习 4：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，开放式生成常用策略之一</li>
     <li>✅ <strong>编程练习 5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
+    <li>✅ <strong>生成评估边界</strong> — 区分多样性、质量、事实性、延迟和任务完成率</li>
     <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，理解分布保持加速的适用条件</li>
     <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
     <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>

@@ -31,14 +31,16 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 ## Written Drill Expectations
 
 - 按 `classic-nlp-handout.md` 的 `I saw her` worked example，写出 stack / buffer / arcs transition table。
+- 写出 seq2seq 的 `p(y | x)` 条件概率分解、teacher forcing loss，并解释 cross-attention 中 `alpha_{t,i}` 与 `c_t` 的含义。
 - 给定一组 beam candidates，比较 sum log prob、length-normalized score 和 length penalty 后的排序。
 - 给定 BERT tokens 和 mask positions，写出 masked input、labels 和 loss positions。
+- 给定一个 candidate/reference，说明 BLEU clipped precision、ROUGE-L、EM/F1 分别会奖励或惩罚什么。
 - 构造一个 BLEU、ROUGE、EM/F1 或 LLM-as-judge 看似高分但人工质量差的 metric failure case。
 
 ## 评分 Rubric
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 40 | 解释 dependency parsing、beam search length bias、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
+| Written questions | 40 | 解释 dependency parsing、seq2seq/cross-attention、beam search length bias、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
 | Programming parts | 50 | 实现 UAS/LAS、BLEU、ROUGE-L、QA EM/F1 和 MLM mask example |
 | Analysis / style | 10 | 构造至少 2 个指标高但人工质量差的例子，并说明指标局限 |

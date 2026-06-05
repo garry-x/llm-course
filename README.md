@@ -104,7 +104,7 @@ Capstone 展示后的项目答辩和个人口头追问题库见 [Capstone Defens
 
 开课前 readiness 证据包见 [Pre-Semester Readiness Audit](docs/presemester-readiness-audit.md)，集中记录 CS224N current snapshot verifier、课程总门禁、student release safety、browser smoke、作业测试、capstone 验收要求和人工 sign-off 边界。
 
-机器可读 evidence manifest 由 [scripts/generate_course_evidence_manifest.py](scripts/generate_course_evidence_manifest.py) 生成，用于归档 readiness 文档、CS224N snapshot、release safety、capstone gate 和人工 sign-off 边界的可追踪证据。
+机器可读 evidence manifest 由 [scripts/generate_course_evidence_manifest.py](scripts/generate_course_evidence_manifest.py) 生成；当前 readiness 证据覆盖 `required_evidence_files: 111`、`required_marker_checks: 63`、全部 `COURSE_DOCS` 文档、核心教学包、教师/评分包、来源清单、classic NLP deep-dive、release safety、capstone gate 和人工 sign-off 边界。
 
 课程数据、模型、tokenizer、checkpoint、评测集合和 runtime asset 的资产级来源登记见 [Dataset, Model, and Artifact Provenance Registry](docs/dataset-model-artifact-registry.md)，用于把 data ethics、source inventory、环境复现和项目报告中的 provenance 要求落到可检查的 artifact ID。
 

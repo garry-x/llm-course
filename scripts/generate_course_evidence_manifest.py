@@ -1017,6 +1017,9 @@ MARKER_CHECKS = {
     ],
     "README.md": [
         "Pre-Semester Readiness Audit",
+        "required_evidence_files: 111",
+        "required_marker_checks: 63",
+        "COURSE_DOCS",
         ".venv/bin/python verify_course.py",
         ".venv/bin/python verify_course.py --capstone --training",
     ],

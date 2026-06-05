@@ -391,12 +391,14 @@ Quick check：
 
 - speculative decoding 加速受 `draft_cost`、`accept_rate`、verify batch size 共同影响。
 - self-consistency、best-of-N 和 verifier reranking 的准确率/成本权衡。
+- pass@k：从 `n` 个样本中有 `c` 个正确时，估计抽取 `k` 个至少命中一次的概率。
 - 约束生成把无效 token mask 到候选集之外。
 
 课堂 demo：
 
 - 运行 speculative decoding toy model，记录接受率。
 - 对同一数学题采样多条推理路径，比较 single-sample、majority vote 和 best-of-N。
+- 给定 `n,c,k` 手算 pass@k，并讨论它和单样本准确率的差异。
 - 构造 JSON 输出失败和修复策略。
 
 Quick check：

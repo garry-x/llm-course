@@ -32,6 +32,11 @@ def length_normalized_score(logprob_sum, length, alpha=1.0):
     raise NotImplementedError
 
 
+def pass_at_k(num_samples, num_correct, k):
+    """Estimate pass@k from n sampled solutions and c correct solutions."""
+    raise NotImplementedError
+
+
 def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
     """Run beam search for a single prompt and return (best_sequence, beam_table)."""
     raise NotImplementedError

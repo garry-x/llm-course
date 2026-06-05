@@ -138,6 +138,23 @@ class TestBeamSearch(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.length_normalized_score(-1.0, length=1, alpha=-0.5)
 
+    def test_pass_at_k_estimates_success_probability(self):
+        self.assertEqual(submission.pass_at_k(num_samples=10, num_correct=0, k=3), 0.0)
+        self.assertEqual(submission.pass_at_k(num_samples=10, num_correct=8, k=3), 1.0)
+        expected = 1.0 - (8 / 10) * (7 / 9) * (6 / 8)
+        self.assertAlmostEqual(submission.pass_at_k(num_samples=10, num_correct=2, k=3), expected)
+        self.assertAlmostEqual(submission.pass_at_k(num_samples=10, num_correct=2, k=1), 0.2)
+
+    def test_pass_at_k_rejects_invalid_counts(self):
+        with self.assertRaises(ValueError):
+            submission.pass_at_k(0, 0, 1)
+        with self.assertRaises(ValueError):
+            submission.pass_at_k(5, 6, 1)
+        with self.assertRaises(ValueError):
+            submission.pass_at_k(5, 1, 0)
+        with self.assertRaises(ValueError):
+            submission.pass_at_k(5, 1, 6)
+
     def test_beam_search_keeps_multiple_candidates_and_reports_scores(self):
         model = BeamToyModel()
         prompt = torch.tensor([[0]])

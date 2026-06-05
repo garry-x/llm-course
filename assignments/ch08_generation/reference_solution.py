@@ -125,6 +125,25 @@ def length_normalized_score(logprob_sum, length, alpha=1.0):
     return float(logprob_sum) / (float(length) ** alpha)
 
 
+def pass_at_k(num_samples, num_correct, k):
+    if num_samples <= 0:
+        raise ValueError("num_samples must be positive")
+    if k <= 0 or k > num_samples:
+        raise ValueError("k must be in [1, num_samples]")
+    if num_correct < 0 or num_correct > num_samples:
+        raise ValueError("num_correct must be in [0, num_samples]")
+    if num_correct == 0:
+        return 0.0
+    incorrect = num_samples - num_correct
+    if incorrect < k:
+        return 1.0
+
+    probability_all_k_fail = 1.0
+    for offset in range(k):
+        probability_all_k_fail *= (incorrect - offset) / (num_samples - offset)
+    return 1.0 - probability_all_k_fail
+
+
 def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
     if input_ids.size(0) != 1:
         raise ValueError("beam_search currently supports batch size 1")

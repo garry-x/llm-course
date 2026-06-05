@@ -27,6 +27,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch08_generation/tests.py
 - Top-K 必须只在最高 K 个 token 内采样，并处理 `k > vocab_size`。
 - Top-P 必须保留累计概率达到阈值的最小 nucleus，并重新归一化。
 - Beam search 必须保留多个候选，累加 log probability，并支持长度归一化评分。
+- `pass_at_k` 应使用 `1 - C(n-c,k)/C(n,k)` 的采样成功率估计，连接代码/数学任务中的多样本评测。
 - `Generator` 应提供统一生成接口，并能计算 distinct-n 多样性指标。
 - 简化推测解码应返回生成序列和接受率统计，便于比较 draft/target 一致性。
 
@@ -35,5 +36,5 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch08_generation/tests.py
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
 | Written questions | 35 | 比较 greedy、beam、temperature、top-k、top-p、repetition penalty、CoT/self-consistency/best-of-N、speculative decoding、生成评估指标和约束解码的适用边界 |
-| Programming parts | 55 | 实现 greedy/beam/temperature、top-k、top-p、Generator 指标和 speculative decoding |
+| Programming parts | 55 | 实现 greedy/beam/temperature、top-k、top-p、pass@k、Generator 指标和 speculative decoding |
 | Analysis / style | 10 | 解释质量、多样性、事实性、推理正确率、test-time compute、延迟、退化风险、参数 sweep 和采样参数边界 |

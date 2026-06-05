@@ -15,6 +15,16 @@ class TokenEmbedding(nn.Module):
         raise NotImplementedError
 
 
+def build_cooccurrence_matrix(token_ids, vocab_size, window_size):
+    """Count directed center->context co-occurrences inside a fixed window."""
+    raise NotImplementedError
+
+
+def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_vectors):
+    """Return mean SGNS loss for center, positive context, and negative vectors."""
+    raise NotImplementedError
+
+
 class SinusoidalEncoding(nn.Module):
     """Fixed sinusoidal positional encoding."""
 

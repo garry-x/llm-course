@@ -51,6 +51,7 @@
 复盘问题：
 
 - BPE merge 规则为什么是贪心的？它在哪些语料上会产生不符合语义直觉的 token？
+- skip-gram 的窗口共现样本如何变成 positive/negative 二分类目标？
 - word2vec 的类比现象是训练目标直接保证的吗？还是空间结构中的经验现象？
 
 ## Week 2: Attention 与 Tensor Derivatives

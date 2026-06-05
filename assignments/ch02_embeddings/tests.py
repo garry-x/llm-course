@@ -35,6 +35,54 @@ class TestTokenEmbedding(unittest.TestCase):
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch02 embedding tests")
+class TestWordVectorObjectives(unittest.TestCase):
+    def test_cooccurrence_matrix_counts_directed_window_context(self):
+        ids = [0, 1, 2, 1]
+        counts = submission.build_cooccurrence_matrix(ids, vocab_size=3, window_size=1)
+        expected = torch.tensor(
+            [
+                [0, 1, 0],
+                [1, 0, 2],
+                [0, 2, 0],
+            ],
+            dtype=torch.long,
+        )
+        self.assertTrue(torch.equal(counts, expected))
+
+    def test_cooccurrence_matrix_rejects_invalid_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.build_cooccurrence_matrix([0], vocab_size=0, window_size=1)
+        with self.assertRaises(ValueError):
+            submission.build_cooccurrence_matrix([0], vocab_size=1, window_size=0)
+        with self.assertRaises(ValueError):
+            submission.build_cooccurrence_matrix([2], vocab_size=2, window_size=1)
+
+    def test_skipgram_negative_sampling_loss_matches_manual_formula(self):
+        center = torch.tensor([[1.0, 0.0], [0.5, 0.5]])
+        positive = torch.tensor([[0.5, 0.0], [0.25, 0.75]])
+        negative = torch.tensor(
+            [
+                [[-1.0, 0.0], [0.0, -1.0]],
+                [[-0.5, 0.0], [0.0, -0.5]],
+            ]
+        )
+        loss = submission.skipgram_negative_sampling_loss(center, positive, negative)
+        positive_logits = torch.tensor([0.5, 0.5])
+        negative_logits = torch.tensor([[-1.0, 0.0], [-0.25, -0.25]])
+        expected = (
+            -torch.nn.functional.logsigmoid(positive_logits)
+            - torch.nn.functional.logsigmoid(-negative_logits).sum(dim=-1)
+        ).mean()
+        self.assertTrue(torch.allclose(loss, expected, atol=1e-6))
+
+    def test_skipgram_negative_sampling_loss_rejects_bad_shapes(self):
+        with self.assertRaises(ValueError):
+            submission.skipgram_negative_sampling_loss(torch.randn(2), torch.randn(2), torch.randn(1, 1, 2))
+        with self.assertRaises(ValueError):
+            submission.skipgram_negative_sampling_loss(torch.randn(2, 3), torch.randn(2, 3), torch.randn(2, 4))
+
+
+@unittest.skipIf(torch is None, "PyTorch is required for Ch02 embedding tests")
 class TestSinusoidalEncoding(unittest.TestCase):
     def test_buffer_no_trainable_parameters_and_shape(self):
         pe = submission.SinusoidalEncoding(d_model=8, max_len=16)

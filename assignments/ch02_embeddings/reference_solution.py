@@ -4,6 +4,7 @@ import math
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class TokenEmbedding(nn.Module):
@@ -16,6 +17,45 @@ class TokenEmbedding(nn.Module):
 
     def forward(self, x):
         return self.embed(x) * math.sqrt(self.d_model)
+
+
+def build_cooccurrence_matrix(token_ids, vocab_size, window_size):
+    if vocab_size <= 0:
+        raise ValueError("vocab_size must be positive")
+    if window_size <= 0:
+        raise ValueError("window_size must be positive")
+    ids = [int(token_id) for token_id in token_ids]
+    counts = torch.zeros(vocab_size, vocab_size, dtype=torch.long)
+    for center_pos, center_id in enumerate(ids):
+        if center_id < 0 or center_id >= vocab_size:
+            raise ValueError("token id out of vocabulary range")
+        left = max(0, center_pos - window_size)
+        right = min(len(ids), center_pos + window_size + 1)
+        for context_pos in range(left, right):
+            if context_pos == center_pos:
+                continue
+            context_id = ids[context_pos]
+            if context_id < 0 or context_id >= vocab_size:
+                raise ValueError("token id out of vocabulary range")
+            counts[center_id, context_id] += 1
+    return counts
+
+
+def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_vectors):
+    if center_vectors.dim() != 2 or positive_vectors.dim() != 2:
+        raise ValueError("center_vectors and positive_vectors must have shape [B, D]")
+    if negative_vectors.dim() != 3:
+        raise ValueError("negative_vectors must have shape [B, K, D]")
+    if center_vectors.shape != positive_vectors.shape:
+        raise ValueError("center_vectors and positive_vectors must have the same shape")
+    if negative_vectors.size(0) != center_vectors.size(0) or negative_vectors.size(2) != center_vectors.size(1):
+        raise ValueError("negative_vectors must align with batch size and embedding dimension")
+
+    positive_logits = torch.sum(center_vectors * positive_vectors, dim=-1)
+    negative_logits = torch.sum(negative_vectors * center_vectors.unsqueeze(1), dim=-1)
+    positive_loss = -F.logsigmoid(positive_logits)
+    negative_loss = -F.logsigmoid(-negative_logits).sum(dim=-1)
+    return (positive_loss + negative_loss).mean()
 
 
 class SinusoidalEncoding(nn.Module):

@@ -98,6 +98,14 @@
   </div>
   <p>这里 <span class="katex-inline" data-expr="\mathbf{v}_c" aria-label="\mathbf{v}_c" role="img"></span> 是中心词向量，<span class="katex-inline" data-expr="\mathbf{u}_o" aria-label="\mathbf{u}_o" role="img"></span> 是真实上下文词的输出向量，负样本来自噪声分布 <span class="katex-inline" data-expr="P_n(w)" aria-label="P_n(w)" role="img"></span>。如果两个词经常共享上下文，它们会在训练中获得相似的向量方向。</p>
 
+  <h4>从窗口共现到 loss：为什么这是可计算作业</h4>
+  <p>skip-gram 的训练样本来自滑动窗口。给定 token 序列 <code>[0, 1, 2, 1]</code> 和窗口大小 1，中心词 1 会把左右相邻 token 0、2、2 计作上下文；这会形成一个 directed co-occurrence matrix <span class="katex-inline" data-expr="C_{center,context}" aria-label="C_{center,context}" role="img"></span>。Ch02 作业中的 <code>build_cooccurrence_matrix</code> 就让学生把这个统计过程写成代码。</p>
+  <p>SGNS loss 则把每个真实 <code>(center, context)</code> 对当作正例，把从噪声分布采样的 token 当作负例。对一个 batch：</p>
+  <div class="math-box"><div class="label">SGNS Batch Loss</div>
+    <div class="katex" data-expr="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" aria-label="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" role="img"></div>
+  </div>
+  <p>作业函数 <code>skipgram_negative_sampling_loss</code> 的输入形状是 <code>center_vectors [B,D]</code>、<code>positive_vectors [B,D]</code> 和 <code>negative_vectors [B,K,D]</code>。这让学生看到：word vectors 不是抽象概念，而是由 dot product、sigmoid 和二分类 loss 训练出来的。</p>
+
   <h4>GloVe：从全局共现矩阵学习</h4>
   <p>GloVe 从全局词-词共现矩阵 <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span> 出发，用加权最小二乘拟合共现对数：</p>
   <div class="math-box"><div class="label">GloVe Objective</div>

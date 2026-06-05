@@ -21,6 +21,11 @@ def recurrent_gradient_factors(hidden_states, w_hh):
     raise NotImplementedError
 
 
+def additive_attention_context(decoder_state, encoder_states, w_s, w_h, v):
+    """Compute seq2seq additive-attention scores, weights, and context vector."""
+    raise NotImplementedError
+
+
 def sentence_bleu(candidate, references, max_n=4):
     """Compute sentence BLEU with clipped n-gram precision."""
     raise NotImplementedError

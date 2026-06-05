@@ -177,6 +177,8 @@ p(y_t | y_<t, x) = softmax(W [s_t; c_t] + b)
 
 其中 `h_i` 是 source encoder state，`s_t` 是 decoder state，`alpha_t` 可作为 alignment 诊断。
 
+Ch11 的 `additive_attention_context` 对应这一步数值计算。它让学生明确三件事：scores 是未归一化 alignment logits；`alpha_{t,i}` 是对 source positions 的概率分布；context vector `c_t` 与 encoder state 同维，并由 source 表示加权求和得到。
+
 边界：
 
 - attention alignment 可帮助定位翻译漏译、重译或错译。
@@ -285,6 +287,7 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 | `recurrent_gradient_factors` | BPTT 局部梯度因子与长程路径 |
 | `attachment_scores` | UAS/LAS head 与 label 对齐 |
 | `sentence_bleu` | clipped precision 与 brevity penalty |
+| `additive_attention_context` | seq2seq alignment scores、softmax weights 和 context vector |
 | `rouge_l_f1` | LCS-based precision/recall/F1 |
 | `exact_match_and_f1` | QA normalization 与 token overlap |
 | `build_mlm_example` | MLM mask positions、labels 和 ignore index |

@@ -48,6 +48,63 @@ def recurrent_gradient_factors(hidden_states, w_hh):
     return [float(w_hh) * (1.0 - float(h_t) ** 2) for h_t in hidden_states]
 
 
+def _matvec(matrix, vector):
+    return [sum(float(weight) * float(value) for weight, value in zip(row, vector)) for row in matrix]
+
+
+def _dot(left, right):
+    return sum(float(x) * float(y) for x, y in zip(left, right))
+
+
+def _validate_rectangular_matrix(name, matrix):
+    if not matrix:
+        raise ValueError(f"{name} must not be empty")
+    width = len(matrix[0])
+    if width == 0:
+        raise ValueError(f"{name} rows must not be empty")
+    if any(len(row) != width for row in matrix):
+        raise ValueError(f"{name} must be rectangular")
+    return width
+
+
+def additive_attention_context(decoder_state, encoder_states, w_s, w_h, v):
+    """Compute seq2seq additive-attention scores, weights, and context vector."""
+    if not decoder_state:
+        raise ValueError("decoder_state must not be empty")
+    source_dim = _validate_rectangular_matrix("encoder_states", encoder_states)
+    decoder_dim = _validate_rectangular_matrix("w_s", w_s)
+    hidden_dim = len(w_s)
+    if decoder_dim != len(decoder_state):
+        raise ValueError("w_s width must match decoder_state length")
+    if len(w_h) != hidden_dim:
+        raise ValueError("w_h must have the same row count as w_s")
+    encoder_dim = _validate_rectangular_matrix("w_h", w_h)
+    if encoder_dim != source_dim:
+        raise ValueError("w_h width must match encoder state length")
+    if len(v) != hidden_dim:
+        raise ValueError("v length must match attention hidden size")
+
+    projected_decoder = _matvec(w_s, decoder_state)
+    scores = []
+    for encoder_state in encoder_states:
+        projected_encoder = _matvec(w_h, encoder_state)
+        hidden = [
+            math.tanh(dec_part + enc_part)
+            for dec_part, enc_part in zip(projected_decoder, projected_encoder)
+        ]
+        scores.append(_dot(v, hidden))
+
+    max_score = max(scores)
+    exp_scores = [math.exp(score - max_score) for score in scores]
+    normalizer = sum(exp_scores)
+    weights = [score / normalizer for score in exp_scores]
+    context = [
+        sum(weight * encoder_state[dim] for weight, encoder_state in zip(weights, encoder_states))
+        for dim in range(source_dim)
+    ]
+    return {"scores": scores, "weights": weights, "context": context}
+
+
 def _ngrams(tokens, n):
     return [tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
 

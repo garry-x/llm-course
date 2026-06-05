@@ -134,6 +134,8 @@ p(y_t | y_<t, x) = softmax(W_o [s_t; c_t])
 
 这里 `alpha_{t,i}` 是 decoder 第 `t` 步对源端第 `i` 个 token 的注意力权重。它可以帮助诊断漏译、重译或错译，但不能直接当成严格的因果解释。
 
+Ch11 的 `additive_attention_context` 把这组公式做成纯 Python 练习：学生需要先算每个源位置的 score，再做 softmax 归一化，最后用 `alpha` 对 encoder states 加权求和得到 `c_t`。这个练习的重点不是训练一个翻译系统，而是把 encoder-decoder attention 的信息流从图示落实到可复算的数值。
+
 ### 核心问题
 
 - Exposure bias：训练时 decoder 看到 gold prefix，推理时看到自己生成的 prefix。

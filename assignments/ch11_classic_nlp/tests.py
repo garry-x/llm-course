@@ -50,6 +50,49 @@ class TestRNNFoundations(unittest.TestCase):
         self.assertLess(product, factors[0])
 
 
+class TestSeq2SeqAttention(unittest.TestCase):
+    def test_additive_attention_returns_alignment_and_context(self):
+        decoder_state = [0.2, -0.1]
+        encoder_states = [[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]]
+        w_s = [[1.0, 0.0], [0.0, 1.0]]
+        w_h = [[0.5, 0.0], [0.0, 0.5]]
+        v = [1.0, -1.0]
+
+        result = solution.additive_attention_context(decoder_state, encoder_states, w_s, w_h, v)
+
+        projected_decoder = decoder_state
+        manual_scores = []
+        for state in encoder_states:
+            hidden = [
+                math.tanh(projected_decoder[0] + 0.5 * state[0]),
+                math.tanh(projected_decoder[1] + 0.5 * state[1]),
+            ]
+            manual_scores.append(hidden[0] - hidden[1])
+
+        exp_scores = [math.exp(score - max(manual_scores)) for score in manual_scores]
+        manual_weights = [score / sum(exp_scores) for score in exp_scores]
+        manual_context = [
+            sum(weight * state[0] for weight, state in zip(manual_weights, encoder_states)),
+            sum(weight * state[1] for weight, state in zip(manual_weights, encoder_states)),
+        ]
+
+        self.assertEqual(len(result["scores"]), 3)
+        self.assertTrue(all(weight > 0.0 for weight in result["weights"]))
+        self.assertAlmostEqual(sum(result["weights"]), 1.0)
+        for actual, expected in zip(result["scores"], manual_scores):
+            self.assertAlmostEqual(actual, expected)
+        for actual, expected in zip(result["context"], manual_context):
+            self.assertAlmostEqual(actual, expected)
+
+    def test_additive_attention_rejects_bad_shapes(self):
+        with self.assertRaises(ValueError):
+            solution.additive_attention_context([], [[1.0]], [[1.0]], [[1.0]], [1.0])
+        with self.assertRaises(ValueError):
+            solution.additive_attention_context([1.0], [[1.0, 2.0]], [[1.0]], [[1.0]], [1.0])
+        with self.assertRaises(ValueError):
+            solution.additive_attention_context([1.0], [[1.0]], [[1.0], [1.0]], [[1.0]], [1.0])
+
+
 class TestBleuRougeEvaluation(unittest.TestCase):
     def test_sentence_bleu_exact_match_is_one(self):
         candidate = "the cat sat on the mat".split()

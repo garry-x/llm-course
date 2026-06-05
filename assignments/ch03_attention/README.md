@@ -1,6 +1,6 @@
 # Ch03 Scaled Dot-Product Attention 作业测试
 
-本目录把第 3 章的 5 个编程练习整理成可自动验收的作业入口，覆盖 QKV 投影、Scaled Dot-Product Attention、Causal Mask、因果注意力和注意力热力图函数。
+本目录把第 3 章的编程练习整理成可自动验收的作业入口，覆盖 QKV 投影、Scaled Dot-Product Attention、softmax/attention 反向传播、Causal Mask、因果注意力和注意力热力图函数。
 
 ## 文件说明
 
@@ -8,7 +8,7 @@
 |------|------|
 | `starter.py` | 学生起始代码，包含需要实现的 TODO |
 | `reference_solution.py` | 教师参考实现，用于验证测试本身 |
-| `tests.py` | `unittest` 测试，覆盖 shape、缩放、mask、因果约束和可视化返回值 |
+| `tests.py` | `unittest` 测试，覆盖 shape、缩放、mask、softmax Jacobian、attention logits gradient、因果约束和可视化返回值 |
 
 ## 学生运行方式
 
@@ -34,6 +34,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch03_attention/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、mask 加在 softmax 前的原因、causal mask 的形状广播、复杂度和 heatmap 解释边界 |
-| Programming parts | 55 | 实现 QKV projection、scaled dot-product attention、causal mask 和 attention visualization |
+| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、softmax Jacobian、mask 加在 softmax 前的原因、causal mask 的形状广播、复杂度和 heatmap 解释边界 |
+| Programming parts | 55 | 实现 QKV projection、scaled dot-product attention、softmax/attention backward helpers、causal mask 和 attention visualization |
 | Analysis / style | 10 | 解释 mask 数值稳定性、attention heatmap 的适用范围和常见 shape bug |

@@ -89,22 +89,25 @@ Quick check：
 核心推导：
 
 - 若 `q_i,k_i` 方差为 1，则 `Var(q^T k)=d_k`。
+- softmax Jacobian `J_ij=p_i(delta_ij-p_j)`。
 - self-attention 时间复杂度 `O(BHT^2D)`。
 
 课堂 demo：
 
 - 手写一个小矩阵 attention，并与 PyTorch 输出对齐。
 - 改变 `d_k`，观察未 scaling logits 的 softmax 饱和。
+- 对单个 query 比较手算 `attention_logits_gradient` 与 autograd。
 
 Quick check：
 
 - score shape 为什么是 `[B, H, T_q, T_k]`？
 - scaling 放在 softmax 前还是后？
+- softmax 的 Jacobian 为什么不是对角矩阵？
 
 课后产出：
 
-- Ch03 scaled attention 测试通过。
-- 书面题：attention scaling 推导。
+- Ch03 scaled attention 与 backward helper 测试通过。
+- 书面题：attention scaling 与 softmax Jacobian 推导。
 
 ## Week 2 Lecture 4: Causal Mask、反向传播与 Dependency Parsing 预告
 

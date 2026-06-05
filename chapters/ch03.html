@@ -267,6 +267,13 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <h4>√dₖ 与温度的等价性</h4>
   <p>除以 √dₖ 等价于在注意力 logits 上使用温度 <span class="katex-inline" data-expr="\tau = \sqrt{d_k}" aria-label="\tau = \sqrt{d_k}" role="img"></span>。在 Q/K 各维近似独立、方差约为 1 的初始化假设下，未缩放点积的方差会随 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 增长；缩放后 logits 的量级回到较稳定范围，避免 softmax 过早饱和。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：√dₖ 是一个<em>logit 尺度控制机制</em>。</strong>它不改变同一 query 下各 key 的相对排序（因为除以正数是单调变换），但会改变 softmax 分布的尖锐程度和梯度尺度。它有助于训练稳定，但不能保证所有层、所有数据分布下梯度都“始终有效”。</div></div>
+
+  <h4>从输出梯度传回 attention logits</h4>
+  <p>对单个 query，attention 输出为 <span class="katex-inline" data-expr="\mathbf{o}=\sum_i p_i\mathbf{v}_i" aria-label="\mathbf{o}=\sum_i p_i\mathbf{v}_i" role="img"></span>，其中 <span class="katex-inline" data-expr="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" aria-label="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" role="img"></span>。若上游梯度为 <span class="katex-inline" data-expr="\mathbf{g}=\partial L/\partial \mathbf{o}" aria-label="\mathbf{g}=\partial L/\partial \mathbf{o}" role="img"></span>，则先有：</p>
+  <div class="math-box"><div class="label">Attention Backward Path</div>
+    <div class="katex" data-expr="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" aria-label="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" role="img"></div>
+  </div>
+  <p>Ch03 作业中的 <code>softmax_jacobian</code> 和 <code>attention_logits_gradient</code> 对应这条路径。学生不需要手写完整 Transformer backward，但应该能解释：梯度先穿过 value 加权和，再穿过 softmax Jacobian，最后才回到 Q/K 点积。</p>
 </section>
 
 <!-- ================================================================ -->

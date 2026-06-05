@@ -33,6 +33,28 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     return output, attn_weights
 
 
+def softmax_jacobian(logits):
+    if logits.dim() != 1:
+        raise ValueError("logits must be a 1D tensor")
+    probs = torch.softmax(logits, dim=-1)
+    return torch.diag(probs) - torch.outer(probs, probs)
+
+
+def attention_logits_gradient(attn_weights, values, grad_output):
+    if attn_weights.dim() != 1:
+        raise ValueError("attn_weights must have shape [T]")
+    if values.dim() != 2:
+        raise ValueError("values must have shape [T, D]")
+    if grad_output.dim() != 1:
+        raise ValueError("grad_output must have shape [D]")
+    if values.size(0) != attn_weights.size(0) or values.size(1) != grad_output.size(0):
+        raise ValueError("values must align with attention length and output dimension")
+
+    grad_attn = values @ grad_output
+    expected_grad = torch.sum(attn_weights * grad_attn)
+    return attn_weights * (grad_attn - expected_grad)
+
+
 def create_causal_mask(seq_len):
     """Return a boolean lower-triangular causal mask."""
     return torch.ones(seq_len, seq_len).tril().bool()

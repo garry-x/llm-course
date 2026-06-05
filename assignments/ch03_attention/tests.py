@@ -71,6 +71,37 @@ class TestScaledDotProductAttention(unittest.TestCase):
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch03 attention tests")
+class TestAttentionBackwardMath(unittest.TestCase):
+    def test_softmax_jacobian_matches_formula_and_rows_sum_to_zero(self):
+        logits = torch.tensor([0.2, -0.4, 1.1])
+        jacobian = submission.softmax_jacobian(logits)
+        probs = torch.softmax(logits, dim=-1)
+        expected = torch.diag(probs) - torch.outer(probs, probs)
+        self.assertTrue(torch.allclose(jacobian, expected, atol=1e-6))
+        self.assertTrue(torch.allclose(jacobian.sum(dim=-1), torch.zeros(3), atol=1e-6))
+
+    def test_attention_logits_gradient_matches_autograd(self):
+        logits = torch.tensor([0.2, -0.7, 1.0], requires_grad=True)
+        values = torch.tensor([[1.0, 0.0], [0.0, 2.0], [-1.0, 1.0]])
+        grad_output = torch.tensor([0.5, -1.5])
+        attn = torch.softmax(logits, dim=-1)
+        output = attn @ values
+        loss = torch.dot(output, grad_output)
+        loss.backward()
+
+        manual = submission.attention_logits_gradient(attn.detach(), values, grad_output)
+        self.assertTrue(torch.allclose(manual, logits.grad, atol=1e-6))
+
+    def test_attention_backward_helpers_reject_bad_shapes(self):
+        with self.assertRaises(ValueError):
+            submission.softmax_jacobian(torch.randn(2, 2))
+        with self.assertRaises(ValueError):
+            submission.attention_logits_gradient(torch.randn(2, 1), torch.randn(2, 3), torch.randn(3))
+        with self.assertRaises(ValueError):
+            submission.attention_logits_gradient(torch.randn(2), torch.randn(2, 3), torch.randn(4))
+
+
+@unittest.skipIf(torch is None, "PyTorch is required for Ch03 attention tests")
 class TestCausalAttention(unittest.TestCase):
     def test_create_causal_mask(self):
         expected = torch.tensor(

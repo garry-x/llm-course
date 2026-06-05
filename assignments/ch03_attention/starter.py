@@ -20,6 +20,16 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     raise NotImplementedError
 
 
+def softmax_jacobian(logits):
+    """Return the Jacobian matrix of a 1D softmax."""
+    raise NotImplementedError
+
+
+def attention_logits_gradient(attn_weights, values, grad_output):
+    """Return dL/dlogits for one query where output = attn_weights @ values."""
+    raise NotImplementedError
+
+
 def create_causal_mask(seq_len):
     """Return a boolean lower-triangular causal mask."""
     raise NotImplementedError

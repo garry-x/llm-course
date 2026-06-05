@@ -31,8 +31,9 @@
 
 1. 若 `q_i, k_i` 独立且均值 0、方差 1，推导 `q^T k` 的方差，并说明为什么 attention scores 要除以 `sqrt(d_k)`。
 2. 写出 causal mask 在 `T=4` 时的矩阵，并说明 mask 值应该在 softmax 前还是 softmax 后应用。
-3. 分析 self-attention 的时间复杂度和显存复杂度，区分训练时保存 activation 与推理时 KV Cache 的差异。
-4. 给定一张 attention heatmap，说明它能支持哪些路由诊断、不能单独支持哪些因果解释；设计一个 ablation 或 counterfactual prompt 比较模型行为变化。
+3. 推导 softmax Jacobian `J_ij = p_i(delta_ij - p_j)`，并说明 attention 输出梯度如何通过 `p @ V` 传回 logits。
+4. 分析 self-attention 的时间复杂度和显存复杂度，区分训练时保存 activation 与推理时 KV Cache 的差异。
+5. 给定一张 attention heatmap，说明它能支持哪些路由诊断、不能单独支持哪些因果解释；设计一个 ablation 或 counterfactual prompt 比较模型行为变化。
 
 ## Ch04 MHA / GQA / MLA
 

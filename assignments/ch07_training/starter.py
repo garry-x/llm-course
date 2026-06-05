@@ -57,6 +57,11 @@ def label_smoothed_cross_entropy(logits, targets, epsilon=0.1, ignore_index=None
     raise NotImplementedError
 
 
+def clip_grad_norm(parameters, max_norm, eps=1e-6):
+    """Clip gradients by global L2 norm and return norm statistics."""
+    raise NotImplementedError
+
+
 class AdamW:
     def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1):
         raise NotImplementedError

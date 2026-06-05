@@ -179,6 +179,34 @@ class TestLossOptimizerScheduler(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.label_smoothed_cross_entropy(torch.randn(1, 2, 3), torch.tensor([[-100, -100]]), ignore_index=-100)
 
+    def test_clip_grad_norm_scales_all_gradients_by_global_norm(self):
+        p1 = torch.nn.Parameter(torch.tensor([1.0, 2.0]))
+        p2 = torch.nn.Parameter(torch.tensor([3.0]))
+        p3 = torch.nn.Parameter(torch.tensor([4.0]))
+        p1.grad = torch.tensor([3.0, 0.0])
+        p2.grad = torch.tensor([4.0])
+        p3.grad = None
+
+        result = submission.clip_grad_norm([p1, p2, p3], max_norm=2.0, eps=0.0 + 1e-6)
+        expected_coef = 2.0 / (5.0 + 1e-6)
+        self.assertAlmostEqual(result["total_norm"], 5.0)
+        self.assertAlmostEqual(result["clip_coef"], expected_coef)
+        self.assertTrue(torch.allclose(p1.grad, torch.tensor([3.0 * expected_coef, 0.0]), atol=1e-6))
+        self.assertTrue(torch.allclose(p2.grad, torch.tensor([4.0 * expected_coef]), atol=1e-6))
+        self.assertIsNone(p3.grad)
+
+    def test_clip_grad_norm_leaves_small_gradients_and_rejects_bad_norms(self):
+        p = torch.nn.Parameter(torch.tensor([1.0]))
+        p.grad = torch.tensor([0.25])
+        result = submission.clip_grad_norm([p], max_norm=1.0)
+        self.assertAlmostEqual(result["clip_coef"], 1.0)
+        self.assertTrue(torch.allclose(p.grad, torch.tensor([0.25])))
+        self.assertEqual(submission.clip_grad_norm([], max_norm=1.0)["total_norm"], 0.0)
+        with self.assertRaises(ValueError):
+            submission.clip_grad_norm([p], max_norm=0.0)
+        with self.assertRaises(ValueError):
+            submission.clip_grad_norm([p], max_norm=1.0, eps=0.0)
+
     def test_adamw_single_step_matches_expected_update(self):
         p = torch.nn.Parameter(torch.tensor([1.0, -2.0]))
         p.grad = torch.tensor([0.1, -0.2])

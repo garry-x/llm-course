@@ -165,6 +165,25 @@ def label_smoothed_cross_entropy(logits, targets, epsilon=0.1, ignore_index=None
     return loss[valid].mean()
 
 
+def clip_grad_norm(parameters, max_norm, eps=1e-6):
+    if max_norm <= 0:
+        raise ValueError("max_norm must be positive")
+    if eps <= 0:
+        raise ValueError("eps must be positive")
+
+    params = [p for p in parameters if p.grad is not None]
+    if not params:
+        return {"total_norm": 0.0, "clip_coef": 1.0}
+
+    grad_norms = torch.stack([p.grad.detach().float().norm(2) for p in params])
+    total_norm = grad_norms.norm(2)
+    clip_coef = min(1.0, float(max_norm) / (float(total_norm.item()) + float(eps)))
+    if clip_coef < 1.0:
+        for p in params:
+            p.grad.detach().mul_(clip_coef)
+    return {"total_norm": float(total_norm.item()), "clip_coef": clip_coef}
+
+
 class AdamW:
     def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1):
         self.params = list(params)

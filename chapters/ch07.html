@@ -684,6 +684,11 @@ def train(model, dataloader, optimizer, scheduler, config,
 
   <h4>Grad norm 应该怎么解释</h4>
   <p><code>grad_norm</code> 不是越小越好，也不是越大越好。它是当前 batch 对参数提出的更新强度。结合学习率看更有意义：高 <code>grad_norm</code> + 高 lr 容易造成 spike；高 <code>grad_norm</code> 但被 clipping 稳定截断，可能只是偶发 hard batch；低 <code>grad_norm</code> + loss 不降，常见于学习率太低、mask 错误或模型路径断开。</p>
+  <p>全局范数裁剪先把所有参数梯度视为一个长向量，计算 <span class="katex-inline" data-expr="\|g\|_2" aria-label="\|g\|_2" role="img"></span>，再用同一个系数缩放所有梯度：</p>
+  <div class="math-box"><div class="label">Global grad norm clipping</div>
+    <div class="katex" data-expr="g \leftarrow g \cdot \min\left(1,\frac{\tau}{\|g\|_2+\epsilon}\right)" aria-label="g \leftarrow g \cdot \min\left(1,\frac{\tau}{\|g\|_2+\epsilon}\right)" role="img"></div>
+  </div>
+  <p>逐参数单独裁剪会改变不同层之间的梯度比例；global clipping 保留方向，只在总更新过大时缩短步长。Ch07 作业中的 <code>clip_grad_norm(parameters, max_norm)</code> 要求学生手动计算这个系数，并返回裁剪前的 total norm 与实际使用的 clip coefficient。</p>
 
   <h4>一个实用的排查顺序</h4>
   <ol>

@@ -1,6 +1,6 @@
 # Chapter 7 Assignment: Training Loop
 
-本作业对应第 7 章训练循环。目标是把 next-token 数据切片、数据重复/泄漏诊断、训练 token budget 估算、稳定交叉熵、logits 梯度、label smoothing、校准指标、AdamW、warmup+cosine 调度和一个可复现的小训练循环串起来。
+本作业对应第 7 章训练循环。目标是把 next-token 数据切片、数据重复/泄漏诊断、训练 token budget 估算、稳定交叉熵、logits 梯度、label smoothing、校准指标、global grad norm clipping、AdamW、warmup+cosine 调度和一个可复现的小训练循环串起来。
 
 ## Files
 
@@ -29,6 +29,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 - `cross_entropy_logits_gradient` 必须返回 mean CE 对 logits 的梯度，并支持被 `ignore_index` 屏蔽的位置不贡献梯度。
 - `label_smoothed_cross_entropy` 必须把 hard target 分布改成平滑分布，并让 `ignore_index` 位置不进入平均。
 - `expected_calibration_error` 必须按置信度分桶，比较每个桶内 accuracy 与 mean confidence，并支持 `ignore_index`。
+- `clip_grad_norm` 必须按所有参数梯度的全局 L2 范数统一缩放梯度，不能逐参数单独裁剪。
 - `AdamW` 必须实现一阶/二阶动量、偏置修正和解耦权重衰减。
 - 调度器必须先 warmup 到 1，再 cosine decay 到 `min_lr_ratio`。
 - `train` 必须执行 `zero_grad -> forward -> loss -> backward -> clip -> step -> scheduler.step`，并记录 loss history。
@@ -37,6 +38,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global batch tokens、训练步数、dense LM 训练 FLOPs、AdamW 偏置修正、warmup+cosine 边界、n-gram 泄漏诊断和 grad clipping 的诊断意义 |
-| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、AdamW、scheduler 和训练循环 |
+| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、global batch tokens、训练步数、dense LM 训练 FLOPs、AdamW 偏置修正、warmup+cosine 边界、n-gram 泄漏诊断和 grad clipping 的诊断意义 |
+| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、AdamW、scheduler 和训练循环 |
 | Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、tokens/s 和 resume 行为 |

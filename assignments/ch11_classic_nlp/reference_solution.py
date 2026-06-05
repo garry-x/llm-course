@@ -463,6 +463,35 @@ def linear_chain_log_partition(emissions, transitions, start_scores=None, end_sc
     return {"log_partition": log_partition, "alpha": alpha_table}
 
 
+def linear_chain_crf_nll(emissions, transitions, gold_tags, start_scores=None, end_scores=None):
+    num_tags = _validate_linear_chain_inputs(emissions, transitions, start_scores, end_scores)
+    if len(gold_tags) != len(emissions):
+        raise ValueError("gold_tags length must match emissions length")
+    if any(tag < 0 or tag >= num_tags for tag in gold_tags):
+        raise ValueError("gold_tags contain tag ids outside the tag set")
+
+    starts = [0.0] * num_tags if start_scores is None else [float(score) for score in start_scores]
+    ends = [0.0] * num_tags if end_scores is None else [float(score) for score in end_scores]
+    transition_scores = [[float(score) for score in row] for row in transitions]
+
+    gold_score = starts[gold_tags[0]] + float(emissions[0][gold_tags[0]])
+    for position in range(1, len(gold_tags)):
+        previous_tag = gold_tags[position - 1]
+        current_tag = gold_tags[position]
+        gold_score += transition_scores[previous_tag][current_tag]
+        gold_score += float(emissions[position][current_tag])
+    gold_score += ends[gold_tags[-1]]
+
+    partition = linear_chain_log_partition(emissions, transitions, start_scores, end_scores)
+    log_partition = partition["log_partition"]
+    return {
+        "gold_score": gold_score,
+        "log_partition": log_partition,
+        "nll": log_partition - gold_score,
+        "alpha": partition["alpha"],
+    }
+
+
 def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
     if not tokens:
         raise ValueError("tokens must not be empty")

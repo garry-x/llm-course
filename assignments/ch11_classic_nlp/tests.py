@@ -276,11 +276,49 @@ class TestQAMetricsAndMLM(unittest.TestCase):
         self.assertEqual(len(result["alpha"]), 3)
         self.assertEqual(len(result["alpha"][0]), 2)
 
+    def test_linear_chain_crf_nll_scores_gold_path_against_all_paths(self):
+        emissions = [
+            [0.2, -0.1],
+            [0.0, 0.3],
+            [0.4, -0.2],
+        ]
+        transitions = [
+            [0.1, -0.2],
+            [0.0, 0.2],
+        ]
+        start_scores = [0.0, -0.3]
+        end_scores = [0.2, 0.0]
+        gold_tags = [0, 1, 0]
+        result = solution.linear_chain_crf_nll(
+            emissions,
+            transitions,
+            gold_tags,
+            start_scores=start_scores,
+            end_scores=end_scores,
+        )
+        gold_score = (
+            start_scores[0]
+            + emissions[0][0]
+            + transitions[0][1]
+            + emissions[1][1]
+            + transitions[1][0]
+            + emissions[2][0]
+            + end_scores[0]
+        )
+        partition = solution.linear_chain_log_partition(emissions, transitions, start_scores, end_scores)
+        self.assertAlmostEqual(result["gold_score"], gold_score)
+        self.assertAlmostEqual(result["log_partition"], partition["log_partition"])
+        self.assertAlmostEqual(result["nll"], partition["log_partition"] - gold_score)
+
     def test_linear_chain_log_partition_rejects_bad_shapes(self):
         with self.assertRaises(ValueError):
             solution.linear_chain_log_partition([], [[0.0]])
         with self.assertRaises(ValueError):
             solution.linear_chain_log_partition([[0.0, 1.0]], [[0.0, 0.0]], end_scores=[0.0])
+        with self.assertRaises(ValueError):
+            solution.linear_chain_crf_nll([[0.0, 1.0]], [[0.0, 0.0], [0.0, 0.0]], [0, 1])
+        with self.assertRaises(ValueError):
+            solution.linear_chain_crf_nll([[0.0, 1.0]], [[0.0, 0.0], [0.0, 0.0]], [2])
 
     def test_select_extractive_qa_span_uses_start_and_end_logits(self):
         tokens = ["[CLS]", "the", "quick", "brown", "fox", "[SEP]"]

@@ -129,7 +129,7 @@
   <div class="math-box"><div class="label">公式 11.8 CRF log-partition</div>
     <div class="katex" data-expr="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" aria-label="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" role="img"></div>
   </div>
-  <p>Ch11 作业中的 <code>linear_chain_log_partition</code> 用 log-space forward DP 计算这个归一化项。它和 <code>viterbi_decode</code> 的状态形状相同，但语义不同：Viterbi 用于预测最优路径，log-partition 用于训练时比较 gold path 与所有竞争路径。</p>
+  <p>Ch11 作业中的 <code>linear_chain_log_partition</code> 用 log-space forward DP 计算这个归一化项，<code>linear_chain_crf_nll</code> 再显式计算 gold path score，并返回 <code>log_partition - gold_score</code>。它们和 <code>viterbi_decode</code> 的状态形状相同，但语义不同：Viterbi 用于预测最优路径，CRF NLL 用于训练时比较 gold path 与所有竞争路径。</p>
 </section>
 
 <section class="card" id="s11-6">
@@ -170,6 +170,7 @@
     <tr><td><code>bio_tags_to_spans</code></td><td>BIO sequence labeling</td><td>如何把 token classification 输出变成实体 span</td></tr>
     <tr><td><code>viterbi_decode</code></td><td>Linear-chain structured decoding</td><td>为什么最优 tag path 不等于逐 token argmax</td></tr>
     <tr><td><code>linear_chain_log_partition</code></td><td>CRF forward algorithm</td><td>如何对所有 tag paths 做 logsumexp 归一化</td></tr>
+    <tr><td><code>linear_chain_crf_nll</code></td><td>CRF training objective</td><td>为什么结构化训练目标是 logZ 减 gold path score</td></tr>
     <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>如何选择合法 answer span 与 no-answer</td></tr>
     <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>为什么指标选择会改变结论</td></tr>
   </table>

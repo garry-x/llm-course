@@ -1,6 +1,6 @@
 # Supplemental Assignment: Classic NLP and Evaluation
 
-本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 RNN 长程依赖、dependency parsing transition system、seq2seq cross-attention、BERT/MLM mask、BIO sequence labeling、Viterbi structured decoding、linear-chain CRF forward algorithm、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
+本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 RNN 长程依赖、dependency parsing transition system、seq2seq cross-attention、BERT/MLM mask、BIO sequence labeling、Viterbi structured decoding、linear-chain CRF forward algorithm 与 CRF NLL、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
 
 ## Files
 
@@ -33,6 +33,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 - `bio_tags_to_spans` 根据 BIO tags 解码 token classification / NER 实体 span，必须区分 `B-`、`I-` 和 `O`。
 - `viterbi_decode` 使用 emission、transition、start/end scores 解码 linear-chain sequence model 的最优 tag path。
 - `linear_chain_log_partition` 使用 logsumexp forward algorithm 计算所有 tag path 的 CRF 归一化项。
+- `linear_chain_crf_nll` 必须计算 gold path score，并返回 `log_partition - gold_score` 的结构化负对数似然。
 - `select_extractive_qa_span` 根据 encoder-only QA head 的 start/end logits 选择合法答案 span，并支持 `[CLS]` no-answer。
 
 ## Written Drill Expectations
@@ -43,7 +44,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 - 给定一组 beam candidates，比较 sum log prob、length-normalized score 和 length penalty 后的排序。
 - 给定 BERT tokens 和 mask positions，写出 masked input、labels 和 loss positions；给定 start/end logits，写出抽取式 QA 的最佳答案 span。
 - 给定 BIO tags，解码实体 span，并说明非法 `I-` 开头或类型切换为什么通常要作为新 span 处理或在严格评测中报错。
-- 给定 emission 和 transition score table，手算 Viterbi DP 表和 CRF forward alpha table，说明 max-path decoding 与 logsumexp 归一化的区别。
+- 给定 emission 和 transition score table，手算 Viterbi DP 表、CRF forward alpha table、gold path score 和 CRF NLL，说明 max-path decoding、logsumexp 归一化与训练目标的区别。
 - 给定一个 candidate/reference，说明 BLEU clipped precision、ROUGE-L、EM/F1 分别会奖励或惩罚什么。
 - 构造一个 BLEU、ROUGE、EM/F1 或 LLM-as-judge 看似高分但人工质量差的 metric failure case。
 
@@ -51,6 +52,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 40 | 解释 RNN 长程依赖、dependency parsing、seq2seq/cross-attention、beam search length bias、BIO sequence labeling、Viterbi/CRF forward decoding、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
-| Programming parts | 50 | 实现 arc-standard transition parsing、RNN recurrence、BPTT gradient factors、UAS/LAS、seq2seq additive attention、BIO span decoding、Viterbi decoding、CRF log-partition、BLEU、ROUGE-L、QA EM/F1、MLM mask example 和 extractive QA span selection |
+| Written questions | 40 | 解释 RNN 长程依赖、dependency parsing、seq2seq/cross-attention、beam search length bias、BIO sequence labeling、Viterbi/CRF forward/CRF NLL、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
+| Programming parts | 50 | 实现 arc-standard transition parsing、RNN recurrence、BPTT gradient factors、UAS/LAS、seq2seq additive attention、BIO span decoding、Viterbi decoding、CRF log-partition、CRF NLL、BLEU、ROUGE-L、QA EM/F1、MLM mask example 和 extractive QA span selection |
 | Analysis / style | 10 | 构造至少 2 个指标高但人工质量差的例子，并说明指标局限 |

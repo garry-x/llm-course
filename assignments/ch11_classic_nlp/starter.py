@@ -75,6 +75,11 @@ def linear_chain_log_partition(emissions, transitions, start_scores=None, end_sc
     raise NotImplementedError
 
 
+def linear_chain_crf_nll(emissions, transitions, gold_tags, start_scores=None, end_scores=None):
+    """Compute linear-chain CRF negative log likelihood for one gold tag path."""
+    raise NotImplementedError
+
+
 def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
     """Select the best BERT-style extractive QA answer span from start/end logits."""
     raise NotImplementedError

@@ -140,7 +140,7 @@ One quality/cost tradeoff I should qualify:
 
 ## Worksheet W4: GPT, Training, Decoding, Alignment
 
-Mapped materials: Ch06-Ch09, `assignments/ch06_gpt/`, `assignments/ch07_training/`, `assignments/ch08_generation/`, `assignments/ch09_alignment/`, DER-08, DER-09, DER-10, DER-11, DER-12, DER-14, [Reading List Week 4-7](reading-list.md).
+Mapped materials: Ch06-Ch09, `assignments/ch06_gpt/`, `assignments/ch07_training/`, `assignments/ch08_generation/`, `assignments/ch09_alignment/`, DER-08, DER-09, DER-10, DER-11, DER-12, [Reading List Week 4-7](reading-list.md).
 
 Learning goal: 连接 next-token objective、MoE routing、CE/AdamW、top-p/speculative decoding、SFT label mask、LoRA 和 DPO/GRPO 的最小可测证据。
 

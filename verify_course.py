@@ -6744,6 +6744,7 @@ def check_lecture_slide_sample_pack() -> None:
 
 def check_recitation_worksheet_pack() -> None:
     text = read("docs/recitation-worksheet-pack.md")
+    derivation_audit = read("docs/mathematical-derivation-audit.md")
     issues = []
 
     for marker in [
@@ -6779,7 +6780,7 @@ def check_recitation_worksheet_pack() -> None:
         ("Worksheet W1: BPE, Embedding, RoPE", ["assignments/ch01_bpe", "assignments/ch02_embeddings"], ["DER-01", "DER-02", "DER-03"]),
         ("Worksheet W2: Attention and Masking", ["assignments/ch03_attention"], ["DER-04", "DER-05"]),
         ("Worksheet W3: MHA, GQA, Norm, FFN", ["assignments/ch04_multihead", "assignments/ch05_block"], ["DER-06", "DER-07"]),
-        ("Worksheet W4: GPT, Training, Decoding, Alignment", ["assignments/ch06_gpt", "assignments/ch07_training", "assignments/ch08_generation", "assignments/ch09_alignment"], ["DER-08", "DER-09", "DER-10", "DER-11", "DER-12", "DER-14"]),
+        ("Worksheet W4: GPT, Training, Decoding, Alignment", ["assignments/ch06_gpt", "assignments/ch07_training", "assignments/ch08_generation", "assignments/ch09_alignment"], ["DER-08", "DER-09", "DER-10", "DER-11", "DER-12"]),
         ("Worksheet W5: Inference, RAG, Evaluation", ["assignments/ch10_inference", "assignments/ch11_classic_nlp"], ["DER-13", "DER-14"]),
         ("Worksheet W6: Capstone Rehearsal and Source Audit", ["training capstone", "inference capstone"], ["Project Report Template", "Experimental Rigor"]),
     ]
@@ -6813,6 +6814,13 @@ def check_recitation_worksheet_pack() -> None:
         failure_rows = extract_markdown_table_after(section, "Failure drill:")
         if len(failure_rows) < 3:
             issues.append(f"{heading} failure drill has too few rows")
+        for der_id in re.findall(r"\bDER-\d{2}\b", section):
+            if not re.search(rf"\|\s*{re.escape(der_id)}\s*\|", derivation_audit):
+                issues.append(f"{heading} references unknown derivation id: {der_id}")
+
+    w4_section = markdown_section(text, "Worksheet W4: GPT, Training, Decoding, Alignment")
+    if "DER-14" in w4_section:
+        issues.append("Worksheet W4 should not include DER-14; evaluation coverage belongs to Worksheet W5")
 
     for marker in [
         "assignments/ch01_bpe",

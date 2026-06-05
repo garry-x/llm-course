@@ -73,7 +73,7 @@
 - 能估算视觉 token 数对 prefill latency、KV Cache 和成本的影响。
 - 能说明 VQA 高分不能推出 OCR、图表或视觉定位可靠。
 
-**对应内容：**Ch10 10.20，Inference Capstone research question，Project Report Rubric。
+**对应内容：**Ch10 10.20，Inference Capstone research question。
 
 ## 学习成果
 

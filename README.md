@@ -216,7 +216,6 @@ llm-learner/
 │   ├── worked-example-pack.md   # 可复算小例子
 │   ├── math-prerequisites.md    # 数学先修
 │   ├── classic-nlp-handout.md   # 经典 NLP 专题
-│   ├── project-report-rubric.md # Capstone 报告评分口径
 │   ├── inference-engineer-curriculum.md  # 推理工程师学习路线
 │   └── training-engineer-curriculum.md   # 训练工程师学习路线
 ├── projects/

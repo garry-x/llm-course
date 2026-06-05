@@ -53,6 +53,16 @@ class SwiGLU(nn.Module):
         raise NotImplementedError
 
 
+def swiglu_hidden_size_for_param_budget(d_model, gelu_multiplier=4):
+    """Return the SwiGLU hidden width that matches a GELU FFN parameter budget."""
+    raise NotImplementedError
+
+
+def ffn_parameter_counts(d_model, gelu_hidden=None, swiglu_hidden=None):
+    """Compare bias-free GELU FFN and SwiGLU parameter counts."""
+    raise NotImplementedError
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, n_heads, dropout=0.0):
         super().__init__()

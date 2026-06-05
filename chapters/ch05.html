@@ -447,7 +447,7 @@ print(f"比例: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for
   <div class="math-box"><div class="label">SwiGLU 参数量</div>
     <div class="katex" data-expr="3d_{\text{model}}d_{\text{ff}}" aria-label="3d_{\text{model}}d_{\text{ff}}" role="img"></div>
   </div>
-  <p>为了与 4x FFN 保持相近参数预算，令 <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" aria-label="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" role="img"></span>，得到 <span class="katex-inline" data-expr="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" aria-label="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" role="img"></span>。因此 8/3 不是经验随手取值，而是<strong>同等参数预算下引入门控机制</strong>的配平结果。</p>
+  <p>为了与 4x FFN 保持相近参数预算，令 <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" aria-label="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" role="img"></span>，得到 <span class="katex-inline" data-expr="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" aria-label="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" role="img"></span>。因此 8/3 不是经验随手取值，而是<strong>同等参数预算下引入门控机制</strong>的配平结果。作业中的 <code>swiglu_hidden_size_for_param_budget</code> 和 <code>ffn_parameter_counts</code> 要求学生用具体整数维度复算这个配平，而不是只背结论。</p>
 
   <h4>门控乘法改变了什么</h4>
   <p>在 GELU FFN 中，中间神经元的输出主要由单一路径 <span class="katex-inline" data-expr="\phi(W_1x)" aria-label="\phi(W_1x)" role="img"></span> 决定。SwiGLU 则产生逐维乘法：</p>

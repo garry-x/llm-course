@@ -234,12 +234,12 @@
 
 ## Week 10: Capstone 报告、复现与前沿来源辨析
 
-对应材料：两个 capstone README、项目报告 rubric 和前沿主题阅读。
+对应材料：两个 capstone README 和前沿主题阅读。
 
 必读：
 
 - Stanford CS224N coursework/final project 页面：重点看 assignment、project proposal、milestone、poster/report 的分工。
-- 本课程 [Capstone 项目报告 Rubric](project-report-rubric.md)。
+- 本课程两个 Capstone README 中的项目报告要求。
 - 目标方向的官方论文、课程讲义或模型卡：interpretability、multimodality、social impact、agents 或 reasoning。
 
 选读：

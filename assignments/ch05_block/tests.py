@@ -88,6 +88,25 @@ class TestFeedForward(unittest.TestCase):
         swiglu_params = submission.count_params(swiglu)
         self.assertLess(abs(ffn_params - swiglu_params) / ffn_params, 0.08)
 
+    def test_swiglu_hidden_size_matches_gelu_budget(self):
+        d_model = 24
+        self.assertEqual(submission.swiglu_hidden_size_for_param_budget(d_model), 64)
+
+        counts = submission.ffn_parameter_counts(d_model)
+        self.assertEqual(counts["gelu_hidden"], 96)
+        self.assertEqual(counts["swiglu_hidden"], 64)
+        self.assertEqual(counts["gelu_params"], 2 * 24 * 96)
+        self.assertEqual(counts["swiglu_params"], 3 * 24 * 64)
+        self.assertAlmostEqual(counts["ratio"], 1.0)
+
+    def test_ffn_parameter_counts_reject_invalid_values(self):
+        with self.assertRaises(ValueError):
+            submission.swiglu_hidden_size_for_param_budget(0)
+        with self.assertRaises(ValueError):
+            submission.ffn_parameter_counts(8, gelu_hidden=-1)
+        with self.assertRaises(ValueError):
+            submission.ffn_parameter_counts(8, swiglu_hidden=0)
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch05 block tests")
 class TestTransformerBlock(unittest.TestCase):

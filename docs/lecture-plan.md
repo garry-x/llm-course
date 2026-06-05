@@ -1,6 +1,6 @@
 # 10 周 / 20 讲 Lecture Plan
 
-本计划把 syllabus 的周安排展开为每周两讲。每讲包含目标、核心推导、课堂 demo、quick check 和课后产出，供教师备课、助教带讨论课和学生复盘使用。讲后产出如何转成下一讲 recap、worksheet、FAQ、handout、rubric 或 source patch，见 Weekly Teaching Reflection and Adjustment Log。
+本计划把 syllabus 的周安排展开为每周两讲。每讲包含目标、核心推导、课堂 demo、quick check 和课后产出，供教师备课、助教带讨论课和学生复盘使用。讲后产出可以转成下一讲 recap、worksheet、FAQ、handout 或 source patch。
 
 默认节奏：每讲 80-90 分钟。若采用 12 周版本，可把 Week 8 的经典 NLP 与 Week 10 的项目展示拆成更多讲次。
 
@@ -196,11 +196,13 @@ Quick check：
 
 - LayerNorm 的 mean/variance 依赖输入，反向传播存在跨 feature 耦合。
 - Pre-Norm residual 为深层模型提供更直接的梯度路径。
+- 4x GELU FFN 的 bias-free 参数量为 `8*d_model^2`；SwiGLU 三矩阵参数量为 `3*d_model*d_ff`，同预算得到 `d_ff = 8/3*d_model`。
 - 单个 block 的参数、FLOPs 和激活显存主项。
 
 课堂 demo：
 
 - 对接近零方差输入测试 LayerNorm/RMSNorm 的 `eps`。
+- 用 `d_model=24` 手算并运行 GELU FFN 与 SwiGLU 的参数预算。
 - 单步 forward 一个 Transformer block，检查梯度是否流到所有子模块。
 - 用 `estimate_block_resources` 比较 `T=512` 与 `T=4096` 时 attention score 显存的变化。
 
@@ -513,7 +515,7 @@ Quick check：
 
 ## Week 8 Lecture 16: Evaluation、Ethics、Safety 与同伴 Review
 
-对应材料：classic NLP handout、presentation peer review、project rubric。
+对应材料：classic NLP handout、presentation peer review、项目报告要求。
 
 目标：
 
@@ -612,7 +614,7 @@ Quick check：
 
 ## Week 10 Lecture 19: Capstone Reproducibility Workshop
 
-对应材料：两个 capstone README、project report rubric、frontier reading notes。
+对应材料：两个 capstone README、frontier reading notes。
 
 目标：
 
@@ -642,7 +644,7 @@ Quick check：
 
 ## Week 10 Lecture 20: Final Presentation、Poster Session 与课程回顾
 
-对应材料：presentation peer review、project report rubric、syllabus。
+对应材料：presentation peer review、syllabus。
 
 目标：
 
@@ -658,7 +660,7 @@ Quick check：
 课堂 demo：
 
 - 每组 5-8 分钟展示，2-3 分钟问答。
-- 助教现场核对最小复现命令和报告 rubric。
+- 助教现场核对最小复现命令和报告要求。
 
 Quick check：
 

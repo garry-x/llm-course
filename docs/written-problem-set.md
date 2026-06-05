@@ -50,7 +50,7 @@
 1. 推导 LayerNorm 的 `mu`、`var`、`x_hat`，说明反向传播中为什么不能把 `mu` 和 `var` 当常数。
 2. 比较 Pre-Norm 与 Post-Norm 的梯度路径，解释为什么深层 decoder-only 模型常用 Pre-Norm。
 3. 比较 GELU FFN、SwiGLU 和 MoE FFN 的参数量、激活参数量和训练稳定性取舍。
-4. 推导 SwiGLU 中 `d_ff = 8/3 * d_model` 与 4x GELU FFN 参数量近似相等，并解释门控乘法能表达哪些 token 条件化交互。
+4. 推导 SwiGLU 中 `d_ff = 8/3 * d_model` 与 4x GELU FFN 参数量近似相等；令 `d_model=24`，计算 bias-free GELU FFN 与 SwiGLU 的隐藏宽度和参数量，并解释门控乘法能表达哪些 token 条件化交互。
 5. 给定 `B,T,d_model,n_heads,d_ff,dtype_bytes`，估算单个 Transformer block 的 attention 参数量、SwiGLU 参数量、主要 FLOPs、attention score 显存和主要激活显存，并说明哪些项会被 FlashAttention 或 activation checkpointing 改变。
 6. 设计一个主语-动词一致性的机制可解释性实验：写出 clean/corrupted prompt、目标 logit difference、activation patching 位置、ablation 对象，并说明 probing、patching 和 ablation 各自能支持什么结论。
 

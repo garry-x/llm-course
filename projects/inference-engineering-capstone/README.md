@@ -144,9 +144,9 @@ python capacity_plan.py \
 - 指标能按模型、租户、状态码、错误类型聚合。
 - 限流、超时、降级和错误响应格式明确。
 
-## 项目报告 Rubric
+## 项目报告要求
 
-报告评分使用 [Capstone 项目报告 Rubric](../../docs/project-report-rubric.md)。推理工程报告必须额外包含：
+推理工程报告必须包含：
 
 - 固定评测集 pass rate 与失败案例。
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。

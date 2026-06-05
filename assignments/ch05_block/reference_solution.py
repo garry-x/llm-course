@@ -84,6 +84,40 @@ class SwiGLU(nn.Module):
         return self.w3(gate * value)
 
 
+def swiglu_hidden_size_for_param_budget(d_model, gelu_multiplier=4):
+    """Return the SwiGLU hidden width that matches a GELU FFN parameter budget."""
+    if d_model <= 0 or gelu_multiplier <= 0:
+        raise ValueError("d_model and gelu_multiplier must be positive")
+    return int(2 * gelu_multiplier * d_model / 3)
+
+
+def ffn_parameter_counts(d_model, gelu_hidden=None, swiglu_hidden=None):
+    """Compare bias-free GELU FFN and SwiGLU parameter counts.
+
+    A GELU FFN has two matrices, d_model -> gelu_hidden -> d_model.
+    SwiGLU has three matrices: gate, value, and output projection.
+    """
+    if d_model <= 0:
+        raise ValueError("d_model must be positive")
+
+    if gelu_hidden is None:
+        gelu_hidden = 4 * d_model
+    if swiglu_hidden is None:
+        swiglu_hidden = swiglu_hidden_size_for_param_budget(d_model)
+    if gelu_hidden <= 0 or swiglu_hidden <= 0:
+        raise ValueError("gelu_hidden and swiglu_hidden must be positive")
+
+    gelu_params = 2 * d_model * gelu_hidden
+    swiglu_params = 3 * d_model * swiglu_hidden
+    return {
+        "gelu_hidden": gelu_hidden,
+        "swiglu_hidden": swiglu_hidden,
+        "gelu_params": gelu_params,
+        "swiglu_params": swiglu_params,
+        "ratio": swiglu_params / gelu_params,
+    }
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, n_heads, dropout=0.0):
         super().__init__()

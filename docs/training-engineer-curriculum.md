@@ -73,7 +73,7 @@
 - 能设计 baseline、ablation、开发集和失败案例分类。
 - 能解释 SFT/DPO/GRPO 的训练目标和最终 helpfulness、honesty、harmlessness、能力保留之间的差异。
 
-**对应内容：**Ch08 8.7B、Ch09 9.10A、Training Capstone README、Project Report Rubric。
+**对应内容：**Ch08 8.7B、Ch09 9.10A、Training Capstone README。
 
 ## 学习成果
 

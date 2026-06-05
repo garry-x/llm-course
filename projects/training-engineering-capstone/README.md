@@ -89,9 +89,9 @@ python plan_training.py \
 - 能解释 global batch tokens、总 step、tokens/s/GPU、GPU hours 和预计成本。
 - 能说明 loss spike、nan、吞吐下降、开发集退化时的排查顺序。
 
-## 项目报告 Rubric
+## 项目报告要求
 
-报告评分使用 [Capstone 项目报告 Rubric](../../docs/project-report-rubric.md)。训练工程报告必须额外包含：
+训练工程报告必须包含：
 
 - 数据分析结果：长度分布、重复、异常样本和 token 预算。
 - 训练曲线：train loss、val loss、perplexity、lr、grad_norm 和 tokens/s。

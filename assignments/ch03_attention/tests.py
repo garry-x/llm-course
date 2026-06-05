@@ -152,6 +152,43 @@ class TestCausalAttention(unittest.TestCase):
         self.assertEqual(mask.dtype, torch.bool)
         self.assertTrue(torch.equal(mask, expected))
 
+    def test_combine_causal_padding_mask_blocks_future_and_padded_keys(self):
+        padding_mask = torch.tensor(
+            [
+                [1, 1, 0, 0],
+                [1, 1, 1, 0],
+            ],
+            dtype=torch.bool,
+        )
+        mask = submission.combine_causal_padding_mask(padding_mask)
+        expected = torch.tensor(
+            [
+                [
+                    [True, False, False, False],
+                    [True, True, False, False],
+                    [True, True, False, False],
+                    [True, True, False, False],
+                ],
+                [
+                    [True, False, False, False],
+                    [True, True, False, False],
+                    [True, True, True, False],
+                    [True, True, True, False],
+                ],
+            ]
+        )
+        self.assertEqual(tuple(mask.shape), (2, 4, 4))
+        self.assertEqual(mask.dtype, torch.bool)
+        self.assertTrue(torch.equal(mask, expected))
+
+    def test_combine_causal_padding_mask_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.combine_causal_padding_mask(torch.ones(2, 3, 1))
+        with self.assertRaises(ValueError):
+            submission.combine_causal_padding_mask(torch.ones(1, 0, dtype=torch.bool))
+        with self.assertRaises(ValueError):
+            submission.combine_causal_padding_mask(torch.tensor([[0, 0]], dtype=torch.bool))
+
     def test_causal_attention_prevents_future_attention(self):
         torch.manual_seed(3)
         Q = torch.randn(1, 5, 8)
@@ -165,6 +202,21 @@ class TestCausalAttention(unittest.TestCase):
         self.assertTrue(torch.all(attn[0][future_mask] < 1e-6))
         self.assertTrue(torch.allclose(attn.sum(dim=-1), torch.ones(1, 5), atol=1e-6))
         self.assertAlmostEqual(attn[0, 0, 0].item(), 1.0, places=6)
+
+    def test_causal_attention_with_padding_mask_never_attends_to_padding_keys(self):
+        torch.manual_seed(5)
+        Q = torch.randn(2, 4, 6)
+        K = torch.randn(2, 4, 6)
+        V = torch.randn(2, 4, 6)
+        padding_mask = torch.tensor([[1, 1, 0, 0], [1, 1, 1, 0]], dtype=torch.bool)
+        mask = submission.combine_causal_padding_mask(padding_mask)
+        _, attn = submission.scaled_dot_product_attention(Q, K, V, mask=mask)
+
+        future = torch.triu(torch.ones(4, 4, dtype=torch.bool), diagonal=1)
+        self.assertTrue(torch.all(attn[:, future] < 1e-6))
+        self.assertTrue(torch.all(attn[0, :, 2:] < 1e-6))
+        self.assertTrue(torch.all(attn[1, :, 3] < 1e-6))
+        self.assertTrue(torch.allclose(attn.sum(dim=-1), torch.ones(2, 4), atol=1e-6))
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch03 attention tests")

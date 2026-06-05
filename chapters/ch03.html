@@ -293,8 +293,8 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 <!-- 编程练习 3: Causal Mask -->
 <!-- ================================================================ -->
 <section class="card" id="s3-7">
-  <h3>3.7 编程练习 3-4：实现并应用 Causal Mask</h3>
-  <p>在自回归（GPT 风格）语言模型中，位置 t 只能看到位置 1..t，不能看到未来的 token。这通过一个<strong>上三角掩码</strong>实现。</p>
+  <h3>3.7 编程练习 3-5：实现并应用 Attention Mask</h3>
+  <p>在自回归（GPT 风格）语言模型中，位置 t 只能看到当前位置及其之前的 token，不能看到未来 token。实现时通常把<strong>上三角未来位置</strong>屏蔽掉，只保留下三角（含对角线）为可见位置。</p>
 
   <div class="math-box"><div class="label">Causal Mask 矩阵（n=4 示例）</div>
     <div class="katex" data-expr="\mathbf{M} = \begin{pmatrix} 0 & -\infty & -\infty & -\infty \\ 0 & 0 & -\infty & -\infty \\ 0 & 0 & 0 & -\infty \\ 0 & 0 & 0 & 0 \end{pmatrix}" aria-label="\mathbf{M} = \begin{pmatrix} 0 & -\infty & -\infty & -\infty \\ 0 & 0 & -\infty & -\infty \\ 0 & 0 & 0 & -\infty \\ 0 & 0 & 0 & 0 \end{pmatrix}" role="img"></div>
@@ -333,7 +333,26 @@ def create_causal_mask(seq_len):
   </div>
 
   <div class="coding-exercise" style="margin-top:16px">
-    <h4>🖥️ 练习 4：将 Causal Mask 集成到注意力中</h4>
+    <h4>🖥️ 练习 4：合成 Causal Mask 与 Padding Mask</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>combine_causal_padding_mask(padding_mask)</code>。输入 <code>padding_mask</code> 形状为 <code>(batch, seq_len)</code>，True 表示真实 token，False 表示 padding；输出形状为 <code>(batch, seq_len, seq_len)</code>，同时屏蔽未来 key 和 padding key。</p>
+      <p><strong>关键 shape：</strong><code>causal_mask</code> 为 <code>(T,T)</code>，扩展成 <code>(1,T,T)</code>；<code>padding_mask</code> 作为 key mask 扩展成 <code>(B,1,T)</code>；二者逻辑与得到 <code>(B,T,T)</code>。</p>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def combine_causal_padding_mask(padding_mask):
+    """合成下三角因果约束和 padding key 约束。"""
+    if padding_mask.dim() != 2:
+        raise ValueError("padding_mask must have shape [B, T]")
+    valid_keys = padding_mask.bool()
+    seq_len = valid_keys.size(1)
+    causal = create_causal_mask(seq_len).to(valid_keys.device)  # [T, T]
+    return causal.unsqueeze(0) & valid_keys.unsqueeze(1)          # [B, T, T]</div>
+    </div>
+  </div>
+
+  <div class="coding-exercise" style="margin-top:16px">
+    <h4>🖥️ 练习 5：将 Causal Mask 集成到注意力中</h4>
     <div class="task">
       <p><strong>任务：</strong>修改你在 3.4 中实现的 <code>scaled_dot_product_attention</code> 函数，加入 causal mask 支持。要求 mask==False 的位置在 softmax 前被设为 -1e9。</p>
       <p><strong>测试：</strong>取 Q=K=V=torch.randn(1,4,64)，验证 causal attention 下位置 0 只关注位置 0，位置 3 关注位置 0-3。</p>
@@ -363,14 +382,14 @@ print("位置3的注意力:", attn[0, 3])  # [0,1,2,3] 都应该 > 0</div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 4: 可视化 -->
+<!-- 编程练习 6: 可视化 -->
 <!-- ================================================================ -->
 <section class="card" id="s3-8">
-  <h3>3.8 编程练习 5：注意力权重可视化</h3>
+  <h3>3.8 编程练习 6：注意力权重可视化</h3>
   <p>理解注意力机制的<strong>行为</strong>和仅仅理解它的数学公式同样重要。在这个练习中，你将用 matplotlib 可视化注意力权重矩阵。</p>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 5：可视化注意力热力图</h4>
+    <h4>🖥️ 练习 6：可视化注意力热力图</h4>
     <div class="task">
       <p><strong>任务：</strong>写一个函数，输入注意力权重矩阵 <code>(seq_len, seq_len)</code> 和 token 列表，绘制热力图。</p>
       <p><strong>要求：</strong></p>

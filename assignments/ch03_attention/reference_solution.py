@@ -99,6 +99,21 @@ def create_causal_mask(seq_len):
     return torch.ones(seq_len, seq_len).tril().bool()
 
 
+def combine_causal_padding_mask(padding_mask):
+    """Return a [B, T, T] mask that blocks future positions and padded keys."""
+    if padding_mask.dim() != 2:
+        raise ValueError("padding_mask must have shape [B, T]")
+    if padding_mask.size(1) == 0:
+        raise ValueError("sequence length must be positive")
+    valid_keys = padding_mask.to(dtype=torch.bool)
+    if not torch.all(valid_keys.any(dim=1)):
+        raise ValueError("each sequence must contain at least one valid token")
+
+    seq_len = valid_keys.size(1)
+    causal = create_causal_mask(seq_len).to(valid_keys.device)
+    return causal.unsqueeze(0) & valid_keys.unsqueeze(1)
+
+
 def causal_attention(Q, K, V):
     """Scaled dot-product attention with a causal mask."""
     mask = create_causal_mask(Q.size(1)).to(Q.device)

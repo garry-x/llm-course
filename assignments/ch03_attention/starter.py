@@ -50,6 +50,11 @@ def create_causal_mask(seq_len):
     raise NotImplementedError
 
 
+def combine_causal_padding_mask(padding_mask):
+    """Return a [B, T, T] mask that blocks future positions and padded keys."""
+    raise NotImplementedError
+
+
 def causal_attention(Q, K, V):
     """Scaled dot-product attention with a causal mask."""
     raise NotImplementedError

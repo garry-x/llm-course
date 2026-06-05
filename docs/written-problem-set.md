@@ -44,6 +44,7 @@
 1. 推导 LayerNorm 的 `mu`、`var`、`x_hat`，说明反向传播中为什么不能把 `mu` 和 `var` 当常数。
 2. 比较 Pre-Norm 与 Post-Norm 的梯度路径，解释为什么深层 decoder-only 模型常用 Pre-Norm。
 3. 比较 GELU FFN、SwiGLU 和 MoE FFN 的参数量、激活参数量和训练稳定性取舍。
+4. 推导 SwiGLU 中 `d_ff = 8/3 * d_model` 与 4x GELU FFN 参数量近似相等，并解释门控乘法能表达哪些 token 条件化交互。
 
 ## Ch06 GPT Assembly / MoE
 

@@ -35,4 +35,4 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch06_gpt/tests.py
 |------|:--:|------|
 | Written questions | 30 | 计算 GPT-2 small 参数量，解释 weight tying、causal leakage 测试、MoE 稀疏激活和负载均衡 |
 | Programming parts | 60 | 实现 GPTConfig、causal attention、GPTModel、初始化/tying 和 MoE router |
-| Analysis / style | 10 | 区分 total/activated parameters，报告参数审计和未来 token 泄漏检查 |
+| Analysis / style | 10 | 区分 total/activated parameters，报告参数分析和未来 token 泄漏检查 |

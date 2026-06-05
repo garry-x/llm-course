@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第5章 Transformer Block</h2>
   <p class="subtitle">RMSNorm + FFN + SwiGLU + mHC 超连接——构建 LLM 的核心单元</p>
-  <div class="reading-time">⏱ 预计阅读: 85 分钟 · 11 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 12 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -399,6 +399,44 @@ print(f"比例: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for
 </section>
 
 <!-- ================================================================ -->
+<!-- 5.6A SwiGLU 理论 -->
+<!-- ================================================================ -->
+<section class="card" id="s5-6a">
+  <h3>5.6A 为什么现代 LLM 偏好 SwiGLU：门控、参数预算与表达能力</h3>
+  <p>把 SwiGLU 只记成 <code>w3(silu(w1(x)) * w2(x))</code> 还不够。它真正重要的地方在于：FFN 不再只是“先投影、激活、再投影”，而是把每个隐藏维度拆成<strong>门控分支</strong>和<strong>值分支</strong>，让模型在 token 级别决定哪些中间特征应该通过。</p>
+
+  <h4>参数预算为什么是 8/3</h4>
+  <p>标准 4x GELU FFN 忽略 bias 时有两块矩阵：</p>
+  <div class="math-box"><div class="label">GELU FFN 参数量</div>
+    <div class="katex" data-expr="d_{\text{model}}\cdot 4d_{\text{model}} + 4d_{\text{model}}\cdot d_{\text{model}} = 8d_{\text{model}}^2" aria-label="d_{\text{model}}\cdot 4d_{\text{model}} + 4d_{\text{model}}\cdot d_{\text{model}} = 8d_{\text{model}}^2" role="img"></div>
+  </div>
+  <p>SwiGLU 有三块矩阵：门控 <span class="katex-inline" data-expr="W_1" aria-label="W_1" role="img"></span>、值分支 <span class="katex-inline" data-expr="W_2" aria-label="W_2" role="img"></span> 和输出投影 <span class="katex-inline" data-expr="W_3" aria-label="W_3" role="img"></span>。若中间宽度为 <span class="katex-inline" data-expr="d_{\text{ff}}" aria-label="d_{\text{ff}}" role="img"></span>，参数量近似是：</p>
+  <div class="math-box"><div class="label">SwiGLU 参数量</div>
+    <div class="katex" data-expr="3d_{\text{model}}d_{\text{ff}}" aria-label="3d_{\text{model}}d_{\text{ff}}" role="img"></div>
+  </div>
+  <p>为了与 4x FFN 保持相近参数预算，令 <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" aria-label="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" role="img"></span>，得到 <span class="katex-inline" data-expr="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" aria-label="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" role="img"></span>。因此 8/3 不是经验随手取值，而是<strong>同等参数预算下引入门控机制</strong>的配平结果。</p>
+
+  <h4>门控乘法改变了什么</h4>
+  <p>在 GELU FFN 中，中间神经元的输出主要由单一路径 <span class="katex-inline" data-expr="\phi(W_1x)" aria-label="\phi(W_1x)" role="img"></span> 决定。SwiGLU 则产生逐维乘法：</p>
+  <div class="math-box"><div class="label">SwiGLU 的逐维门控</div>
+    <div class="katex" data-expr="z_i = \mathrm{SiLU}(w_{1,i}^{\top}x)\cdot (w_{2,i}^{\top}x)" aria-label="z_i = \mathrm{SiLU}(w_{1,i}^{\top}x)\cdot (w_{2,i}^{\top}x)" role="img"></div>
+  </div>
+  <p>这相当于让一个模式检测器控制另一个值通道是否被写入残差流。与普通激活相比，门控乘法更容易表达“只有在条件 A 成立时，才使用特征 B”的交互关系。这类条件交互在语言建模中很常见：代码缩进、括号闭合、实体属性、指代关系和格式约束都不是孤立特征，而是上下文条件下才有意义。</p>
+
+  <h4>SwiGLU 与 MoE 的区别</h4>
+  <p>SwiGLU 是 dense FFN：每个 token 都经过同一组矩阵，只是在隐藏维度上做软门控。MoE 是 sparse FFN：每个 token 只激活少数专家，靠 router 在专家之间选择。二者都引入“选择性计算”，但粒度不同：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>机制</th><th>选择发生在哪里</th><th>每 token 激活</th><th>主要收益</th><th>主要风险</th></tr>
+      <tr><td>SwiGLU</td><td>单个 FFN 内部维度</td><td>所有矩阵都参与计算</td><td>同等参数预算下增强条件交互</td><td>激活显存和 dense 计算仍然存在</td></tr>
+      <tr><td>MoE</td><td>多个专家之间</td><td>只选 top-k 专家</td><td>total parameters 大幅增加而 activated parameters 可控</td><td>负载均衡、通信和路由稳定性更复杂</td></tr>
+    </table>
+  </div>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>设计结论：</strong>SwiGLU 不是“多一个矩阵所以更强”这么简单。它是在接近相同参数预算下，用门控乘法增加 token 条件化表达；MoE 则是在系统复杂度更高的前提下，把 FFN 容量扩展到多个稀疏专家。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 编程练习 4: TransformerBlock -->
 <!-- ================================================================ -->
 <section class="card" id="s5-7">
@@ -643,6 +681,7 @@ def sinkhorn_knopp(M, num_iter=10):
     <li>✅ <strong>RMSNorm</strong> — 去掉均值中心化，提升 15% 速度，Llama/DeepSeek 的选择</li>
     <li>✅ <strong>Pre-Norm vs Post-Norm</strong> — 理解了为什么"归一化放在哪里"决定了能否训练 1000 层网络</li>
     <li>✅ <strong>SwiGLU 门控 FFN</strong> — 三个权重矩阵 + SiLU 门控，信息选择性通过</li>
+    <li>✅ <strong>SwiGLU 参数预算</strong> — 用 8/3 宽度在接近 4x FFN 参数量下引入门控乘法</li>
     <li>✅ <strong>TransformerBlock 组装</strong> — RMSNorm + MHA + SwiGLU + 残差，~25 行核心代码</li>
     <li>✅ <strong>梯度检查</strong> — 用 gradcheck 验证反向传播正确性</li>
     <li>✅ <strong>DeepSeek V4 mHC</strong> — Birkhoff polytope 约束、Sinkhorn-Knopp 迭代、可学习的超连接</li>

@@ -31,6 +31,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch05_block/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 LayerNorm/RMSNorm，比较 Pre-Norm/Post-Norm 梯度路径，计算 FFN/SwiGLU 参数量 |
+| Written questions | 35 | 推导 LayerNorm/RMSNorm，比较 Pre-Norm/Post-Norm 梯度路径，计算 FFN/SwiGLU 参数量和 8/3 宽度来源 |
 | Programming parts | 55 | 实现 LayerNorm、RMSNorm、FFN/SwiGLU 和 Pre-Norm TransformerBlock |
-| Analysis / style | 10 | 说明数值稳定性、梯度检查、残差路径和跳过子层的投机实现风险 |
+| Analysis / style | 10 | 说明数值稳定性、梯度检查、残差路径、SwiGLU 门控含义和跳过子层的投机实现风险 |

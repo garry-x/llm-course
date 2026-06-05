@@ -51,6 +51,7 @@
 1. 按 embedding、position embedding、12 个 block、final LayerNorm 和 tied LM head 逐项计算 GPT-2 small 的参数量。
 2. 解释 weight tying 为什么既减少参数又可能改善输入/输出词向量的一致性。
 3. 给定 `256` 个专家、`top_k=8` 和 1 个 shared expert，解释 MoE 的 total parameters 与 activated parameters 为什么不同，并说明负载不均衡的风险。
+4. 给定 token 序列 `[BOS, a, b, c, EOS]`，写出 GPT 训练时的 `inputs`、`labels` 和每个 `logits[:, t, :]` 对应的预测目标；说明 causal leakage 会如何让训练 loss 虚高地好看。
 
 ## Ch07 Training Loop
 

@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第6章 组装完整 GPT 模型</h2>
   <p class="subtitle">GPT-2 124M 从头实现 + DeepSeekMoE 稀疏激活架构</p>
-  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 10 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 11 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -300,6 +300,45 @@ print(f"输出 shape: {logits.shape}")
 print("前向 + 反向传播通过 ✓")</div>
     </div>
   </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 6.3A 从 logits 到 next-token loss -->
+<!-- ================================================================ -->
+<section class="card" id="s6-3a">
+  <h3>6.3A 从 logits 到语言模型目标：为什么输出是 [batch, seq, vocab]</h3>
+  <p>完整 GPTModel 的前向传播到 <code>logits</code> 还没有结束。语言模型训练真正优化的是：在每个位置 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>，用当前位置的隐藏状态预测<strong>下一个 token</strong> <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。因此 <code>logits[:, t, :]</code> 不是预测当前位置 token，而是预测下一位置 token 的分类分布。</p>
+
+  <div class="math-box"><div class="label">自回归分解</div>
+    <div class="katex" data-expr="p(x_1,\ldots,x_T)=\prod_{t=1}^{T}p(x_t \mid x_{<t})" aria-label="p(x_1,\ldots,x_T)=\prod_{t=1}^{T}p(x_t \mid x_{<t})" role="img"></div>
+  </div>
+  <p>训练时通常把输入和标签错开一位：</p>
+  <div class="code-block" data-lang="python">
+# tokens:  [BOS,  The,  cat,  sat,  EOS]
+inputs = tokens[:, :-1]   # [BOS, The, cat, sat]
+labels = tokens[:, 1:]    # [The, cat, sat, EOS]
+logits = model(inputs)    # (batch, seq-1, vocab)
+loss = F.cross_entropy(logits.reshape(-1, vocab), labels.reshape(-1))</div>
+
+  <h4>Teacher forcing 与并行训练</h4>
+  <p>训练阶段并不是让模型一步步生成再把生成结果喂回去，而是使用真实前缀并行预测所有下一 token。这叫 <strong>teacher forcing</strong>。它让长度为 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 的序列在一次 forward 中产生 <span class="katex-inline" data-expr="T-1" aria-label="T-1" role="img"></span> 个分类任务，因此训练可以充分利用 GPU 并行性。推理阶段则不同：模型只能使用自己已经生成的 token，逐步扩展上下文。</p>
+
+  <h4>Softmax 只在 loss 中需要</h4>
+  <p>LM Head 输出的是未归一化分数 <code>logits</code>。训练时直接把 logits 传给 <code>F.cross_entropy</code>，因为它内部会稳定地计算 log-softmax 和负对数似然：</p>
+  <div class="math-box"><div class="label">Next-token cross entropy</div>
+    <div class="katex" data-expr="\mathcal{L}=-\sum_{t=1}^{T-1}\log \frac{\exp z_{t,x_{t+1}}}{\sum_{v\in V}\exp z_{t,v}}" aria-label="\mathcal{L}=-\sum_{t=1}^{T-1}\log \frac{\exp z_{t,x_{t+1}}}{\sum_{v\in V}\exp z_{t,v}}" role="img"></div>
+  </div>
+  <p>不要在模型 forward 里先做 softmax 再传给 cross entropy；那会损失数值稳定性，也会让梯度更差。</p>
+
+  <h4>Causal leakage 的最小反例</h4>
+  <p>如果 causal mask 错了，模型可能在位置 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 看到 <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>，训练 loss 会异常容易下降，但推理时这种信息不可用。一个简单检查是：固定前缀，只改变未来 token，比较前缀位置 logits 是否变化。</p>
+  <div class="code-block" data-lang="python">
+a = torch.tensor([[10, 20, 30, 40]])
+b = torch.tensor([[10, 20, 99, 88]])  # 前两个 token 相同，未来 token 不同
+logits_a = model(a)
+logits_b = model(b)
+assert torch.allclose(logits_a[:, :2], logits_b[:, :2], atol=1e-5)</div>
+  <p>这个测试不是质量评测，而是因果结构检查：前缀位置的输出不能依赖未来 token。它把第 3 章的 causal mask、第 6 章的 logits shape 和第 7 章的 next-token loss 串成同一个训练目标。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -752,6 +791,7 @@ for step in range(10):
   <ul>
     <li>✅ <strong>GPTConfig</strong> — 配置类封装所有超参数，支持快速切换模型尺寸</li>
     <li>✅ <strong>GPTModel (~60 行核心代码)</strong> — Embedding → 12×Block → Norm → LM Head</li>
+    <li>✅ <strong>Next-token logits 与 label shift</strong> — 理解 <code>logits[:, t, :]</code> 预测的是下一 token，而不是当前位置 token</li>
     <li>✅ <strong>Weight Tying 深入</strong> — 小模型收益大（31%），大模型收益微乎其微（&lt; 0.1%）</li>
     <li>✅ <strong>124M 参数精算</strong> — 逐层验证：Embedding 38.6M + 12 层 Block 85M + Norm 1.5K = 124.4M</li>
     <li>✅ <strong>HuggingFace 权重加载</strong> — 与官方 GPT-2 输出一致性验证</li>

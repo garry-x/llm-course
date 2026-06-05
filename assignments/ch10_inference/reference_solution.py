@@ -251,6 +251,57 @@ def maximal_marginal_relevance(query_embedding, doc_embeddings, doc_ids=None, to
     return selected
 
 
+def build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_tokens=0, token_counter=None):
+    if max_context_tokens <= 0:
+        raise ValueError("max_context_tokens must be positive")
+    if reserved_output_tokens < 0:
+        raise ValueError("reserved_output_tokens must be non-negative")
+    context_budget = max_context_tokens - reserved_output_tokens
+    if context_budget <= 0:
+        raise ValueError("reserved_output_tokens must be smaller than max_context_tokens")
+    if token_counter is None:
+        token_counter = lambda text: len(str(text).split())
+
+    selected = []
+    used_tokens = 0
+    skipped = 0
+    for chunk in retrieved_chunks:
+        if not isinstance(chunk, dict):
+            raise ValueError("retrieved_chunks must contain dictionaries")
+        if "doc_id" not in chunk or "text" not in chunk:
+            raise ValueError("each chunk must contain doc_id and text")
+        text = str(chunk["text"]).strip()
+        if not text:
+            skipped += 1
+            continue
+        block = f"[{chunk['doc_id']}] {text}"
+        cost = int(token_counter(block))
+        if cost <= 0:
+            raise ValueError("token_counter must return a positive integer for non-empty chunks")
+        if used_tokens + cost > context_budget:
+            skipped += 1
+            continue
+        selected.append(
+            {
+                "doc_id": chunk["doc_id"],
+                "text": text,
+                "score": chunk.get("score"),
+                "tokens": cost,
+            }
+        )
+        used_tokens += cost
+
+    context = "\n\n".join(f"[{item['doc_id']}] {item['text']}" for item in selected)
+    return {
+        "context": context,
+        "selected": selected,
+        "citations": [item["doc_id"] for item in selected],
+        "used_tokens": used_tokens,
+        "context_budget": context_budget,
+        "skipped": skipped,
+    }
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         if overlap >= chunk_size:

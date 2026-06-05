@@ -70,6 +70,11 @@ def maximal_marginal_relevance(query_embedding, doc_embeddings, doc_ids=None, to
     raise NotImplementedError
 
 
+def build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_tokens=0, token_counter=None):
+    """Pack retrieved chunks with citations under a context-token budget."""
+    raise NotImplementedError
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         raise NotImplementedError

@@ -517,13 +517,14 @@ class SimpleRAG:
   <p>训练 bi-encoder retrieval embedding 时，常用 in-batch negatives：同一个 batch 中第 <code>i</code> 个 query 的正样本文档是第 <code>i</code> 个 document，其余 document 都作为负样本。Ch10 作业中的 <code>contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature)</code> 对 embedding 做 L2 normalization，计算 <code>Q D^T / temperature</code>，再用对角线标签做 cross entropy。这就是 InfoNCE / contrastive retrieval loss 的最小形式；它训练的是向量空间，后续仍要用 Recall@k、MRR、nDCG 和端到端答案质量检验是否真的改善 RAG。</p>
   <p>Cross-encoder reranker 的训练方式不同：它直接读取 query 和候选文档拼接后的文本，输出一个相关性分数。给定同一 query 下的 chosen/rejected 文档对，<code>pairwise_reranker_loss(chosen_scores, rejected_scores)</code> 可用 <code>-log sigmoid(s_chosen - s_rejected)</code> 训练排序方向。Bi-encoder 适合大规模召回，cross-encoder 更适合对 top-k 候选做精排；二者的 loss、输入形式和服务成本都不同。</p>
   <p>Ch10 作业中的 <code>recall_at_k(retrieved_ids, relevant_ids, k)</code>、<code>reciprocal_rank_at_k(...)</code> 和 <code>ndcg_at_k(retrieved_ids, relevance_scores, k)</code> 分别对应三个问题：top-k 里是否包含应命中的文档、第一个相关文档排在第几位、分级相关性更高的文档是否排得更靠前。nDCG 的 DCG 项通常写作 <code>(2^rel - 1) / log2(rank + 1)</code>，再除以理想排序的 IDCG，使分数落在 0 到 1 附近。若 Recall@5 很低，生成模型通常没有足够上下文；若 Recall@5 高但 reciprocal rank 或 nDCG 低，说明相关 chunk 被排在后面，容易被 prompt 截断或被无关上下文干扰。作业还加入 <code>reciprocal_rank_fusion</code>、<code>rerank_documents</code> 与 <code>maximal_marginal_relevance</code>，让学生实现 hybrid search、cross-encoder rerank 和去冗余 chunk selection 的最小版本。</p>
+  <p>检索和重排之后还要做 <strong>context packing</strong>。<code>build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_tokens)</code> 在 prompt 预算内装配带 citation 的 chunk，并报告 <code>used_tokens</code>、<code>citations</code> 和 <code>skipped</code>。这一步能暴露一种常见错误：相关 chunk 已经被检索到，但因为排序靠后、重复 chunk 太多或输出预算预留过大，最终没有进入 prompt。</p>
   <p>MMR 的选择规则是每一步选最大化 <code>lambda * sim(query, doc) - (1 - lambda) * max_sim(doc, selected)</code> 的候选。它不是提高召回的训练目标，而是 prompt assembly 前的贪心选择策略：当多个 chunk 都来自同一段近重复文本时，MMR 会牺牲一点 query 相似度，换取覆盖互补信息的上下文。</p>
 
   <h4>一个可复现实验设置</h4>
   <ol>
     <li><strong>固定数据切片：</strong>FAQ、长文档、多跳问题、时间敏感问题、相似实体问题分别统计，不用一个总分替代所有场景。</li>
     <li><strong>逐层消融：</strong>比较 dense-only、BM25-only、hybrid、hybrid+rerank、hybrid+MMR、不同 chunk size/overlap 的变化。</li>
-    <li><strong>分开报告检索和生成：</strong>如果 Recall@5 很低，先修检索；如果 Recall@5 高但答案错，重点看 prompt assembly 和 generation。</li>
+    <li><strong>分开报告检索和生成：</strong>如果 Recall@5 很低，先修检索；如果 Recall@5 高但答案错，重点看 prompt assembly、citation coverage 和 generation。</li>
     <li><strong>记录成本维度：</strong>top-k 越大不一定越好，它会提高 token 成本、TTFT 和上下文干扰。</li>
   </ol>
 

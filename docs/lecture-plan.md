@@ -624,6 +624,7 @@ Quick check：
 - RAG retrieval metrics：Recall@k、reciprocal rank 与 nDCG@k。
 - RRF 融合 dense/BM25 排序；rerank 改善前排相关性但会增加延迟。
 - MMR 在 query 相关性和 chunk 去冗余之间做贪心折中。
+- RAG context packing 在 context budget 与 reserved output budget 下选择带 citation 的 chunk；Recall 命中但没有进入 prompt 仍然会失败。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
 课堂 demo：
@@ -634,6 +635,7 @@ Quick check：
 - 给定 retrieved/relevant ids 与 graded relevance，手算 Recall@k、reciprocal rank 和 nDCG@k。
 - 给定 dense/BM25 排序，手算 RRF 分数，再用 reranker 分数调整 top-k。
 - 给定 query-doc 和 doc-doc 相似度，手算 MMR 选择顺序。
+- 给定候选 chunk、token 预算和预留输出预算，手算哪些 citation 进入 prompt。
 - 对 per-channel INT8 权重做 roundtrip。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 
@@ -641,12 +643,13 @@ Quick check：
 
 - RAG 失败一定是模型生成错了吗？
 - 为什么 top-k 最相似 chunk 可能不是最好的 prompt context？
+- Recall@k 命中了相关 chunk，为什么答案仍然可能缺引用或编造？
 - INT8 降低的是权重显存、KV cache 还是两者？
 - 一个多模态模型 VQA 分数高，是否能推出 OCR 或视觉定位可靠？
 
 课后产出：
 
-- A9 RAG/quantization/benchmark 测试通过。
+- A9 RAG/context packing/quantization/benchmark 测试通过。
 - 推理 capstone 初版，包含 RAG 或多模态输入的失败模式分析。
 
 ## Week 10 Lecture 19: Capstone Reproducibility Workshop

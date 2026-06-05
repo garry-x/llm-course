@@ -210,6 +210,40 @@ class TestRetrievalMetrics(unittest.TestCase):
         self.assertEqual([item["doc_id"] for item in selected], ["exact", "diverse"])
         self.assertGreater(selected[1]["diversity_penalty"], 0.0)
 
+    def test_build_rag_context_packs_citations_under_budget(self):
+        chunks = [
+            {"doc_id": "A", "text": "alpha beta", "score": 0.9},
+            {"doc_id": "B", "text": "gamma delta epsilon", "score": 0.8},
+            {"doc_id": "C", "text": "zeta eta theta iota", "score": 0.7},
+        ]
+        packed = submission.build_rag_context(
+            chunks,
+            max_context_tokens=9,
+            reserved_output_tokens=2,
+            token_counter=lambda text: len(text.split()),
+        )
+        self.assertEqual(packed["context_budget"], 7)
+        self.assertLessEqual(packed["used_tokens"], packed["context_budget"])
+        self.assertEqual(packed["citations"], ["A", "B"])
+        self.assertIn("[A] alpha beta", packed["context"])
+        self.assertIn("[B] gamma delta epsilon", packed["context"])
+        self.assertNotIn("[C]", packed["context"])
+        self.assertEqual(packed["skipped"], 1)
+        self.assertEqual([item["tokens"] for item in packed["selected"]], [3, 4])
+
+    def test_build_rag_context_rejects_bad_budget_and_chunks(self):
+        chunks = [{"doc_id": "A", "text": "alpha"}]
+        with self.assertRaises(ValueError):
+            submission.build_rag_context(chunks, max_context_tokens=0)
+        with self.assertRaises(ValueError):
+            submission.build_rag_context(chunks, max_context_tokens=4, reserved_output_tokens=4)
+        with self.assertRaises(ValueError):
+            submission.build_rag_context([("A", "alpha")], max_context_tokens=4)
+        with self.assertRaises(ValueError):
+            submission.build_rag_context([{"doc_id": "A"}], max_context_tokens=4)
+        with self.assertRaises(ValueError):
+            submission.build_rag_context(chunks, max_context_tokens=4, token_counter=lambda _text: 0)
+
     def test_reranking_helpers_reject_invalid_inputs(self):
         with self.assertRaises(ValueError):
             submission.reciprocal_rank_fusion([], k=60)

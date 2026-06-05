@@ -61,6 +61,7 @@ SAFE_DOCS = [
     "guest-speaker-seminar-policy.md",
     "inference-engineer-curriculum.md",
     "lecture-media-access-policy.md",
+    "lecture-note-core-pack.md",
     "lecture-note-sample-pack.md",
     "learning-outcome-attainment-report.md",
     "learning-analytics-remediation-plan.md",

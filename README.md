@@ -68,6 +68,8 @@
 
 评分锚点样例和学生可见反馈口径见 [Grading Anchor Sample Feedback Pack](docs/grading-anchor-sample-feedback-pack.md)，用于把 written、programming、capstone、reading、peer review 和 regrade 的双评边界落实为可复用 anchor sample。
 
+高风险讲次的学生可见核心讲义见 [Lecture Note Core Pack](docs/lecture-note-core-pack.md)，覆盖 L2/L4/L6/L12/L15 的类比推理、RoPE、mask/CE、GQA/MLA、推测解码、来源边界和经典 NLP 对标主题。
+
 学生可见的讨论课 worksheet 见 [Recitation Worksheet Pack](docs/recitation-worksheet-pack.md)，覆盖 shape drill、failure drill、paper-to-code link、source boundary、exit ticket 和 capstone rehearsal。
 
 编程作业代码质量评分口径见 [Programming Assignment Code Quality Rubric](docs/programming-assignment-code-quality-rubric.md)，用于把 API contract、shape discipline、向量化 PyTorch、数值稳定、dtype/device、边界处理、可读性、复现和反硬编码纳入人工复核。

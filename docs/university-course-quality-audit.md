@@ -26,7 +26,7 @@
 | 学习目标证据 | 每个课程目标能映射到教学材料、学生交付、自动证据和人工评分证据 | 已新增 [Course Outcome Map](course-outcome-map.md)，覆盖 6 个 syllabus outcome、自动门禁覆盖矩阵和人工审查清单 | 课程运行后继续补真实学生样例和隐藏测试统计 |
 | 评分一致性 | 助教批改有校准流程、双评规则、满分/部分分/不通过样例和复核口径 | 已新增 [Grading Calibration Guide](grading-calibration.md)，覆盖书面题、代码作业、capstone、阅读复盘和同伴 review | 课程运行后继续加入真实争议样例 |
 | 授课执行 | 每周主题能展开到单次课堂目标、推导、demo、讨论课、答疑和课堂检查 | 已新增 [10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[Classroom Demo Runbook](demo-runbook.md)、[Discussion Section and Office Hours Guide](discussion-office-hours-guide.md) 与 [Weekly Teaching Reflection and Adjustment Log](weekly-teaching-reflection-adjustment-log.md)，覆盖每讲目标、核心推导、课堂 demo、quick check、讨论课 drill、demo dry run、office-hour triage 和讲后下次课调整 | 教师可按班级节奏替换具体日期和课堂活动 |
-| 材料发布 | 每讲章节、阅读、lecture notes、demo、作业证据、slide outline 和发布状态有统一索引 | 已新增 [Course Materials Index](course-materials-index.md)、[Lecture Slide Outline](lecture-slide-outline.md)、[Lecture Notes Index](lecture-notes-index.md) 与 [Board Derivation and Instructor Notes Pack](board-derivation-pack.md)，覆盖 20 讲材料映射、notes、板书推导、demo 规则、slides/notes/recording 规则、课件大纲和版本记录 | 若后续加入正式 PDF slides、notebook 或录屏，应持续更新发布状态 |
+| 材料发布 | 每讲章节、阅读、lecture notes、demo、作业证据、slide outline 和发布状态有统一索引 | 已新增 [Course Materials Index](course-materials-index.md)、[Lecture Slide Outline](lecture-slide-outline.md)、[Lecture Notes Index](lecture-notes-index.md)、[Lecture Note Core Pack](lecture-note-core-pack.md) 与 [Board Derivation and Instructor Notes Pack](board-derivation-pack.md)，覆盖 20 讲材料映射、notes、高风险讲次核心讲义、板书推导、demo 规则、slides/notes/recording 规则、课件大纲和版本记录 | 若后续加入正式 PDF slides、notebook 或录屏，应持续更新发布状态 |
 | Staff 执行 | 教师、课程经理和助教有职责分工、开课清单、权限配置、公告模板、排班、事故升级和交接模板 | 已新增 [Course Staff Runbook](staff-runbook.md)，覆盖真实开课执行流程 | 每轮开课前填入真实 staff、工具和排班 |
 | 学术规范 | 明确协作、引用、AI 工具、复现要求 | 已新增 [课程 Syllabus](syllabus.md) 和 [课程政策：协作、引用与 AI 工具](course-policies.md) | 教师可按学校规则微调迟交和复核流程 |
 | 学生支持与可及性 | 课程明确学术便利安排、支持渠道、隐私边界、材料可访问性和公平评分边界 | 已新增 [Accessibility and Student Support Guide](accessibility-student-support.md)，并接入 syllabus 与课程政策 | 教师按本校正式流程填入联系人和处理时限 |
@@ -68,7 +68,7 @@
 | Outcome Map | 每个课程目标有教学材料、学生交付、自动证据、人工评分证据和最低通过标准 | `docs/course-outcome-map.md` | 课程运行后用学生样例校准标准 |
 | Lecture Plan | 10 周课程展开为 20 讲，且每讲有目标、核心推导、demo、quick check 和课后证据 | `docs/lecture-plan.md` | 教师按课堂反馈调整时间分配和例题 |
 | Demo Runbook | 20 讲课堂 demo 有命令、预期输出、常见失败和备用方案 | `docs/demo-runbook.md` | 教师每轮开课前完成 dry run 并记录失败项 |
-| Materials Index / Slides / Notes | 每讲有章节/讲义、阅读、lecture notes、板书推导、demo、作业证据、slide outline、发布状态和版本记录 | `docs/course-materials-index.md`、`docs/lecture-slide-outline.md`、`docs/lecture-notes-index.md` 与 `docs/board-derivation-pack.md` | 课程经理每次发布正式 slides、notes、notebook 或录屏后更新 |
+| Materials Index / Slides / Notes | 每讲有章节/讲义、阅读、lecture notes、板书推导、demo、作业证据、slide outline、发布状态和版本记录 | `docs/course-materials-index.md`、`docs/lecture-slide-outline.md`、`docs/lecture-notes-index.md`、`docs/lecture-note-core-pack.md` 与 `docs/board-derivation-pack.md` | 课程经理每次发布正式 slides、notes、notebook 或录屏后更新 |
 | Discussion / Office Hours | 每周有可执行的 shape drill、failure drill、paper-to-code drill、office-hour triage 和 exit ticket 汇总 | `docs/discussion-office-hours-guide.md` | 助教按真实答疑记录更新高频问题 |
 | Student FAQ | 学生有集中 FAQ 与 troubleshooting，覆盖环境、测试、PyTorch shape/mask、capstone、评分复核和提问模板 | `docs/student-faq-troubleshooting.md` | 课程团队按 Office Hours 和复核记录持续更新 |
 | Staff Runbook | 课程团队有角色职责、开课前 checklist、权限配置、公告模板、每周会议、评分交接、事故升级和期末交接 | `docs/staff-runbook.md` | 课程经理每轮开课前更新真实排班和工具权限 |
@@ -167,6 +167,7 @@
 | Done | 新增课程材料发布索引 | [Course Materials Index](course-materials-index.md) 覆盖 20 讲章节、阅读、demo、作业证据、发布状态、slides/notes/recording 规则和版本记录 |
 | Done | 新增 20 讲课件大纲 | [Lecture Slide Outline](lecture-slide-outline.md) 覆盖每讲 slide 标题、核心 slides、demo、quick check 和课后证据 |
 | Done | 新增 20 讲 lecture notes 索引 | [Lecture Notes Index](lecture-notes-index.md) 覆盖每讲 notes、板书推导、复盘问题、证据和发布 checklist |
+| Done | 新增高风险核心讲义包 | [Lecture Note Core Pack](lecture-note-core-pack.md) 覆盖 L2/L4/L6/L12/L15 的类比推理、RoPE、mask/CE、GQA/MLA、推测解码、来源边界和经典 NLP 误区 |
 | Done | 新增板书推导与教师讲稿包 | [Board Derivation and Instructor Notes Pack](board-derivation-pack.md) 覆盖 BPE、Embedding、RoPE、attention scaling、mask、MHA/GQA/MLA、Norm、CE、AdamW、DPO、GRPO、KV cache 和 L1-L20 quick check |
 | Done | 新增讨论课与 office hours 指南 | [Discussion Section and Office Hours Guide](discussion-office-hours-guide.md) 覆盖 Week 1-10 shape drill、failure drill、paper-to-code drill、office-hour triage 和 exit ticket 汇总 |
 | Done | 新增学生 FAQ 与 troubleshooting 指南 | [Student FAQ and Troubleshooting Guide](student-faq-troubleshooting.md) 覆盖环境、公开/隐藏测试、shape/mask、capstone、复核和提问模板 |

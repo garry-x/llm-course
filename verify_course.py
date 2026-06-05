@@ -475,6 +475,7 @@ COURSE_DOCS = {
         "Lecture Notes Quality and Review Standard",
         "Lecture Notes Review Ledger",
         "Lecture Note Sample Pack",
+        "Lecture Note Core Pack",
         "Board Derivation and Instructor Notes Pack",
         "使用规则",
         "Notes 发布状态",
@@ -495,6 +496,28 @@ COURSE_DOCS = {
         "Sample L3: Scaled Dot-Product Attention",
         "Sample L9: Cross Entropy and AdamW",
         "Sample L18: Serving SLO and Capacity",
+        "TA Review Checklist",
+        "Release Checklist",
+        "Learning goals",
+        "Notation ledger",
+        "Core derivation",
+        "Shape checks",
+        "Code binding",
+        "Common misconceptions",
+        "Source boundary",
+        "Accessibility notes",
+        "Quick check",
+        "Post-lecture evidence",
+    ],
+    "docs/lecture-note-core-pack.md": [
+        "Lecture Note Core Pack",
+        "复核日期：2026-06-05",
+        "Coverage Contract",
+        "Core L2: Embedding, Analogy, and RoPE",
+        "Core L4: Causal Mask and Cross-Entropy Gradient",
+        "Core L6: MHA, GQA, MLA, Norm, and Block Boundaries",
+        "Core L12: Speculative Decoding, Constraints, and Frontier Source Boundaries",
+        "Core L15: Classic NLP, Encoder-Decoder, BERT, and Evaluation",
         "TA Review Checklist",
         "Release Checklist",
         "Learning goals",
@@ -6234,6 +6257,110 @@ def check_lecture_note_sample_pack() -> None:
     ok("lecture note sample pack covers 4 representative notes with fields, evidence, and boundaries")
 
 
+def check_lecture_note_core_pack() -> None:
+    text = read("docs/lecture-note-core-pack.md")
+    issues = []
+
+    for marker in [
+        "Lecture Note Core Pack",
+        "复核日期：2026-06-05",
+        "Coverage Contract",
+        "TA Review Checklist",
+        "Release Checklist",
+        "lecture-notes-index.md",
+        "lecture-note-sample-pack.md",
+        "lecture-notes-quality-review.md",
+        "lecture-notes-review-ledger.md",
+        "mathematical-derivation-audit.md",
+        "paper-to-code-traceability-matrix.md",
+    ]:
+        if marker not in text:
+            issues.append(f"missing lecture note core marker: {marker}")
+
+    required_fields = [
+        "Learning goals",
+        "Notation ledger",
+        "Core derivation",
+        "Shape checks",
+        "Code binding",
+        "Common misconceptions",
+        "Source boundary",
+        "Accessibility notes",
+        "Quick check",
+        "Post-lecture evidence",
+    ]
+    core_specs = [
+        (
+            "Core L2: Embedding, Analogy, and RoPE",
+            ["assignments/ch02_embeddings/tests.py", "DER-02", "DER-03", "analogy", "RoPE"],
+        ),
+        (
+            "Core L4: Causal Mask and Cross-Entropy Gradient",
+            ["assignments/ch03_attention/tests.py", "assignments/ch07_training/tests.py", "DER-05", "DER-09"],
+        ),
+        (
+            "Core L6: MHA, GQA, MLA, Norm, and Block Boundaries",
+            ["assignments/ch04_multihead/tests.py", "assignments/ch05_block/tests.py", "GQA", "MLA", "Pre-Norm"],
+        ),
+        (
+            "Core L12: Speculative Decoding, Constraints, and Frontier Source Boundaries",
+            ["assignments/ch08_generation/tests.py", "scripts/verify_frontier_sources.py", "D-level", "monitor-only"],
+        ),
+        (
+            "Core L15: Classic NLP, Encoder-Decoder, BERT, and Evaluation",
+            ["assignments/ch11_classic_nlp/tests.py", "dependency parsing", "seq2seq", "BERT", "BLEU"],
+        ),
+    ]
+    for heading, expected_markers in core_specs:
+        section = markdown_section(text, heading)
+        if not section:
+            issues.append(f"missing lecture note core section: {heading}")
+            continue
+        for field in required_fields:
+            if f"{field}:" not in section:
+                issues.append(f"{heading} missing field: {field}")
+        section_lower = section.lower()
+        for expected_marker in expected_markers:
+            if expected_marker.lower() not in section_lower:
+                issues.append(f"{heading} missing expected marker: {expected_marker}")
+        boundary_hits = sum(section.count(marker) for marker in ["does not", "not ", "不能", "不等于", "不是", "false"])
+        if boundary_hits < 2:
+            issues.append(f"{heading} missing enough explicit boundary language")
+        if ".venv/bin/python" not in section:
+            issues.append(f"{heading} missing executable verification command")
+
+    coverage_rows = extract_markdown_table_after(text, "## Coverage Contract")
+    covered_lectures = {cells[0] for cells in coverage_rows[1:] if cells}
+    for lecture in ["L2", "L4", "L6", "L12", "L15"]:
+        if lecture not in covered_lectures:
+            issues.append(f"coverage contract missing lecture: {lecture}")
+
+    checklist = markdown_section(text, "TA Review Checklist")
+    for checklist_marker in [
+        "Field completeness",
+        "Executable binding",
+        "Boundary control",
+        "CS224N alignment",
+        "Source safety",
+        "Student usability",
+    ]:
+        if checklist_marker not in checklist:
+            issues.append(f"lecture note core TA checklist missing marker: {checklist_marker}")
+
+    for doc_path in [
+        "README.md",
+        "docs/lecture-notes-index.md",
+        "docs/course-materials-index.md",
+        "docs/university-course-quality-audit.md",
+    ]:
+        if "lecture-note-core-pack.md" not in read(doc_path):
+            issues.append(f"{doc_path} missing lecture note core pack link")
+
+    if issues:
+        fail(f"lecture note core pack is incomplete: {'; '.join(issues[:10])}")
+    ok("lecture note core pack covers high-risk L2/L4/L6/L12/L15 notes with tests, boundaries, and source controls")
+
+
 def check_notation_shape_glossary() -> None:
     text = read("docs/notation-shape-glossary.md")
     issues = []
@@ -11655,6 +11782,7 @@ def check_course_site_release_builder() -> None:
             "course-calendar-deadline-ledger.md",
             "lecture-media-access-policy.md",
             "lecture-note-sample-pack.md",
+            "lecture-note-core-pack.md",
             "notation-shape-glossary.md",
             "worked-example-pack.md",
             "learning-outcome-attainment-report.md",
@@ -11858,6 +11986,7 @@ def main() -> int:
     check_lecture_notes_quality_review()
     check_lecture_notes_review_ledger()
     check_lecture_note_sample_pack()
+    check_lecture_note_core_pack()
     check_notation_shape_glossary()
     check_worked_example_pack()
     check_lecture_slide_sample_pack()

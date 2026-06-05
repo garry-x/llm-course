@@ -1,6 +1,6 @@
 # Lecture Notes Index
 
-本索引用于把 20 讲的课堂 notes、板书推导、章节正文、阅读复盘和作业证据连起来。它补充 [10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[Lecture Slide Outline](lecture-slide-outline.md)、[Lecture Notes Quality and Review Standard](lecture-notes-quality-review.md)、[Lecture Notes Review Ledger](lecture-notes-review-ledger.md)、[Lecture Note Sample Pack](lecture-note-sample-pack.md)、[Board Derivation and Instructor Notes Pack](board-derivation-pack.md)、[Classroom Demo Runbook](demo-runbook.md) 和 [Course Materials Index](course-materials-index.md)：lecture plan 说明课堂流程，slide outline 说明课件结构，lecture notes quality review 说明每讲 notes 的 notation、derivation、shape、source boundary 和 correction workflow，lecture notes review ledger 记录 L1-L20 的 review_record，lecture note sample pack 提供 L1/L3/L9/L18 的学生可见样例，board derivation pack 提供可直接板书的推导脚本，demo runbook 说明现场命令，本文件说明学生课前/课后应阅读哪份 notes、复盘哪些推导、提交什么证据。
+本索引用于把 20 讲的课堂 notes、板书推导、章节正文、阅读复盘和作业证据连起来。它补充 [10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[Lecture Slide Outline](lecture-slide-outline.md)、[Lecture Notes Quality and Review Standard](lecture-notes-quality-review.md)、[Lecture Notes Review Ledger](lecture-notes-review-ledger.md)、[Lecture Note Sample Pack](lecture-note-sample-pack.md)、[Lecture Note Core Pack](lecture-note-core-pack.md)、[Board Derivation and Instructor Notes Pack](board-derivation-pack.md)、[Classroom Demo Runbook](demo-runbook.md) 和 [Course Materials Index](course-materials-index.md)：lecture plan 说明课堂流程，slide outline 说明课件结构，lecture notes quality review 说明每讲 notes 的 notation、derivation、shape、source boundary 和 correction workflow，lecture notes review ledger 记录 L1-L20 的 review_record，lecture note sample pack 提供 L1/L3/L9/L18 的学生可见样例，lecture note core pack 补充 L2/L4/L6/L12/L15 的高风险核心讲义，board derivation pack 提供可直接板书的推导脚本，demo runbook 说明现场命令，本文件说明学生课前/课后应阅读哪份 notes、复盘哪些推导、提交什么证据。
 
 ## 使用规则
 
@@ -27,20 +27,20 @@
 | 讲次 | Notes / 正文 | 板书推导重点 | 复盘问题 | 证据 | 状态 |
 |------|--------------|--------------|----------|------|------|
 | L1 | Ch01; [math-prerequisites.md](math-prerequisites.md) | BPE merge 对长度和词表的影响；贪心 merge 的局限 | byte-level BPE 为什么通常没有 OOV？ | Ch01 BPE tests + reading recap | ready |
-| L2 | Ch02 | `one_hot @ E` 等价于 embedding lookup；`R_m^T R_n = R_{n-m}` | 类比推理是不是训练目标直接保证的性质？ | Ch02 embedding/RoPE tests + written proof | ready |
+| L2 | Ch02; [lecture-note-core-pack.md](lecture-note-core-pack.md#core-l2-embedding-analogy-and-rope) | `one_hot @ E` 等价于 embedding lookup；`R_m^T R_n = R_{n-m}` | 类比推理是不是训练目标直接保证的性质？ | Ch02 embedding/RoPE tests + written proof | ready |
 | L3 | Ch03 | `Var(q^T k)=d_k`；attention score/prob/context shape | 为什么 scaling 必须在 softmax 前？ | Ch03 scaled attention tests | ready |
-| L4 | Ch03; [classic-nlp-handout.md](classic-nlp-handout.md) | causal mask 广播；softmax+CE 梯度 | softmax 后 mask 为什么会破坏概率分布？ | causal mask failure analysis | ready |
+| L4 | Ch03; [lecture-note-core-pack.md](lecture-note-core-pack.md#core-l4-causal-mask-and-cross-entropy-gradient); [classic-nlp-handout.md](classic-nlp-handout.md) | causal mask 广播；softmax+CE 梯度 | softmax 后 mask 为什么会破坏概率分布？ | causal mask failure analysis | ready |
 | L5 | Ch04 | MHA/GQA 参数量与 KV cache 元素数 | GQA 减少的是哪些 heads？ | Ch04 MHA/GQA tests | ready |
-| L6 | Ch04-Ch05 | MLA latent cache；LayerNorm/RMSNorm；Pre-Norm residual | latent cache 低维是否意味着 attention 免费？ | Ch05 block grad-flow tests | ready |
+| L6 | Ch04-Ch05; [lecture-note-core-pack.md](lecture-note-core-pack.md#core-l6-mha-gqa-mla-norm-and-block-boundaries) | MLA latent cache；LayerNorm/RMSNorm；Pre-Norm residual | latent cache 低维是否意味着 attention 免费？ | Ch05 block grad-flow tests | ready |
 | L7 | Ch06 | 自回归分解；tied LM head 参数审计 | labels 为什么右移一位？ | Ch06 GPT forward tests | ready |
 | L8 | Ch06 | top-k routing；activated parameters；load balancing | 稀疏激活为什么不自动等于负载均衡？ | MoE router tests + written audit | ready |
 | L9 | Ch07 | CE 数值稳定性；AdamW decoupled decay；warmup+cosine | weight decay 和 L2 regularization 在 Adam 中有什么差别？ | Ch07 loss/optimizer tests | ready |
 | L10 | Ch07; training capstone README | checkpoint/resume；tokens/s；GPU hours；曲线诊断 | loss 曲线下降但验证集变差时如何定位？ | training capstone acceptance | ready |
 | L11 | Ch08 | greedy/top-k/top-p 的候选集定义；重复生成机理 | top-p 和 top-k 哪个候选数固定？ | Ch08 sampling tests | ready |
-| L12 | Ch08 | speculative decoding 接受率；约束解码边界；MTP 来源等级 | 推测解码什么时候可能不加速？ | speculative decoding tests + source check | ready |
+| L12 | Ch08; [lecture-note-core-pack.md](lecture-note-core-pack.md#core-l12-speculative-decoding-constraints-and-frontier-source-boundaries) | speculative decoding 接受率；约束解码边界；MTP 来源等级 | 推测解码什么时候可能不加速？ | speculative decoding tests + source check | ready |
 | L13 | Ch09 | SFT label mask；LoRA low-rank delta；参数冻结 | LoRA 初始输出为什么应接近 base model？ | LoRA/SFT tests | ready |
 | L14 | Ch09 | DPO log-ratio；GRPO group advantage whitening | preference loss 如何避免只看 chosen 概率？ | DPO/GRPO tests + written proof | ready |
-| L15 | [classic-nlp-handout.md](classic-nlp-handout.md); [nlp-evaluation-coverage.md](nlp-evaluation-coverage.md) | dependency parsing action constraints；BLEU/ROUGE/EM/F1 | 为什么 exact match 不能替代 F1？ | Ch11 classic NLP tests | ready |
+| L15 | [lecture-note-core-pack.md](lecture-note-core-pack.md#core-l15-classic-nlp-encoder-decoder-bert-and-evaluation); [classic-nlp-handout.md](classic-nlp-handout.md); [nlp-evaluation-coverage.md](nlp-evaluation-coverage.md) | dependency parsing action constraints；BLEU/ROUGE/EM/F1 | 为什么 exact match 不能替代 F1？ | Ch11 classic NLP tests | ready |
 | L16 | [data-ethics-review.md](data-ethics-review.md) | data license/PII/contamination/safety risk matrix | 一个项目何时必须降级或移除数据？ | data ethics review form | ready |
 | L17 | Ch10 | KV cache memory；per-channel int8；RAG chunk overlap | KV cache 为什么随 batch/context 线性增长？ | Ch10 KV/RAG tests | ready |
 | L18 | Ch10; inference capstone README | TTFT/TPOT/TPS；P95/P99；capacity plan | 哪些指标证明系统可上线，哪些只能证明 demo 可跑？ | inference capstone benchmark/SLO | ready |

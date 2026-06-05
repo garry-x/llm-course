@@ -527,31 +527,30 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
 <!-- 概念练习 -->
 <!-- ================================================================ -->
 <!-- ================================================================ -->
-<!-- 2.11 提示工程深入 -->
+<!-- 2.11 上下文学习导论 -->
 <!-- ================================================================ -->
 <section class="card" id="s2-11">
-  <h3>2.11 提示工程（Prompt Engineering）深入</h3>
-  <p>在完成 Embedding + RoPE 的理论和实现后，让我们回到 LLM 应用中最实用的技能：<strong>如何写好 prompt</strong>。这不是"技巧"，而是对模型概率分布的精确引导。</p>
+  <h3>2.11 上下文学习导论：prompt 为什么会影响生成</h3>
+  <p>完成 Embedding 与 RoPE 后，我们可以从模型内部重新理解 prompt：它不是一个独立于模型之外的"话术"，而是一段已经被分词、嵌入、加上位置信息的<strong>条件序列</strong>。自回归语言模型在每一步都学习条件分布 \(p(x_t \mid x_{&lt;t})\)，所以前文 token 的内容、顺序和相对位置都会改变下一个 token 的概率分布。</p>
 
-  <h4>Zero-Shot vs Few-Shot Prompting</h4>
-  <p><strong>Zero-Shot：</strong>仅给出指令，不给示例。"将以下句子翻译成英文：今天天气很好。"——模型根据指令和自身知识完成。</p>
-  <p><strong>Few-Shot：</strong>在指令前给出 2-5 个示例。"输入→输出"对帮助模型理解任务格式和期望风格。GPT-3 论文的核心发现就是 few-shot 能力——模型不需要微调就能通过示例适应新任务。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么 Few-Shot 有效？</strong>从注意力机制的角度看，few-shot 示例会作为上下文中的条件信息进入 KV Cache，后续 token 可以参考这些示例的格式、标签空间和推理模式。这是一种<strong>上下文学习</strong>现象，不会更新模型参数；不要把它等同于真正的微调。</div></div>
+  <h4>从 token 序列到条件分布</h4>
+  <p>设输入序列为 \(x_1,\ldots,x_n\)。经过嵌入层后，每个 token 得到语义向量；经过位置编码后，模型还能区分"示例在前、问题在后"与"问题在前、示例在后"。因此，同样的任务描述如果改变示例顺序、标签格式或边界符号，模型看到的条件序列就不同，最终生成分布也会不同。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键连接：</strong>prompt 的效果首先来自表示层：token embedding 提供内容语义，位置编码提供顺序结构；第 3 章的注意力机制会进一步说明模型如何在生成时选择性读取这些上下文信息。</div></div>
 
-  <h4>Chain-of-Thought (CoT) Prompting</h4>
-  <p>在 prompt 中加入"让我们一步步思考"（Let's think step by step），引导模型生成<strong>中间推理步骤</strong>而非直接给出答案。这是常见且低成本的 prompt 技巧之一，在数学、逻辑和多步任务中经常有帮助；实际效果仍取决于模型、任务和评测方式。</p>
-  <p>CoT 的数学直觉：标准的 next-token prediction 会直接跳到答案 token——但复杂问题需要多步推理。CoT 将推理过程<strong>显式化</strong>为 token 序列，使得模型在生成中间步骤时能看到自己的推理历史，逐步修正和深化。</p>
+  <h4>Zero-shot、few-shot 与上下文学习</h4>
+  <p><strong>Zero-shot</strong> 只给任务指令，不给输入输出示例；模型依靠预训练中学到的语言模式和任务描述完成预测。<strong>Few-shot</strong> 在上下文中放入若干示例，模型参数没有更新，但示例的格式、标签空间和推理模式会进入条件序列，影响后续 token 的生成。</p>
+  <p>这类能力通常称为<strong>上下文学习</strong>。它与微调的区别很重要：微调通过梯度更新参数，把任务信息写入权重；上下文学习只在当前序列内提供条件信息，离开这段上下文后不会保留为新的模型参数。</p>
 
-  <h4>System Prompt 与角色设定</h4>
-  <p>许多 Chat API 会把 system/developer 指令作为独立消息或特殊模板片段，并在产品策略上赋予它高于普通用户消息的约束作用。实现上，这些指令通常被序列化到上下文较靠前的位置或专门的 chat template 中；因果注意力允许后续 token 读取前文，因此它们会持续影响生成。但具体优先级、模板和冲突处理由服务商协议与模型训练共同决定，不能只用注意力可见性来解释。</p>
+  <h4>长上下文中的位置问题</h4>
+  <p>长上下文模型并不只是"把窗口变大"。当序列长度扩展时，模型需要稳定处理更远距离的相对位置，避免重要信息因为位置外推、注意力稀释或上下文组织混乱而失效。RoPE、ALiBi、YaRN 等方法都围绕一个核心问题展开：如何让模型在较长序列中仍能可靠地区分 token 之间的相对距离与顺序关系。</p>
 
-  <h4>提示工程的核心原则</h4>
+  <h4>本章应掌握的建模视角</h4>
   <div class="info-box tip"><span class="icon">💡</span><div>
-    <strong>1. 明确任务 + 输出格式</strong> —— 不要把 LLM 当成会读心术<br>
-    <strong>2. Few-shot > Zero-shot</strong> —— 2-3 个好示例胜过 100 字描述<br>
-    <strong>3. CoT 对推理任务有效</strong> —— 数学/逻辑/多步问题必加 "Let's think step by step"<br>
-    <strong>4. 越具体越好</strong> —— 给出格式、长度、风格、受众的明确约束<br>
-    <strong>5. System prompt 设置边界</strong> —— 角色、知识范围、安全约束
+    <strong>1. Prompt 是条件序列</strong> —— 它首先会被 tokenizer、embedding 和位置编码处理<br>
+    <strong>2. Few-shot 是上下文学习</strong> —— 示例改变当前条件分布，但不更新参数<br>
+    <strong>3. 顺序和边界很重要</strong> —— 相同 token 的不同排列会形成不同的模型输入<br>
+    <strong>4. 长上下文依赖位置外推</strong> —— 位置编码决定模型能否稳定理解远距离关系<br>
+    <strong>5. 注意力是下一章的核心</strong> —— 它解释模型如何读取、比较和聚合上下文 token
   </div></div>
 </section>
 

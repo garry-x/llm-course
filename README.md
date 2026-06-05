@@ -164,7 +164,7 @@ PORT=3000 docker compose up -d
 | # | 章节 | 编程产出 | 练习 |
 |---|------|---------|:--:|
 | 1 | **环境搭建与分词** — 实现 BPE Tokenizer | `BPETokenizer` ~80行 | 5+5 |
-| 2 | **嵌入层与位置编码** — TokenEmbedding + RoPE + PromptEng | `TokenEmbedding` + `RoPE` ~60行 | 4+5 |
+| 2 | **嵌入层与位置编码** — TokenEmbedding + RoPE + 上下文学习导论 | `TokenEmbedding` + `RoPE` ~60行 | 4+5 |
 | 3 | **单头自注意力** — Scaled Dot-Product Attention | `ScaledDotProductAttention` ~40行 | 5+5 |
 | 4 | **多头注意力与 MLA** — MHA → GQA → DeepSeek MLA | `MultiHeadAttention` ~60行 | 5+5 |
 | 5 | **Transformer Block** — RMSNorm + FFN/SwiGLU + mHC | `TransformerBlock` ~50行 | 5+5 |

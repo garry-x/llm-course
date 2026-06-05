@@ -81,6 +81,45 @@ class TestWordVectorObjectives(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.skipgram_negative_sampling_loss(torch.randn(2, 3), torch.randn(2, 3), torch.randn(2, 4))
 
+    def test_cosine_similarity_matrix_normalizes_rows(self):
+        vectors = torch.tensor([[3.0, 0.0], [0.0, 4.0], [6.0, 0.0]])
+        sims = submission.cosine_similarity_matrix(vectors)
+        expected = torch.tensor(
+            [
+                [1.0, 0.0, 1.0],
+                [0.0, 1.0, 0.0],
+                [1.0, 0.0, 1.0],
+            ]
+        )
+        self.assertTrue(torch.allclose(sims, expected, atol=1e-6))
+
+    def test_analogy_3cosadd_excludes_query_words(self):
+        word_to_idx = {"man": 0, "king": 1, "woman": 2, "queen": 3, "apple": 4}
+        embeddings = torch.tensor(
+            [
+                [0.0, 1.0],
+                [1.0, 1.0],
+                [0.0, 2.0],
+                [1.0, 2.0],
+                [-1.0, -1.0],
+            ]
+        )
+        result = submission.analogy_3cosadd(embeddings, word_to_idx, "man", "king", "woman", top_k=2)
+        self.assertEqual(result[0][0], "queen")
+        self.assertNotIn("man", [word for word, _score in result])
+        self.assertNotIn("king", [word for word, _score in result])
+        self.assertNotIn("woman", [word for word, _score in result])
+
+    def test_analogy_3cosadd_rejects_bad_inputs(self):
+        embeddings = torch.randn(3, 2)
+        word_to_idx = {"a": 0, "b": 1, "c": 2}
+        with self.assertRaises(ValueError):
+            submission.cosine_similarity_matrix(torch.randn(2, 2, 2))
+        with self.assertRaises(ValueError):
+            submission.analogy_3cosadd(embeddings, word_to_idx, "a", "b", "c", top_k=0)
+        with self.assertRaises(KeyError):
+            submission.analogy_3cosadd(embeddings, word_to_idx, "a", "b", "missing")
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch02 embedding tests")
 class TestSinusoidalEncoding(unittest.TestCase):

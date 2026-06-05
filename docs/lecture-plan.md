@@ -55,18 +55,21 @@ Quick check：
 
 - 从 one-hot 矩阵乘法推导 embedding lookup。
 - 解释 word2vec/GloVe 空间结构、窗口共现和类比推理的经验性质。
+- 计算 cosine similarity matrix 与 3CosAdd 类比。
 - 推导 sinusoidal 和 RoPE 的相对位置性质。
 
 核心推导：
 
 - `one_hot @ E = E[token_id]`。
 - directed co-occurrence matrix 与 SGNS loss。
+- 3CosAdd 查询向量：`v_b - v_a + v_c`，并排除输入词。
 - `R_m^T R_n = R_{n-m}`。
 
 课堂 demo：
 
 - 比较 learned embedding 与 one-hot matmul 的 shape 和内存。
 - 手算 `[0,1,2,1]` 在 window size 1 下的共现矩阵，再计算一个 SGNS loss。
+- 手造 `man/king/woman/queen` 向量，跑 3CosAdd。
 - 检查 RoPE 是否保持向量范数。
 
 Quick check：

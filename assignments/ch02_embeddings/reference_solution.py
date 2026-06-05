@@ -58,6 +58,35 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     return (positive_loss + negative_loss).mean()
 
 
+def cosine_similarity_matrix(vectors):
+    if vectors.dim() != 2:
+        raise ValueError("vectors must have shape [V, D]")
+    normalized = F.normalize(vectors.float(), p=2, dim=-1, eps=1e-12)
+    return normalized @ normalized.T
+
+
+def analogy_3cosadd(embeddings, word_to_idx, a, b, c, top_k=1):
+    if embeddings.dim() != 2:
+        raise ValueError("embeddings must have shape [V, D]")
+    if top_k <= 0:
+        raise ValueError("top_k must be positive")
+    for word in (a, b, c):
+        if word not in word_to_idx:
+            raise KeyError(word)
+
+    idx_to_word = {idx: word for word, idx in word_to_idx.items()}
+    query = embeddings[word_to_idx[b]] - embeddings[word_to_idx[a]] + embeddings[word_to_idx[c]]
+    normalized_embeddings = F.normalize(embeddings.float(), p=2, dim=-1, eps=1e-12)
+    normalized_query = F.normalize(query.float(), p=2, dim=0, eps=1e-12)
+    scores = normalized_embeddings @ normalized_query
+    for word in (a, b, c):
+        scores[word_to_idx[word]] = -float("inf")
+
+    k = min(top_k, embeddings.size(0) - len({a, b, c}))
+    values, indices = torch.topk(scores, k=k)
+    return [(idx_to_word[int(idx)], float(score)) for score, idx in zip(values, indices)]
+
+
 class SinusoidalEncoding(nn.Module):
     """Fixed sinusoidal positional encoding."""
 

@@ -25,6 +25,16 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     raise NotImplementedError
 
 
+def cosine_similarity_matrix(vectors):
+    """Return pairwise cosine similarities for a [V, D] embedding matrix."""
+    raise NotImplementedError
+
+
+def analogy_3cosadd(embeddings, word_to_idx, a, b, c, top_k=1):
+    """Solve a:b :: c:? with vector(b) - vector(a) + vector(c)."""
+    raise NotImplementedError
+
+
 class SinusoidalEncoding(nn.Module):
     """Fixed sinusoidal positional encoding."""
 

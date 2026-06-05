@@ -23,9 +23,10 @@
 
 1. 从 one-hot 矩阵乘法推导 embedding lookup，说明为什么 `E[token_id]` 等价于 `one_hot @ E`。
 2. 给定 token 序列 `[0,1,2,1]` 和 window size 1，手算 directed co-occurrence matrix；再给定 center/positive/negative 向量，写出 SGNS loss。
-3. 比较 skip-gram negative sampling 与 GloVe：它们分别从局部上下文样本和全局共现矩阵中学习什么统计信号？为什么类比推理不是训练目标直接保证的性质？
-4. 证明 sinusoidal position encoding 的相对位移可以由线性变换表示，即 `PE(pos+k)` 可以由 `PE(pos)` 的 sin/cos block 旋转得到。
-5. 证明 RoPE 点积只依赖相对位置：`(R_m q)^T (R_n k) = q^T R_{n-m} k`，并解释为什么这对长上下文外推有帮助但不是充分条件。
+3. 给定 5 个二维词向量，计算 cosine similarity matrix，并用 3CosAdd 解 `man:king :: woman:?`；说明为什么必须排除输入词。
+4. 比较 skip-gram negative sampling 与 GloVe：它们分别从局部上下文样本和全局共现矩阵中学习什么统计信号？为什么类比推理不是训练目标直接保证的性质？
+5. 证明 sinusoidal position encoding 的相对位移可以由线性变换表示，即 `PE(pos+k)` 可以由 `PE(pos)` 的 sin/cos block 旋转得到。
+6. 证明 RoPE 点积只依赖相对位置：`(R_m q)^T (R_n k) = q^T R_{n-m} k`，并解释为什么这对长上下文外推有帮助但不是充分条件。
 
 ## Ch03 Scaled Dot-Product Attention
 

@@ -352,27 +352,31 @@ Quick check：
 
 - 解释 draft/target 模型的接受机制。
 - 分析接受率、draft 成本和 target batch verify 的权衡。
+- 区分普通 sampling 与 reasoning/test-time compute。
 - 引入结构化输出、JSON schema 和约束生成。
 
 核心推导：
 
 - speculative decoding 加速受 `draft_cost`、`accept_rate`、verify batch size 共同影响。
+- self-consistency、best-of-N 和 verifier reranking 的准确率/成本权衡。
 - 约束生成把无效 token mask 到候选集之外。
 
 课堂 demo：
 
 - 运行 speculative decoding toy model，记录接受率。
+- 对同一数学题采样多条推理路径，比较 single-sample、majority vote 和 best-of-N。
 - 构造 JSON 输出失败和修复策略。
 
 Quick check：
 
 - draft model 越强是否一定越划算？
+- reasoning 输出更长是否一定代表推理更正确？
 - 约束生成会改变模型概率分布吗？
 
 课后产出：
 
 - A6 speculative decoding 输出统计。
-- 阅读复盘：speculative decoding 的失败条件。
+- 阅读复盘：speculative decoding 或 self-consistency 的失败条件。
 
 ## Week 7 Lecture 13: SFT、LoRA 与 Parameter-Efficient Tuning
 
@@ -528,7 +532,7 @@ Quick check：
 - Ch10 KV cache 测试通过。
 - 推理项目提案。
 
-## Week 9 Lecture 18: RAG、Quantization、LSH 与 Production Readiness
+## Week 9 Lecture 18: RAG、Quantization、多模态输入与 Production Readiness
 
 对应材料：Ch10、inference capstone。
 
@@ -536,27 +540,31 @@ Quick check：
 
 - 解释 RAG 的 chunking、embedding、retrieval、rerank、prompt assembly。
 - 比较 weight-only quantization、KV quantization、FP8/FP4。
+- 区分 VQA、OCR、图表理解、视觉定位和视频理解的评价方式。
 - 建立上线前的 latency、cost、quality 和 safety 判断框架。
 
 核心推导：
 
 - cosine similarity 与 normalized dot product。
 - quantization scale、dequantization error 和 ranking 误差。
+- 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
 课堂 demo：
 
 - 运行 RAG toy retriever，制造 chunk overlap 错误。
 - 对 per-channel INT8 权重做 roundtrip。
+- 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 
 Quick check：
 
 - RAG 失败一定是模型生成错了吗？
 - INT8 降低的是权重显存、KV cache 还是两者？
+- 一个多模态模型 VQA 分数高，是否能推出 OCR 或视觉定位可靠？
 
 课后产出：
 
 - A9 RAG/quantization/benchmark 测试通过。
-- 推理 capstone 初版。
+- 推理 capstone 初版，包含 RAG 或多模态输入的失败模式分析。
 
 ## Week 10 Lecture 19: Capstone Reproducibility Workshop
 

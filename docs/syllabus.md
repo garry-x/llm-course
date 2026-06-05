@@ -73,13 +73,13 @@
 |----|------|------|-----------|
 | 1 | Tokenization 与 Embedding | Ch01-Ch02；reading-list Week 1 | A1：BPE + embedding/RoPE；书面题 Ch01-Ch02 |
 | 2 | Attention 与反向传播复习 | Ch03；reading-list Week 2；math prerequisites | A2：scaled attention + causal mask；书面题 Ch03 |
-| 3 | MHA/GQA/MLA 与 Transformer Block | Ch04-Ch05；reading-list Week 3 | A3：MHA/GQA/MLA + block；书面题 Ch04-Ch05 |
+| 3 | MHA/GQA/MLA、Transformer Block 与机制可解释性 | Ch04-Ch05；reading-list Week 3 | A3：MHA/GQA/MLA + block；书面题 Ch04-Ch05 |
 | 4 | GPT 组装与 MoE | Ch06；reading-list Week 4 | A4：GPTModel + MoE router；书面题 Ch06 |
 | 5 | Training Loop | Ch07；reading-list Week 5 | A5：dataset/CE/AdamW/scheduler/train；训练项目提案 |
-| 6 | Generation 与 Decoding | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding；书面题 Ch08 |
+| 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO；训练 capstone 初版 |
 | 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：dependency/seq2seq/BERT/evaluation 书面题；同伴 review |
-| 9 | Inference Engineering | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark；推理项目提案 |
+| 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark/多模态评估；推理项目提案 |
 | 10 | Capstone 展示与前沿 seminar | 两个 capstone README；reading-list Week 10 | 训练 capstone + 推理 capstone 报告、演示、复现包 |
 
 ## 项目

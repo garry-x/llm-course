@@ -86,11 +86,14 @@
 
 - Zhang and Sennrich. [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467).
 - Shazeer. [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202).
+- Geva et al. [Transformer Feed-Forward Layers Are Key-Value Memories](https://arxiv.org/abs/2012.14913). 重点看 FFN neuron 的键值存储解释。
+- Meng et al. [Locating and Editing Factual Associations in GPT](https://arxiv.org/abs/2202.05262). 重点看 causal tracing、activation patching 和模型编辑边界。
 
 复盘问题：
 
 - GQA 节省 KV cache 的同时损失了什么表达能力？
 - MLA 的 latent cache 与 RoPE 解耦为什么会改变工程实现？
+- Probing、activation patching 和 ablation 分别能支持什么结论，不能支持什么结论？
 
 ## Week 4: GPT 组装、预训练目标与 MoE
 
@@ -142,6 +145,8 @@
 - Holtzman et al. [The Curious Case of Neural Text Degeneration](https://arxiv.org/abs/1904.09751). 重点看 nucleus sampling。
 - Leviathan, Kalman, Matias. [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192). 重点看 draft/target 接受机制。
 - Stern et al. [Blockwise Parallel Decoding for Deep Autoregressive Models](https://arxiv.org/abs/1811.03115). 重点看一次预测多个 token 的动机。
+- Wei et al. [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903). 重点看中间推理 token 如何改变任务成功率。
+- Wang et al. [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171). 重点看多路径采样与投票。
 
 选读：
 
@@ -152,6 +157,7 @@
 
 - top-k、top-p、temperature 分别控制分布的哪个性质？
 - speculative decoding 在什么情况下不能带来明显加速？
+- self-consistency 或 best-of-N 的准确率提升应如何同时报告 token 成本和延迟？
 
 ## Week 7: SFT、LoRA、DPO 与 GRPO
 
@@ -212,11 +218,14 @@
 
 - vLLM documentation on PagedAttention and continuous batching。
 - SGLang, TensorRT-LLM, llama.cpp 官方文档中 serving、quantization 或 batching 部分。
+- Liu et al. [Visual Instruction Tuning](https://arxiv.org/abs/2304.08485). 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。
+- OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。
 
 复盘问题：
 
 - TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？
 - RAG 评测为什么必须同时看检索质量和生成质量？
+- 多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？
 
 ## Week 10: Capstone 报告、复现与前沿来源辨析
 

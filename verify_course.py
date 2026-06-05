@@ -4260,6 +4260,47 @@ def check_release_placeholders() -> None:
     ok("course release docs have no unresolved placeholder markers")
 
 
+def check_cross_document_reference_integrity() -> None:
+    issues = []
+    audited_derivations = set(
+        re.findall(r"\|\s*(DER-\d{2})\s*\|", read("docs/mathematical-derivation-audit.md"))
+    )
+    source_paths = [Path("README.md")]
+    source_paths.extend(sorted(Path("docs").glob("*.md")))
+    source_paths.extend(sorted(Path("chapters").glob("*.html")))
+
+    assignment_ref_re = re.compile(r"assignments/[A-Za-z0-9_./*?-]+")
+    allowed_assignment_templates = (
+        "assignments/ch*",
+        "assignments/chXX_name",
+    )
+    for path in source_paths:
+        text = read(path)
+        for der_id in sorted(set(re.findall(r"\bDER-\d{2}\b", text))):
+            if der_id not in audited_derivations:
+                issues.append(f"{path} references unknown derivation id: {der_id}")
+
+        for raw_ref in sorted(set(assignment_ref_re.findall(text))):
+            ref = raw_ref.rstrip(".,;:，。；、)]}>'\"")
+            if any(ref.startswith(template) for template in allowed_assignment_templates):
+                continue
+            if "*" in ref or "XX" in ref:
+                continue
+            ref_path = ROOT / ref
+            if ref.endswith("/"):
+                exists = ref_path.is_dir()
+            elif ref.endswith((".py", ".md", ".json")):
+                exists = ref_path.is_file()
+            else:
+                exists = ref_path.exists() or ref_path.is_dir()
+            if not exists:
+                issues.append(f"{path} references missing assignment path: {ref}")
+
+    if issues:
+        fail(f"cross-document reference integrity failed: {'; '.join(issues[:10])}")
+    ok("cross-document references use known DER IDs and existing assignment paths")
+
+
 def check_command_conventions() -> None:
     files = [ROOT / "README.md"]
     files.extend(sorted((ROOT / "docs").glob("*.md")))
@@ -12095,6 +12136,7 @@ def main() -> int:
     check_markdown_table_structure()
     check_text_and_formula_format()
     check_release_placeholders()
+    check_cross_document_reference_integrity()
     check_command_conventions()
     check_key_derivation_consistency()
     check_chapter_code_contracts()

@@ -269,17 +269,20 @@ Quick check：
 目标：
 
 - 把连续文本切成 input/target block。
+- 计算 n-gram 重复率和 train/eval overlap rate。
 - 推导 next-token cross entropy。
 - 区分 AdamW 与 L2 regularization。
 
 核心推导：
 
 - CE gradient `p_i - 1[i=y]`。
+- n-gram repetition / overlap 的分母和结论边界。
 - AdamW 的 decoupled weight decay 更新项。
 
 课堂 demo：
 
 - 打印 dataset 样本，确认 input 和 target 右移。
+- 对一段 toy token 序列计算重复率和 train/eval 重叠率。
 - 手算 AdamW 单步更新并与测试对齐。
 
 Quick check：

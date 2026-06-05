@@ -21,6 +21,16 @@ def create_dataloader(data_path, tokenizer, batch_size=8, block_size=1024, shuff
     raise NotImplementedError
 
 
+def ngram_repetition_rate(token_ids, n=4):
+    """Return fraction of n-gram occurrences that are repeats beyond the first occurrence."""
+    raise NotImplementedError
+
+
+def ngram_overlap_rate(train_token_ids, eval_token_ids, n=8):
+    """Return fraction of eval n-grams that also appear in train n-grams."""
+    raise NotImplementedError
+
+
 def cross_entropy_manual(logits, targets):
     raise NotImplementedError
 

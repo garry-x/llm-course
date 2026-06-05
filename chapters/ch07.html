@@ -233,6 +233,13 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   </div>
   <p>数据配比没有通用最优解。严谨报告应说明 raw corpus、过滤规则、去重粒度、tokenizer、mixture weight、训练 token 数和评测集是否可能被污染。</p>
 
+  <h4>最小数据诊断：重复率与 train/eval 重叠</h4>
+  <p>课程作业中的 <code>ngram_repetition_rate</code> 和 <code>ngram_overlap_rate</code> 是训练前的最小 sanity check。重复率衡量同一 token n-gram 在语料中反复出现的程度；train/eval 重叠率衡量开发集或测试集中的 n-gram 是否已经出现在训练集里。</p>
+  <div class="math-box"><div class="label">N-gram 重复与重叠</div>
+    <div class="katex" data-expr="\text{repeat\_rate}=\frac{\#\text{repeated n-gram occurrences}}{\#\text{all n-gram occurrences}},\qquad \text{overlap\_rate}=\frac{\#\{g\in G_{\text{eval}}:g\in G_{\text{train}}\}}{|G_{\text{eval}}|}" aria-label="\text{repeat\_rate}=\frac{\#\text{repeated n-gram occurrences}}{\#\text{all n-gram occurrences}},\qquad \text{overlap\_rate}=\frac{\#\{g\in G_{\text{eval}}:g\in G_{\text{train}}\}}{|G_{\text{eval}}|}" role="img"></div>
+  </div>
+  <p>这不是完整去重系统：真实预训练还会用 near-duplicate detection、文档级哈希、MinHash/LSH、URL 归一化和 benchmark contamination 检查。但这个练习能让学生掌握核心判断：开发集 loss 低不一定代表泛化好，也可能是切分泄漏或重复样本让模型提前见过答案。</p>
+
   <h4>Chinchilla-style scaling：模型大小与数据量要配平</h4>
   <p>Hoffmann et al. (2022) 的 Chinchilla 结论改变了大模型训练的常见直觉：在固定训练算力下，不能只把参数量做大；如果 token 数不足，大模型会处于 under-trained 状态。简化地说，训练成本主要随参数量 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span>、训练 token 数 <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 和每 token 前后向计算量共同增长，常用粗略量级写作：</p>
   <div class="math-box"><div class="label">公式 7.8c 训练计算量粗略量级</div>

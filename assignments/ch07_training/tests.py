@@ -65,6 +65,27 @@ class TestTextDataset(unittest.TestCase):
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
+class TestDataDiagnostics(unittest.TestCase):
+    def test_ngram_repetition_rate_counts_repeated_occurrences(self):
+        tokens = [1, 2, 3, 1, 2, 3, 1, 2]
+        self.assertAlmostEqual(submission.ngram_repetition_rate(tokens, n=3), 3 / 6)
+        self.assertEqual(submission.ngram_repetition_rate([1, 2], n=3), 0.0)
+
+    def test_ngram_overlap_rate_measures_eval_leakage(self):
+        train = [10, 11, 12, 13, 20, 21, 22]
+        eval_tokens = [0, 10, 11, 12, 1, 20, 21, 22]
+        self.assertAlmostEqual(submission.ngram_overlap_rate(train, eval_tokens, n=3), 2 / 6)
+        self.assertEqual(submission.ngram_overlap_rate([], eval_tokens, n=3), 0.0)
+        self.assertEqual(submission.ngram_overlap_rate(train, [1, 2], n=3), 0.0)
+
+    def test_ngram_diagnostics_reject_invalid_n(self):
+        with self.assertRaises(ValueError):
+            submission.ngram_repetition_rate([1, 2, 3], n=0)
+        with self.assertRaises(ValueError):
+            submission.ngram_overlap_rate([1, 2, 3], [1, 2, 3], n=0)
+
+
+@unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
 class TestLossOptimizerScheduler(unittest.TestCase):
     def test_cross_entropy_matches_pytorch_for_large_logits(self):
         torch.manual_seed(0)

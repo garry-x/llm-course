@@ -42,6 +42,36 @@ def create_dataloader(data_path, tokenizer, batch_size=8, block_size=1024, shuff
     )
 
 
+def _ngrams(token_ids, n):
+    if n <= 0:
+        raise ValueError("n must be positive")
+    ids = [int(token_id) for token_id in token_ids]
+    return [tuple(ids[i : i + n]) for i in range(len(ids) - n + 1)]
+
+
+def ngram_repetition_rate(token_ids, n=4):
+    grams = _ngrams(token_ids, n)
+    if not grams:
+        return 0.0
+    unique = set()
+    repeats = 0
+    for gram in grams:
+        if gram in unique:
+            repeats += 1
+        else:
+            unique.add(gram)
+    return repeats / len(grams)
+
+
+def ngram_overlap_rate(train_token_ids, eval_token_ids, n=8):
+    train_grams = set(_ngrams(train_token_ids, n))
+    eval_grams = _ngrams(eval_token_ids, n)
+    if not train_grams or not eval_grams:
+        return 0.0
+    overlap = sum(1 for gram in eval_grams if gram in train_grams)
+    return overlap / len(eval_grams)
+
+
 def cross_entropy_manual(logits, targets):
     batch, seq_len, vocab_size = logits.shape
     logits_flat = logits.reshape(batch * seq_len, vocab_size)

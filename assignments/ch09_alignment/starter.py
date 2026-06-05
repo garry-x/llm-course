@@ -51,6 +51,11 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
     raise NotImplementedError
 
 
+def approx_kl_from_logps(policy_logps, ref_logps, mask=None, reduction="mean"):
+    """Estimate token-level KL(policy || reference) from sampled policy tokens."""
+    raise NotImplementedError
+
+
 def pairwise_reward_loss(chosen_rewards, rejected_rewards):
     raise NotImplementedError
 

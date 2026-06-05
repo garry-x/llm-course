@@ -140,6 +140,29 @@ class TestDPOGRPO(unittest.TestCase):
         self.assertTrue(torch.allclose(loss, expected))
         self.assertEqual(acc, 0.5)
 
+    def test_approx_kl_from_logps_masks_padding_tokens(self):
+        policy_logps = torch.tensor([[-0.2, -1.0, -3.0]])
+        ref_logps = torch.tensor([[-0.4, -0.7, -3.5]])
+        mask = torch.tensor([[1, 1, 0]])
+        kl = submission.approx_kl_from_logps(policy_logps, ref_logps, mask=mask)
+        log_ratio = ref_logps[:, :2] - policy_logps[:, :2]
+        expected = (torch.exp(log_ratio) - log_ratio - 1.0).mean()
+        self.assertTrue(torch.allclose(kl, expected))
+        none = submission.approx_kl_from_logps(policy_logps, ref_logps, mask=mask, reduction="none")
+        self.assertEqual(none[0, 2].item(), 0.0)
+
+    def test_approx_kl_from_logps_rejects_bad_inputs(self):
+        policy_logps = torch.zeros(2, 3)
+        ref_logps = torch.zeros(2, 3)
+        with self.assertRaises(ValueError):
+            submission.approx_kl_from_logps(policy_logps, torch.zeros(2, 2))
+        with self.assertRaises(ValueError):
+            submission.approx_kl_from_logps(policy_logps, ref_logps, mask=torch.ones(2, 2))
+        with self.assertRaises(ValueError):
+            submission.approx_kl_from_logps(policy_logps, ref_logps, reduction="median")
+        with self.assertRaises(ValueError):
+            submission.approx_kl_from_logps(policy_logps, ref_logps, mask=torch.zeros(2, 3))
+
     def test_pairwise_reward_loss_matches_bradley_terry(self):
         chosen = torch.tensor([3.0, 1.0])
         rejected = torch.tensor([1.0, 2.0])

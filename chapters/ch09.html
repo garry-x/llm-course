@@ -517,6 +517,7 @@ def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>grpo_advantages(rewards, group_size)</code> 计算组内白化后的优势函数</li>
+        <li><code>approx_kl_from_logps(policy_logps, ref_logps, mask)</code> 计算有效 completion token 上的近似 KL</li>
         <li>对每组 G 个回答的奖励做 z-score 归一化（减去组均值，除以组标准差）</li>
         <li>实现带 PPO-clip 的策略梯度损失</li>
         <li>包含 KL 惩罚（使用近似 KL：<span class="katex-inline" data-expr="e^{\log q - \log p} - (\log q - \log p) - 1" aria-label="e^{\log q - \log p} - (\log q - \log p) - 1" role="img"></span>）</li>
@@ -526,9 +527,9 @@ def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
 rewards = torch.randn(8, 4)  # 8 groups, batch=4
 advantages = grpo_advantages(rewards)
 assert advantages.shape == (8, 4)
-# 每组 mean ≈ 0, std ≈ 1
-print(advantages.mean(dim=1))  # ~0
-print(advantages.std(dim=1))   # ~1</pre>
+# 同一 prompt 的 8 个候选回答 mean ≈ 0, std ≈ 1
+print(advantages.mean(dim=0))  # ~0
+print(advantages.std(dim=0))   # ~1</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
@@ -547,6 +548,13 @@ def grpo_advantages(rewards):
         mean = rewards.mean(dim=0, keepdim=True)
         std = rewards.std(dim=0, keepdim=True) + 1e-8
         return (rewards - mean) / std
+
+def approx_kl_from_logps(policy_logps, ref_logps, mask):
+    """只在有效 completion token 上估计 KL(policy || reference)"""
+    log_ratio = ref_logps - policy_logps
+    token_kl = torch.exp(log_ratio) - log_ratio - 1.0
+    mask = mask.float()
+    return (token_kl * mask).sum() / mask.sum().clamp_min(1.0)
 
 def grpo_loss(model, ref_model, prompt_ids, prompt_mask,
               tokenizer, reward_model, beta=0.04, group_size=8, epsilon=0.2):
@@ -605,9 +613,9 @@ def grpo_loss(model, ref_model, prompt_ids, prompt_mask,
         surr2 = torch.clamp(ratio, 1-epsilon, 1+epsilon) * adv
         policy_loss = -torch.min(surr1, surr2).mean()
 
-        # KL 惩罚 (近似)
-        kl = (torch.exp(ref_token_logps - token_logps) -
-              (ref_token_logps - token_logps) - 1.0).sum(dim=-1).mean()
+        # KL 惩罚 (近似)，只统计非 padding completion token
+        completion_mask = (all_completions[i] != tokenizer.pad_token_id)
+        kl = approx_kl_from_logps(token_logps, ref_token_logps, completion_mask)
 
         total_loss += policy_loss + beta * kl
 

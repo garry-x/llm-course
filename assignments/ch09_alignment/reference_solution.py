@@ -138,6 +138,35 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
     return loss, acc
 
 
+def approx_kl_from_logps(policy_logps, ref_logps, mask=None, reduction="mean"):
+    if policy_logps.shape != ref_logps.shape:
+        raise ValueError("policy_logps and ref_logps must have the same shape")
+    if reduction not in {"mean", "sum", "none"}:
+        raise ValueError("reduction must be 'mean', 'sum', or 'none'")
+    if mask is not None and mask.shape != policy_logps.shape:
+        raise ValueError("mask must have the same shape as log probabilities")
+
+    log_ratio = ref_logps - policy_logps
+    kl = torch.exp(log_ratio) - log_ratio - 1.0
+    if mask is None:
+        if reduction == "none":
+            return kl
+        if reduction == "sum":
+            return kl.sum()
+        return kl.mean()
+
+    mask = mask.to(dtype=kl.dtype, device=kl.device)
+    kl = kl * mask
+    if reduction == "none":
+        return kl
+    if reduction == "sum":
+        return kl.sum()
+    valid = mask.sum()
+    if valid <= 0:
+        raise ValueError("mask must contain at least one valid token for mean reduction")
+    return kl.sum() / valid
+
+
 def pairwise_reward_loss(chosen_rewards, rejected_rewards):
     if chosen_rewards.shape != rejected_rewards.shape:
         raise ValueError("chosen_rewards and rejected_rewards must have the same shape")

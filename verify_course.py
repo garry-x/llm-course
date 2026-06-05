@@ -3509,6 +3509,8 @@ def check_course_evidence_manifest_script() -> None:
         "release_safety_invariants",
         "scripts/verify_cs224n_snapshot.py",
         "scripts/verify_frontier_sources.py",
+        "docs/external-source-inventory.md",
+        "精确 URL 覆盖补充",
         "frontier_source_evidence",
         "expected_marker_count",
         "38",

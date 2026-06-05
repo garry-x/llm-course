@@ -11,6 +11,11 @@ def attachment_scores(gold_heads, gold_labels, pred_heads, pred_labels):
     raise NotImplementedError
 
 
+def run_arc_standard_transitions(tokens, actions):
+    """Run arc-standard dependency parsing actions and return heads, labels, and trace."""
+    raise NotImplementedError
+
+
 def scalar_rnn_forward(inputs, w_xh, w_hh, h0=0.0):
     """Run a scalar tanh RNN: h_t = tanh(w_xh * x_t + w_hh * h_{t-1})."""
     raise NotImplementedError

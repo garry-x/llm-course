@@ -28,6 +28,33 @@ class TestDependencyParsingMetrics(unittest.TestCase):
             solution.attachment_scores([], [], [], [])
 
 
+class TestArcStandardParsing(unittest.TestCase):
+    def test_arc_standard_transition_sequence_builds_tree(self):
+        tokens = ["I", "saw", "her"]
+        actions = [
+            "SHIFT",
+            "SHIFT",
+            ("LEFT_ARC", "nsubj"),
+            "SHIFT",
+            "RIGHT_ARC(obj)",
+            "ROOT:root",
+        ]
+        result = solution.run_arc_standard_transitions(tokens, actions)
+        self.assertEqual(result["heads"], [1, -1, 1])
+        self.assertEqual(result["labels"], ["nsubj", "root", "obj"])
+        self.assertEqual(result["arcs"], [("saw", 0, "nsubj"), ("saw", 2, "obj"), ("ROOT", 1, "root")])
+        self.assertEqual(result["trace"][0]["stack"], ["I"])
+        self.assertEqual(result["trace"][-1]["action"], "ROOT(root)")
+
+    def test_arc_standard_rejects_illegal_or_incomplete_sequences(self):
+        with self.assertRaises(ValueError):
+            solution.run_arc_standard_transitions(["I"], ["LEFT_ARC:nsubj"])
+        with self.assertRaises(ValueError):
+            solution.run_arc_standard_transitions(["I"], ["SHIFT"])
+        with self.assertRaises(ValueError):
+            solution.run_arc_standard_transitions(["I", "saw"], ["SHIFT", "SHIFT", "ROOT:root"])
+
+
 class TestRNNFoundations(unittest.TestCase):
     def test_scalar_rnn_forward_matches_manual_tanh_recurrence(self):
         states = solution.scalar_rnn_forward([1.0, 0.5, -1.0], w_xh=0.8, w_hh=0.4, h0=0.0)

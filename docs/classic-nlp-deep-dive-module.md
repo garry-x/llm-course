@@ -10,7 +10,7 @@
 
 | outcome_id | 学习结果 | 可评分依据 |
 |------------|----------|------------|
-| CL-NLP-1 | 用 transition system 描述 dependency parsing，并计算 UAS/LAS | 手写 stack/buffer/arcs trace；Ch11 `attachment_scores` 测试 |
+| CL-NLP-1 | 用 transition system 描述 dependency parsing，并计算 UAS/LAS | 手写 stack/buffer/arcs trace；Ch11 `run_arc_standard_transitions` 与 `attachment_scores` 测试 |
 | CL-NLP-2 | 计算标量 RNN hidden state 和 BPTT 梯度连乘，解释 LSTM 为什么缓解长程依赖 | Ch11 `scalar_rnn_forward` 与 `recurrent_gradient_factors` 测试；手算题 |
 | CL-NLP-3 | 写出 seq2seq teacher forcing 和 beam search 的目标、搜索状态和 length bias | 书面题；beam table；metric failure case |
 | CL-NLP-4 | 区分 encoder-decoder attention alignment 与 decoder-only causal self-attention | 信息流图；错误解释短答 |
@@ -95,6 +95,8 @@ p(a_t | state_t) = softmax(W h(state_t) + b)
 - action classifier 的局部准确率不等于最终 tree 合法性。
 - greedy parsing 快但会累积错误；beam 或 dynamic oracle 可缓解但增加复杂度。
 - attention heatmap 不能自动替代 dependency tree。
+
+Ch11 的 `run_arc_standard_transitions` 把本节 action 定义落成可运行状态机。它要求学生处理 action 合法性、dependent 只能有一个 head、最终 parse 必须耗尽 buffer 并为每个 token 赋 head。这比只计算 UAS/LAS 更接近 CS224N 风格的 structured prediction 基础。
 
 ## RNN / LSTM Deep Dive
 
@@ -285,6 +287,7 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 |----------|------------------|
 | `scalar_rnn_forward` | recurrent hidden state 递推 |
 | `recurrent_gradient_factors` | BPTT 局部梯度因子与长程路径 |
+| `run_arc_standard_transitions` | arc-standard stack/buffer/arcs 状态转移 |
 | `attachment_scores` | UAS/LAS head 与 label 对齐 |
 | `sentence_bleu` | clipped precision 与 brevity penalty |
 | `additive_attention_context` | seq2seq alignment scores、softmax weights 和 context vector |

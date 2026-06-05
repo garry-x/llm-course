@@ -1,6 +1,6 @@
 # Supplemental Assignment: Classic NLP and Evaluation
 
-本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 RNN 长程依赖、dependency parsing、seq2seq cross-attention、BERT/MLM mask、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
+本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 RNN 长程依赖、dependency parsing transition system、seq2seq cross-attention、BERT/MLM mask、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
 
 ## Files
 
@@ -23,6 +23,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 ## Requirements
 
 - `attachment_scores` 计算 UAS/LAS，必须检查 heads 与 labels 长度一致。
+- `run_arc_standard_transitions` 执行 `SHIFT`、`LEFT_ARC(label)`、`RIGHT_ARC(label)` 和 `ROOT(label)`，返回 heads、labels、arcs 和 stack/buffer trace。
 - `scalar_rnn_forward` 和 `recurrent_gradient_factors` 展示 tanh RNN 的状态递推与 BPTT 梯度乘积。
 - `additive_attention_context` 按 `v^T tanh(W_s s_t + W_h h_i)` 计算 alignment scores、softmax weights 和 context vector。
 - `sentence_bleu` 使用 clipped n-gram precision 和 brevity penalty。
@@ -45,5 +46,5 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
 | Written questions | 40 | 解释 RNN 长程依赖、dependency parsing、seq2seq/cross-attention、beam search length bias、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
-| Programming parts | 50 | 实现 RNN recurrence、BPTT gradient factors、UAS/LAS、seq2seq additive attention、BLEU、ROUGE-L、QA EM/F1 和 MLM mask example |
+| Programming parts | 50 | 实现 arc-standard transition parsing、RNN recurrence、BPTT gradient factors、UAS/LAS、seq2seq additive attention、BLEU、ROUGE-L、QA EM/F1 和 MLM mask example |
 | Analysis / style | 10 | 构造至少 2 个指标高但人工质量差的例子，并说明指标局限 |

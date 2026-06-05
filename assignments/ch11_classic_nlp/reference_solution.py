@@ -35,6 +35,104 @@ def attachment_scores(gold_heads, gold_labels, pred_heads, pred_labels):
     }
 
 
+def _parse_action(action):
+    if isinstance(action, str):
+        if ":" in action:
+            name, label = action.split(":", 1)
+        elif "(" in action and action.endswith(")"):
+            name, label = action[:-1].split("(", 1)
+        else:
+            name, label = action, None
+    else:
+        if len(action) == 1:
+            name, label = action[0], None
+        elif len(action) == 2:
+            name, label = action
+        else:
+            raise ValueError("action tuples must have one or two items")
+    name = str(name).upper().replace("-", "_")
+    return name, label
+
+
+def run_arc_standard_transitions(tokens, actions):
+    """Run arc-standard dependency parsing actions and return heads, labels, and trace."""
+    if not tokens:
+        raise ValueError("tokens must not be empty")
+
+    stack = []
+    buffer = list(range(len(tokens)))
+    heads = [None] * len(tokens)
+    labels = [None] * len(tokens)
+    arcs = []
+    trace = []
+
+    def snapshot(action_name, label, arc):
+        trace.append(
+            {
+                "stack": [tokens[index] for index in stack],
+                "buffer": [tokens[index] for index in buffer],
+                "action": action_name if label is None else f"{action_name}({label})",
+                "arc": None if arc is None else (arc[0], tokens[arc[1]], arc[2]),
+            }
+        )
+
+    for action in actions:
+        name, label = _parse_action(action)
+        arc = None
+        if name == "SHIFT":
+            if not buffer:
+                raise ValueError("SHIFT requires a non-empty buffer")
+            stack.append(buffer.pop(0))
+        elif name == "LEFT_ARC":
+            if label is None:
+                raise ValueError("LEFT_ARC requires a label")
+            if len(stack) < 2:
+                raise ValueError("LEFT_ARC requires at least two stack items")
+            head = stack[-1]
+            dep = stack[-2]
+            if heads[dep] is not None:
+                raise ValueError("dependent already has a head")
+            heads[dep] = head
+            labels[dep] = label
+            stack.pop(-2)
+            arc = (tokens[head], dep, label)
+            arcs.append(arc)
+        elif name == "RIGHT_ARC":
+            if label is None:
+                raise ValueError("RIGHT_ARC requires a label")
+            if len(stack) < 2:
+                raise ValueError("RIGHT_ARC requires at least two stack items")
+            head = stack[-2]
+            dep = stack[-1]
+            if heads[dep] is not None:
+                raise ValueError("dependent already has a head")
+            heads[dep] = head
+            labels[dep] = label
+            stack.pop()
+            arc = (tokens[head], dep, label)
+            arcs.append(arc)
+        elif name == "ROOT":
+            root_label = label or "root"
+            if buffer or len(stack) != 1:
+                raise ValueError("ROOT requires an empty buffer and exactly one stack item")
+            dep = stack[-1]
+            if heads[dep] is not None:
+                raise ValueError("root token already has a head")
+            heads[dep] = -1
+            labels[dep] = root_label
+            stack.pop()
+            arc = ("ROOT", dep, root_label)
+            arcs.append(arc)
+        else:
+            raise ValueError(f"unknown action: {action}")
+        snapshot(name, label, arc)
+
+    if stack or buffer or any(head is None for head in heads):
+        raise ValueError("transition sequence did not finish a complete parse")
+
+    return {"heads": heads, "labels": labels, "arcs": arcs, "trace": trace}
+
+
 def scalar_rnn_forward(inputs, w_xh, w_hh, h0=0.0):
     hidden_states = []
     h_prev = float(h0)

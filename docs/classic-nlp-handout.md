@@ -36,6 +36,7 @@ Dependency parsing 的目标是为句子中的词建立有向依存边。例如 
 课堂检查：
 
 - `LEFT-ARC` 和 `RIGHT-ARC` 的 head/dependent 方向不能靠“左/右”字面猜，要看系统定义。
+- Ch11 的 `run_arc_standard_transitions` 会执行这张表中的 action，并返回 heads、labels、arcs 和 stack/buffer trace；学生需要用代码检查每一步 action 是否满足系统约束。
 - 若预测 heads 为 `[1, -1, 1]`，labels 为 `["nsubj", "root", "obj"]`，UAS/LAS 都是 1.0。
 - 若 `her` 的 head 预测为 `I`，但 label 仍是 `obj`，UAS 和 LAS 都会下降；LAS 只有在 head 与 label 同时正确时才计入。
 

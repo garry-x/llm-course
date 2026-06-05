@@ -140,6 +140,23 @@ class TestDPOGRPO(unittest.TestCase):
         self.assertTrue(torch.allclose(loss, expected))
         self.assertEqual(acc, 0.5)
 
+    def test_pairwise_reward_loss_matches_bradley_terry(self):
+        chosen = torch.tensor([3.0, 1.0])
+        rejected = torch.tensor([1.0, 2.0])
+        loss, acc = submission.pairwise_reward_loss(chosen, rejected)
+        expected = -F.logsigmoid(torch.tensor([2.0, -1.0])).mean()
+        self.assertTrue(torch.allclose(loss, expected))
+        self.assertEqual(acc, 0.5)
+
+    def test_preference_length_bias_reports_direction(self):
+        chosen_lengths = torch.tensor([10, 8, 5, 7])
+        rejected_lengths = torch.tensor([6, 8, 9, 4])
+        stats = submission.preference_length_bias(chosen_lengths, rejected_lengths)
+        self.assertAlmostEqual(stats["mean_length_delta"], 0.75)
+        self.assertAlmostEqual(stats["chosen_longer_rate"], 0.5)
+        self.assertAlmostEqual(stats["rejected_longer_rate"], 0.25)
+        self.assertAlmostEqual(stats["tie_rate"], 0.25)
+
     def test_grpo_advantages_whiten_within_group(self):
         rewards = torch.tensor([[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]])
         adv = submission.grpo_advantages(rewards)

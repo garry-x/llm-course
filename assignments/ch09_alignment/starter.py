@@ -51,6 +51,14 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
     raise NotImplementedError
 
 
+def pairwise_reward_loss(chosen_rewards, rejected_rewards):
+    raise NotImplementedError
+
+
+def preference_length_bias(chosen_lengths, rejected_lengths):
+    raise NotImplementedError
+
+
 def grpo_advantages(rewards, eps=1e-8):
     raise NotImplementedError
 

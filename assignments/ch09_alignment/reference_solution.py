@@ -138,6 +138,27 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
     return loss, acc
 
 
+def pairwise_reward_loss(chosen_rewards, rejected_rewards):
+    if chosen_rewards.shape != rejected_rewards.shape:
+        raise ValueError("chosen_rewards and rejected_rewards must have the same shape")
+    logits = chosen_rewards - rejected_rewards
+    loss = -F.logsigmoid(logits).mean()
+    acc = (logits > 0).float().mean().item()
+    return loss, acc
+
+
+def preference_length_bias(chosen_lengths, rejected_lengths):
+    if chosen_lengths.shape != rejected_lengths.shape:
+        raise ValueError("chosen_lengths and rejected_lengths must have the same shape")
+    diff = chosen_lengths.float() - rejected_lengths.float()
+    return {
+        "mean_length_delta": diff.mean().item(),
+        "chosen_longer_rate": (diff > 0).float().mean().item(),
+        "rejected_longer_rate": (diff < 0).float().mean().item(),
+        "tie_rate": (diff == 0).float().mean().item(),
+    }
+
+
 def grpo_advantages(rewards, eps=1e-8):
     if rewards.dim() == 1:
         mean = rewards.mean()

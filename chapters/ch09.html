@@ -222,6 +222,7 @@ def sft_step(model, batch, optimizer):
   <div class="math-box"><div class="label">公式 9.2 RM 损失</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" aria-label="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" role="img"></div>
   </div>
+  <p>在作业中，这个目标对应 <code>pairwise_reward_loss(chosen_rewards, rejected_rewards)</code>：先计算每个偏好对的奖励边际 <span class="katex-inline" data-expr="m_i=r_i^w-r_i^l" aria-label="m_i=r_i^w-r_i^l" role="img"></span>，再对 <span class="katex-inline" data-expr="-\log\sigma(m_i)" aria-label="-\log\sigma(m_i)" role="img"></span> 取均值。若 <span class="katex-inline" data-expr="m_i&gt;0" aria-label="m_i&gt;0" role="img"></span> 的比例很低，说明奖励模型尚未把 chosen 排到 rejected 前面；若比例很高但泛化差，则要检查偏好对是否被长度、模板或候选分布主导。</p>
 
   <h4>RLHF 三步曲</h4>
   <ol>
@@ -374,6 +375,9 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
       <tr><td>奖励漏洞</td><td>模型找到提高 reward 的捷径</td><td>分数上升但真实质量、安全性或可验证性下降</td></tr>
     </table>
   </div>
+
+  <h4>把长度偏差转成可计算统计</h4>
+  <p>课程作业中的 <code>preference_length_bias(chosen_lengths, rejected_lengths)</code> 把每个偏好对的长度差写成 <span class="katex-inline" data-expr="\Delta \ell_i = \ell_i^w - \ell_i^l" aria-label="\Delta \ell_i = \ell_i^w - \ell_i^l" role="img"></span>，并报告 <code>mean_length_delta</code>、<code>chosen_longer_rate</code>、<code>rejected_longer_rate</code> 和 <code>tie_rate</code>。如果 chosen 经常显著更长，DPO 或 RM 可能学到“多写就赢”的捷径；如果 rejected 更长但仍被判差，学生应进一步判断是冗长、跑题、事实错误还是安全边界问题。</p>
 
   <h4>为什么 reference model 很关键</h4>
   <p>DPO 中的核心比较不是 <span class="katex-inline" data-expr="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" aria-label="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" role="img"></span>，而是 policy 相对 reference 的提升：</p>
@@ -913,6 +917,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>对齐的必要性</strong> — 从"文本续写器"到"助手"的鸿沟</li>
     <li>✅ <strong>编程练习 1：SFT</strong> — 损失掩码，只对回答部分计算损失</li>
     <li>✅ <strong>Bradley-Terry 与 RLHF 三步曲</strong> — SFT → RM → PPO</li>
+    <li>✅ <strong>奖励模型训练目标</strong> — pairwise reward loss 与 preference accuracy</li>
     <li>✅ <strong>编程练习 2：LoRA</strong> — 低秩适配，99% 参数节省</li>
     <li>✅ <strong>DPO 数学等价性</strong> — 策略 log 比值作为隐式奖励函数</li>
     <li>✅ <strong>偏好数据质量</strong> — 长度偏差、标注分歧、reference model 和 reward hacking 边界</li>

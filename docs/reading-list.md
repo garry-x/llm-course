@@ -226,6 +226,7 @@
 - TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？
 - RAG 评测为什么必须同时看检索质量和生成质量？
 - 多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？
+- 一个 metric card 应怎样限制 benchmark 结论的适用范围？
 
 ## Week 10: Capstone 报告、复现与前沿来源辨析
 

@@ -93,6 +93,7 @@
 5. 说明为什么前沿模型 benchmark 数字必须标注来源、日期、任务设置和评测版本。
 6. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。
 7. 设计一个多模态 LLM 评估：分别覆盖图像问答、OCR/文档理解、图表数值推理和视觉定位，说明输入分辨率、视觉 token 数、延迟、KV Cache 成本和每类任务的失败模式。
+8. 为一个 LLM benchmark 写 metric card：包括 task、sample_size、baseline、metrics、risks、uncertainty 和 conclusion，并说明哪些结论不能从这组数据推出。
 
 ## 经典 NLP 专题题
 

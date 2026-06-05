@@ -110,6 +110,33 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
         self.assertEqual(result["memory_gb"], 1.5)
         self.assertGreaterEqual(result["p95_ms"], result["ms_per_token"])
 
+    def test_metric_card_preserves_benchmark_context_and_limits(self):
+        card = submission.build_metric_card(
+            task="rag qa",
+            metrics={"pass_rate": 0.8, "p95_ms": 320.0},
+            baseline="bm25-only",
+            sample_size=25,
+            risks=["retrieval_contamination", "judge_bias"],
+            uncertainty="bootstrap_ci_or_repeated_runs_needed",
+            conclusion="hybrid improves this fixed dev set only",
+        )
+        self.assertEqual(card["task"], "rag qa")
+        self.assertEqual(card["sample_size"], 25)
+        self.assertEqual(card["baseline"], "bm25-only")
+        self.assertAlmostEqual(card["metrics"]["pass_rate"], 0.8)
+        self.assertIn("retrieval_contamination", card["risks"])
+        self.assertIn("fixed dev set", card["conclusion"])
+
+    def test_metric_card_rejects_missing_core_fields(self):
+        with self.assertRaises(ValueError):
+            submission.build_metric_card("", {"acc": 1.0}, "baseline", 10)
+        with self.assertRaises(ValueError):
+            submission.build_metric_card("qa", {}, "baseline", 10)
+        with self.assertRaises(ValueError):
+            submission.build_metric_card("qa", {"acc": 1.0}, "", 10)
+        with self.assertRaises(ValueError):
+            submission.build_metric_card("qa", {"acc": 1.0}, "baseline", 0)
+
     def test_lsh_returns_best_same_bucket_candidate(self):
         memory = submission.LSHMemory(dim=2, n_bits=1, seed=0)
         memory.planes = torch.tensor([[1.0, 0.0]])

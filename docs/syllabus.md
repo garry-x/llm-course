@@ -79,7 +79,7 @@
 | 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO；训练 capstone 初版 |
 | 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：dependency/seq2seq/BERT/evaluation 书面题；同伴 review |
-| 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark/多模态评估；推理项目提案 |
+| 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark/metric card/多模态评估；推理项目提案 |
 | 10 | Capstone 展示与前沿 seminar | 两个 capstone README；reading-list Week 10 | 训练 capstone + 推理 capstone 报告、演示、复现包 |
 
 ## 项目

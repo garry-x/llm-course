@@ -50,6 +50,10 @@ def summarize_benchmark(latencies, generated_tokens, memory_gb):
     raise NotImplementedError
 
 
+def build_metric_card(task, metrics, baseline, sample_size, risks=None, uncertainty=None, conclusion=None):
+    raise NotImplementedError
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         raise NotImplementedError

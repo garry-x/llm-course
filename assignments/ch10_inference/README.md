@@ -27,6 +27,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 - INT8 量化使用 per-output-channel 对称 scale，零权重不能产生 NaN。
 - RAG 检索使用余弦相似度，返回按相关性降序排列的 chunk。
 - benchmark summary 应报告 TTFT、TPOT、tokens/s 和显存。
+- metric card 应记录任务、样本量、baseline、指标、风险、不确定性和结论边界。
 - LSH 检索应在同桶内返回余弦相似度最高的候选。
 
 ## 评分 Rubric
@@ -34,5 +35,5 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
 | Written questions | 35 | 推导 KV cache 显存、量化误差、RAG chunk/overlap、RAG 失败分解、多模态 token 成本、TTFT/TPOT/tokens/s 和 SLO 的上线意义 |
-| Programming parts | 55 | 实现 KV cache、显存估算、INT8 量化、RAG/LSH 和 benchmark 指标汇总 |
+| Programming parts | 55 | 实现 KV cache、显存估算、INT8 量化、RAG/LSH、benchmark 指标汇总和 metric card |
 | Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、多模态失败模式和前沿 benchmark 来源边界 |

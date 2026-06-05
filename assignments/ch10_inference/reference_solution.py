@@ -146,6 +146,37 @@ def summarize_benchmark(latencies, generated_tokens, memory_gb):
     }
 
 
+def build_metric_card(task, metrics, baseline, sample_size, risks=None, uncertainty=None, conclusion=None):
+    if not isinstance(task, str) or not task.strip():
+        raise ValueError("task must be a non-empty string")
+    if not isinstance(metrics, dict) or not metrics:
+        raise ValueError("metrics must be a non-empty dict")
+    if not isinstance(baseline, str) or not baseline.strip():
+        raise ValueError("baseline must be a non-empty string")
+    if sample_size <= 0:
+        raise ValueError("sample_size must be positive")
+
+    normalized_metrics = {}
+    for name, value in metrics.items():
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("metric names must be non-empty strings")
+        if isinstance(value, (int, float)):
+            normalized_metrics[name] = float(value)
+        else:
+            normalized_metrics[name] = value
+
+    risk_items = list(risks or [])
+    return {
+        "task": task.strip(),
+        "sample_size": int(sample_size),
+        "baseline": baseline.strip(),
+        "metrics": normalized_metrics,
+        "risks": risk_items,
+        "uncertainty": uncertainty or "single_run_limit",
+        "conclusion": conclusion or "metric_card_describes_results_but_does_not_prove_general_capability",
+    }
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         generator = torch.Generator().manual_seed(seed)

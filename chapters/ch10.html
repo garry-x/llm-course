@@ -41,9 +41,9 @@
     <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、benchmark 与 SLO。</li>
     <li><strong>课前阅读：</strong>阅读 vLLM/PagedAttention、FlashAttention、RAG 和 GPTQ/AWQ 摘要，记录每项技术主要优化哪个瓶颈。</li>
     <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试和 LSH 检索示例。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试、metric card 和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告、metric card 和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
 </section>
 
@@ -673,6 +673,41 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>KV Cache 通常会显著降低 decode 阶段的重复计算；INT8 量化通常会减少权重显存和带宽压力。具体加速倍数依赖 prompt 长度、batch、GPU、kernel、量化方案和模型结构。注意 KV Cache 会<strong>增加</strong>缓存显存，而量化主要<strong>减少</strong>权重显存。</p>
     </div>
   </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.10A LLM Benchmarking Methodology -->
+<!-- ================================================================ -->
+<section class="card" id="s10-10a">
+  <h3>10.10A LLM 评测方法：一个数字不能代表一个模型</h3>
+  <p>CS224N 2026 把 Large language model benchmarking and evaluation 作为独立作业主题，原因很直接：现代 LLM 的质量不是一个 loss、一个榜单分数或一组延迟数字能概括的。课程项目中的评测应回答一个具体问题，例如“hybrid+rerank 是否改善这个客服知识库上的引用正确率”，而不是泛泛声称“模型更好”。</p>
+
+  <h4>从任务到结论的最小链路</h4>
+  <table>
+    <tr><th>环节</th><th>要写清什么</th><th>常见错误</th></tr>
+    <tr><td>任务定义</td><td>用户场景、输入分布、允许工具、输出格式和非目标</td><td>用开放聊天样例代表所有能力</td></tr>
+    <tr><td>数据集</td><td>样本来源、split、样本数、难度分层、是否含多轮或多模态输入</td><td>把调 prompt 用过的样例继续当测试集</td></tr>
+    <tr><td>指标</td><td>质量、安全、格式、延迟、成本至少分开报告</td><td>只报告 pass rate，不看错误类型和单位成本</td></tr>
+    <tr><td>baseline</td><td>最简单可用方案，例如 BM25-only、no-rerank、greedy decoding 或旧 prompt</td><td>只和一个明显较弱的配置比较</td></tr>
+    <tr><td>不确定性</td><td>样本数、重复运行、bootstrap CI、seed 或负载波动</td><td>单次运行后写“显著提升”</td></tr>
+    <tr><td>结论边界</td><td>结论只适用于哪些数据、模型、日期、工具和约束</td><td>把固定开发集结论外推到真实生产流量</td></tr>
+  </table>
+
+  <h4>Metric Card：把评测结果写成可复用对象</h4>
+  <p>本章作业中的 <code>build_metric_card</code> 不是复杂算法，而是训练学生把实验结论写成结构化对象。一个合格的 card 至少包含：<code>task</code>、<code>sample_size</code>、<code>baseline</code>、<code>metrics</code>、<code>risks</code>、<code>uncertainty</code> 和 <code>conclusion</code>。这样做的重点不是文档格式，而是防止评测结论离开数据条件后被误读。</p>
+
+  <div class="code-block" data-lang="python">
+card = build_metric_card(
+    task="RAG customer support QA",
+    metrics={"answer_pass_rate": 0.82, "citation_hit_rate": 0.76, "p95_ms": 420.0},
+    baseline="bm25-only",
+    sample_size=50,
+    risks=["retrieval_contamination", "judge_bias", "small_dev_set"],
+    uncertainty="3 repeated runs; bootstrap CI should be reported in final project",
+    conclusion="hybrid+rerank improves this fixed support QA dev set, but does not prove open-domain QA quality",
+)</div>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>benchmark 的目标不是制造排行榜，而是让一个工程判断可讨论：是否值得增加 rerank、是否值得提高 max tokens、是否值得牺牲一点延迟换更高引用正确率。</div></div>
 </section>
 
 <!-- ================================================================ -->

@@ -182,7 +182,7 @@
 
 ## Week 8: 经典 NLP、Encoder-only、Evaluation 与 Ethics
 
-对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、经典 NLP 与评测覆盖说明。
+对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。
 
 必读：
 

@@ -22,7 +22,6 @@ SAFE_DOCS = [
     "lecture-plan.md",
     "math-prerequisites.md",
     "ml-foundations-prerequisite-bridge.md",
-    "nlp-evaluation-coverage.md",
     "project-report-rubric.md",
     "python-pytorch-review-session.md",
     "reading-list.md",

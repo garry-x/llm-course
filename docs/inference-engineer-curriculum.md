@@ -4,17 +4,17 @@
 
 ## 目标画像
 
-完成课程后，你应该能独立完成一个小型 LLM 推理服务的设计、实现、压测、评估和上线复盘。最低能力不是“背熟名词”，而是面对一个慢、贵、不稳定或质量波动的 LLM 服务时，能拆解问题、定位瓶颈并给出可验证的改进方案。
+完成课程后，你应该能独立完成一个小型 LLM 推理服务的设计、实现、压测、评估和上线复盘。最低能力不是“背熟名词”，而是面对一个慢、贵、不稳定、质量波动或多模态输入成本失控的 LLM 服务时，能拆解问题、定位瓶颈并给出可验证的改进方案。
 
 ## 学习路径
 
 | 阶段 | 章节与项目 | 主要问题 | 学习产出 |
 |------|------------|----------|----------|
 | 1. 模型内部结构 | Ch01-Ch06 | Token 如何进入模型，attention/FFN/MoE 如何产生 logits | 能从 shape 和参数量解释一次前向传播 |
-| 2. 生成链路 | Ch08 | Prefill、decode、采样和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量和随机性的 trade-off |
+| 2. 生成链路 | Ch08 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性和 test-time compute 的 trade-off |
 | 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化如何降低成本 | 能手算 KV Cache 显存，并说明瓶颈在算力、带宽还是显存 |
 | 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark |
-| 5. 质量与上线 | Ch09-Ch10、Capstone | 如何评测输出质量、安全、格式和成本 | 有固定评测集、上线方案和压测报告 |
+| 5. 多模态与质量评估 | Ch09-Ch10、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、上线方案和压测报告 |
 
 ## 能力目标
 
@@ -67,6 +67,14 @@
 
 **对应内容：**Ch09，Ch10 10.13，Capstone `evaluate.py` 与 README 上线方案。
 
+### G. 多模态输入评估
+
+- 能区分图像问答、OCR/文档理解、图表数值推理、视觉定位和视频理解。
+- 能估算视觉 token 数对 prefill latency、KV Cache 和成本的影响。
+- 能说明 VQA 高分不能推出 OCR、图表或视觉定位可靠。
+
+**对应内容：**Ch10 10.20，Inference Capstone research question，Project Report Rubric。
+
 ## 学习成果
 
 完成以下项目后，可以认为你已经达到“初级 LLM 推理工程师”课程目标。
@@ -79,6 +87,7 @@
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
 | 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性和工具调用，失败样例有记录 | `evaluate.py` 输出 |
+| 实验结论 | 项目有 research question、baseline、workload、ablation 和结论边界 | proposal / milestone / final report |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |
 | 引擎替换 | 至少说明如何把 `MockEngine` 替换为一个真实推理引擎 | 代码 diff 或设计说明 |
 
@@ -108,11 +117,14 @@
 
 ```text
 项目名称：
+research question：
+baseline：
 模型/引擎：
 硬件环境：
 API：
 是否支持 streaming：
 是否支持 RAG：
+是否支持多模态输入：
 评测集规模：
 pass rate：
 压测配置：
@@ -124,6 +136,8 @@ tokens/s：
 显存峰值：
 主要瓶颈：
 已做优化：
+ablation：
+结论边界：
 下一步优化：
 上线风险：
 ```

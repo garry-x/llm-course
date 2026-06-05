@@ -1,10 +1,10 @@
 # LLM 训练工程师课程路线与学习成果
 
-这份文档把课程中的模型实现、训练循环、微调对齐和大规模训练优化整理成“LLM 训练工程师”岗位路线。训练工程师的核心产出不是一个 notebook，而是一套可复现、可恢复、可观测、成本可解释的训练系统。
+这份文档把课程中的模型实现、训练循环、微调对齐、实验设计和大规模训练优化整理成“LLM 训练工程师”岗位路线。训练工程师的核心产出不是一个 notebook，而是一套可复现、可恢复、可观测、成本可解释的训练系统。
 
 ## 目标画像
 
-完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，并能解释显存、吞吐、GPU 小时和训练成本之间的关系。
+完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，提出 baseline/ablation，并能解释显存、吞吐、GPU 小时和训练成本之间的关系。
 
 ## 学习路径
 
@@ -13,8 +13,9 @@
 | 1. 模型可训练性 | Ch01-Ch06 | 数据如何变成 logits，梯度如何穿过模型 | 能解释 token、shape、参数量、梯度路径 |
 | 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint |
 | 3. 微调与对齐 | Ch09 | 如何把预训练模型变成可用助手 | SFT/LoRA/DPO/GRPO 训练数据、loss masking、偏好优化 |
-| 4. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP/TP/PP、FP8/FP4、MFU、tokens/s 解释 |
-| 5. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划报告 |
+| 4. 实验设计与评估 | Ch08-Ch09、Capstone | 如何证明训练或对齐方法真的更好 | research question、baseline、ablation、对齐评估和结论边界 |
+| 5. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP/TP/PP、FP8/FP4、MFU、tokens/s 解释 |
+| 6. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划报告 |
 
 ## 能力目标
 
@@ -66,6 +67,14 @@
 
 **对应内容：**Training Capstone `plan_training.py`。
 
+### G. 实验设计与对齐评估
+
+- 能把训练项目写成一个可回答问题，而不是只报告“跑通了”。
+- 能设计 baseline、ablation、开发集和失败案例分类。
+- 能解释 SFT/DPO/GRPO 的训练目标和最终 helpfulness、honesty、harmlessness、能力保留之间的差异。
+
+**对应内容：**Ch08 8.7B、Ch09 9.10A、Training Capstone README、Project Report Rubric。
+
 ## 学习成果
 
 | 项目项 | 合格标准 | 产出 |
@@ -76,6 +85,7 @@
 | 开发集 | 能记录 val_loss / perplexity | `metrics.jsonl` |
 | 监控指标 | 至少记录 loss、lr、grad_norm、tokens/s | `metrics.jsonl` |
 | 训练规划 | 能估算 steps、GPU hours、成本、checkpoint 存储 | `plan_training.py` 输出 |
+| 实验结论 | 项目有研究问题、baseline、ablation 和结论边界 | proposal / milestone / final report |
 | 异常处理 | 能说明 nan/loss spike/吞吐下降时的排查顺序 | 复盘文档 |
 | 最终运行 | 一条命令跑通训练工程闭环 | `python acceptance.py` 输出 `ACCEPTANCE: PASS` |
 
@@ -96,6 +106,8 @@
 
 ```text
 项目名称：
+研究问题：
+baseline：
 数据集：
 token 数：
 模型配置：
@@ -111,6 +123,8 @@ val loss / ppl：
 tokens/s：
 GPU hours：
 预计成本：
+ablation：
+结论边界：
 主要风险：
 下一步实验：
 ```

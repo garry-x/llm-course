@@ -313,3 +313,45 @@ def build_mlm_example(tokens, mask_positions, mask_token="[MASK]"):
         labels[position] = token_list[position]
         token_list[position] = mask_token
     return token_list, labels
+
+
+def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
+    if not tokens:
+        raise ValueError("tokens must not be empty")
+    if len(tokens) != len(start_logits) or len(tokens) != len(end_logits):
+        raise ValueError("tokens, start_logits, and end_logits must have equal length")
+    if max_answer_len <= 0:
+        raise ValueError("max_answer_len must be positive")
+    if cls_index < 0 or cls_index >= len(tokens):
+        raise ValueError("cls_index out of range")
+
+    best = None
+    for start in range(len(tokens)):
+        if start == cls_index:
+            continue
+        max_end = min(len(tokens), start + max_answer_len)
+        for end in range(start, max_end):
+            if end == cls_index:
+                continue
+            score = float(start_logits[start]) + float(end_logits[end])
+            if best is None or score > best["score"]:
+                best = {
+                    "start": start,
+                    "end": end,
+                    "tokens": list(tokens[start : end + 1]),
+                    "text": " ".join(tokens[start : end + 1]),
+                    "score": score,
+                    "no_answer": False,
+                }
+
+    no_answer_score = float(start_logits[cls_index]) + float(end_logits[cls_index])
+    if best is None or no_answer_score >= best["score"]:
+        return {
+            "start": cls_index,
+            "end": cls_index,
+            "tokens": [tokens[cls_index]],
+            "text": "",
+            "score": no_answer_score,
+            "no_answer": True,
+        }
+    return best

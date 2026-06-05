@@ -14,7 +14,7 @@
 | CL-NLP-2 | 计算标量 RNN hidden state 和 BPTT 梯度连乘，解释 LSTM 为什么缓解长程依赖 | Ch11 `scalar_rnn_forward` 与 `recurrent_gradient_factors` 测试；手算题 |
 | CL-NLP-3 | 写出 seq2seq teacher forcing 和 beam search 的目标、搜索状态和 length bias | 书面题；beam table；metric failure case |
 | CL-NLP-4 | 区分 encoder-decoder attention alignment 与 decoder-only causal self-attention | 信息流图；错误解释短答 |
-| CL-NLP-5 | 构造 BERT-style MLM input、labels、loss mask 和 `[CLS]` fine-tuning 产出 | Ch11 `build_mlm_example` 测试；书面题 |
+| CL-NLP-5 | 构造 BERT-style MLM input、labels、loss mask、抽取式 QA span 和 `[CLS]` no-answer 产出 | Ch11 `build_mlm_example` 与 `select_extractive_qa_span` 测试；书面题 |
 | CL-NLP-6 | 判断 BLEU/ROUGE/EM/F1 与人工评价各自能支持什么 claim | 指标反例；项目 metric_card |
 
 最低通过标准：学生不能只背术语。每个主题都必须给出一个状态/张量/指标的可计算例子，并说明该例子不能证明什么。
@@ -241,6 +241,14 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 | extractive QA | token hidden states | start/end classifiers | two CE losses |
 | retrieval / embedding | pooled representation | contrastive head | contrastive / triplet loss |
 
+抽取式 QA 的推理阶段通常枚举候选 span：
+
+```text
+score(i,j) = start_logit_i + end_logit_j,  i <= j,  j-i+1 <= L_max
+```
+
+若 `[CLS]` 的 `start_logit + end_logit` 更高，则返回 no-answer。Ch11 的 `select_extractive_qa_span` 对应这个推理过程；它把 encoder-only fine-tuning 从“知道有 head”推进到“能解释 start/end logits 如何产生答案”。
+
 与 decoder-only 的关键区别：
 
 | dimension | encoder-only | encoder-decoder | decoder-only |
@@ -294,6 +302,7 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 | `rouge_l_f1` | LCS-based precision/recall/F1 |
 | `exact_match_and_f1` | QA normalization 与 token overlap |
 | `build_mlm_example` | MLM mask positions、labels 和 ignore index |
+| `select_extractive_qa_span` | encoder-only extractive QA start/end span selection |
 
 可选扩展：让学生实现一个小 beam search 函数，输入 step-level log probability table，输出 top beam 和 length-normalized score。若加入扩展，hidden tests 应覆盖 EOS、empty beam、tie-breaking 和 length penalty。
 

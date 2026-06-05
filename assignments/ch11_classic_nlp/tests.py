@@ -186,6 +186,37 @@ class TestQAMetricsAndMLM(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.build_mlm_example(["a", "b"], [1, 1])
 
+    def test_select_extractive_qa_span_uses_start_and_end_logits(self):
+        tokens = ["[CLS]", "the", "quick", "brown", "fox", "[SEP]"]
+        start_logits = [0.1, 0.2, 3.0, 1.0, 0.4, -1.0]
+        end_logits = [0.1, 0.0, 0.5, 2.8, 0.3, -1.0]
+        result = solution.select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=3)
+        self.assertEqual(result["start"], 2)
+        self.assertEqual(result["end"], 3)
+        self.assertEqual(result["tokens"], ["quick", "brown"])
+        self.assertEqual(result["text"], "quick brown")
+        self.assertFalse(result["no_answer"])
+
+    def test_select_extractive_qa_span_allows_cls_no_answer(self):
+        tokens = ["[CLS]", "the", "answer", "[SEP]"]
+        result = solution.select_extractive_qa_span(
+            tokens,
+            start_logits=[5.0, 0.1, 0.2, -1.0],
+            end_logits=[4.0, 0.1, 0.2, -1.0],
+            max_answer_len=2,
+        )
+        self.assertTrue(result["no_answer"])
+        self.assertEqual(result["start"], 0)
+        self.assertEqual(result["text"], "")
+
+    def test_select_extractive_qa_span_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            solution.select_extractive_qa_span([], [], [])
+        with self.assertRaises(ValueError):
+            solution.select_extractive_qa_span(["[CLS]"], [0.0], [0.0], max_answer_len=0)
+        with self.assertRaises(ValueError):
+            solution.select_extractive_qa_span(["[CLS]", "a"], [0.0], [0.0, 1.0])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

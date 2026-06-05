@@ -58,3 +58,8 @@ def build_mlm_example(tokens, mask_positions, mask_token="[MASK]"):
     elsewhere.
     """
     raise NotImplementedError
+
+
+def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
+    """Select the best BERT-style extractive QA answer span from start/end logits."""
+    raise NotImplementedError

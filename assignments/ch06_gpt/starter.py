@@ -68,6 +68,17 @@ def parameter_breakdown(model):
     raise NotImplementedError
 
 
+def moe_parameter_budget(
+    d_model,
+    expert_hidden,
+    n_routed_experts,
+    top_k,
+    shared_experts=0,
+    router_bias=False,
+):
+    raise NotImplementedError
+
+
 class MoERouter(nn.Module):
     def __init__(self, d_model, n_experts=256, top_k=8):
         super().__init__()

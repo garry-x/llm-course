@@ -262,12 +262,13 @@ Quick check：
 
 核心推导：
 
-- 每 token 激活参数只包含被选专家和共享专家。
+- bias-free SwiGLU expert 参数量为 `3 * d_model * d_ff`；MoE total expert parameters 乘以全部路由专家和共享专家，每 token activated expert parameters 只乘以被选专家和共享专家。
 - load imbalance 会导致 token drop、专家过载或吞吐下降。
 
 课堂 demo：
 
 - 用 `MoERouter` 观察 top-k 权重归一化。
+- 手算 `d_model=16, d_ff=32, n_routed=8, top_k=2, shared=1` 的 MoE 参数预算，并比较 total params 与 activated params。
 - 人为增加负载偏置，观察 routing 倾向变化。
 
 Quick check：
@@ -277,7 +278,7 @@ Quick check：
 
 课后产出：
 
-- A4 MoE router 测试通过。
+- A4 MoE router 和参数预算测试通过。
 - 阅读复盘：Switch/DeepSeekMoE 的负载均衡策略。
 
 ## Week 5 Lecture 9: Dataset、Loss、AdamW 与 Scheduler

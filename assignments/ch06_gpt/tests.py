@@ -130,6 +130,37 @@ class TestCausalAttention(unittest.TestCase):
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch06 GPT tests")
 class TestMoERouter(unittest.TestCase):
+    def test_moe_parameter_budget_distinguishes_total_and_activated(self):
+        budget = submission.moe_parameter_budget(
+            d_model=16,
+            expert_hidden=32,
+            n_routed_experts=8,
+            top_k=2,
+            shared_experts=1,
+        )
+        expert_params = 3 * 16 * 32
+        self.assertEqual(budget["expert_params"], expert_params)
+        self.assertEqual(budget["router_params"], 16 * 8)
+        self.assertEqual(budget["total_expert_params"], 9 * expert_params)
+        self.assertEqual(budget["total_params"], 9 * expert_params + 16 * 8)
+        self.assertEqual(budget["activated_expert_params_per_token"], 3 * expert_params)
+        self.assertAlmostEqual(budget["activated_fraction_of_experts"], 3 / 9)
+        self.assertLess(budget["activated_fraction_of_total_params"], 1.0)
+        self.assertAlmostEqual(budget["capacity_to_compute_ratio"], 3.0)
+
+    def test_moe_parameter_budget_validates_inputs(self):
+        bad_kwargs = [
+            dict(d_model=0, expert_hidden=32, n_routed_experts=8, top_k=2),
+            dict(d_model=16, expert_hidden=0, n_routed_experts=8, top_k=2),
+            dict(d_model=16, expert_hidden=32, n_routed_experts=8, top_k=0),
+            dict(d_model=16, expert_hidden=32, n_routed_experts=8, top_k=9),
+            dict(d_model=16, expert_hidden=32, n_routed_experts=8, top_k=2, shared_experts=-1),
+        ]
+        for kwargs in bad_kwargs:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    submission.moe_parameter_budget(**kwargs)
+
     def test_router_topk_shapes_and_normalization(self):
         torch.manual_seed(4)
         router = submission.MoERouter(d_model=10, n_experts=7, top_k=3)

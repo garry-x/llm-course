@@ -636,6 +636,7 @@ def load_hf_weights_to_model(hf_model, our_model):
   <p>这类似于一个大型医院——有 256 个专科科室（专家），但一个病人（token）通常只需要看 2-3 个科室就够了。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>实际效果：</strong>DeepSeek-V3 的 671B 参数模型中，每次前向只激活 37B 参数。这意味着它的<strong>计算成本</strong>与 37B 的稠密模型相近，但<strong>模型容量</strong>（可学习的知识）相当于 671B 模型。这是 MoE 最核心的 trade-off：<strong>用总参数量换容量，用稀疏激活保持计算效率</strong>。</div></div>
+  <p>作业中的 <code>moe_parameter_budget</code> 会把这个 trade-off 写成可计算的参数预算。若每个 expert 是 bias-free SwiGLU FFN，单个 expert 参数量为 <code>3 * d_model * d_ff</code>，分别对应 gate/up/down 三个线性矩阵。MoE 的 total expert parameters 需要乘以全部路由专家和 shared experts；每 token activated expert parameters 只乘以 <code>top_k</code> 个路由专家和 shared experts。router 本身还包含 <code>d_model * n_experts</code> 个门控参数。这样可以明确区分“模型容量来自全部专家”和“单次 token 计算只经过少量专家”。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -647,11 +648,17 @@ def load_hf_weights_to_model(hf_model, our_model):
   <div class="coding-exercise">
     <h4>🖥️ 练习 5：DeepSeekMoE Router—Top-K Gating + Dynamic Bias</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 DeepSeekMoE 的路由器（Router）和负载均衡器（Aux-Loss-Free Balancer）。</p>
+      <p><strong>任务：</strong>实现 DeepSeekMoE 的参数预算、路由器（Router）和负载均衡器（Aux-Loss-Free Balancer）。</p>
+      <p><strong>参数预算要求：</strong></p>
+      <ul>
+        <li><code>moe_parameter_budget</code>：使用 bias-free SwiGLU expert 的 <code>3 * d_model * expert_hidden</code> 参数量</li>
+        <li>返回 router 参数、全部 expert 参数、每 token 激活 expert 参数、激活比例和 capacity-to-compute ratio</li>
+        <li>检查 <code>top_k</code> 必须在 <code>[1, n_routed_experts]</code> 内，维度和专家数必须为正数</li>
+      </ul>
       <p><strong>路由部分要求：</strong></p>
       <ul>
         <li><code>MoERouter</code>：一个 <code>nn.Linear(d_model, n_experts)</code> 计算路由得分，然后 <code>softmax</code> + <code>topk</code> 选择 top-K 专家</li>
-        <li>返回 <code>(expert_indices, expert_weights)</code>——被选中的专家索引和对应的门控权重</li>
+        <li>返回 <code>(top_weights, top_indices)</code>——重新归一化后的门控权重和被选中的专家索引</li>
         <li>支持 <code>n_experts=256, top_k=8</code>（DeepSeek 配置）</li>
       </ul>
       <p><strong>负载均衡器要求：</strong></p>
@@ -795,7 +802,7 @@ for step in range(10):
     <li>✅ <strong>Weight Tying 深入</strong> — 小模型收益大（31%），大模型收益微乎其微（&lt; 0.1%）</li>
     <li>✅ <strong>124M 参数精算</strong> — 逐层验证：Embedding 38.6M + 12 层 Block 85M + Norm 1.5K = 124.4M</li>
     <li>✅ <strong>HuggingFace 权重加载</strong> — 与官方 GPT-2 输出一致性验证</li>
-    <li>✅ <strong>DeepSeekMoE 路由器</strong> — Top-K 门控 + 共享专家 + Aux-Loss-Free 动态偏置</li>
+    <li>✅ <strong>DeepSeekMoE 参数预算与路由器</strong> — total parameters、activated parameters、Top-K 门控 + 共享专家 + Aux-Loss-Free 动态偏置</li>
   </ul>
   <p>你现在拥有了一个完整的、可训练的 GPT 模型。第 7 章我们将为它编写完整的训练循环——从 DataLoader 到 AdamW 优化器，从混合精度训练到学习率调度，以及完整的 Shakespeare 文本生成训练示例。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>

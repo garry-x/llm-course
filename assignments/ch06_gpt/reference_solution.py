@@ -150,6 +150,44 @@ def parameter_breakdown(model):
     return groups
 
 
+def moe_parameter_budget(
+    d_model,
+    expert_hidden,
+    n_routed_experts,
+    top_k,
+    shared_experts=0,
+    router_bias=False,
+):
+    if d_model <= 0 or expert_hidden <= 0 or n_routed_experts <= 0:
+        raise ValueError("d_model, expert_hidden and n_routed_experts must be positive")
+    if not 1 <= top_k <= n_routed_experts:
+        raise ValueError("top_k must satisfy 1 <= top_k <= n_routed_experts")
+    if shared_experts < 0:
+        raise ValueError("shared_experts must be non-negative")
+
+    expert_params = 3 * d_model * expert_hidden
+    router_params = d_model * n_routed_experts
+    if router_bias:
+        router_params += n_routed_experts
+
+    total_experts = n_routed_experts + shared_experts
+    activated_experts = top_k + shared_experts
+    total_expert_params = total_experts * expert_params
+    activated_expert_params_per_token = activated_experts * expert_params
+    total_params = total_expert_params + router_params
+
+    return {
+        "expert_params": expert_params,
+        "router_params": router_params,
+        "total_expert_params": total_expert_params,
+        "total_params": total_params,
+        "activated_expert_params_per_token": activated_expert_params_per_token,
+        "activated_fraction_of_experts": activated_experts / total_experts,
+        "activated_fraction_of_total_params": activated_expert_params_per_token / total_params,
+        "capacity_to_compute_ratio": total_expert_params / activated_expert_params_per_token,
+    }
+
+
 class MoERouter(nn.Module):
     def __init__(self, d_model, n_experts=256, top_k=8):
         super().__init__()

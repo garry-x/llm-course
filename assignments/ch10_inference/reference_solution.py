@@ -81,6 +81,28 @@ def nrmse(original, reconstructed):
     return (rmse / denom).item()
 
 
+def recall_at_k(retrieved_ids, relevant_ids, k):
+    if k <= 0:
+        raise ValueError("k must be positive")
+    relevant = set(relevant_ids)
+    if not relevant:
+        raise ValueError("relevant_ids must not be empty")
+    retrieved_top_k = set(retrieved_ids[:k])
+    return len(retrieved_top_k & relevant) / len(relevant)
+
+
+def reciprocal_rank_at_k(retrieved_ids, relevant_ids, k):
+    if k <= 0:
+        raise ValueError("k must be positive")
+    relevant = set(relevant_ids)
+    if not relevant:
+        raise ValueError("relevant_ids must not be empty")
+    for rank, doc_id in enumerate(retrieved_ids[:k], start=1):
+        if doc_id in relevant:
+            return 1.0 / rank
+    return 0.0
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         if overlap >= chunk_size:

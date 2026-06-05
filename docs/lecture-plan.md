@@ -567,6 +567,7 @@ Quick check：
 目标：
 
 - 解释 RAG 的 chunking、embedding、retrieval、rerank、prompt assembly。
+- 计算 Recall@k 和 MRR，区分召回失败与排序失败。
 - 比较 weight-only quantization、KV quantization、FP8/FP4。
 - 区分 VQA、OCR、图表理解、视觉定位和视频理解的评价方式。
 - 建立上线前的 latency、cost、quality 和 safety 判断框架。
@@ -575,11 +576,13 @@ Quick check：
 
 - cosine similarity 与 normalized dot product。
 - quantization scale、dequantization error 和 ranking 误差。
+- RAG retrieval metrics：Recall@k 与 reciprocal rank。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
 课堂 demo：
 
 - 运行 RAG toy retriever，制造 chunk overlap 错误。
+- 给定 retrieved/relevant ids，手算 Recall@k 和 reciprocal rank。
 - 对 per-channel INT8 权重做 roundtrip。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 

@@ -95,12 +95,13 @@
 
 1. 推导 KV Cache 显存公式，必须包含 batch size、layers、kv heads、head dim、context length 和 dtype bytes。
 2. 区分 TTFT、TPOT、tokens/s、吞吐、并发和 P95 latency；说明它们分别对应哪个用户体验或成本问题。
-3. 给定一个 RAG 失败案例，判断可能是 chunking、embedding、retrieval、reranking、prompt assembly 还是 generation 的问题。
-4. 比较 INT8 weight-only quantization、KV Cache quantization 和 FP8/FP4 mixed precision 的目标、风险和验证指标。
-5. 说明为什么前沿模型 benchmark 数字必须标注来源、日期、任务设置和评测版本。
-6. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。
-7. 设计一个多模态 LLM 评估：分别覆盖图像问答、OCR/文档理解、图表数值推理和视觉定位，说明输入分辨率、视觉 token 数、延迟、KV Cache 成本和每类任务的失败模式。
-8. 为一个 LLM benchmark 写 metric card：包括 task、sample_size、baseline、metrics、risks、uncertainty 和 conclusion，并说明哪些结论不能从这组数据推出。
+3. 给定 retrieved document ids、relevant document ids 和 `k`，计算 Recall@k 与 reciprocal rank，并说明它们分别衡量 RAG 检索的哪一类问题。
+4. 给定一个 RAG 失败案例，判断可能是 chunking、embedding、retrieval、reranking、prompt assembly 还是 generation 的问题。
+5. 比较 INT8 weight-only quantization、KV Cache quantization 和 FP8/FP4 mixed precision 的目标、风险和验证指标。
+6. 说明为什么前沿模型 benchmark 数字必须标注来源、日期、任务设置和评测版本。
+7. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。
+8. 设计一个多模态 LLM 评估：分别覆盖图像问答、OCR/文档理解、图表数值推理和视觉定位，说明输入分辨率、视觉 token 数、延迟、KV Cache 成本和每类任务的失败模式。
+9. 为一个 LLM benchmark 写 metric card：包括 task、sample_size、baseline、metrics、risks、uncertainty 和 conclusion，并说明哪些结论不能从这组数据推出。
 
 ## 经典 NLP 专题题
 

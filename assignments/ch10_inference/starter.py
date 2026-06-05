@@ -32,6 +32,14 @@ def nrmse(original, reconstructed):
     raise NotImplementedError
 
 
+def recall_at_k(retrieved_ids, relevant_ids, k):
+    raise NotImplementedError
+
+
+def reciprocal_rank_at_k(retrieved_ids, relevant_ids, k):
+    raise NotImplementedError
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         raise NotImplementedError

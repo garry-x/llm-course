@@ -68,6 +68,24 @@ class TestMemoryQuantization(unittest.TestCase):
         self.assertTrue(torch.all(q[2] == 0))
 
 
+@unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
+class TestRetrievalMetrics(unittest.TestCase):
+    def test_recall_and_reciprocal_rank_at_k(self):
+        retrieved = ["doc9", "doc2", "doc5", "doc1"]
+        relevant = {"doc1", "doc2", "doc7"}
+        self.assertAlmostEqual(submission.recall_at_k(retrieved, relevant, k=3), 1 / 3)
+        self.assertAlmostEqual(submission.reciprocal_rank_at_k(retrieved, relevant, k=3), 1 / 2)
+        self.assertEqual(submission.reciprocal_rank_at_k(["doc9", "doc8"], relevant, k=2), 0.0)
+
+    def test_retrieval_metrics_reject_invalid_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.recall_at_k(["doc1"], {"doc1"}, k=0)
+        with self.assertRaises(ValueError):
+            submission.recall_at_k(["doc1"], set(), k=1)
+        with self.assertRaises(ValueError):
+            submission.reciprocal_rank_at_k(["doc1"], set(), k=1)
+
+
 class BagOfWordsEmbedder:
     def __init__(self):
         self.vocab = {"apple": 0, "banana": 1, "car": 2, "engine": 3, "fruit": 4}

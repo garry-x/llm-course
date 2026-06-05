@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第7章 训练循环</h2>
   <p class="subtitle">从 MLE 到 AdamW/Muon + FP8/FP4 + DualPipe——极致的训练效率</p>
-  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 17 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 115 分钟 · 18 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -257,6 +257,37 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   </div>
   <p>因为 <span class="katex-inline" data-expr="z_j - z_{\max} \leq 0" aria-label="z_j - z_{\max} \leq 0" role="img"></span>，所以 <span class="katex-inline" data-expr="e^{z_j - z_{\max}} \leq 1" aria-label="e^{z_j - z_{\max}} \leq 1" role="img"></span>，在任意精度下都不可能溢出。PyTorch 的 <code>F.cross_entropy</code> 和 <code>F.log_softmax</code> 都内置了这个技巧。</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>另一个常见错误：</strong>在计算交叉熵时，必须将 <code>(batch, seq_len, vocab_size)</code> 展平为 <code>(batch*seq_len, vocab_size)</code>。如果不对 logits 做 <code>.view(-1, vocab_size)</code>，<code>F.softmax</code> 会在错误的维度上做归一化——它会在整个 batch+seq 联合空间上做 softmax，而不是在每个 token 位置上单独做。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 7.4A CE 梯度与反向传播路径 -->
+<!-- ================================================================ -->
+<section class="card" id="s7-4a">
+  <h3>7.4A 从 Cross-Entropy 梯度看训练到底在更新什么</h3>
+  <p>手动实现 cross entropy 解决的是前向数值稳定性；理解训练还需要看它的梯度。对单个 token 位置，设 logits 为 <span class="katex-inline" data-expr="z \in \mathbb{R}^{V}" aria-label="z \in \mathbb{R}^{V}" role="img"></span>，softmax 概率为 <span class="katex-inline" data-expr="p_i = \exp(z_i) / \sum_j \exp(z_j)" aria-label="p_i = \exp(z_i) / \sum_j \exp(z_j)" role="img"></span>，目标类别为 <span class="katex-inline" data-expr="y" aria-label="y" role="img"></span>。损失为 <span class="katex-inline" data-expr="L=-\log p_y" aria-label="L=-\log p_y" role="img"></span>。</p>
+
+  <div class="math-box"><div class="label">公式 7.8A Cross-Entropy 对 logits 的梯度</div>
+    <div class="katex" data-expr="\frac{\partial L}{\partial z_i}=p_i-\mathbf{1}[i=y]" aria-label="\frac{\partial L}{\partial z_i}=p_i-\mathbf{1}[i=y]" role="img"></div>
+  </div>
+
+  <p>这个结果非常重要：正确 token 的梯度是 <span class="katex-inline" data-expr="p_y-1" aria-label="p_y-1" role="img"></span>，通常为负；梯度下降会提高正确 token 的 logit。错误 token 的梯度是 <span class="katex-inline" data-expr="p_i" aria-label="p_i" role="img"></span>，梯度下降会降低它们的 logit，降低幅度与模型当前给它们的概率成正比。</p>
+
+  <h4>梯度如何回到 LM Head 和 Embedding</h4>
+  <p>如果 logits 来自 tied LM head：</p>
+  <div class="math-box"><div class="label">LM Head</div>
+    <div class="katex" data-expr="z_t = h_t E^\top" aria-label="z_t = h_t E^\top" role="img"></div>
+  </div>
+  <p>其中 <span class="katex-inline" data-expr="h_t" aria-label="h_t" role="img"></span> 是最后一层 hidden state，<span class="katex-inline" data-expr="E" aria-label="E" role="img"></span> 是词嵌入矩阵。由链式法则：</p>
+  <ul>
+    <li><strong>LM head / output embedding：</strong>目标 token 行会被拉近当前 hidden state，过高概率的错误 token 行会被推远。</li>
+    <li><strong>Transformer hidden state：</strong>梯度 <span class="katex-inline" data-expr="\partial L / \partial h_t" aria-label="\partial L / \partial h_t" role="img"></span> 会继续穿过 final norm、block、attention 和 FFN。</li>
+    <li><strong>输入 embedding：</strong>只有 batch 中实际出现的 token 行通过 embedding lookup 收到梯度；没有出现的 token 行不会在输入侧被更新。</li>
+  </ul>
+
+  <h4>Mask 对梯度的影响</h4>
+  <p>在 padding、SFT label mask 或 packed sequence 中，被设为 ignore index 的位置不应该贡献 loss，也不应该贡献梯度。实现上不是把这些位置的概率设为 0，而是在 reduction 前把对应 NLL 从平均中排除。否则模型会被迫预测 padding、prompt 或无效位置，训练目标就会偏离真实任务。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Cross entropy 不只是一个标量分数。它给 logits 的更新方向非常明确：提高正确 token，压低模型自己认为可能但实际错误的 token，并通过链式法则把这个信号传回整个 Transformer。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -808,6 +839,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     <li>✅ <strong>编程练习 1：DataLoader</strong> — 文本分片、批量、右移一位目标</li>
     <li>✅ <strong>数据与 Token Budget</strong> — 训练步数、global batch tokens、mixture weight 和 scaling law</li>
     <li>✅ <strong>编程练习 2：Cross-Entropy</strong> — 手动实现 + Log-Sum-Exp 数值稳定技巧</li>
+    <li>✅ <strong>CE 梯度与反向传播路径</strong> — logits 梯度、LM head、embedding 和 mask 对更新的影响</li>
     <li>✅ <strong>编程练习 3：AdamW</strong> — 动量 + 自适应学习率 + 解耦权重衰减</li>
     <li>✅ <strong>编程练习 4：Warmup + Cosine Decay</strong> — 学习率调度器</li>
     <li>✅ <strong>编程练习 5：完整训练循环</strong> — forward + backward + AMP + clipping + logging</li>

@@ -415,7 +415,7 @@ total_params = count_parameters(model)</div>
   <h3>6.6 训练前的完整性检查——前向传播测试</h3>
   <p>在训练之前，你需要确认模型的前向传播能正确运行。这里的关键检查项是：</p>
 
-  <h4>检查清单</h4>
+      <h4>实现要点</h4>
   <ul>
     <li><strong>Shape 正确：</strong>从 <code>(batch, seq_len)</code> 的 token ID 到 <code>(batch, seq_len, vocab_size)</code> 的 logits，整个链条没有被破坏</li>
     <li><strong>数值稳定：</strong>随机初始化下 logits 在合理范围内（均值 ~0，标准差 ~1-10）。如果出现 NaN 或 Inf，说明初始化有问题</li>

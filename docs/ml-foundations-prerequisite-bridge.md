@@ -1,6 +1,6 @@
 # ML Foundations Prerequisite Bridge
 
-本 handout 补齐 CS224N 风格先修中的 college calculus、probability/statistics 和 foundations of machine learning。它不是独立机器学习课程，而是把学生需要带入本课程的最小概念映射到 LLM 章节、作业、书面题和项目报告。它补充 Prerequisite Diagnostic、[数学与 PyTorch 先修复习](math-prerequisites.md)、[Python and PyTorch Review Session](python-pytorch-review-session.md)、[逐周阅读清单与复盘 Handout](reading-list.md)、Course Outcome Map 和 Project Report Template and Reproducibility Checklist。
+本 handout 补齐 CS224N 风格先修中的 college calculus、probability/statistics 和 foundations of machine learning。它不是独立机器学习课程，而是把学生需要带入本课程的最小概念映射到 LLM 章节、作业、书面题和项目报告。相关复习材料见 [数学与 PyTorch 先修复习](math-prerequisites.md)、[Python and PyTorch Review Session](python-pytorch-review-session.md) 和 [逐周阅读清单与复盘 Handout](reading-list.md)。
 
 ## 覆盖范围
 
@@ -107,7 +107,7 @@ log P(x_1, ..., x_T) = sum_t log P(x_t | x_<t)
 - 失败案例如何分类。
 - 哪个结论只在当前数据、seed、模型或硬件条件下成立。
 
-## Project Learning output Checklist
+## Project Learning Outputs
 
 | learning output_id | 要求 |
 |-------------|------|
@@ -129,17 +129,3 @@ log P(x_1, ..., x_T) = sum_t log P(x_t | x_<t)
 | statistics | 对 3 次 benchmark 结果计算 mean/std 并解释不确定性 | 报告样本数、条件和局限 |
 | ML objectives | 把 Ch07 training loss、Ch09 SFT/DPO loss 和项目 metric 分别解释 | 能区分训练目标和评价指标 |
 | generalization | 为项目写 split、baseline、ablation 和 leakage check | 进入 proposal 或 milestone |
-
-## Staff Checklist
-
-- Week 0/1 对未修过 ML 基础课的学生发布本 handout。
-- `Prerequisite Diagnostic` 对 calculus、statistics 和 ML foundations 低分学生给出补救任务。
-- Week 5 前检查训练项目 proposal 是否写清 objective、split、baseline 和 leakage_check。
-- Week 9 前检查推理项目 proposal 是否写清 benchmark variance、metric_limit 和 generalization_boundary。
-- 期末报告 rubric 中 objective、baseline、ablation、variance 和 leakage 的扣分口径与本 handout 一致。
-
-## 发布前 Checklist
-
-- syllabus、prerequisite diagnostic、math prerequisites、reading list 和 CS224N crosswalk 均链接本 handout。
-- `scripts/build_course_site_release.py` 把本文件列入学生安全文档。
-- `.venv/bin/python run_assignment_tests.py` 通过。

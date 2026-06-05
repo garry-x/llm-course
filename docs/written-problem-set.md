@@ -1,6 +1,6 @@
 # 书面推导与概念题题库
 
-本题库对应 README 中 20% 的“书面推导与概念题”。它补充自动编程测试无法覆盖的数学、复杂度、实验解释和工程判断。每章建议选 2-3 题作为正式作业，剩余题作为讨论课或期末复习。课程目标、认知层级和评估产出映射见 Assessment Blueprint and Coverage Matrix；综合复习路径见 Comprehensive Review Study Guide；逐章可复算小例子见 [Worked Example Pack](worked-example-pack.md)。
+本题库对应 README 中 20% 的“书面推导与概念题”。它补充自动编程测试无法覆盖的数学、复杂度、实验解释和工程判断。每章建议选 2-3 题作为正式作业，剩余题作为讨论课或期末复习；逐章可复算小例子见 [Worked Example Pack](worked-example-pack.md)。
 
 ## 评分规则
 

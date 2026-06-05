@@ -71,7 +71,7 @@
 
 章节作业入口：[assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/)。
 
-## 面向 LLM 推理工程师的能力矩阵
+## 面向 LLM 推理工程师的能力路线
 
 如果你的目标是成为 LLM 推理工程师，学习目标不只是“懂 Transformer”，而是能把模型稳定、低成本、可观测地服务给真实用户。课程按以下能力组织：
 
@@ -88,7 +88,7 @@
 
 **学习路线：**如果你想按岗位能力学习，先看 [LLM 推理工程师课程路线](inference-engineer-curriculum.html)（详细 Markdown 版在 [docs/inference-engineer-curriculum.md](docs/inference-engineer-curriculum.md)）。它把章节、练习、Capstone、压测、评测和上线复盘串成一条实践路径。
 
-## 面向 LLM 训练工程师的能力矩阵
+## 面向 LLM 训练工程师的能力路线
 
 如果你的目标是成为 LLM 训练工程师，学习目标要从“能跑一个 loss”推进到“能交付可复现、可恢复、可观测、成本可解释的训练系统”。课程按以下能力补齐：
 

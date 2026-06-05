@@ -1,6 +1,6 @@
 # 逐周阅读清单与复盘 Handout
 
-本 handout 把 10 周课程的阅读材料集中为可布置、可评分、可引用的清单。阅读复盘评分样例和 A/B/C/not-passing 校准标准见 Paper Recap Calibration Pack；可直接用于课堂讨论、reading recap、paper-to-code drill、quiz/checkpoint 和 capstone clinic 的问题见 Reading Discussion Question Bank；核心论文到章节、推导、作业测试和项目产出的映射见 Paper-to-Code Traceability Matrix；每周阅读时间预算和降载规则见 Workload and Pacing Calibration。阅读分为三类：
+本 handout 把 10 周课程的阅读材料集中为可布置、可评分、可引用的清单。阅读分为三类：
 
 - 必读：课堂讨论和作业默认依赖。
 - 选读：用于项目、报告或加深理解。
@@ -218,15 +218,13 @@
 
 ## Week 10: Capstone 报告、复现与前沿来源辨析
 
-对应材料：两个 capstone README、项目报告 rubric、展示互评 rubric、前沿来源辨析、Frontier Seminar Handout。
+对应材料：两个 capstone README、项目报告 rubric 和前沿主题阅读。
 
 必读：
 
 - Stanford CS224N coursework/final project 页面：重点看 assignment、project proposal、milestone、poster/report 的分工。
 - 本课程 [Capstone 项目报告 Rubric](project-report-rubric.md)。
-- 本课程 项目展示与同伴 Review Rubric。
-- 本课程 前沿模型来源等级与检查记录。
-- 本课程 Frontier Seminar Handout 中 interpretability、multimodality、social impact 和 open questions 的最低交付。
+- 目标方向的官方论文、课程讲义或模型卡：interpretability、multimodality、social impact、agents 或 reasoning。
 
 选读：
 

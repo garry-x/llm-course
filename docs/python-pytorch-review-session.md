@@ -1,6 +1,6 @@
 # Python and PyTorch Review Session
 
-本 handout 用于 Week 1 Python Review Session 和 Week 2 PyTorch Tutorial Session。它补充 Prerequisite Diagnostic、[数学与 PyTorch 先修复习](math-prerequisites.md)、Environment and Reproducibility Guide、Course Calendar and Deadline Ledger、[10 周 / 20 讲 Lecture Plan](lecture-plan.md)、Student FAQ and Troubleshooting Guide 和 Assignment Submission and Release Guide。
+本 handout 用于 Week 1 Python Review Session 和 Week 2 PyTorch Tutorial Session。它和 [数学与 PyTorch 先修复习](math-prerequisites.md)、[10 周 / 20 讲 Lecture Plan](lecture-plan.md) 配套，帮助学生在进入 Transformer 代码前补齐 Python、张量 shape、autograd 和测试定位能力。
 
 参照 CS224N Winter 2026 公开 schedule：Week 1 安排 Python Review Session，Week 2 安排 PyTorch Tutorial Session。本课程把两次 review 合并为可移植 handout：学生先确认环境和 Python helper，再进入 PyTorch tensor、`nn.Module`、loss、autograd 和作业提交日志。
 
@@ -94,21 +94,3 @@ Shape trace:
 Fix hypothesis:
 Question for office hours:
 ```
-
-## Staff Checklist
-
-| 时间 | 动作 |
-|------|------|
-| Week 1 前 | 根据 Prerequisite Diagnostic 标记 Python/PyTorch Borderline 学生 |
-| Python Review Session 前 | 确认 Ch01 helper tests 能在 `.venv/bin/python` 下运行 |
-| PyTorch Tutorial Session 前 | 确认 Ch02 embedding/RoPE tests 能在 CPU 下运行 |
-| Session 后 24 小时 | 将高频失败模式写入 Student FAQ and Troubleshooting Guide 或 operations log |
-| Week 2 前 | 对仍不能解释 shape trace 的学生安排 office hours 检查 |
-
-## 发布前 Checklist
-
-- Course Calendar and Deadline Ledger 中列出 Python Review Session 和 PyTorch Tutorial Session。
-- [10 周 / 20 讲 Lecture Plan](lecture-plan.md) 的 Week 1/2 能映射到本 handout。
-- Prerequisite Diagnostic 的 Borderline 学生有明确补救路径。
-- Environment and Reproducibility Guide 的命令与本 handout 一致。
-- 运行 `.venv/bin/python run_assignment_tests.py`；正式期末发布或站点大改版前运行 `.venv/bin/python run_assignment_tests.py`。

@@ -169,7 +169,7 @@ LLM 课程的工程项目必须覆盖以下风险：
 3. 用 15 分钟把一个文本分类任务分别设计成 BERT fine-tuning 和 GPT prompting。
 4. 用 20 分钟审查一个 RAG 失败案例，标出 retrieval、generation 和 evaluation 的责任边界。
 
-## Mini-Recitation Checklist
+## Mini-Recitation Activities
 
 | Topic | Board artifact | Student action |
 |-------|----------------|----------------|

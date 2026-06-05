@@ -78,7 +78,7 @@
   <ul>
     <li>"king" 和 "queen" 出现的位置（上下文）有大量重叠 → 向量距离近</li>
     <li>"king" 和 "apple" 的上下文基本不重叠 → 向量距离远</li>
-    <li><strong>类比推理：</strong> <span class="katex-inline" data-expr="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" aria-label="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" role="img"></span>——语义关系被编码为向量空间的线性变换</li>
+    <li><strong>类比推理：</strong> <span class="katex-inline" data-expr="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" aria-label="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" role="img"></span>——在 word2vec/GloVe 等静态词向量中常见，但它是语料、训练目标和评价方式共同形成的经验现象，不是嵌入层自动保证的数学性质</li>
   </ul>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>参数量：</strong>嵌入矩阵 <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span>。GPT-2 124M 中 <span class="katex-inline" data-expr="V=50257, d=768" aria-label="V=50257, d=768" role="img"></span>，嵌入层约 3860 万参数——占模型总参数的 31%！嵌入矩阵通常与 LM Head（输出投影）共享权重（weight tying），进一步复用参数。</div></div>

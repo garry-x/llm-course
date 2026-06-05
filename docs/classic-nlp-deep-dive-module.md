@@ -251,12 +251,6 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 | “BERT 和 GPT 只是 mask 不同” | objective、attention visibility、输出用途和 fine-tuning head 都不同 | 写出 MLM labels 与 causal labels |
 | “encoder-only 不能用于现代 LLM 项目” | classification、reranking、retrieval embedding、span extraction 仍常用 | 设计一个 RAG reranker 或 classifier |
 
-## Source And Update Boundary
+## Topic Boundary
 
-本模块内容属于稳定神经 NLP 基础，来源层级按 External Source Inventory 中的 Classic NLP / evaluation 记录维护。若后续课程加入新的 encoder-only 模型、NMT benchmark 或 parser 论文，不应替换本模块的基础定义；应作为 extension reading 加入 [reading-list.md](reading-list.md) 或 Frontier Seminar Handout。
-
-发布前检查：
-
-- `.venv/bin/python assignments/ch11_classic_nlp/tests.py` 通过。
-- `.venv/bin/python run_assignment_tests.py` 通过。
-- Lecture plan、slides outline、reading list 和 Ch11 assignment README 均能指向本模块。
+本模块内容属于稳定神经 NLP 基础。若后续课程加入新的 encoder-only 模型、NMT benchmark 或 parser 论文，不应替换本模块的基础定义；应作为 extension reading 加入 [reading-list.md](reading-list.md)，并明确新论文的任务设置和适用范围。

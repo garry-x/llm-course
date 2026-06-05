@@ -1,6 +1,6 @@
 # Compute Resource and Cost Guide
 
-本指南用于管理课程中的 CPU/GPU、云额度、API 调用和成本复现实验。它补充 [课程 Syllabus](syllabus.md)、[LLM Training Engineering Capstone](../projects/training-engineering-capstone/)、[LLM Inference Engineering Capstone](../projects/inference-engineering-capstone/)、Capstone Proposal and Milestone Guide、Data and Ethics Review 和 Course Staff Runbook。
+本指南用于说明课程中的 CPU/GPU、云额度、API 调用和成本复现实验。它补充 [课程 Syllabus](syllabus.md)、[LLM Training Engineering Capstone](../projects/training-engineering-capstone/) 和 [LLM Inference Engineering Capstone](../projects/inference-engineering-capstone/)。
 
 高校 LLM 课程不能只要求学生“跑大模型”，还必须说明：哪些任务 CPU 可完成，哪些任务需要 GPU，额度如何公平分配，成本如何记录，失败时如何降级，项目报告如何证明实验不是浪费算力或不可复现。
 
@@ -61,7 +61,7 @@
 | 估算成本 | cloud price, API price, or course credit usage |
 | 产物 | log file, checkpoint, benchmark report, eval output |
 | 失败次数 | failed runs and first failure reason |
-| 降级路径 | CPU command or smaller config that reproduces the claim |
+| 降级路径 | CPU command or smaller config that reproduces the reported result |
 
 项目报告中的成本表不得只写“用了 GPU”；必须能让助教检查数字是否来自日志、容量规划或平台账单。
 
@@ -80,29 +80,7 @@
 ## 安全与数据边界
 
 - 不上传包含 PII、受限许可证或未获授权的数据到外部云或第三方 API。
-- 使用外部 API 时，必须按 Data and Ethics Review 检查数据来源、隐私、模型卡和使用条款。
+- 使用外部 API 时，必须确认数据来源、隐私、模型卡和使用条款。
 - 不把课程 API key、云凭证或私有 endpoint 写入代码、日志、报告或截图。
 - 对可能产生有害内容的评测，必须记录安全边界和拒答策略；不得用共享额度做无约束红队探索。
 - 若平台条款禁止某类 benchmark、数据用途或模型用途，课程要求自动降级，不得以项目需求为理由绕过。
-
-## Staff Checklist
-
-| 时间 | 检查项 |
-|------|--------|
-| 开课前 | 确认所有必交测试 CPU 可跑；记录 `.venv`、PyTorch 和 Python 版本 |
-| Week 4 | 公布 capstone 可用资源、额度规则、申请方式和支持窗口 |
-| Week 5 | 检查训练项目 proposal 是否有资源预算和降级路径 |
-| Week 8 | 检查推理项目 proposal 是否有 SLO、容量估算和 API/GPU 成本假设 |
-| Week 9 | 汇总额度使用异常、失败重跑和公平性问题 |
-| Week 10 | 抽查项目报告中的成本、日志、checkpoint 和复现命令是否一致 |
-
-## 发布前 Checklist
-
-| 检查项 | 通过标准 |
-|--------|----------|
-| CPU baseline | 所有必交作业和 capstone acceptance 无 GPU 可通过 |
-| 配额规则 | 共享资源、云额度和 API key 有公平使用规则 |
-| 成本模板 | 项目报告有可检查的资源、运行时长、成本和失败重跑记录 |
-| 降级路径 | 每个 GPU/API 实验有 CPU 或小配置 fallback |
-| 安全边界 | 数据、隐私、凭证和平台条款有明确约束 |
-| Staff 流程 | staff runbook 或 operations log 能记录额度、事故和改进项 |

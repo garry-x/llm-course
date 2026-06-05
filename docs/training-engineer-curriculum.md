@@ -8,7 +8,7 @@
 
 ## 学习路径
 
-| 阶段 | 章节与项目 | 主要问题 | 产出产出 |
+| 阶段 | 章节与项目 | 主要问题 | 学习产出 |
 |------|------------|----------|----------|
 | 1. 模型可训练性 | Ch01-Ch06 | 数据如何变成 logits，梯度如何穿过模型 | 能解释 token、shape、参数量、梯度路径 |
 | 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint |
@@ -16,7 +16,7 @@
 | 4. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP/TP/PP、FP8/FP4、MFU、tokens/s 解释 |
 | 5. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划报告 |
 
-## 能力清单
+## 能力目标
 
 ### A. 数据与 Token 预算
 

@@ -528,7 +528,7 @@ Quick check：
 - Ch10 KV cache 测试通过。
 - 推理项目提案。
 
-## Week 9 Lecture 18: RAG、Quantization、LSH 与 Production Checklist
+## Week 9 Lecture 18: RAG、Quantization、LSH 与 Production Readiness
 
 对应材料：Ch10、inference capstone。
 
@@ -536,7 +536,7 @@ Quick check：
 
 - 解释 RAG 的 chunking、embedding、retrieval、rerank、prompt assembly。
 - 比较 weight-only quantization、KV quantization、FP8/FP4。
-- 建立上线前的 latency/cost/quality/safety checklist。
+- 建立上线前的 latency、cost、quality 和 safety 判断框架。
 
 核心推导：
 

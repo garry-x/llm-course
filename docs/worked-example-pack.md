@@ -1,13 +1,13 @@
 # Worked Example Pack
 
 
-本包把章节正文、lecture notes、recitation worksheet、书面题和编程作业中的核心概念落成可复算例子。它补充 Core Concept Glossary、Topic Dependency and Spiral Review Map、Lecture Note Sample Pack、Recitation Worksheet Pack、Notation and Shape Glossary、Mathematical Derivation Audit、Chapter Claim Audit Ledger、Assignment Handout Pack、[书面推导与概念题题库](written-problem-set.md) 和 Paper-to-Code Traceability Matrix。
+本包把章节正文、讨论课、书面题和编程作业中的核心概念落成可复算例子。它的作用是帮助学生把公式、shape、代码和常见错误连接起来；配套题目见 [书面推导与概念题题库](written-problem-set.md)。
 
 使用规则：
 
 - 每个 worked example 必须能被学生用纸笔或少量 PyTorch 张量复算。
-- 每个例子必须说明输入、shape、关键公式、预期中间量、常见错误、关联作业和评估产出。
-- 前沿模型、benchmark、API、价格或硬件性能不能从 worked example 外推为课程事实；相关边界按 External Source Verification Guide 和 前沿模型来源等级与检查记录 维护。
+- 每个例子必须说明输入、shape、关键公式、预期中间量、常见错误和关联作业。
+- 前沿模型、benchmark、API、价格或硬件性能不能从 worked example 外推为通用事实；需要回到论文、官方文档或模型卡阅读实验条件。
 - 例子可以进入 student site release；不得包含隐藏测试输入、reference_solution.py、评分私有样例或真实学生提交。
 
 ## Example Schema
@@ -20,15 +20,15 @@
 | inputs and shapes | Concrete tensors, token sequences, dimensions, masks, or metric tables. |
 | worked trace | Intermediate values sufficient to reproduce the result. |
 | common failure | A plausible wrong answer and the diagnostic signal. |
-| assessment link | Assignment, written problem, recitation worksheet, quiz, or capstone learning output. |
-| source boundary | Stable theory, implementation detail, course inference, or volatile external claim. |
+| learning link | Assignment, written problem, recitation worksheet, quiz, or capstone task. |
+| scope note | Stable theory, implementation detail, course inference, or volatile external fact. |
 
 ## Core Worked Examples
 
-| example_id | chapter | learning target | inputs and shapes | worked trace | common failure | assessment link | source boundary |
+| example_id | chapter | learning target | inputs and shapes | worked trace | common failure | learning link | scope note |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | WE-CH01-BPE | Ch01 Tokenization / BPE | Compute two BPE merge steps and explain why merges are corpus-dependent. | Corpus tokens `low`, `lower`, `newer`; byte/character pairs counted over word-end markers. | Count adjacent pairs, pick highest frequency, merge once, recount before the next merge; show that `l o` and `e r` can change rank after the first merge. | Reusing the original pair counts after a merge; diagnostic is a merge order that no longer matches current tokenization. | `assignments/ch01_bpe/`, `written-problem-set.md` Ch01, `recitation-worksheet-pack.md` W1 | stable algorithmic procedure |
-| WE-CH02-ROPE | Ch02 Embedding / Position Encoding / RoPE | Verify that RoPE preserves vector norm while changing relative dot products by position difference. | Two 2D query/key vectors `q=[1,0]`, `k=[0,1]`; positions `m=0`, `n=1`; angle `theta`. | Rotate with `R_m` and `R_n`; show `norm(R_m q)=norm(q)`, `norm(R_n k)=norm(k)`, and `(R_m q)^T(R_n k)` depends on `n-m`. | Treating RoPE as adding a position vector; diagnostic is norm drift or loss of relative-position dependence. | `assignments/ch02_embeddings/`, DER-03, Ch02 formula gate | stable theory with notation boundary |
+| WE-CH02-ROPE | Ch02 Embedding / Position Encoding / RoPE | Show that RoPE preserves vector norm while changing relative dot products by position difference. | Two 2D query/key vectors `q=[1,0]`, `k=[0,1]`; positions `m=0`, `n=1`; angle `theta`. | Rotate with `R_m` and `R_n`; show `norm(R_m q)=norm(q)`, `norm(R_n k)=norm(k)`, and `(R_m q)^T(R_n k)` depends on `n-m`. | Treating RoPE as adding a position vector; diagnostic is norm drift or loss of relative-position dependence. | `assignments/ch02_embeddings/`, Ch02 written problem | stable theory with notation boundary |
 | WE-CH03-ATTN | Ch03 Scaled Dot-Product Attention | Compute masked attention weights for a three-token causal sequence. | `Q,K,V` shape `(T=3,d=2)`; mask blocks future columns above the diagonal. | Compute `QK^T/sqrt(2)`, replace masked logits with large negative value, apply row-wise softmax, multiply by `V`. | Applying softmax before masking; diagnostic is nonzero attention mass on future tokens. | `assignments/ch03_attention/`, DER-04, W2 shape drill | stable theory and implementation detail |
 | WE-CH04-GQA | Ch04 MHA / GQA / MLA | Compare KV-cache memory for MHA and GQA with the same query heads. | `n_q=8`, `n_kv=2`, `d_head=64`, `T=1024`, fp16 KV cache. | MHA stores `2*T*n_q*d_head*2` bytes; GQA stores `2*T*n_kv*d_head*2` bytes; ratio is `n_kv/n_q=0.25`. | Counting query heads for KV cache in GQA; diagnostic is no memory reduction despite fewer KV heads. | `assignments/ch04_multihead/`, Ch04 KV-cache analysis | implementation detail tied to architecture |
 | WE-CH05-NORM | Ch05 Transformer Block / Norm / FFN | Distinguish LayerNorm centering from RMSNorm scaling. | Vector `x=[1,2,5]`; compare mean-centered variance against root-mean-square. | LayerNorm subtracts mean then divides by standard deviation; RMSNorm divides by `sqrt(mean(x^2)+eps)` without centering. | Claiming RMSNorm output has zero mean; diagnostic is output mean not equal to zero. | `assignments/ch05_block/`, DER-07, written norm question | stable normalization math |
@@ -52,25 +52,15 @@
 
 | channel | required use |
 | --- | --- |
-| programming assignments | Each example links to at least one public assignment suite or capstone gate. |
+| programming assignments | Each example links to at least one public assignment suite or capstone task. |
 | written assessment | Ch01-Ch10 and Ch11 examples map to written derivation or concept questions. |
 | recitation | Recitation rows require students to produce a visible trace, not just a final answer. |
 | quiz/checkpoint | Instructors may convert any common failure into a quick check or distractor item. |
-| paper recap | Examples with source boundaries must be tied back to a source record or paper-to-code row. |
+| paper recap | Examples with external facts should point students back to the relevant paper, official documentation, or model card. |
 
 ## Maintenance Workflow
 
-1. When a chapter formula, starter API, assignment test, or source boundary changes, update the corresponding `WE-*` row in this pack.
+1. When a chapter formula, starter API, assignment test, or scope note changes, update the corresponding `WE-*` row in this pack.
 2. If a worked trace becomes too long for a table, move the expanded trace into lecture notes and keep the `WE-*` row as the index record.
-3. If an example depends on a volatile external model or benchmark claim, record it in the reading notes before using it in assessment.
+3. If an example depends on a volatile external model or benchmark number, cite the paper or official documentation in the relevant reading notes.
 4. Run `.venv/bin/python run_assignment_tests.py` after editing this pack or any linked chapter/assignment.
-
-## Release Checklist
-
-- Example Schema includes identifier, learning target, inputs/shapes, worked trace, common failure, assessment link, and source boundary.
-- Core Worked Examples include WE-CH01-BPE through WE-CH11-METRICS.
-- Each core example has an assessment link and a source boundary.
-- Recitation Use maps examples to exit learning output.
-- Assessment Coverage includes programming assignments, written assessment, recitation, quiz/checkpoint, and paper recap.
-- Maintenance Workflow specifies update triggers and verification command.
-- Student site release excludes hidden tests, reference_solution.py, private grading samples, and real student submissions.

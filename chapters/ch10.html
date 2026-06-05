@@ -43,7 +43,7 @@
     <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
     <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告和上线检查清单；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
 </section>
 
@@ -763,7 +763,7 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
     </table>
   </div>
 
-  <h4>上线检查清单</h4>
+  <h4>上线方案</h4>
   <ul>
     <li><strong>容量：</strong>测过目标 prompt 长度、输出长度、并发数下的 P50/P95/P99。</li>
     <li><strong>显存：</strong>计算过模型权重、KV Cache、batch 峰值和安全余量。</li>

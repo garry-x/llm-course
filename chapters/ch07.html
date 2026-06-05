@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第7章 训练循环</h2>
   <p class="subtitle">从 MLE 到 AdamW/Muon + FP8/FP4 + DualPipe——极致的训练效率</p>
-  <div class="reading-time">⏱ 预计阅读: 85 分钟 · 15 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 16 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -200,6 +200,46 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么在 <code>__init__</code> 而非 <code>__getitem__</code> 中 tokenize？</strong>每次调用 <code>__getitem__</code> 都做 tokenize 会慢几百倍。一次性 tokenize 整个语料然后通过整数索引切片——这是标准做法，也是 PyTorch 官方教程推荐的方式。</p>
     </div>
   </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 7.3A Data mixture and scaling -->
+<!-- ================================================================ -->
+<section class="card" id="s7-3a">
+  <h3>7.3A 数据配比、Token Budget 与 Scaling Law</h3>
+  <p>写出 DataLoader 只是训练系统的第一步。真正的大模型训练要先回答三个问题：训练多少 token、这些 token 从哪些数据源来、在给定算力下模型参数量和数据量如何平衡。这个问题决定 loss 曲线、模型能力边界和训练成本，不是调一个 <code>batch_size</code> 就能解决。</p>
+
+  <h4>Token budget：训练步数不是 epoch 决定的</h4>
+  <p>传统小数据集训练常说“跑 3 个 epoch”。LLM 预训练更常用 <strong>token budget</strong> 描述训练量，因为语料规模巨大、样本会被打包成连续 token stream，而且不同数据源可能按比例重复采样。设一次 optimizer step 消耗的全局 token 数为：</p>
+  <div class="math-box"><div class="label">公式 7.8a Global Batch Tokens</div>
+    <div class="katex" data-expr="B_{\text{tokens}} = B_{\text{micro}} \times T_{\text{seq}} \times A_{\text{grad}} \times N_{\text{dp}}" aria-label="B_{\text{tokens}} = B_{\text{micro}} \times T_{\text{seq}} \times A_{\text{grad}} \times N_{\text{dp}}" role="img"></div>
+  </div>
+  <p>其中 <span class="katex-inline" data-expr="B_{\text{micro}}" aria-label="B_{\text{micro}}" role="img"></span> 是每张数据并行卡上的 micro-batch size，<span class="katex-inline" data-expr="T_{\text{seq}}" aria-label="T_{\text{seq}}" role="img"></span> 是序列长度，<span class="katex-inline" data-expr="A_{\text{grad}}" aria-label="A_{\text{grad}}" role="img"></span> 是 gradient accumulation steps，<span class="katex-inline" data-expr="N_{\text{dp}}" aria-label="N_{\text{dp}}" role="img"></span> 是数据并行副本数。若计划训练 <span class="katex-inline" data-expr="D_{\text{tokens}}" aria-label="D_{\text{tokens}}" role="img"></span> 个 token，则训练步数近似为：</p>
+  <div class="math-box"><div class="label">公式 7.8b Step Count</div>
+    <div class="katex" data-expr="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" aria-label="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" role="img"></div>
+  </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么这很重要：</strong>learning rate schedule、checkpoint 间隔、日志频率和训练成本都依赖 step count。只报告 epoch 不足以复现 LLM 训练，因为同一语料在不同 packing、sequence length、重复采样和数据配比下会产生不同 token 分布。</div></div>
+
+  <h4>Data mixture：不是所有 token 等价</h4>
+  <p>LLM 语料通常来自网页、书籍、代码、数学、百科、对话、领域文档等多个来源。训练时常按 mixture weight 采样，而不是按原始体量直接拼接。设第 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span> 个数据源的采样权重为 <span class="katex-inline" data-expr="w_k" aria-label="w_k" role="img"></span>，且 <span class="katex-inline" data-expr="\sum_k w_k = 1" aria-label="\sum_k w_k = 1" role="img"></span>，那么一个 batch 中来自各源的 token 比例会近似跟随这些权重。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>数据决策</th><th>影响</th><th>常见风险</th></tr>
+      <tr><td>提高代码数据权重</td><td>增强程序合成、结构化推理和工具使用模式</td><td>自然语言风格变硬，许可证和重复代码风险上升</td></tr>
+      <tr><td>提高数学/推理数据权重</td><td>增强多步推导和符号操作能力</td><td>格式模板过拟合，泛化到真实问题不稳定</td></tr>
+      <tr><td>提高对话数据权重</td><td>增强指令遵循和交互风格</td><td>可能提前引入后训练偏好，削弱纯 LM 分布建模</td></tr>
+      <tr><td>强去重和质量过滤</td><td>降低记忆化、污染和低质量样本影响</td><td>过度过滤会损失长尾语言、领域和风格覆盖</td></tr>
+    </table>
+  </div>
+  <p>数据配比没有通用最优解。严谨报告应说明 raw corpus、过滤规则、去重粒度、tokenizer、mixture weight、训练 token 数和评测集是否可能被污染。</p>
+
+  <h4>Chinchilla-style scaling：模型大小与数据量要配平</h4>
+  <p>Hoffmann et al. (2022) 的 Chinchilla 结论改变了大模型训练的常见直觉：在固定训练算力下，不能只把参数量做大；如果 token 数不足，大模型会处于 under-trained 状态。简化地说，训练成本主要随参数量 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span>、训练 token 数 <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 和每 token 前后向计算量共同增长，常用粗略量级写作：</p>
+  <div class="math-box"><div class="label">公式 7.8c 训练计算量粗略量级</div>
+    <div class="katex" data-expr="C \propto N \times D" aria-label="C \propto N \times D" role="img"></div>
+  </div>
+  <p>因此，给定算力预算 <span class="katex-inline" data-expr="C" aria-label="C" role="img"></span> 时，课程中应比较的是 <strong>参数量、token 数、数据质量和训练时长</strong> 的组合，而不是孤立比较“模型有多少 B 参数”。小模型训练项目也遵循同一思想：如果只增大模型而数据很少，训练 loss 可能下降，但开发集 PPL 和生成质量可能变差；如果数据很多但模型太小，模型容量可能成为瓶颈。</p>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>不要过度外推：</strong>Chinchilla 给的是特定实验设定下的 scaling 规律，不是任意 tokenizer、数据质量、架构、训练目标和后训练流程的精确公式。课程里用它建立“数据-参数-算力必须配平”的判断，而不是背固定常数。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -732,6 +772,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     <li>✅ <strong>MLE 框架</strong> — 语言建模 = 最大化对数似然 = 最小化交叉熵 = 最小化 KL 散度</li>
     <li>✅ <strong>Perplexity</strong> — PPL = exp(loss)，有效分支因子的度量</li>
     <li>✅ <strong>编程练习 1：DataLoader</strong> — 文本分片、批量、右移一位目标</li>
+    <li>✅ <strong>数据与 Token Budget</strong> — 训练步数、global batch tokens、mixture weight 和 scaling law</li>
     <li>✅ <strong>编程练习 2：Cross-Entropy</strong> — 手动实现 + Log-Sum-Exp 数值稳定技巧</li>
     <li>✅ <strong>编程练习 3：AdamW</strong> — 动量 + 自适应学习率 + 解耦权重衰减</li>
     <li>✅ <strong>编程练习 4：Warmup + Cosine Decay</strong> — 学习率调度器</li>

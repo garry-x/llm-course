@@ -130,6 +130,7 @@
 复盘问题：
 
 - AdamW 的 weight decay 为什么不能简单等同于 Adam 里的 L2 penalty？
+- 在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？
 - 训练日志里 loss 下降但开发集变差时，应该先查哪些产出？
 
 ## Week 6: Generation、Search 与 Speculative Decoding

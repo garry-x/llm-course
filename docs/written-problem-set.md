@@ -53,7 +53,9 @@
 1. 从自回归分解推导 next-token negative log likelihood，并说明它与 cross entropy 的关系。
 2. 推导单样本 cross entropy 对 logits 的梯度 `p_i - 1[i=y]`。
 3. 解释 AdamW 中“解耦权重衰减”和 L2 regularization 的区别，并说明 warmup + cosine decay 的作用。
-4. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
+4. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16` 和训练预算 `D=20B tokens`，计算 global batch tokens 与训练 step 数，并说明这会如何影响 learning rate schedule 与 checkpoint 间隔。
+5. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。
+6. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
 
 ## Ch08 Generation / Decoding
 

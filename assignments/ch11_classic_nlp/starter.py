@@ -65,6 +65,11 @@ def bio_tags_to_spans(tokens, tags):
     raise NotImplementedError
 
 
+def viterbi_decode(emissions, transitions, start_scores=None, end_scores=None):
+    """Decode the highest-scoring tag path for a linear-chain sequence model."""
+    raise NotImplementedError
+
+
 def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
     """Select the best BERT-style extractive QA answer span from start/end logits."""
     raise NotImplementedError

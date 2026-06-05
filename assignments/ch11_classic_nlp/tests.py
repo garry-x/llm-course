@@ -214,6 +214,41 @@ class TestQAMetricsAndMLM(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.bio_tags_to_spans(["a"], ["B-"])
 
+    def test_viterbi_decode_uses_transition_scores(self):
+        # Tags: 0=O, 1=B-ORG, 2=I-ORG. Emissions alone prefer O at the last
+        # position, but the transition score makes B-ORG -> I-ORG globally best.
+        emissions = [
+            [0.0, 2.0, -2.0],
+            [1.0, 0.0, 0.8],
+        ]
+        transitions = [
+            [0.0, 0.0, -2.0],
+            [-2.0, -1.0, 2.0],
+            [-2.0, -1.0, 1.0],
+        ]
+        result = solution.viterbi_decode(emissions, transitions, start_scores=[0.0, 0.0, -3.0])
+        self.assertEqual(result["tags"], [1, 2])
+        self.assertAlmostEqual(result["score"], 4.8)
+        self.assertEqual(len(result["scores"]), 2)
+        self.assertEqual(result["backpointers"][1][2], 1)
+
+    def test_viterbi_decode_applies_end_scores(self):
+        emissions = [[0.0, 0.0], [0.0, 0.0]]
+        transitions = [[0.0, 0.0], [0.0, 0.0]]
+        result = solution.viterbi_decode(emissions, transitions, end_scores=[0.0, 1.5])
+        self.assertEqual(result["tags"][-1], 1)
+        self.assertAlmostEqual(result["score"], 1.5)
+
+    def test_viterbi_decode_rejects_bad_shapes(self):
+        with self.assertRaises(ValueError):
+            solution.viterbi_decode([], [[0.0]])
+        with self.assertRaises(ValueError):
+            solution.viterbi_decode([[0.0], [0.0, 1.0]], [[0.0]])
+        with self.assertRaises(ValueError):
+            solution.viterbi_decode([[0.0, 1.0]], [[0.0, 1.0]])
+        with self.assertRaises(ValueError):
+            solution.viterbi_decode([[0.0, 1.0]], [[0.0, 0.0], [0.0, 0.0]], start_scores=[0.0])
+
     def test_select_extractive_qa_span_uses_start_and_end_logits(self):
         tokens = ["[CLS]", "the", "quick", "brown", "fox", "[SEP]"]
         start_logits = [0.1, 0.2, 3.0, 1.0, 0.4, -1.0]

@@ -496,6 +496,7 @@ Quick check：
 - seq2seq teacher forcing 与 exposure bias。
 - MLM 与 causal LM 的 mask 方向差异。
 - BIO tagging 如何把 token classification 转成 entity spans。
+- Viterbi DP：emission + transition scores 下的最优 tag path。
 - encoder-decoder cross-attention 与 decoder-only causal self-attention 的信息流差异。
 
 课堂 demo：
@@ -503,6 +504,7 @@ Quick check：
 - 手写一个 transition parsing 状态序列。
 - 手算 3 步标量 RNN hidden state 和 recurrent gradient factors。
 - 给定 BIO tags，解码 NER spans，并讨论非法 `I-` 标签的处理策略。
+- 给定小型 emission/transition table，手算 Viterbi scores 和 backpointers。
 - 对比 BERT MLM 输入和 GPT causal LM 输入。
 - 用 beam candidate table 展示 length-normalized score 如何改变排序。
 

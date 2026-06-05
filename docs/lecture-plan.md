@@ -23,15 +23,18 @@
 - 解释课程交付物：章节作业、书面题、阅读复盘、两个 capstone。
 - 复习 tensor shape、indexing、broadcast 和 `nn.Module`。
 - 从 OOV 问题引出 byte-level BPE。
+- 用 tokenizer report 比较平均 token 数、P95 token 数和 round-trip 成功率。
 
 核心推导：
 
 - BPE 每次 merge 对序列长度和 vocab size 的影响。
 - 贪心 merge 与全局最优压缩之间的差距。
+- tokenizer 成本指标：tokens/character、P95 token count、embedding params。
 
 课堂 demo：
 
 - 在小语料上手算 3 次 merge。
+- 对中英/代码/emoji 样本运行 tokenizer report。
 - 运行 `assignments/ch01_bpe/tests.py`，定位 `_get_stats` 与 `_merge` 的失败原因。
 
 Quick check：

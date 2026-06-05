@@ -8,7 +8,7 @@
 |------|------|
 | `starter.py` | 学生起始代码，包含需要实现的 TODO |
 | `reference_solution.py` | 教师参考实现，用于验证测试本身 |
-| `tests.py` | `unittest` 测试，覆盖 `_get_stats`、`_merge`、`train`、`encode`、`decode` |
+| `tests.py` | `unittest` 测试，覆盖 `_get_stats`、`_merge`、`train`、`encode`、`decode` 和 tokenizer 统计报告 |
 
 ## 学生运行方式
 
@@ -35,5 +35,5 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch01_bpe/tests.py
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
 | Written questions | 30 | 解释 byte-level BPE 可逆性、频率合并的压缩启发式、tie-breaking 对词表的影响、词表大小与序列长度/嵌入参数量/多语言成本的权衡 |
-| Programming parts | 60 | 实现 `_get_stats`、`_merge`、`train`、`encode`、`decode`，通过中英文、emoji、多字节 UTF-8 round trip |
+| Programming parts | 60 | 实现 `_get_stats`、`_merge`、`train`、`encode`、`decode` 和 `tokenizer_report`，通过中英文、emoji、多字节 UTF-8 round trip 与 token 成本统计 |
 | Analysis / style | 10 | 报告至少 2 个 tokenizer 失败或边界案例，并比较压缩率、可逆性、特殊 token 和领域文本切分 |

@@ -5,6 +5,8 @@ Students should implement the TODO functions/classes and run:
     STUDENT_MODULE=student_solution .venv/bin/python assignments/ch01_bpe/tests.py
 """
 
+import math
+
 
 def _get_stats(ids):
     """Return a dict mapping adjacent token pairs to their frequency.
@@ -38,3 +40,8 @@ class BPETokenizer:
     def decode(self, ids):
         """Decode token ids back into a UTF-8 string."""
         raise NotImplementedError
+
+
+def tokenizer_report(tokenizer, texts, vocab_size=None, d_model=None):
+    """Return token-count, round-trip, and embedding-budget statistics for texts."""
+    raise NotImplementedError

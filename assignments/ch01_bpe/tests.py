@@ -89,5 +89,27 @@ class TestBPETokenizer(unittest.TestCase):
             tokenizer.decode([999999])
 
 
+class TestTokenizerReport(unittest.TestCase):
+    def test_tokenizer_report_counts_lengths_round_trip_and_embedding_budget(self):
+        tokenizer = submission.BPETokenizer()
+        texts = ["hello hello", "世界", "emoji 😊", "x = a + b"]
+        tokenizer.train(" ".join(texts), vocab_size=280)
+        report = submission.tokenizer_report(tokenizer, texts, vocab_size=280, d_model=16)
+
+        lengths = [len(tokenizer.encode(text)) for text in texts]
+        self.assertEqual(report["num_texts"], 4)
+        self.assertEqual(report["total_tokens"], sum(lengths))
+        self.assertAlmostEqual(report["avg_tokens"], sum(lengths) / 4)
+        self.assertEqual(report["p95_tokens"], sorted(lengths)[-1])
+        self.assertAlmostEqual(report["tokens_per_character"], sum(lengths) / sum(len(text) for text in texts))
+        self.assertEqual(report["round_trip_success_rate"], 1.0)
+        self.assertEqual(report["embedding_params"], 280 * 16)
+
+    def test_tokenizer_report_rejects_empty_texts(self):
+        tokenizer = submission.BPETokenizer()
+        with self.assertRaises(ValueError):
+            submission.tokenizer_report(tokenizer, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

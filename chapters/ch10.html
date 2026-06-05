@@ -504,7 +504,7 @@ class SimpleRAG:
     <table>
       <tr><th>环节</th><th>要问的问题</th><th>常用指标</th><th>常见改法</th></tr>
       <tr><td>Chunking</td><td>答案所需信息是否被完整保留在 chunk 中</td><td>答案覆盖率、chunk 长度分布</td><td>按标题/段落分块，调大 overlap，保留元数据</td></tr>
-      <tr><td>Embedding</td><td>查询和相关文档是否在向量空间接近</td><td>Recall@k、MRR、nDCG</td><td>换领域 embedding，加入 query rewriting，混合 BM25</td></tr>
+      <tr><td>Embedding</td><td>查询和相关文档是否在向量空间接近</td><td>InfoNCE loss、Recall@k、MRR、nDCG</td><td>领域内 contrastive fine-tuning，加入 query rewriting，混合 BM25</td></tr>
       <tr><td>Retrieval</td><td>top-k 是否包含足够的相关上下文</td><td>Context recall、命中率、重复 chunk 比例</td><td>调 top-k、过滤低分、按来源去重</td></tr>
       <tr><td>Reranking</td><td>最有用的 chunk 是否排在前面</td><td>nDCG@k、top-1 relevance</td><td>交叉编码器重排，多阶段检索</td></tr>
       <tr><td>Prompt assembly</td><td>上下文是否被正确组织进模型窗口</td><td>截断率、引用位置、token 占用</td><td>压缩上下文，按相关性和新鲜度排序</td></tr>
@@ -514,6 +514,7 @@ class SimpleRAG:
 
   <h4>离线评估与线上指标</h4>
   <p>离线阶段先构造 query-answer-document 三元组：每个问题对应一个标准答案和应命中的文档片段。检索模块报告 Recall@k、MRR、nDCG；生成模块报告答案正确率、引用一致性和未命中时是否拒绝编造。线上阶段再看延迟、成本和用户行为：检索耗时、rerank 耗时、prompt token 数、回答 token 数、用户追问率、人工接管率。</p>
+  <p>训练 bi-encoder retrieval embedding 时，常用 in-batch negatives：同一个 batch 中第 <code>i</code> 个 query 的正样本文档是第 <code>i</code> 个 document，其余 document 都作为负样本。Ch10 作业中的 <code>contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature)</code> 对 embedding 做 L2 normalization，计算 <code>Q D^T / temperature</code>，再用对角线标签做 cross entropy。这就是 InfoNCE / contrastive retrieval loss 的最小形式；它训练的是向量空间，后续仍要用 Recall@k、MRR、nDCG 和端到端答案质量检验是否真的改善 RAG。</p>
   <p>Ch10 作业中的 <code>recall_at_k(retrieved_ids, relevant_ids, k)</code>、<code>reciprocal_rank_at_k(...)</code> 和 <code>ndcg_at_k(retrieved_ids, relevance_scores, k)</code> 分别对应三个问题：top-k 里是否包含应命中的文档、第一个相关文档排在第几位、分级相关性更高的文档是否排得更靠前。nDCG 的 DCG 项通常写作 <code>(2^rel - 1) / log2(rank + 1)</code>，再除以理想排序的 IDCG，使分数落在 0 到 1 附近。若 Recall@5 很低，生成模型通常没有足够上下文；若 Recall@5 高但 reciprocal rank 或 nDCG 低，说明相关 chunk 被排在后面，容易被 prompt 截断或被无关上下文干扰。作业还加入 <code>reciprocal_rank_fusion</code> 与 <code>rerank_documents</code>，让学生实现 hybrid search 合并排序和 cross-encoder rerank 的最小版本。</p>
 
   <h4>一个可复现实验设置</h4>

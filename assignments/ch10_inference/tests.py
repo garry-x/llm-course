@@ -69,6 +69,42 @@ class TestMemoryQuantization(unittest.TestCase):
 
 
 @unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
+class TestContrastiveRetrievalTraining(unittest.TestCase):
+    def test_contrastive_inbatch_loss_uses_diagonal_positives(self):
+        query_embeddings = torch.tensor(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+            ]
+        )
+        doc_embeddings = torch.tensor(
+            [
+                [0.9, 0.1, 0.0],
+                [0.1, 0.8, 0.0],
+                [0.0, 0.1, 0.9],
+            ]
+        )
+        result = submission.contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature=0.5)
+        self.assertEqual(tuple(result["logits"].shape), (3, 3))
+        self.assertGreater(result["logits"][0, 0], result["logits"][0, 1])
+        self.assertGreater(result["logits"][1, 1], result["logits"][1, 0])
+        self.assertAlmostEqual(result["accuracy"], 1.0)
+
+        labels = torch.arange(3)
+        expected_loss = torch.nn.functional.cross_entropy(result["logits"], labels)
+        self.assertTrue(torch.allclose(result["loss"], expected_loss))
+
+    def test_contrastive_inbatch_loss_rejects_bad_shapes(self):
+        with self.assertRaises(ValueError):
+            submission.contrastive_inbatch_loss(torch.randn(2, 3), torch.randn(2, 3), temperature=0.0)
+        with self.assertRaises(ValueError):
+            submission.contrastive_inbatch_loss(torch.randn(2, 3), torch.randn(3, 3))
+        with self.assertRaises(ValueError):
+            submission.contrastive_inbatch_loss(torch.randn(2, 3, 1), torch.randn(2, 3, 1))
+
+
+@unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
 class TestRetrievalMetrics(unittest.TestCase):
     def test_recall_and_reciprocal_rank_at_k(self):
         retrieved = ["doc9", "doc2", "doc5", "doc1"]

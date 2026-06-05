@@ -32,6 +32,11 @@ def nrmse(original, reconstructed):
     raise NotImplementedError
 
 
+def contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature=1.0):
+    """Compute symmetric-free InfoNCE loss for paired query/document embeddings."""
+    raise NotImplementedError
+
+
 def recall_at_k(retrieved_ids, relevant_ids, k):
     raise NotImplementedError
 

@@ -598,6 +598,7 @@ Quick check：
 核心推导：
 
 - cosine similarity 与 normalized dot product。
+- InfoNCE / in-batch negatives：`Q D^T / temperature` 后用对角线正样本做 cross entropy。
 - quantization scale、dequantization error 和 ranking 误差。
 - RAG retrieval metrics：Recall@k、reciprocal rank 与 nDCG@k。
 - RRF 融合 dense/BM25 排序；rerank 改善前排相关性但会增加延迟。
@@ -606,6 +607,7 @@ Quick check：
 课堂 demo：
 
 - 运行 RAG toy retriever，制造 chunk overlap 错误。
+- 给定 query/document embedding batch，手算 contrastive logits 和对角线 labels。
 - 给定 retrieved/relevant ids 与 graded relevance，手算 Recall@k、reciprocal rank 和 nDCG@k。
 - 给定 dense/BM25 排序，手算 RRF 分数，再用 reranker 分数调整 top-k。
 - 对 per-channel INT8 权重做 roundtrip。

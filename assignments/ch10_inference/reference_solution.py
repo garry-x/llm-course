@@ -81,6 +81,25 @@ def nrmse(original, reconstructed):
     return (rmse / denom).item()
 
 
+def contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature=1.0):
+    if temperature <= 0:
+        raise ValueError("temperature must be positive")
+    if query_embeddings.dim() != 2 or doc_embeddings.dim() != 2:
+        raise ValueError("embeddings must be 2D tensors")
+    if query_embeddings.shape != doc_embeddings.shape:
+        raise ValueError("query and document embeddings must have the same shape")
+    if query_embeddings.size(0) == 0:
+        raise ValueError("batch size must be positive")
+
+    query_norm = F.normalize(query_embeddings.float(), p=2, dim=1)
+    doc_norm = F.normalize(doc_embeddings.float(), p=2, dim=1)
+    logits = query_norm @ doc_norm.t() / float(temperature)
+    labels = torch.arange(logits.size(0), device=logits.device)
+    loss = F.cross_entropy(logits, labels)
+    accuracy = (logits.argmax(dim=1) == labels).float().mean().item()
+    return {"loss": loss, "logits": logits, "accuracy": accuracy}
+
+
 def recall_at_k(retrieved_ids, relevant_ids, k):
     if k <= 0:
         raise ValueError("k must be positive")

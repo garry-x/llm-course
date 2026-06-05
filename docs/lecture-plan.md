@@ -95,6 +95,7 @@ Quick check：
 核心推导：
 
 - 若 `q_i,k_i` 方差为 1，则 `Var(q^T k)=d_k`。
+- 无位置、无遮挡 self-attention 的置换等变性：`Attn(PX)=P Attn(X)`。
 - softmax Jacobian `J_ij=p_i(delta_ij-p_j)`。
 - attention entropy `-sum p log p` 衡量分布尖锐程度。
 - self-attention 时间复杂度 `O(BHT^2D)`。
@@ -104,6 +105,7 @@ Quick check：
 
 - 手写一个小矩阵 attention，并与 PyTorch 输出对齐。
 - 改变 `d_k`，观察未 scaling logits 的 softmax 饱和。
+- 对同一序列做置换，验证 `Attention(PX)` 与 `P Attention(X)` 对齐。
 - 计算 one-hot 与 uniform attention 的 entropy。
 - 对单个 query 比较手算 `attention_logits_gradient` 与 autograd。
 

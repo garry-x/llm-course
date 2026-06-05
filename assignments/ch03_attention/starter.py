@@ -20,6 +20,11 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     raise NotImplementedError
 
 
+def self_attention_permutation_error(x, permutation):
+    """Return max error between Attention(Px) and P Attention(x) without positions or masks."""
+    raise NotImplementedError
+
+
 def softmax_jacobian(logits):
     """Return the Jacobian matrix of a 1D softmax."""
     raise NotImplementedError

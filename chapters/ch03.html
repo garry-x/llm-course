@@ -215,6 +215,18 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 </section>
 
 <!-- ================================================================ -->
+<!-- 3.4A Self-Attention 的置换等变性 -->
+<!-- ================================================================ -->
+<section class="card" id="s3-4a">
+  <h3>3.4A Self-Attention 的置换等变性：为什么位置仍然要单独编码</h3>
+  <p>如果不加入位置编码，也不使用 causal mask，self-attention 只看 token 内容之间的相似度。给输入序列乘一个置换矩阵 <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span>，Q、K、V 的行会以同样方式重排，注意力输出也只会以同样方式重排：</p>
+  <div class="math-box"><div class="label">Self-attention permutation equivariance</div>
+    <div class="katex" data-expr="\text{Attn}(PX)=P\,\text{Attn}(X)" aria-label="\text{Attn}(PX)=P\,\text{Attn}(X)" role="img"></div>
+  </div>
+  <p>这不是坏性质：它说明 attention 对集合式输入很自然。但语言序列需要区分“我打你”和“你打我”，所以 Transformer 必须通过 absolute position embedding、RoPE、ALiBi 或 causal mask 等机制引入顺序信息。Ch03 作业中的 <code>self_attention_permutation_error(x, permutation)</code> 用数值方式验证无位置、无遮挡 self-attention 的等变性：比较 <code>Attention(Px)</code> 与 <code>P Attention(x)</code> 的最大误差。</p>
+</section>
+
+<!-- ================================================================ -->
 <!-- 3.5 深度理论: √dₖ -->
 <!-- ================================================================ -->
 <section class="card" id="s3-5">

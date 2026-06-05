@@ -33,6 +33,31 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     return output, attn_weights
 
 
+def self_attention_permutation_error(x, permutation):
+    if x.dim() == 2:
+        x_batch = x.unsqueeze(0)
+        squeeze = True
+    elif x.dim() == 3:
+        x_batch = x
+        squeeze = False
+    else:
+        raise ValueError("x must have shape [T, D] or [B, T, D]")
+
+    perm = torch.as_tensor(permutation, device=x_batch.device, dtype=torch.long)
+    seq_len = x_batch.size(1)
+    if perm.dim() != 1 or perm.numel() != seq_len:
+        raise ValueError("permutation must have shape [T]")
+    if sorted(perm.detach().cpu().tolist()) != list(range(seq_len)):
+        raise ValueError("permutation must contain each position exactly once")
+
+    output, _ = scaled_dot_product_attention(x_batch, x_batch, x_batch)
+    permuted_x = x_batch[:, perm, :]
+    permuted_output, _ = scaled_dot_product_attention(permuted_x, permuted_x, permuted_x)
+    expected = output[:, perm, :]
+    error = (permuted_output - expected).abs().max()
+    return float(error.item()) if squeeze else error.item()
+
+
 def softmax_jacobian(logits):
     if logits.dim() != 1:
         raise ValueError("logits must be a 1D tensor")

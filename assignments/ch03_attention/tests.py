@@ -69,6 +69,22 @@ class TestScaledDotProductAttention(unittest.TestCase):
         self.assertLess(attn_3d[1, 2, 0].item(), 1e-6)
         self.assertGreater(attn_3d[0, 2, 0].item(), 0.0)
 
+    def test_self_attention_is_permutation_equivariant_without_positions(self):
+        torch.manual_seed(4)
+        x = torch.randn(2, 5, 6)
+        permutation = torch.tensor([2, 4, 0, 3, 1])
+        error = submission.self_attention_permutation_error(x, permutation)
+        self.assertLess(error, 1e-6)
+
+    def test_self_attention_permutation_error_rejects_bad_permutations(self):
+        x = torch.randn(4, 3)
+        with self.assertRaises(ValueError):
+            submission.self_attention_permutation_error(x, [0, 1, 1, 3])
+        with self.assertRaises(ValueError):
+            submission.self_attention_permutation_error(x, [0, 1, 2])
+        with self.assertRaises(ValueError):
+            submission.self_attention_permutation_error(torch.randn(1, 2, 3, 4), [0, 1])
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch03 attention tests")
 class TestAttentionBackwardMath(unittest.TestCase):

@@ -81,6 +81,35 @@ class TestWordVectorObjectives(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.skipgram_negative_sampling_loss(torch.randn(2, 3), torch.randn(2, 3), torch.randn(2, 4))
 
+    def test_shifted_pmi_matrix_matches_cooccurrence_formula(self):
+        counts = torch.tensor(
+            [
+                [2.0, 0.0, 1.0],
+                [1.0, 3.0, 0.0],
+                [0.0, 1.0, 2.0],
+            ]
+        )
+        spmi = submission.shifted_pmi_matrix(counts, negative_samples=2)
+
+        total = counts.sum()
+        row_totals = counts.sum(dim=1, keepdim=True)
+        col_totals = counts.sum(dim=0, keepdim=True)
+        expected_00 = torch.log(counts[0, 0] * total / (row_totals[0, 0] * col_totals[0, 0])) - torch.log(torch.tensor(2.0))
+        expected_11 = torch.log(counts[1, 1] * total / (row_totals[1, 0] * col_totals[0, 1])) - torch.log(torch.tensor(2.0))
+        self.assertTrue(torch.allclose(spmi[0, 0], expected_00, atol=1e-6))
+        self.assertTrue(torch.allclose(spmi[1, 1], expected_11, atol=1e-6))
+        self.assertTrue(torch.isneginf(spmi[0, 1]))
+
+    def test_shifted_pmi_matrix_rejects_invalid_counts(self):
+        with self.assertRaises(ValueError):
+            submission.shifted_pmi_matrix(torch.ones(2, 3))
+        with self.assertRaises(ValueError):
+            submission.shifted_pmi_matrix(torch.zeros(2, 2))
+        with self.assertRaises(ValueError):
+            submission.shifted_pmi_matrix(torch.tensor([[1.0, -1.0], [0.0, 1.0]]))
+        with self.assertRaises(ValueError):
+            submission.shifted_pmi_matrix(torch.ones(2, 2), negative_samples=0)
+
     def test_glove_weighted_loss_matches_manual_nonzero_counts(self):
         word = torch.tensor([[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]])
         context = torch.tensor([[0.5, 0.0], [0.0, 0.25], [2.0, -1.0]])

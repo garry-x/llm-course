@@ -61,14 +61,14 @@ Quick check：
 核心推导：
 
 - `one_hot @ E = E[token_id]`。
-- directed co-occurrence matrix、SGNS loss 与 GloVe weighted least-squares residual。
+- directed co-occurrence matrix、SGNS loss、PMI/shifted PMI 与 GloVe weighted least-squares residual。
 - 3CosAdd 查询向量：`v_b - v_a + v_c`，并排除输入词。
 - `R_m^T R_n = R_{n-m}`。
 
 课堂 demo：
 
 - 比较 learned embedding 与 one-hot matmul 的 shape 和内存。
-- 手算 `[0,1,2,1]` 在 window size 1 下的共现矩阵，再计算一个 SGNS loss。
+- 手算 `[0,1,2,1]` 在 window size 1 下的共现矩阵，再计算一个 SGNS loss 和 shifted PMI。
 - 手造 `man/king/woman/queen` 向量，跑 3CosAdd。
 - 检查 RoPE 是否保持向量范数。
 

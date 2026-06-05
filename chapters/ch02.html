@@ -105,6 +105,11 @@
     <div class="katex" data-expr="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" aria-label="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" role="img"></div>
   </div>
   <p>作业函数 <code>skipgram_negative_sampling_loss</code> 的输入形状是 <code>center_vectors [B,D]</code>、<code>positive_vectors [B,D]</code> 和 <code>negative_vectors [B,K,D]</code>。这让学生看到：word vectors 不是抽象概念，而是由 dot product、sigmoid 和二分类 loss 训练出来的。</p>
+  <p>SGNS 也可以从矩阵分解角度理解。给定 directed co-occurrence count <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span>、中心词边际计数 <span class="katex-inline" data-expr="X_{i*}" aria-label="X_{i*}" role="img"></span>、上下文词边际计数 <span class="katex-inline" data-expr="X_{*j}" aria-label="X_{*j}" role="img"></span> 和总共现数 <span class="katex-inline" data-expr="X_{**}" aria-label="X_{**}" role="img"></span>，PMI 写作：</p>
+  <div class="math-box"><div class="label">PMI 与 shifted PMI</div>
+    <div class="katex" data-expr="\text{PMI}(i,j)=\log\frac{X_{ij}X_{**}}{X_{i*}X_{*j}},\qquad \text{SPMI}(i,j)=\text{PMI}(i,j)-\log K" aria-label="\text{PMI}(i,j)=\log\frac{X_{ij}X_{**}}{X_{i*}X_{*j}},\qquad \text{SPMI}(i,j)=\text{PMI}(i,j)-\log K" role="img"></div>
+  </div>
+  <p>在常见假设下，SGNS 学到的 dot product 与 shifted PMI 有紧密关系：负样本数 <span class="katex-inline" data-expr="K" aria-label="K" role="img"></span> 越大，目标 dot product 会整体向下平移 <span class="katex-inline" data-expr="\log K" aria-label="\log K" role="img"></span>。Ch02 作业中的 <code>shifted_pmi_matrix(cooccurrence, negative_samples)</code> 让学生从共现矩阵显式计算这个统计量；未出现的 <span class="katex-inline" data-expr="X_{ij}=0" aria-label="X_{ij}=0" role="img"></span> 共现对 PMI 未定义，函数返回 <code>-inf</code>，如果要做 PPMI 才进一步裁剪到非负。</p>
   <p>为了把“相似”和“类比”也落到可计算层面，Ch02 作业还加入 <code>cosine_similarity_matrix</code> 与 <code>analogy_3cosadd</code>。前者把 embedding 行向量归一化后计算两两余弦相似度；后者用 <span class="katex-inline" data-expr="\mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c" aria-label="\mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c" role="img"></span> 作为查询向量，并排除输入词后返回最相近词。学生应把它理解为静态词向量空间结构的诊断方法，而不是证明模型“理解”语义关系。</p>
 
   <h4>GloVe：从全局共现矩阵学习</h4>

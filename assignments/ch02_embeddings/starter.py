@@ -25,6 +25,11 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     raise NotImplementedError
 
 
+def shifted_pmi_matrix(cooccurrence, negative_samples=1):
+    """Compute PMI(i,j) - log(negative_samples) for positive co-occurrence counts."""
+    raise NotImplementedError
+
+
 def glove_weighted_loss(word_vectors, context_vectors, word_biases, context_biases, cooccurrence, x_max=100.0, alpha=0.75):
     """Return GloVe weighted least-squares loss over nonzero co-occurrences."""
     raise NotImplementedError

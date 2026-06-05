@@ -58,6 +58,28 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     return (positive_loss + negative_loss).mean()
 
 
+def shifted_pmi_matrix(cooccurrence, negative_samples=1):
+    if cooccurrence.dim() != 2 or cooccurrence.size(0) != cooccurrence.size(1):
+        raise ValueError("cooccurrence must be a square [V, V] matrix")
+    if negative_samples <= 0:
+        raise ValueError("negative_samples must be positive")
+    counts = cooccurrence.float()
+    if torch.any(counts < 0):
+        raise ValueError("cooccurrence counts must be non-negative")
+    total = counts.sum()
+    if total.item() <= 0:
+        raise ValueError("cooccurrence must contain at least one positive count")
+
+    row_totals = counts.sum(dim=1, keepdim=True)
+    col_totals = counts.sum(dim=0, keepdim=True)
+    positive = counts > 0
+    result = torch.full_like(counts, -float("inf"))
+    denominator = row_totals @ col_totals
+    pmi = torch.log((counts * total) / denominator.clamp_min(1e-12))
+    result[positive] = pmi[positive] - math.log(float(negative_samples))
+    return result
+
+
 def glove_weighted_loss(word_vectors, context_vectors, word_biases, context_biases, cooccurrence, x_max=100.0, alpha=0.75):
     if word_vectors.dim() != 2 or context_vectors.dim() != 2:
         raise ValueError("word_vectors and context_vectors must have shape [V, D]")

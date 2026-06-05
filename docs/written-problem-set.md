@@ -96,9 +96,10 @@
 4. 给定一组 chosen/rejected 回答长度，计算 mean length delta、chosen_longer_rate、rejected_longer_rate 和 tie_rate，并说明长度偏差如何影响 DPO 或 RLHF。
 5. 给定一组 chosen/rejected 回答，指出可能的风格偏差或标注者分歧，并说明这些偏差如何影响 DPO 或 RLHF。
 6. 给定 policy/ref 在 sampled tokens 上的 log probability，计算近似 KL `exp(log_ref-log_policy) - (log_ref-log_policy) - 1`，并说明 padding mask 为什么不能进入均值分母。
-7. 说明 GRPO 组内白化如何减少不同 prompt reward scale 的影响，以及它不能解决哪些 reward hacking 问题。
-8. 比较 LoRA rank、alpha、target modules 对训练参数量、表达能力和合并推理的影响。
-9. 设计一个评估 DPO 模型是否优于 SFT/reference 的方案：至少包含 helpfulness、事实性、安全拒答、过度拒答和数学/代码能力保留，并解释为什么 preference win rate 不能单独作为结论。
+7. 给定 old/new policy log-probs、advantages 和 `clip_range=0.2`，计算 PPO unclipped surrogate、clipped surrogate、最终 policy loss、clip fraction 和 approximate KL；说明 PPO clipping 与 KL penalty 分别约束什么。
+8. 说明 GRPO 组内白化如何减少不同 prompt reward scale 的影响，以及它不能解决哪些 reward hacking 问题。
+9. 比较 LoRA rank、alpha、target modules 对训练参数量、表达能力和合并推理的影响。
+10. 设计一个评估 DPO 模型是否优于 SFT/reference 的方案：至少包含 helpfulness、事实性、安全拒答、过度拒答和数学/代码能力保留，并解释为什么 preference win rate 不能单独作为结论。
 
 ## Ch10 Inference / RAG / Serving
 

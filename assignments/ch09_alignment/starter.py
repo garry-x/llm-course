@@ -64,6 +64,11 @@ def preference_length_bias(chosen_lengths, rejected_lengths):
     raise NotImplementedError
 
 
+def ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask=None, clip_range=0.2):
+    """Compute PPO clipped policy-gradient loss and basic update statistics."""
+    raise NotImplementedError
+
+
 def grpo_advantages(rewards, eps=1e-8):
     raise NotImplementedError
 

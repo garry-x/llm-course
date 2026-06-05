@@ -180,6 +180,56 @@ class TestDPOGRPO(unittest.TestCase):
         self.assertAlmostEqual(stats["rejected_longer_rate"], 0.25)
         self.assertAlmostEqual(stats["tie_rate"], 0.25)
 
+    def test_ppo_clipped_policy_loss_matches_manual_surrogate(self):
+        old_logps = torch.zeros(3)
+        ratios = torch.tensor([1.0, 1.5, 0.5])
+        new_logps = torch.log(ratios)
+        advantages = torch.tensor([1.0, 1.0, -1.0])
+        loss, stats = submission.ppo_clipped_policy_loss(
+            new_logps,
+            old_logps,
+            advantages,
+            clip_range=0.2,
+        )
+        expected_surrogate = torch.tensor([1.0, 1.2, -0.8])
+        self.assertTrue(torch.allclose(loss, -expected_surrogate.mean()))
+        expected_kl = ((ratios - 1.0) - torch.log(ratios)).mean().item()
+        self.assertAlmostEqual(stats["mean_ratio"], ratios.mean().item())
+        self.assertAlmostEqual(stats["clip_fraction"], 2 / 3)
+        self.assertAlmostEqual(stats["approx_kl"], expected_kl)
+
+    def test_ppo_clipped_policy_loss_masks_padding_tokens(self):
+        old_logps = torch.zeros(3)
+        ratios = torch.tensor([1.0, 1.5, 0.5])
+        new_logps = torch.log(ratios)
+        advantages = torch.tensor([1.0, 1.0, -1.0])
+        mask = torch.tensor([1, 1, 0])
+        loss, stats = submission.ppo_clipped_policy_loss(
+            new_logps,
+            old_logps,
+            advantages,
+            mask=mask,
+            clip_range=0.2,
+        )
+        expected_surrogate = torch.tensor([1.0, 1.2])
+        self.assertTrue(torch.allclose(loss, -expected_surrogate.mean()))
+        self.assertAlmostEqual(stats["clip_fraction"], 0.5)
+        self.assertAlmostEqual(stats["mean_ratio"], 1.25)
+
+    def test_ppo_clipped_policy_loss_rejects_bad_inputs(self):
+        logps = torch.zeros(2, 3)
+        advantages = torch.ones(2, 3)
+        with self.assertRaises(ValueError):
+            submission.ppo_clipped_policy_loss(logps, torch.zeros(2, 2), advantages)
+        with self.assertRaises(ValueError):
+            submission.ppo_clipped_policy_loss(logps, logps, torch.ones(2, 2))
+        with self.assertRaises(ValueError):
+            submission.ppo_clipped_policy_loss(logps, logps, advantages, mask=torch.ones(2, 2))
+        with self.assertRaises(ValueError):
+            submission.ppo_clipped_policy_loss(logps, logps, advantages, mask=torch.zeros(2, 3))
+        with self.assertRaises(ValueError):
+            submission.ppo_clipped_policy_loss(logps, logps, advantages, clip_range=0.0)
+
     def test_grpo_advantages_whiten_within_group(self):
         rewards = torch.tensor([[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]])
         adv = submission.grpo_advantages(rewards)

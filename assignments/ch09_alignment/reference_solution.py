@@ -188,6 +188,42 @@ def preference_length_bias(chosen_lengths, rejected_lengths):
     }
 
 
+def ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask=None, clip_range=0.2):
+    if new_logps.shape != old_logps.shape or new_logps.shape != advantages.shape:
+        raise ValueError("new_logps, old_logps and advantages must have the same shape")
+    if clip_range <= 0:
+        raise ValueError("clip_range must be positive")
+    if mask is not None and mask.shape != new_logps.shape:
+        raise ValueError("mask must have the same shape as log probabilities")
+
+    log_ratio = new_logps - old_logps
+    ratio = torch.exp(log_ratio)
+    unclipped = ratio * advantages
+    clipped_ratio = ratio.clamp(1.0 - clip_range, 1.0 + clip_range)
+    clipped = clipped_ratio * advantages
+    surrogate = torch.minimum(unclipped, clipped)
+    clipped_mask = (torch.abs(ratio - 1.0) > clip_range).float()
+    approx_kl = (ratio - 1.0) - log_ratio
+
+    if mask is None:
+        loss = -surrogate.mean()
+        stats_mask = torch.ones_like(surrogate)
+    else:
+        stats_mask = mask.to(dtype=surrogate.dtype, device=surrogate.device)
+        valid = stats_mask.sum()
+        if valid <= 0:
+            raise ValueError("mask must contain at least one valid token")
+        loss = -(surrogate * stats_mask).sum() / valid
+
+    denom = stats_mask.sum()
+    stats = {
+        "mean_ratio": ((ratio * stats_mask).sum() / denom).item(),
+        "clip_fraction": ((clipped_mask * stats_mask).sum() / denom).item(),
+        "approx_kl": ((approx_kl * stats_mask).sum() / denom).item(),
+    }
+    return loss, stats
+
+
 def grpo_advantages(rewards, eps=1e-8):
     if rewards.dim() == 1:
         mean = rewards.mean()

@@ -508,18 +508,19 @@ def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
 <!-- 编程练习 4: GRPO Advantage -->
 <!-- ================================================================ -->
 <section class="card" id="s9-9">
-  <h3>9.9 编程练习 4：实现 GRPO 优势估计</h3>
+  <h3>9.9 编程练习 4：实现 PPO Clipped Objective 与 GRPO 优势估计</h3>
 
   <div class="coding-exercise">
     <h4>练习 4：GRPO 组内白化 + 损失计算</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 GRPO 的组内白化优势估计和带 KL 惩罚的策略梯度损失。</p>
+      <p><strong>任务：</strong>实现 PPO clipped policy objective、GRPO 的组内白化优势估计和带 KL 惩罚的策略梯度损失。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>grpo_advantages(rewards, group_size)</code> 计算组内白化后的优势函数</li>
+        <li><code>ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask, clip_range)</code> 计算 <code>min(ratio * A, clipped_ratio * A)</code>，并报告 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code></li>
         <li><code>approx_kl_from_logps(policy_logps, ref_logps, mask)</code> 计算有效 completion token 上的近似 KL</li>
         <li>对每组 G 个回答的奖励做 z-score 归一化（减去组均值，除以组标准差）</li>
-        <li>实现带 PPO-clip 的策略梯度损失</li>
+        <li>PPO clipping 要同时处理正 advantage 和负 advantage，不能把所有超出范围的 ratio 都简单当作奖励提升</li>
         <li>包含 KL 惩罚（使用近似 KL：<span class="katex-inline" data-expr="e^{\log q - \log p} - (\log q - \log p) - 1" aria-label="e^{\log q - \log p} - (\log q - \log p) - 1" role="img"></span>）</li>
       </ul>
       <pre># 预期用法
@@ -930,8 +931,9 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>DPO 数学等价性</strong> — 策略 log 比值作为隐式奖励函数</li>
     <li>✅ <strong>偏好数据质量</strong> — 长度偏差、标注分歧、reference model 和 reward hacking 边界</li>
     <li>✅ <strong>编程练习 3：DPO Loss</strong> — 直接偏好优化</li>
+    <li>✅ <strong>PPO Clipped Objective</strong> — old/new policy ratio、advantage、clip fraction 与 approx KL</li>
     <li>✅ <strong>GRPO 组内白化</strong> — 无需 Critic 的策略优化</li>
-    <li>✅ <strong>编程练习 4：GRPO 优势估计</strong> — 组内白化 + PPO-clip + KL</li>
+    <li>✅ <strong>编程练习 4：PPO + GRPO 优势估计</strong> — clipped surrogate + 组内白化 + KL</li>
     <li>✅ <strong>编程练习 5：DPO vs GRPO 对比</strong> — 收敛速度与准确率</li>
     <li>✅ <strong>对齐评估协议</strong> — 同时看 helpfulness、honesty、harmlessness、过度拒答和能力保留</li>
     <li>✅ <strong>编程练习 6：LoRA 合并推理</strong> — 适配器加载与合并</li>

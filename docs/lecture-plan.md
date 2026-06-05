@@ -471,6 +471,7 @@ Quick check：
 
 - RM 训练最大化 `sigmoid(r_chosen - r_rejected)`，对应 `-logsigmoid` 损失。
 - DPO 比较 policy 相对 reference 的 chosen/rejected log probability 改变量。
+- PPO clipped objective 用 `ratio = exp(new_logp - old_logp)`，优化 `min(ratio*A, clip(ratio, 1-eps, 1+eps)*A)`，限制单步 policy 更新幅度。
 - 近似 KL `exp(log_ref-log_policy) - (log_ref-log_policy) - 1` 只在有效 sampled tokens 上求平均。
 - GRPO 在同 prompt group 内标准化 reward。
 
@@ -478,6 +479,7 @@ Quick check：
 
 - 手算 chosen/rejected reward 的 pairwise loss 和 preference accuracy。
 - 手造 chosen/rejected logits，观察 DPO loss 方向。
+- 给定 old/new log-probs 和 advantages，手算 PPO clipped surrogate、clip fraction 和 approx KL。
 - 手算带 padding mask 的 token-level 近似 KL。
 - 对 chosen/rejected response length 计算 length bias 统计。
 - 对不同 reward scale 的 group 做 whitening。
@@ -486,12 +488,13 @@ Quick check：
 
 - RM accuracy 高是否足以说明偏好数据质量好？
 - DPO 为什么需要 reference model？
+- PPO clipping 是否等价于 KL 惩罚？
 - KL 惩罚为什么不能把 padding token 算进均值？
 - GRPO 是否解决 reward hacking？
 
 课后产出：
 
-- A7 RM/DPO/GRPO 测试通过。
+- A7 RM/DPO/PPO/GRPO 测试通过。
 - 阅读复盘：R1/GRPO 的方法边界。
 
 ## Week 8 Lecture 15: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT

@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CHAPTERS = [f"ch{index:02d}.html" for index in range(1, 11)]
+CHAPTERS = [f"ch{index:02d}.html" for index in range(1, 12)]
 SAFE_DOCS = [
     "classic-nlp-deep-dive-module.md",
     "classic-nlp-handout.md",

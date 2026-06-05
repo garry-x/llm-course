@@ -18,7 +18,7 @@
     <p>从代码出发，构建大语言模型</p>
   </div>
   <div class="sidebar-progress">
-    <span>学习进度: <strong id="progress-text">0 / 10</strong></span>
+    <span>学习进度: <strong id="progress-text">0 / 11</strong></span>
     <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
   </div>
   <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
@@ -40,7 +40,7 @@
       <span class="hero-tag">🔬 Reasoning / Interpretability / Multimodal</span>
     </div>
     <h2>系统学习大语言模型：表示、架构、训练、生成、对齐与服务</h2>
-    <p>10 章 · 编程练习 · 书面推导 · 两个工程 Capstone<br>先建立 LLM 的完整计算图，再进入训练工程、推理工程、对齐评估和前沿专题。</p>
+    <p>11 章 · 编程练习 · 书面推导 · 两个工程 Capstone<br>先建立 LLM 的完整计算图，再进入训练工程、推理工程、对齐评估和经典 NLP 专题。</p>
     <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
     <div class="hero-deep-links" aria-label="章节首节快速入口">
       <a href="chapters/ch01.html#s1-1">Ch01</a>
@@ -53,6 +53,7 @@
       <a href="chapters/ch08.html#s8-1">Ch08</a>
       <a href="chapters/ch09.html#s9-1">Ch09</a>
       <a href="chapters/ch10.html#s10-1">Ch10</a>
+      <a href="chapters/ch11.html#s11-1">Ch11</a>
     </div>
   </section>
 
@@ -64,7 +65,7 @@
       <div class="path-step"><strong>3. 训练闭环</strong><span>Ch07：next-token maximum likelihood、CE 梯度路径、PPL、AdamW、scheduler、checkpoint 与分布式训练。</span></div>
       <div class="path-step"><strong>4. 生成与推理</strong><span>Ch08-Ch10：prefill/decode、sampling、reasoning/test-time compute、speculative decoding、KV cache、FlashAttention、RAG 与推理服务。</span></div>
       <div class="path-step"><strong>5. 微调与对齐</strong><span>Ch09：SFT、LoRA、preference modeling、DPO、GRPO、偏好数据质量、对齐评估和能力退化权衡。</span></div>
-      <div class="path-step"><strong>6. 前沿取舍</strong><span>贯穿 Ch04-Ch10：MLA/MoE/FP8/GRPO/稀疏注意力、多模态和外部记忆作为工程案例，而不是孤立热点。</span></div>
+      <div class="path-step"><strong>6. 经典 NLP 与评测</strong><span>Ch11：RNN、dependency parsing、seq2seq、BERT/encoder-only、BLEU/ROUGE/EM/F1/UAS/LAS。</span></div>
     </div>
   </section>
 
@@ -73,7 +74,7 @@
     <div class="path-grid">
       <div class="path-step"><strong>第一遍：能画出计算图</strong><span>读 Ch01-Ch06，手写核心模块，重点检查每一步输入、输出、shape、mask、参数来源和梯度路径。</span></div>
       <div class="path-step"><strong>第二遍：能解释实验</strong><span>读 Ch07-Ch08，跑训练和生成实验，解释 PPL、CE 梯度、采样参数、reasoning 成本和失败模式。</span></div>
-      <div class="path-step"><strong>第三遍：能做系统取舍</strong><span>读 Ch09-Ch10，对比微调/对齐/RAG/多模态/推理引擎，在质量、延迟、显存、成本之间做工程判断。</span></div>
+      <div class="path-step"><strong>第三遍：能做系统取舍</strong><span>读 Ch09-Ch11，对比微调/对齐/RAG/多模态/推理引擎和 classic NLP 模型族，在质量、延迟、显存、成本之间做工程判断。</span></div>
     </div>
   </section>
 
@@ -120,6 +121,7 @@
       <span>LLM 评测局限</span>
     </div>
     <div class="role-actions">
+      <a class="role-project-link" href="chapters/ch11.html">正式章节 →</a>
       <a class="role-project-link" href="docs/classic-nlp-handout.md">专题讲义 →</a>
       <a class="role-project-link" href="docs/classic-nlp-deep-dive-module.md">扩展模块 →</a>
       <a class="role-project-link" href="assignments/ch11_classic_nlp/">Ch11 作业 →</a>

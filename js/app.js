@@ -14,7 +14,8 @@
     {id:7, file:'ch07.html', title:'训练循环', desc:'AdamW/Muon+FP8/FP4+DualPipe+分布式——极致训练效率', sections:15},
     {id:8, file:'ch08.html', title:'文本生成', desc:'采样策略+MTP推测解码+约束生成——让模型开口说话', sections:12},
     {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT/LoRA/DPO/GRPO——从预训练到有用助手', sections:14},
-    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache/CSA+HCA/Engram/量化/RAG/vLLM/Triton/生产服务/多模态', sections:20}
+    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache/CSA+HCA/Engram/量化/RAG/vLLM/Triton/生产服务/多模态', sections:20},
+    {id:11, file:'ch11.html', title:'经典神经 NLP 与评测', desc:'RNN/Dependency Parsing/Seq2Seq/BERT——把 CS224N 主线接回现代 LLM', sections:10}
   ];
 
   // ---- State helpers (IndexedDB-backed) ----

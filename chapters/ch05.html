@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第5章 Transformer Block</h2>
   <p class="subtitle">RMSNorm + FFN + SwiGLU + mHC 超连接——构建 LLM 的核心单元</p>
-  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 12 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 13 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -312,6 +312,39 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
   <h4>模型编辑的启示</h4>
   <p>这个视角直接启发了 <strong>模型编辑</strong> 方法。ROME (Meng et al., 2022) 利用 FFN 键值存储的性质，通过定位存储特定事实的 FFN 神经元，直接修改其值向量来更新模型中的事实知识——不需要重新训练。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>这意味着：</strong>模型的知识主要集中在 FFN 的权重中。Attention 扮演"检索协调者"的角色——决定从哪些键值对中检索信息。这也就解释了为什么扩大 FFN 的维度（更多键值对）比扩大注意力维度更能提升模型容量。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 5.5A 机制可解释性方法 -->
+<!-- ================================================================ -->
+<section class="card" id="s5-5a">
+  <h3>5.5A 机制可解释性：从“看起来相关”到“改动会改变输出”</h3>
+  <p>把 FFN 看成键值存储器之后，一个自然问题是：怎样判断某个 neuron、head、layer 或 residual stream 方向真的参与了某个行为？高校课程需要区分三类问题：表示中是否包含信息、模型是否使用这些信息、改动这些信息是否会改变输出。</p>
+
+  <h4>四类常用方法</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>方法</th><th>核心做法</th><th>能回答</th><th>不能单独说明</th></tr>
+      <tr><td>Probing</td><td>用线性/小模型从 hidden state 预测 POS、句法、实体等标签</td><td>表示里是否可读出某类信息</td><td>模型生成时是否真的使用该信息</td></tr>
+      <tr><td>Logit attribution</td><td>把 residual stream 或 neuron 输出投影到 unembedding 方向</td><td>哪些组件直接推高或压低某些 token</td><td>间接路径和后续层重写效果</td></tr>
+      <tr><td>Activation patching</td><td>把干净样本中的某层激活替换到扰动样本中</td><td>某位置/层激活是否足以恢复行为</td><td>是否只有这一条路径负责该行为</td></tr>
+      <tr><td>Ablation</td><td>置零、替换或屏蔽某个 head/neuron/layer 输出</td><td>移除组件会造成多大性能或行为变化</td><td>模型是否通过冗余路径补偿</td></tr>
+    </table>
+  </div>
+
+  <h4>一个最小案例：主语-动词一致性</h4>
+  <p>给定 prompt：<code>The keys to the cabinet ...</code>，模型应更偏向 <code>are</code> 而不是 <code>is</code>。可解释性实验可以这样设计：</p>
+  <ol>
+    <li><strong>构造对照：</strong>把主语从复数 <code>keys</code> 改为单数 <code>key</code>，保持干扰短语 <code>to the cabinet</code> 不变。</li>
+    <li><strong>定位层和位置：</strong>比较主语 token、介词短语 token 和预测位置的 residual stream。</li>
+    <li><strong>做 patching：</strong>把复数样本中某层某位置的激活替换到单数样本，观察 <code>are</code> 相对 <code>is</code> 的 logit 差是否恢复。</li>
+    <li><strong>再做 ablation：</strong>屏蔽候选 head 或 FFN neuron，观察一致性 logit 差是否下降。</li>
+  </ol>
+
+  <h4>结论边界</h4>
+  <p>如果 probe 准确率很高，只能说明 hidden state 中有可线性读出的信息；如果 patching 能恢复输出，说明该激活对这组 prompt 的行为有因果作用；如果 ablation 让性能下降，说明组件在当前任务中重要。但这些结论都依赖 prompt 分布、层位置、替换方式和度量口径，不能直接推广为“模型所有语法能力都在这个 head 里”。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>可解释性不是画一张热力图。严谨做法是先定义行为指标，例如目标 logit difference，再通过对照样本、patching 和 ablation 判断哪些内部状态对该行为有作用。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -680,6 +713,7 @@ def sinkhorn_knopp(M, num_iter=10):
     <li>✅ <strong>LayerNorm（从零实现）</strong> — 均值 + 方差归一化 + 仿射变换，理解为什么 LLM 选择它而非 BatchNorm</li>
     <li>✅ <strong>RMSNorm</strong> — 去掉均值中心化，提升 15% 速度，Llama/DeepSeek 的选择</li>
     <li>✅ <strong>Pre-Norm vs Post-Norm</strong> — 理解了为什么"归一化放在哪里"决定了能否训练 1000 层网络</li>
+    <li>✅ <strong>机制可解释性</strong> — 区分 probing、logit attribution、activation patching 和 ablation 的适用边界</li>
     <li>✅ <strong>SwiGLU 门控 FFN</strong> — 三个权重矩阵 + SiLU 门控，信息选择性通过</li>
     <li>✅ <strong>SwiGLU 参数预算</strong> — 用 8/3 宽度在接近 4x FFN 参数量下引入门控乘法</li>
     <li>✅ <strong>TransformerBlock 组装</strong> — RMSNorm + MHA + SwiGLU + 残差，~25 行核心代码</li>

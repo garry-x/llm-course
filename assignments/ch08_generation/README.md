@@ -33,6 +33,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch08_generation/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 比较 greedy、temperature、top-k、top-p、repetition penalty、speculative decoding、生成评估指标和约束解码的适用边界 |
+| Written questions | 35 | 比较 greedy、temperature、top-k、top-p、repetition penalty、CoT/self-consistency/best-of-N、speculative decoding、生成评估指标和约束解码的适用边界 |
 | Programming parts | 55 | 实现 greedy/temperature、top-k、top-p、Generator 指标和 speculative decoding |
-| Analysis / style | 10 | 解释质量、多样性、事实性、延迟、退化风险、参数 sweep 和采样参数边界 |
+| Analysis / style | 10 | 解释质量、多样性、事实性、推理正确率、test-time compute、延迟、退化风险、参数 sweep 和采样参数边界 |

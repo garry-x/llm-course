@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第8章 文本生成</h2>
   <p class="subtitle">采样策略 + DeepSeek MTP 推测解码——从概率到文本的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 13 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 14 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -501,6 +501,40 @@ metrics     distinct-2, repetition rate, task score, latency</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 8.7B 推理式生成与 Test-Time Compute -->
+<!-- ================================================================ -->
+<section class="card" id="s8-7b">
+  <h3>8.7B 推理式生成：用更多 test-time compute 换更高正确率</h3>
+  <p>对数学、代码、规划和多跳问答来说，生成策略不只是“选哪个 token”。模型可能需要先生成中间推理，再选择最终答案。近年的 reasoning 方法可以统一看成一个问题：在训练完成后，是否愿意用更多<strong>测试时计算量</strong>换取更高的任务成功率。</p>
+
+  <h4>常见方法</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>方法</th><th>做法</th><th>收益来源</th><th>代价/风险</th></tr>
+      <tr><td>Chain-of-Thought</td><td>让模型先写中间步骤再给答案</td><td>把隐式计算展开成 token 序列</td><td>步骤可能看似合理但实际错误</td></tr>
+      <tr><td>Self-consistency</td><td>采样多条推理路径，对最终答案投票</td><td>降低单一路径偶然错误</td><td>成本约乘以样本数，投票只适合可聚合答案</td></tr>
+      <tr><td>Best-of-N</td><td>生成 N 个候选，用奖励模型或规则选择</td><td>把生成问题变成搜索和重排</td><td>reranker 偏差会选择风格好但事实错的答案</td></tr>
+      <tr><td>Verifier / Critic</td><td>单独训练或调用模型判断解答是否正确</td><td>把“会做题”和“会判题”拆开</td><td>验证器覆盖不足时会放过同类错误</td></tr>
+      <tr><td>Process supervision</td><td>评价每一步推理而不只评价最终答案</td><td>更容易定位中间错误</td><td>标注成本高，步骤粒度难定义</td></tr>
+    </table>
+  </div>
+
+  <h4>为什么它不同于普通 sampling</h4>
+  <p>普通 top-p 或 temperature 主要控制输出分布的熵；reasoning 生成关心的是<strong>搜索空间</strong>。同一个问题可以生成多条推理路径，每条路径都有自己的中间状态和最终答案。对有标准答案的任务，评价重点不是 distinct-n，而是 pass@k、majority vote accuracy、verifier accuracy、平均输出 token 数和单位正确答案成本。</p>
+
+  <h4>计算预算怎么报告</h4>
+  <p>如果一个方法把准确率从 60% 提到 72%，但每题从 1 次生成变成 32 次生成，就不能只报告准确率。至少要同时报告：</p>
+  <ul>
+    <li><strong>样本数：</strong><code>N</code>、temperature、top-p、max reasoning tokens。</li>
+    <li><strong>正确率：</strong>single sample、pass@k、majority vote 或 reranked top-1。</li>
+    <li><strong>成本：</strong>平均生成 token 数、TTFT/TPOT、每题延迟和每题 token 成本。</li>
+    <li><strong>失败类型：</strong>算术错误、条件遗漏、无效代码、错误投票、verifier 误判。</li>
+  </ul>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Reasoning 能力不是“输出更长解释”。严谨实验必须证明更多中间 token 或更多候选确实提高了任务成功率，并说明它花掉了多少测试时计算量。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 8.8 MTP Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s8-8">
@@ -682,6 +716,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <li>✅ <strong>编程练习 4：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，开放式生成常用策略之一</li>
     <li>✅ <strong>编程练习 5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
     <li>✅ <strong>生成评估边界</strong> — 区分多样性、质量、事实性、延迟和任务完成率</li>
+    <li>✅ <strong>推理式生成</strong> — CoT、self-consistency、best-of-N、verifier 和 test-time compute 取舍</li>
     <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，理解分布保持加速的适用条件</li>
     <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
     <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>

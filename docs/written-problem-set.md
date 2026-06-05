@@ -71,6 +71,7 @@
 3. 说明 beam search 为什么常需要长度惩罚，并比较它与 sampling 在开放式生成任务中的适用场景。
 4. 解释 speculative decoding 的接受率如何影响吞吐，为什么 draft model 过弱或过强都可能不划算。
 5. 设计一个比较 greedy、top-p 和 temperature sampling 的小实验：写出 prompt 集、随机种子、输出长度、distinct-n、重复率、任务正确率或人工偏好指标，并说明每个指标的局限。
+6. 对数学或代码题设计一个 reasoning 生成实验：比较 single-sample、self-consistency、best-of-N 和 verifier reranking，报告准确率、pass@k、平均输出 token 数、延迟和单位正确答案成本。
 
 ## Ch09 Fine-tuning / Alignment
 

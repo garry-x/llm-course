@@ -343,17 +343,19 @@ Quick check：
 课堂 demo：
 
 - 对固定 logits 手算 top-k/top-p。
+- 构造 beam table，比较 raw logprob 与 length-normalized 排序。
 - 调整 temperature，观察分布 entropy。
 
 Quick check：
 
 - top-p 是否可能保留 0 个 token？
 - beam search 是否总比 sampling 好？
+- length penalty 解决的是短输出偏置还是事实性？
 
 课后产出：
 
-- Ch08 sampling 测试通过。
-- 书面题：top-p 手算。
+- Ch08 sampling 与 beam search 测试通过。
+- 书面题：top-p 和 beam table 手算。
 
 ## Week 6 Lecture 12: Speculative Decoding 与 Constrained Generation
 

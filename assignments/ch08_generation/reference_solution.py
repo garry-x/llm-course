@@ -117,6 +117,76 @@ def generate_topp(model, input_ids, max_new_tokens=100, p=0.9, temperature=1.0, 
     )
 
 
+def length_normalized_score(logprob_sum, length, alpha=1.0):
+    if length <= 0:
+        raise ValueError("length must be positive")
+    if alpha < 0:
+        raise ValueError("alpha must be non-negative")
+    return float(logprob_sum) / (float(length) ** alpha)
+
+
+def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
+    if input_ids.size(0) != 1:
+        raise ValueError("beam_search currently supports batch size 1")
+    if max_new_tokens <= 0:
+        raise ValueError("max_new_tokens must be positive")
+    if num_beams <= 0:
+        raise ValueError("num_beams must be positive")
+    if length_penalty_alpha < 0:
+        raise ValueError("length_penalty_alpha must be non-negative")
+
+    model.eval()
+    device = _model_device(model)
+    eos_token_id = _eos_from_model(model, eos_token_id)
+    prompt_len = input_ids.size(1)
+    beams = [(input_ids.to(device), 0.0, False)]
+
+    for _ in range(max_new_tokens):
+        candidates = []
+        all_ended = True
+        for sequence, score, ended in beams:
+            if ended:
+                candidates.append((sequence, score, True))
+                continue
+            all_ended = False
+            with torch.no_grad():
+                logits = model(sequence)[:, -1, :]
+                log_probs = torch.log_softmax(logits, dim=-1)
+            top_scores, top_tokens = torch.topk(log_probs, k=min(num_beams, log_probs.size(-1)), dim=-1)
+            for token_score, token_id in zip(top_scores[0], top_tokens[0]):
+                token = token_id.view(1, 1).to(sequence.device)
+                new_sequence = torch.cat([sequence, token.to(sequence.dtype)], dim=-1)
+                is_ended = eos_token_id is not None and int(token_id.item()) == eos_token_id
+                candidates.append((new_sequence, score + float(token_score.item()), is_ended))
+
+        if all_ended:
+            break
+
+        def rank_key(item):
+            seq, score, _ended = item
+            generated_len = max(1, seq.size(1) - prompt_len)
+            return length_normalized_score(score, generated_len, length_penalty_alpha)
+
+        beams = sorted(candidates, key=rank_key, reverse=True)[:num_beams]
+        if all(ended for _seq, _score, ended in beams):
+            break
+
+    beam_table = []
+    for sequence, score, ended in beams:
+        generated_len = max(1, sequence.size(1) - prompt_len)
+        beam_table.append(
+            {
+                "tokens": sequence[0].tolist(),
+                "logprob_sum": score,
+                "normalized_score": length_normalized_score(score, generated_len, length_penalty_alpha),
+                "generated_len": generated_len,
+                "ended": ended,
+            }
+        )
+    beam_table.sort(key=lambda item: item["normalized_score"], reverse=True)
+    return torch.tensor([beam_table[0]["tokens"]], device=device, dtype=input_ids.dtype), beam_table
+
+
 class Generator:
     def __init__(self, model, tokenizer):
         self.model = model

@@ -27,6 +27,16 @@ def generate_topp(model, input_ids, max_new_tokens=100, p=0.9, temperature=1.0, 
     raise NotImplementedError
 
 
+def length_normalized_score(logprob_sum, length, alpha=1.0):
+    """Return a beam score normalized by generated length."""
+    raise NotImplementedError
+
+
+def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
+    """Run beam search for a single prompt and return (best_sequence, beam_table)."""
+    raise NotImplementedError
+
+
 class Generator:
     def __init__(self, model, tokenizer):
         raise NotImplementedError

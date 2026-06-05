@@ -501,10 +501,34 @@ metrics     distinct-2, repetition rate, task score, latency</div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.7B 推理式生成与 Test-Time Compute -->
+<!-- 8.7B Beam Search -->
 <!-- ================================================================ -->
 <section class="card" id="s8-7b">
-  <h3>8.7B 推理式生成：用更多 test-time compute 换更高正确率</h3>
+  <h3>8.7B Beam Search：搜索多个高概率候选，而不是只走一步最优</h3>
+  <p>Greedy decoding 每一步只保留当前概率最高的 token，容易早早走进局部最优。Beam search 保留 <code>num_beams</code> 条候选路径，每一步把每条路径扩展到若干下一个 token，再按累计 log probability 排序保留前几条。</p>
+
+  <h4>长度偏置</h4>
+  <p>直接累加 log probability 会天然偏向短序列，因为每多生成一个 token 都会再加一个非正的 log probability。机器翻译、摘要和结构化候选生成里常用长度归一化或 length penalty 缓解这个问题：</p>
+  <div class="math-box"><div class="label">Length-normalized Beam Score</div>
+    <div class="katex" data-expr="s(y)=\frac{\sum_t \log p(y_t|y_{<t},x)}{|y|^{\alpha}}" aria-label="s(y)=\frac{\sum_t \log p(y_t|y_{<t},x)}{|y|^{\alpha}}" role="img"></div>
+  </div>
+  <p>Ch08 作业中的 <code>length_normalized_score</code> 和 <code>beam_search</code> 对应这个过程。这里使用的是教学版 batch size 1 实现，目的是让学生看清 beam table、raw score 和 normalized score 的关系。</p>
+
+  <h4>什么时候用 beam</h4>
+  <ul>
+    <li><strong>适合：</strong>翻译、抽取、代码候选、数学短答、schema 受限输出等有明确目标的任务。</li>
+    <li><strong>不适合盲用：</strong>开放式聊天和创意写作中，beam 可能产生高概率但平庸、重复或过短的输出。</li>
+    <li><strong>要报告：</strong>beam size、length penalty、最大长度、是否 early stop，以及候选排序指标。</li>
+  </ul>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>边界：</strong>Beam search 是搜索策略，不是训练目标，也不是事实性保证。它能更系统地探索高概率区域，但如果模型概率本身偏向错误答案，beam 只会更稳定地找到高概率错误。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 8.7C 推理式生成与 Test-Time Compute -->
+<!-- ================================================================ -->
+<section class="card" id="s8-7c">
+  <h3>8.7C 推理式生成：用更多 test-time compute 换更高正确率</h3>
   <p>对数学、代码、规划和多跳问答来说，生成策略不只是“选哪个 token”。模型可能需要先生成中间推理，再选择最终答案。近年的 reasoning 方法可以统一看成一个问题：在训练完成后，是否愿意用更多<strong>测试时计算量</strong>换取更高的任务成功率。</p>
 
   <h4>常见方法</h4>

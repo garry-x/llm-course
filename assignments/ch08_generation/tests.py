@@ -48,6 +48,30 @@ class TinyTokenizer:
         return "".join(self.itos.get(int(i), "?") for i in ids)
 
 
+class BeamToyModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.anchor = nn.Parameter(torch.zeros(()))
+        self.vocab_size = 4
+        self.tokenizer = type("Tok", (), {"eos_token_id": 3})()
+
+    def forward(self, input_ids):
+        batch, seq = input_ids.shape
+        logits = torch.full((batch, seq, self.vocab_size), -20.0, device=input_ids.device)
+        last = int(input_ids[0, -1].item())
+        if seq == 1:
+            logits[:, -1, 1] = 3.0
+            logits[:, -1, 3] = 2.8
+        elif last == 1:
+            logits[:, -1, 2] = 3.0
+            logits[:, -1, 3] = 1.0
+        elif last == 2:
+            logits[:, -1, 3] = 3.0
+        else:
+            logits[:, -1, 3] = 3.0
+        return logits + self.anchor
+
+
 @unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")
 class TestSampling(unittest.TestCase):
     def test_greedy_uses_last_position_argmax(self):
@@ -102,6 +126,40 @@ class TestGenerator(unittest.TestCase):
         self.assertEqual(text, "abcd")
         self.assertAlmostEqual(generator.distinct_ngrams("a b a b", n=2), 2 / 3)
         self.assertEqual(generator.distinct_ngrams("a", n=2), 0.0)
+
+
+@unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")
+class TestBeamSearch(unittest.TestCase):
+    def test_length_normalized_score_penalizes_shorter_or_longer_outputs_by_alpha(self):
+        self.assertAlmostEqual(submission.length_normalized_score(-3.0, length=3, alpha=1.0), -1.0)
+        self.assertAlmostEqual(submission.length_normalized_score(-3.0, length=3, alpha=0.0), -3.0)
+        with self.assertRaises(ValueError):
+            submission.length_normalized_score(-1.0, length=0)
+        with self.assertRaises(ValueError):
+            submission.length_normalized_score(-1.0, length=1, alpha=-0.5)
+
+    def test_beam_search_keeps_multiple_candidates_and_reports_scores(self):
+        model = BeamToyModel()
+        prompt = torch.tensor([[0]])
+        best, table = submission.beam_search(
+            model,
+            prompt,
+            max_new_tokens=3,
+            num_beams=2,
+            eos_token_id=3,
+            length_penalty_alpha=0.0,
+        )
+        self.assertEqual(best.tolist(), [[0, 1, 2, 3]])
+        self.assertEqual(len(table), 2)
+        self.assertTrue(all("normalized_score" in item for item in table))
+        self.assertTrue(any(item["tokens"] == [0, 3] for item in table))
+
+    def test_beam_search_rejects_unsupported_shapes(self):
+        model = BeamToyModel()
+        with self.assertRaises(ValueError):
+            submission.beam_search(model, torch.tensor([[0], [0]]))
+        with self.assertRaises(ValueError):
+            submission.beam_search(model, torch.tensor([[0]]), num_beams=0)
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")

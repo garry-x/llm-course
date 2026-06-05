@@ -31,11 +31,49 @@ def top_p_filter(logits, p=0.9):
     return filtered.scatter(dim=-1, index=sorted_indices, src=sorted_logits)
 
 
-def sample_next_token(logits, strategy="greedy", temperature=1.0, k=40, p=0.9):
+def apply_repetition_penalty(logits, generated_ids, penalty=1.2):
+    if penalty <= 0:
+        raise ValueError("penalty must be positive")
+    if logits.dim() != 2:
+        raise ValueError("logits must have shape [batch, vocab]")
+    if generated_ids.dim() != 2:
+        raise ValueError("generated_ids must have shape [batch, seq]")
+    if generated_ids.size(0) != logits.size(0):
+        raise ValueError("generated_ids batch size must match logits batch size")
+    if generated_ids.numel() and (
+        int(generated_ids.min().item()) < 0 or int(generated_ids.max().item()) >= logits.size(-1)
+    ):
+        raise ValueError("generated_ids contains token ids outside the vocabulary")
+
+    adjusted = logits.clone()
+    for batch_idx in range(logits.size(0)):
+        seen_ids = torch.unique(generated_ids[batch_idx])
+        if seen_ids.numel() == 0:
+            continue
+        seen_scores = adjusted[batch_idx, seen_ids]
+        adjusted[batch_idx, seen_ids] = torch.where(
+            seen_scores < 0,
+            seen_scores * penalty,
+            seen_scores / penalty,
+        )
+    return adjusted
+
+
+def sample_next_token(
+    logits,
+    strategy="greedy",
+    temperature=1.0,
+    k=40,
+    p=0.9,
+    generated_ids=None,
+    repetition_penalty=1.0,
+):
     if logits.dim() == 3:
         logits = logits[:, -1, :]
     if logits.dim() != 2:
         raise ValueError("logits must have shape [batch, vocab] or [batch, seq, vocab]")
+    if generated_ids is not None and repetition_penalty != 1.0:
+        logits = apply_repetition_penalty(logits, generated_ids, repetition_penalty)
 
     if strategy == "greedy" or temperature == 0:
         return logits.argmax(dim=-1, keepdim=True)
@@ -71,18 +109,37 @@ def _generate(model, input_ids, max_new_tokens, strategy, eos_token_id=None, **k
     for _ in range(max_new_tokens):
         with torch.no_grad():
             logits = model(output)
-        next_token = sample_next_token(logits[:, -1, :], strategy=strategy, **kwargs)
+        next_token = sample_next_token(
+            logits[:, -1, :],
+            strategy=strategy,
+            generated_ids=output,
+            **kwargs,
+        )
         output = torch.cat([output, next_token], dim=-1)
         if eos_token_id is not None and torch.all(next_token.squeeze(-1) == eos_token_id):
             break
     return output
 
 
-def generate_greedy(model, input_ids, max_new_tokens=100, eos_token_id=None):
-    return _generate(model, input_ids, max_new_tokens, "greedy", eos_token_id=eos_token_id)
+def generate_greedy(model, input_ids, max_new_tokens=100, eos_token_id=None, repetition_penalty=1.0):
+    return _generate(
+        model,
+        input_ids,
+        max_new_tokens,
+        "greedy",
+        eos_token_id=eos_token_id,
+        repetition_penalty=repetition_penalty,
+    )
 
 
-def generate_temperature(model, input_ids, max_new_tokens=100, temperature=1.0, eos_token_id=None):
+def generate_temperature(
+    model,
+    input_ids,
+    max_new_tokens=100,
+    temperature=1.0,
+    eos_token_id=None,
+    repetition_penalty=1.0,
+):
     return _generate(
         model,
         input_ids,
@@ -90,10 +147,19 @@ def generate_temperature(model, input_ids, max_new_tokens=100, temperature=1.0, 
         "temperature",
         eos_token_id=eos_token_id,
         temperature=temperature,
+        repetition_penalty=repetition_penalty,
     )
 
 
-def generate_topk(model, input_ids, max_new_tokens=100, k=40, temperature=1.0, eos_token_id=None):
+def generate_topk(
+    model,
+    input_ids,
+    max_new_tokens=100,
+    k=40,
+    temperature=1.0,
+    eos_token_id=None,
+    repetition_penalty=1.0,
+):
     return _generate(
         model,
         input_ids,
@@ -102,10 +168,19 @@ def generate_topk(model, input_ids, max_new_tokens=100, k=40, temperature=1.0, e
         eos_token_id=eos_token_id,
         temperature=temperature,
         k=k,
+        repetition_penalty=repetition_penalty,
     )
 
 
-def generate_topp(model, input_ids, max_new_tokens=100, p=0.9, temperature=1.0, eos_token_id=None):
+def generate_topp(
+    model,
+    input_ids,
+    max_new_tokens=100,
+    p=0.9,
+    temperature=1.0,
+    eos_token_id=None,
+    repetition_penalty=1.0,
+):
     return _generate(
         model,
         input_ids,
@@ -114,6 +189,7 @@ def generate_topp(model, input_ids, max_new_tokens=100, p=0.9, temperature=1.0, 
         eos_token_id=eos_token_id,
         temperature=temperature,
         p=p,
+        repetition_penalty=repetition_penalty,
     )
 
 
@@ -212,7 +288,16 @@ class Generator:
         self.tokenizer = tokenizer
 
     @torch.no_grad()
-    def generate(self, prompt, strategy="top-p", max_new_tokens=100, temperature=0.8, k=40, p=0.9):
+    def generate(
+        self,
+        prompt,
+        strategy="top-p",
+        max_new_tokens=100,
+        temperature=0.8,
+        k=40,
+        p=0.9,
+        repetition_penalty=1.0,
+    ):
         input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
         eos_token_id = getattr(self.tokenizer, "eos_token_id", None)
         output = _generate(
@@ -224,6 +309,7 @@ class Generator:
             temperature=temperature,
             k=k,
             p=p,
+            repetition_penalty=repetition_penalty,
         )
         return self.tokenizer.decode(output[0].tolist())
 

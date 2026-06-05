@@ -361,16 +361,17 @@ Quick check：
 
 - 比较 greedy、beam、temperature、top-k、top-p。
 - 解释开放式生成中的 degeneration。
-- 明确 sampling 的概率过滤和重新归一化。
+- 明确 sampling 的概率过滤、repetition penalty 和重新归一化。
 
 核心推导：
 
 - top-p nucleus 保留累计概率达到阈值的最小集合。
+- repetition penalty 是采样前的 logits processor：已出现 token 的正 logit 除以 penalty，负 logit 乘以 penalty。
 - beam score 与 length penalty 的关系。
 
 课堂 demo：
 
-- 对固定 logits 手算 top-k/top-p。
+- 对固定 logits 手算 top-k/top-p 和 repetition penalty。
 - 构造 beam table，比较 raw logprob 与 length-normalized 排序。
 - 调整 temperature，观察分布 entropy。
 
@@ -383,7 +384,7 @@ Quick check：
 课后产出：
 
 - Ch08 sampling 与 beam search 测试通过。
-- 书面题：top-p 和 beam table 手算。
+- 书面题：top-p、repetition penalty 和 beam table 手算。
 
 ## Week 6 Lecture 12: Speculative Decoding 与 Constrained Generation
 

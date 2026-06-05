@@ -489,6 +489,9 @@ seeds       at least 3
 metrics     distinct-2, repetition rate, task score, latency</div>
   <p>如果只用一个 prompt、一个 seed、一个样例输出下结论，通常不足以说明策略优劣。开放式生成还应保存失败样例：重复循环、提前停止、跑题、事实错误、格式破坏和过度保守都属于不同失败模式。</p>
 
+  <h4>Repetition penalty 的位置</h4>
+  <p>Repetition penalty 不是新的概率分布，也不是训练目标；它是在 softmax 与采样之前作用在 logits 上的 processor。常见规则是：对已经出现在 prefix 中的 token，若 logit 为正则除以 penalty，若 logit 为负则乘以 penalty，使这些 token 的相对概率下降。Ch08 作业中的 <code>apply_repetition_penalty</code> 要求学生手写这个变换，并验证它会在 greedy、top-k 或 top-p 选择之前改变候选排序。</p>
+
   <h4>策略选择的实际判断</h4>
   <ul>
     <li><strong>代码、数学、抽取：</strong>优先低温或 beam / pass@k；多样性不是主要目标，正确性和可复现性更重要。</li>

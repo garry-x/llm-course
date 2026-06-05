@@ -106,6 +106,26 @@ class TestSampling(unittest.TestCase):
         kept = torch.isfinite(filtered)
         self.assertEqual(kept.tolist(), [[True, True, False]])
 
+    def test_repetition_penalty_adjusts_seen_logits_by_sign(self):
+        logits = torch.tensor([[2.0, -1.0, 0.5, 3.0]])
+        original = logits.clone()
+        generated_ids = torch.tensor([[0, 1, 1]])
+        adjusted = submission.apply_repetition_penalty(logits, generated_ids, penalty=2.0)
+        expected = torch.tensor([[1.0, -2.0, 0.5, 3.0]])
+        self.assertTrue(torch.allclose(adjusted, expected))
+        self.assertTrue(torch.allclose(logits, original))
+
+    def test_sample_next_token_applies_repetition_penalty_before_greedy(self):
+        logits = torch.tensor([[4.0, 3.5, 1.0]])
+        generated_ids = torch.tensor([[0]])
+        token = submission.sample_next_token(
+            logits,
+            strategy="greedy",
+            generated_ids=generated_ids,
+            repetition_penalty=2.0,
+        )
+        self.assertEqual(token.item(), 1)
+
     def test_invalid_sampling_hyperparameters_raise(self):
         logits = torch.tensor([[1.0, 2.0]])
         with self.assertRaises(ValueError):
@@ -114,6 +134,12 @@ class TestSampling(unittest.TestCase):
             submission.sample_next_token(logits, strategy="top-k", k=0)
         with self.assertRaises(ValueError):
             submission.sample_next_token(logits, strategy="top-p", p=0.0)
+        with self.assertRaises(ValueError):
+            submission.apply_repetition_penalty(logits, torch.tensor([[0]]), penalty=0.0)
+        with self.assertRaises(ValueError):
+            submission.apply_repetition_penalty(logits, torch.tensor([[0], [1]]), penalty=1.2)
+        with self.assertRaises(ValueError):
+            submission.apply_repetition_penalty(logits, torch.tensor([[2]]), penalty=1.2)
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")

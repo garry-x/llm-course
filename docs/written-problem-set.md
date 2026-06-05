@@ -79,13 +79,14 @@
 
 ## Ch08 Generation / Decoding
 
-1. 比较 greedy、temperature、top-k、top-p 的质量/多样性/可复现性/延迟取舍。
+1. 比较 greedy、temperature、top-k、top-p 和 repetition penalty 的质量/多样性/可复现性/延迟取舍。
 2. 手算一个 5 token 词表的 top-p nucleus：给定概率 `[0.40, 0.25, 0.20, 0.10, 0.05]`，当 `p=0.7` 和 `p=0.9` 时各保留哪些 token。
-3. 说明 beam search 为什么常需要长度惩罚，并比较它与 sampling 在开放式生成任务中的适用场景。
-4. 给定一个 beam table，分别用 raw logprob 和 length-normalized score 排序，说明排序改变是否一定意味着质量更好。
-5. 解释 speculative decoding 的接受率如何影响吞吐，为什么 draft model 过弱或过强都可能不划算。
-6. 设计一个比较 greedy、top-p 和 temperature sampling 的小实验：写出 prompt 集、随机种子、输出长度、distinct-n、重复率、任务正确率或人工偏好指标，并说明每个指标的局限。
-7. 对数学或代码题设计一个 reasoning 生成实验：比较 single-sample、self-consistency、best-of-N 和 verifier reranking；给定 `n` 个样本中 `c` 个正确，计算 `pass@k = 1 - C(n-c,k)/C(n,k)`，并报告平均输出 token 数、延迟和单位正确答案成本。
+3. 给定 logits `[4.0, 3.0, -1.0]`、已生成 token ids `[0,2]` 和 repetition penalty `2.0`，手算采样前 logits 如何变化，并说明为什么正负 logit 的处理方向不同。
+4. 说明 beam search 为什么常需要长度惩罚，并比较它与 sampling 在开放式生成任务中的适用场景。
+5. 给定一个 beam table，分别用 raw logprob 和 length-normalized score 排序，说明排序改变是否一定意味着质量更好。
+6. 解释 speculative decoding 的接受率如何影响吞吐，为什么 draft model 过弱或过强都可能不划算。
+7. 设计一个比较 greedy、top-p 和 temperature sampling 的小实验：写出 prompt 集、随机种子、输出长度、distinct-n、重复率、任务正确率或人工偏好指标，并说明每个指标的局限。
+8. 对数学或代码题设计一个 reasoning 生成实验：比较 single-sample、self-consistency、best-of-N 和 verifier reranking；给定 `n` 个样本中 `c` 个正确，计算 `pass@k = 1 - C(n-c,k)/C(n,k)`，并报告平均输出 token 数、延迟和单位正确答案成本。
 
 ## Ch09 Fine-tuning / Alignment
 

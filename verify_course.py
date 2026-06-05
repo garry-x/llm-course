@@ -6490,6 +6490,7 @@ def check_notation_shape_glossary() -> None:
 
 def check_worked_example_pack() -> None:
     text = read("docs/worked-example-pack.md")
+    derivation_audit = read("docs/mathematical-derivation-audit.md")
     issues = []
 
     for marker in [
@@ -6555,10 +6556,30 @@ def check_worked_example_pack() -> None:
         if len(cells) != 8:
             issues.append(f"worked example row expected 8 cells, got {len(cells)}: {cells[:2]}")
             continue
+        example_id = cells[0]
+        assessment_link = cells[6]
         if not cells[4] or not cells[5] or not cells[6] or not cells[7]:
             issues.append(f"{cells[0]} missing worked trace, common failure, assessment link, or source boundary")
         if "assignments/" not in cells[6] and "capstone" not in cells[6] and "handout" not in cells[6]:
             issues.append(f"{cells[0]} assessment link does not bind to assignment/capstone/handout evidence")
+        for assignment_dir in re.findall(r"`(assignments/[^`]+/)`", assessment_link):
+            if not (ROOT / assignment_dir).is_dir():
+                issues.append(f"{example_id} assignment directory does not exist: {assignment_dir}")
+        for der_id in re.findall(r"\bDER-\d{2}\b", assessment_link):
+            if not re.search(rf"\|\s*{re.escape(der_id)}\s*\|", derivation_audit):
+                issues.append(f"{example_id} references unknown derivation id: {der_id}")
+
+    expected_example_derivations = {
+        "WE-CH02-ROPE": "DER-03",
+        "WE-CH03-ATTN": "DER-04",
+        "WE-CH05-NORM": "DER-07",
+        "WE-CH07-ADAMW": "DER-10",
+        "WE-CH09-DPO": "DER-12",
+    }
+    example_links = {cells[0]: cells[6] for cells in core_rows[1:] if len(cells) == 8}
+    for example_id, der_id in expected_example_derivations.items():
+        if der_id not in example_links.get(example_id, ""):
+            issues.append(f"{example_id} must link to {der_id}")
 
     recitation_rows = extract_markdown_table_after(text, "## Recitation Use")
     recitation_ids = {cells[0] for cells in recitation_rows[1:] if cells}

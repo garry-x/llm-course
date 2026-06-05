@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第3章 单头自注意力</h2>
   <p class="subtitle">从零实现 Scaled Dot-Product Attention——LLM 一切魔力的源头</p>
-  <div class="reading-time">⏱ 预计阅读: 75 分钟 · 11 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 85 分钟 · 12 小节 · 5 道编程练习 · 6 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -393,6 +393,35 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 3.8A Attention 可解释性边界 -->
+<!-- ================================================================ -->
+<section class="card" id="s3-8a">
+  <h3>3.8A Attention Heatmap 的解释边界：权重不是因果解释</h3>
+  <p>注意力热力图是非常有用的诊断工具：它能告诉你某一层、某一头、某个 query 位置在聚合 value 时分配了多少权重。但在严谨分析中，<strong>attention weight 不能直接等同于“模型为什么这样回答”</strong>。原因是 Transformer 的最终输出不是单个注意力矩阵决定的，而是多层、多头、残差路径、MLP 和输出层共同作用的结果。</p>
+
+  <h4>为什么权重不等于解释</h4>
+  <ul>
+    <li><strong>Value 才是被混合的信息。</strong>热力图显示的是 <span class="katex-inline" data-expr="\mathrm{softmax}(QK^\top/\sqrt{d_k})" aria-label="\mathrm{softmax}(QK^\top/\sqrt{d_k})" role="img"></span>，但真正进入下一层的是权重对 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的加权和。高权重位置的 value 未必携带最终预测所需的语义方向。</li>
+    <li><strong>多头与多层会重新组合信息。</strong>一个 head 的高亮区域可能只是局部模式；后续 head、残差连接和 MLP 可以放大、抵消或改写这部分信息。</li>
+    <li><strong>相同输出可能对应不同注意力分布。</strong>如果替换、扰动或重排部分注意力权重后 logits 几乎不变，就说明该热力图不是唯一的因果说明。</li>
+    <li><strong>自注意力只描述层内路由，不描述训练目标。</strong>模型学到的事实、偏见和能力主要来自训练数据与损失函数；单张 heatmap 不能说明这些知识如何形成。</li>
+  </ul>
+
+  <h4>Heatmap 能说明什么，不能单独说明什么</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>观察</th><th>可以支持的分析</th><th>还需要什么比较</th></tr>
+      <tr><td>causal heatmap 是下三角</td><td>mask 方向大概率正确，未来 token 没被读取</td><td>改变未来 token，比较当前位置 logits 是否保持不变</td></tr>
+      <tr><td>某些头集中在分隔符、换行或句末</td><td>该头可能学习了结构边界或格式位置</td><td>遮蔽这些位置，比较 loss、logits 或下游指标变化</td></tr>
+      <tr><td>长距离位置获得较高权重</td><td>该层存在跨距离信息路由</td><td>检查对应 value、后续层激活以及最终 token 概率变化</td></tr>
+      <tr><td>回答相关词获得高权重</td><td>热力图与人类直觉一致</td><td>做 counterfactual prompt：替换相关词后观察预测是否系统变化</td></tr>
+    </table>
+  </div>
+
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>实践原则：</strong>把 attention heatmap 当作调试入口，而不是最终解释。严谨做法是结合 ablation、counterfactual prompt、logit attribution 或 activation patching，比较“改动前后模型行为是否真的变化”。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 3.9 O(n²) + MLA -->
 <!-- ================================================================ -->
 <section class="card" id="s3-9">
@@ -418,9 +447,6 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) 是注意力永恒的张力。</strong>FlashAttention 和 MLA 分别从"计算"和"存储"两个维度缓解了问题，但它们都没有改变 O(n²) 的本质。这也解释了为什么长上下文依然是 LLM 最前沿的研究方向之一——DeepSeek V4 的 CSA+HCA 混合注意力就是为了在 1M 上下文中实用化而设计的。</div></div>
 </section>
 
-<!-- ================================================================ -->
-<!-- 3.10 总结 -->
-<!-- ================================================================ -->
 <!-- ================================================================ -->
 <!-- 3.10 可微字典 -->
 <!-- ================================================================ -->
@@ -463,6 +489,7 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
     <li>✅ <strong>Scaled Dot-Product Attention</strong> —— 实现了"查询→匹配→聚合"的完整流程</li>
     <li>✅ <strong>Causal Mask</strong> —— 确保了自回归生成的因果性约束</li>
     <li>✅ <strong>注意力可视化</strong> —— 建立了对注意力行为的直观理解</li>
+    <li>✅ <strong>Attention Heatmap 的解释边界</strong> —— 知道它适合诊断路由模式，但不能单独当作因果解释</li>
     <li>✅ <strong>深刻理解了 √dₖ</strong> —— 从方差分析和梯度视角掌握了缩放因子</li>
   </ul>
   <p>这些代码加起来约 <strong>60 行</strong>，但它们是 GPT、Llama、Claude 等所有现代 LLM 的共同基础。在第 4 章中，我们将把单头注意力扩展为<strong>多头注意力</strong>，并深入实现 DeepSeek 的 MLA。</p>

@@ -66,7 +66,7 @@
 
 - [课程 Syllabus](docs/syllabus.md)：课程目标、周安排、作业节奏和项目安排。
 - [10 周 / 20 讲 Lecture Plan](docs/lecture-plan.md)：每讲目标、推导、课堂 demo 和 quick check。
-- [逐周阅读清单与复盘 Handout](docs/reading-list.md)：论文阅读、关键问题和复盘要求。
+- [逐周阅读材料与复盘 Handout](docs/reading-list.md)：论文阅读、关键问题和复盘要求。
 - [书面推导与概念题题库](docs/written-problem-set.md)：公式推导、复杂度分析和概念辨析。
 - [Worked Example Pack](docs/worked-example-pack.md)：BPE、RoPE、attention、GQA、Norm、AdamW、DPO、KV cache 等可复算小例子。
 - [经典 NLP 专题 Handout](docs/classic-nlp-handout.md)：dependency parsing、seq2seq/NMT、BERT、BLEU/ROUGE/F1/EM 与现代 LLM 的关系。

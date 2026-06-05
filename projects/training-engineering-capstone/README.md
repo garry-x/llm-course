@@ -62,7 +62,7 @@ python plan_training.py \
   --gpu-hour-cost 2.5
 ```
 
-## 上线检查清单
+## 上线准备
 
 - 固定随机种子、训练配置和数据版本。
 - `metrics.jsonl` 至少包含 train_loss、val_loss、ppl、lr、grad_norm、tokens/s。

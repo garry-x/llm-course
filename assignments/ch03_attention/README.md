@@ -34,6 +34,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch03_attention/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、mask 加在 softmax 前的原因、causal mask 的形状广播和复杂度 |
+| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、mask 加在 softmax 前的原因、causal mask 的形状广播、复杂度和 heatmap 解释边界 |
 | Programming parts | 55 | 实现 QKV projection、scaled dot-product attention、causal mask 和 attention visualization |
-| Analysis / style | 10 | 解释 mask 数值稳定性、attention heatmap 的局限和常见 shape bug |
+| Analysis / style | 10 | 解释 mask 数值稳定性、attention heatmap 的适用范围和常见 shape bug |

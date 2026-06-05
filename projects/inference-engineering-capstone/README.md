@@ -1,6 +1,6 @@
 # LLM Inference Engineering Capstone
 
-这个项目把课程最后几章落成一个可运行的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线检查清单。
+这个项目把课程最后几章落成一个可运行的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线准备说明。
 
 默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目的 CPU baseline、GPU/API 额度、成本记录和降级路径按 [Compute Resource and Cost Guide](../../docs/compute-resource-guide.md) 执行。
 
@@ -112,7 +112,7 @@ python capacity_plan.py \
 | TensorRT-LLM | 调用部署好的 TRT-LLM endpoint | 关注模型编译、engine 版本和 GPU 绑定 |
 | llama.cpp | 调用 llama-server OpenAI-compatible API | 关注 GGUF 量化、CPU/RAM、Apple Metal |
 
-## 上线检查清单
+## 上线准备
 
 - P95 TTFT、P95 TPOT、P99 total latency 已测。
 - SLO 目标可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。

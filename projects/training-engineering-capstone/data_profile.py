@@ -12,7 +12,7 @@ def percentile(values: list[int], pct: float) -> int:
     return values[idx]
 
 
-def audit(path: Path) -> dict:
+def profile(path: Path) -> dict:
     lines = path.read_text(encoding="utf-8").splitlines()
     lengths = [len(line) for line in lines]
     non_empty = [line for line in lines if line.strip()]
@@ -34,10 +34,10 @@ def audit(path: Path) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Audit a text dataset before LLM training")
+    parser = argparse.ArgumentParser(description="Profile a text dataset before LLM training")
     parser.add_argument("--data", default="sample_corpus.txt")
     args = parser.parse_args()
-    print(json.dumps(audit(Path(args.data)), indent=2, ensure_ascii=False))
+    print(json.dumps(profile(Path(args.data)), indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

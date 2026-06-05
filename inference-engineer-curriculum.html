@@ -7,7 +7,7 @@
   <link rel="apple-touch-icon" href="images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>LLM 推理工程师课程路线 — LLM 深度学习</title>
-<meta name="description" content="LLM 推理工程师学习路线、岗位能力清单、Capstone 项目和课程实践标准。">
+<meta name="description" content="LLM 推理工程师学习路线、岗位能力矩阵、Capstone 项目和课程实践标准。">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-ch="0">
@@ -43,13 +43,13 @@
         <tr><td>生成链路</td><td>Ch08</td><td>Prefill、decode、采样和推测解码如何影响用户体验</td><td>能解释 TTFT、TPOT、TPS、质量和随机性的 trade-off</td></tr>
         <tr><td>显存与吞吐</td><td>Ch03-Ch04、Ch10</td><td>KV Cache、FlashAttention、GQA/MLA、量化如何降低成本</td><td>能手算 KV Cache 显存，并说明瓶颈在算力、带宽还是显存</td></tr>
         <tr><td>服务化工程</td><td>Ch10、Capstone</td><td>如何把模型包装成可观测、可压测、可回归的 API</td><td>跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark</td></tr>
-        <tr><td>质量与上线</td><td>Ch09-Ch10、Capstone</td><td>如何评测输出质量、安全、格式和成本</td><td>有固定评测集、上线清单和压测报告</td></tr>
+        <tr><td>质量与上线</td><td>Ch09-Ch10、Capstone</td><td>如何评测输出质量、安全、格式和成本</td><td>有固定评测集、上线准备说明和压测报告</td></tr>
       </table>
     </div>
   </section>
 
   <section class="card">
-    <h3>能力清单</h3>
+    <h3>能力矩阵</h3>
     <div class="table-wrap">
       <table>
         <tr><th>能力</th><th>你需要能做什么</th><th>对应内容</th></tr>
@@ -58,7 +58,7 @@
         <tr><td>显存与成本预算</td><td>估算权重显存、KV Cache、激活峰值、安全余量和 tokens 成本</td><td>Ch04、Ch07、Ch10，Capstone capacity_plan.py</td></tr>
         <tr><td>推理服务实现</td><td>实现 OpenAI-compatible API、非流式响应、SSE 流式响应和 metrics</td><td>Ch10 10.13，Capstone app.py</td></tr>
         <tr><td>RAG 与输出约束</td><td>设计检索命中文档、prompt 注入、引用返回、JSON schema、工具 schema 和失败兜底</td><td>Ch08，Ch10 10.8、10.13，Capstone response_format / tools</td></tr>
-        <tr><td>评测与上线</td><td>维护固定评测集，产出压测报告、上线清单、告警和回滚方案</td><td>Ch09-Ch10，Capstone evaluate.py</td></tr>
+        <tr><td>评测与上线</td><td>维护固定评测集，产出压测报告、上线准备说明、告警和回滚方案</td><td>Ch09-Ch10，Capstone evaluate.py</td></tr>
       </table>
     </div>
   </section>

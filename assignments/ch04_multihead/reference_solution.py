@@ -127,6 +127,15 @@ def count_params(model):
     return sum(p.numel() for p in model.parameters())
 
 
+def gqa_head_mapping(n_heads, n_kv_heads):
+    if n_heads <= 0 or n_kv_heads <= 0:
+        raise ValueError("n_heads and n_kv_heads must be positive")
+    if n_heads % n_kv_heads != 0:
+        raise ValueError("n_heads must be divisible by n_kv_heads")
+    n_rep = n_heads // n_kv_heads
+    return [query_head // n_rep for query_head in range(n_heads)]
+
+
 def compute_kv_cache_size(d_model, n_heads, n_kv_heads, d_latent, seq_len):
     d_k = d_model // n_heads
     bytes_per_float = 4

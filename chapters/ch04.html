@@ -338,6 +338,7 @@ print(f"QKV 投影参数相同: {mha.W_qkv.weight.numel()} == {sha.W_qkv.weight.
 
   <h4>GQA：最优折中</h4>
   <p>GQA（Ainslie et al., 2023）将 Q 头分为 <span class="katex-inline" data-expr="n_g" aria-label="n_g" role="img"></span> 组，每组共享一个 K/V 头。Llama 2 70B 使用 8 个 KV 头（<span class="katex-inline" data-expr="n_h / n_g = 8" aria-label="n_h / n_g = 8" role="img"></span>)，KV Cache 缩小 8 倍，但保留了一定的 K/V 多样性。</p>
+  <p>Ch04 作业中的 <code>gqa_head_mapping(n_heads, n_kv_heads)</code> 把这个分组关系写成显式列表。若 <code>n_heads=8</code>、<code>n_kv_heads=2</code>，则每 4 个 Q head 共享一个 KV head，映射为 <code>[0,0,0,0,1,1,1,1]</code>；若 <code>n_kv_heads=1</code>，就是 MQA；若 <code>n_kv_heads=n_heads</code>，退化回标准 MHA。</p>
   <p>实验表明，GQA 的质量在 n_g >= 4 时接近 MHA，而推理效率接近 MQA。这是"两全其美"的工程设计——<strong>训练后升级</strong>（从 MHA checkpoint 通过加权平均合并 K/V 头来获得 GQA）也是一大亮点。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>历史趣闻：</strong>MQA 早在 2019 年由 Shazeer 在 Fast Transformer Decoding 中提出，但直到 2023 年 Llama 2 大规模采用后，MQA/GQA 才被广泛关注。好工程有时需要时间才能"出圈"。</div></div>
 </section>

@@ -68,6 +68,15 @@ class TestGroupedQueryAttention(unittest.TestCase):
         with self.assertRaises(AssertionError):
             submission.GroupedQueryAttention(d_model=32, n_heads=6, n_kv_heads=4)
 
+    def test_gqa_head_mapping_assigns_query_groups_to_kv_heads(self):
+        self.assertEqual(submission.gqa_head_mapping(n_heads=8, n_kv_heads=2), [0, 0, 0, 0, 1, 1, 1, 1])
+        self.assertEqual(submission.gqa_head_mapping(n_heads=4, n_kv_heads=1), [0, 0, 0, 0])
+        self.assertEqual(submission.gqa_head_mapping(n_heads=4, n_kv_heads=4), [0, 1, 2, 3])
+        with self.assertRaises(ValueError):
+            submission.gqa_head_mapping(n_heads=6, n_kv_heads=4)
+        with self.assertRaises(ValueError):
+            submission.gqa_head_mapping(n_heads=0, n_kv_heads=1)
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch04 multi-head tests")
 class TestMLA(unittest.TestCase):

@@ -1,6 +1,6 @@
 # Classic NLP Deep-Dive Teaching Module
 
-本模块用于把 [经典 NLP 专题 Handout](classic-nlp-handout.md) 从讨论课材料扩展为可独立授课的 2-4 讲专题。它补充 [经典 NLP 与评测覆盖说明](nlp-evaluation-coverage.md)、[10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[Lecture Slide Outline](lecture-slide-outline.md)、[Board Derivation and Instructor Notes Pack](board-derivation-pack.md)、[书面推导与概念题题库](written-problem-set.md)、[Instructor Solution Guide](instructor-solution-guide.md) 和 `assignments/ch11_classic_nlp/`。
+本模块用于把 [经典 NLP 专题 Handout](classic-nlp-handout.md) 从讨论课材料扩展为可独立授课的 2-4 讲专题。它补充 [经典 NLP 与评测覆盖说明](nlp-evaluation-coverage.md)、[10 周 / 20 讲 Lecture Plan](lecture-plan.md)、Lecture Slide Outline、Board Derivation and Instructor Notes Pack、[书面推导与概念题题库](written-problem-set.md)、Instructor Solution Guide 和 `assignments/ch11_classic_nlp/`。
 
 目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释 CS224N 风格神经 NLP 主线中三类非 decoder-only 模型：structured prediction、encoder-decoder 和 encoder-only representation learning。
 
@@ -8,12 +8,12 @@
 
 完成本模块后，学生应能：
 
-| outcome_id | 学习结果 | 可评分证据 |
+| outcome_id | 学习结果 | 可评分依据 |
 |------------|----------|------------|
 | CL-NLP-1 | 用 transition system 描述 dependency parsing，并计算 UAS/LAS | 手写 stack/buffer/arcs trace；Ch11 `attachment_scores` 测试 |
 | CL-NLP-2 | 写出 seq2seq teacher forcing 和 beam search 的目标、搜索状态和 length bias | 书面题；beam table；metric failure case |
 | CL-NLP-3 | 区分 encoder-decoder attention alignment 与 decoder-only causal self-attention | 信息流图；错误解释短答 |
-| CL-NLP-4 | 构造 BERT-style MLM input、labels、loss mask 和 `[CLS]` fine-tuning 证据 | Ch11 `build_mlm_example` 测试；书面题 |
+| CL-NLP-4 | 构造 BERT-style MLM input、labels、loss mask 和 `[CLS]` fine-tuning 产出 | Ch11 `build_mlm_example` 测试；书面题 |
 | CL-NLP-5 | 判断 BLEU/ROUGE/EM/F1 与人工评价各自能支持什么 claim | 指标反例；项目 metric_card |
 
 最低通过标准：学生不能只背术语。每个主题都必须给出一个状态/张量/指标的可计算例子，并说明该例子不能证明什么。
@@ -210,7 +210,7 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 
 ### In-Class Checks
 
-| check_id | prompt | expected evidence |
+| check_id | prompt | expected learning output |
 |----------|--------|-------------------|
 | DP-1 | 给定 4-token sentence 和 gold arcs，写出合法 transition sequence | stack/buffer/arcs 表，action 合法 |
 | DP-2 | 给定 pred/gold heads 和 labels，计算 UAS/LAS | 分母、head match、label match 正确 |
@@ -227,11 +227,11 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 4. BERT/MLM：给出 tokens 与 mask positions，要求写 masked input、labels、loss mask，并和 causal LM labels 对比。
 5. Evaluation：给出一个高 BLEU/低人工质量或低 BLEU/高人工质量例子，要求判断 claim strength。
 
-### Programming Evidence
+### Programming Learning output
 
-本模块的最低可运行证据由 `assignments/ch11_classic_nlp/` 提供：
+本模块的最低可运行产出由 `assignments/ch11_classic_nlp/` 提供：
 
-| function | concept evidence |
+| function | concept learning output |
 |----------|------------------|
 | `attachment_scores` | UAS/LAS head 与 label 对齐 |
 | `sentence_bleu` | clipped precision 与 brevity penalty |
@@ -243,7 +243,7 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 
 ## Teaching Misconception Register
 
-| misconception | correction | evidence to request |
+| misconception | correction | learning output to request |
 |---------------|------------|---------------------|
 | “dependency parsing 只是 attention heatmap” | parsing 输出离散 tree，attention 是连续权重诊断 | 给出 heads/labels 并计算 UAS/LAS |
 | “beam search 找到全局最优翻译” | beam 是近似搜索，受 beam size、length penalty 和 model score 影响 | 比较 beam size 1/2/4 的候选 |
@@ -253,10 +253,10 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 
 ## Source And Update Boundary
 
-本模块内容属于稳定神经 NLP 基础，来源层级按 [External Source Inventory](external-source-inventory.md) 中的 Classic NLP / evaluation 记录维护。若后续课程加入新的 encoder-only 模型、NMT benchmark 或 parser 论文，不应替换本模块的基础定义；应作为 extension reading 加入 [reading-list.md](reading-list.md) 或 [Frontier Seminar Handout](frontier-seminar-handout.md)。
+本模块内容属于稳定神经 NLP 基础，来源层级按 External Source Inventory 中的 Classic NLP / evaluation 记录维护。若后续课程加入新的 encoder-only 模型、NMT benchmark 或 parser 论文，不应替换本模块的基础定义；应作为 extension reading 加入 [reading-list.md](reading-list.md) 或 Frontier Seminar Handout。
 
 发布前检查：
 
 - `.venv/bin/python assignments/ch11_classic_nlp/tests.py` 通过。
-- `.venv/bin/python verify_course.py` 通过。
+- `.venv/bin/python run_assignment_tests.py` 通过。
 - Lecture plan、slides outline、reading list 和 Ch11 assignment README 均能指向本模块。

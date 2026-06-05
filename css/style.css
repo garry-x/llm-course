@@ -186,13 +186,6 @@ body{
 .card p{margin-bottom:10px;color:var(--text-secondary)}
 .card ul,.card ol{margin:6px 0 14px 22px;color:var(--text-secondary)}
 .card li{margin-bottom:5px}
-.source-guidance{
-  border-left:4px solid var(--accent);
-  background:var(--accent-light)
-}
-.source-guidance h3{font-size:1.05rem}
-.source-guidance p,.source-guidance li{font-size:.9rem}
-
 /* ---- KaTeX Math ---- */
 .katex{font-size:1.05em!important}
 .katex-display{overflow-x:auto;overflow-y:hidden;padding:6px 0}

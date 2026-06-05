@@ -1,6 +1,6 @@
 # 10 周 / 20 讲 Lecture Plan
 
-本计划把 syllabus 的周安排展开为每周两讲。每讲包含目标、核心推导、课堂 demo、quick check 和课后证据，供教师备课、助教带讨论课和学生复盘使用。讲后证据如何转成下一讲 recap、worksheet、FAQ、handout、rubric 或 source patch，见 [Weekly Teaching Reflection and Adjustment Log](weekly-teaching-reflection-adjustment-log.md)。
+本计划把 syllabus 的周安排展开为每周两讲。每讲包含目标、核心推导、课堂 demo、quick check 和课后产出，供教师备课、助教带讨论课和学生复盘使用。讲后产出如何转成下一讲 recap、worksheet、FAQ、handout、rubric 或 source patch，见 Weekly Teaching Reflection and Adjustment Log。
 
 默认节奏：每讲 80-90 分钟。若采用 12 周版本，可把 Week 8 的经典 NLP 与 Week 10 的项目展示拆成更多讲次。
 
@@ -39,7 +39,7 @@ Quick check：
 - 给定 `[1, 1, 1]` 和 pair `(1, 1)`，非重叠 merge 后长度是多少？
 - byte-level BPE 为什么通常没有 OOV？
 
-课后证据：
+课后产出：
 
 - A1 Ch01 starter 初版。
 - 阅读复盘：BPE 论文中的 rare word 处理假设。
@@ -69,7 +69,7 @@ Quick check：
 - RoPE 为什么要求 head dim 成对旋转？
 - 类比推理是否由训练目标直接保证？
 
-课后证据：
+课后产出：
 
 - Ch02 embedding/RoPE 测试通过。
 - 书面题：RoPE 点积相对位置推导。
@@ -99,7 +99,7 @@ Quick check：
 - score shape 为什么是 `[B, H, T_q, T_k]`？
 - scaling 放在 softmax 前还是后？
 
-课后证据：
+课后产出：
 
 - Ch03 scaled attention 测试通过。
 - 书面题：attention scaling 推导。
@@ -129,7 +129,7 @@ Quick check：
 - 为什么 softmax 后乘 mask 通常是错误实现？
 - UAS 和 LAS 差别是什么？
 
-课后证据：
+课后产出：
 
 - A2 causal mask 失败案例分析。
 - 阅读复盘：Attention Is All You Need 的 mask 设计。
@@ -159,7 +159,7 @@ Quick check：
 - GQA 是否减少 Q heads？
 - 参数量节省和 KV cache 节省是不是同一件事？
 
-课后证据：
+课后产出：
 
 - Ch04 MHA/GQA 测试通过。
 - 书面题：GQA cache 压缩比。
@@ -189,7 +189,7 @@ Quick check：
 - RMSNorm 是否会减去均值？
 - MLA cache 低维是否意味着 attention 计算免费？
 
-课后证据：
+课后产出：
 
 - A3 block 测试通过。
 - 阅读复盘：MLA 或 RMSNorm 的一个 trade-off。
@@ -202,7 +202,7 @@ Quick check：
 
 - 串联 token embedding、position embedding、blocks、final norm 和 LM head。
 - 解释 decoder-only next-token objective。
-- 审计 GPT-2 small 参数量。
+- 分析 GPT-2 small 参数量。
 
 核心推导：
 
@@ -219,10 +219,10 @@ Quick check：
 - labels 为什么右移一位？
 - tied embedding 为什么影响参数量统计？
 
-课后证据：
+课后产出：
 
 - Ch06 GPTModel forward 和参数量测试通过。
-- 书面题：GPT-2 small 参数审计。
+- 书面题：GPT-2 small 参数分析。
 
 ## Week 4 Lecture 8: MoE、Routing 与 Load Balancing
 
@@ -249,7 +249,7 @@ Quick check：
 - 稀疏激活是否自动保证负载均衡？
 - total parameters 和 activated parameters 分别对应什么成本？
 
-课后证据：
+课后产出：
 
 - A4 MoE router 测试通过。
 - 阅读复盘：Switch/DeepSeekMoE 的负载均衡策略。
@@ -279,7 +279,7 @@ Quick check：
 - perplexity 是正确率吗？
 - warmup 解决什么早期训练问题？
 
-课后证据：
+课后产出：
 
 - Ch07 dataset/CE/AdamW/scheduler 测试通过。
 - 训练 capstone 提案。
@@ -309,7 +309,7 @@ Quick check：
 - resume 时只恢复 model 权重够不够？
 - tokens/s 下降可能来自哪些非模型原因？
 
-课后证据：
+课后产出：
 
 - 训练日志、checkpoint、resume 证明。
 - 阅读复盘：Chinchilla 或 ZeRO 的一个工程假设。
@@ -339,7 +339,7 @@ Quick check：
 - top-p 是否可能保留 0 个 token？
 - beam search 是否总比 sampling 好？
 
-课后证据：
+课后产出：
 
 - Ch08 sampling 测试通过。
 - 书面题：top-p 手算。
@@ -369,7 +369,7 @@ Quick check：
 - draft model 越强是否一定越划算？
 - 约束生成会改变模型概率分布吗？
 
-课后证据：
+课后产出：
 
 - A6 speculative decoding 输出统计。
 - 阅读复盘：speculative decoding 的失败条件。
@@ -399,7 +399,7 @@ Quick check：
 - 为什么不能对 `-100` 直接 gather？
 - merge LoRA 后推理还需要 adapter 分支吗？
 
-课后证据：
+课后产出：
 
 - Ch09 SFT/LoRA 测试通过。
 - 训练 capstone 初版。
@@ -429,7 +429,7 @@ Quick check：
 - DPO 为什么需要 reference model？
 - GRPO 是否解决 reward hacking？
 
-课后证据：
+课后产出：
 
 - A7 DPO/GRPO 测试通过。
 - 阅读复盘：R1/GRPO 的来源边界。
@@ -462,7 +462,7 @@ Quick check：
 - BERT 是 decoder-only 模型吗？
 - BLEU 高是否代表事实正确？
 
-课后证据：
+课后产出：
 
 - 经典 NLP 专题书面题。
 - 阅读复盘：BERT 或 seq2seq 的一个 inductive bias。
@@ -476,7 +476,7 @@ Quick check：
 
 - 比较 perplexity、BLEU、ROUGE、F1、EM、LLM-as-judge。
 - 讨论隐私、偏见、幻觉、评测污染和安全拒答。
-- 训练同伴 review 的证据标准和反馈质量。
+- 训练同伴 review 的评价标准和反馈质量。
 
 核心推导：
 
@@ -486,14 +486,14 @@ Quick check：
 课堂 demo：
 
 - 对同一输出分别用 ROUGE、EM 和人工判断打分。
-- 现场 review 一段项目摘要，标出最强证据和最大风险。
+- 现场 review 一段项目摘要，标出最强产出和最大风险。
 
 Quick check：
 
 - 为什么单一指标不能覆盖 LLM 质量？
 - review 里“建议更好”为什么不是可执行反馈？
 
-课后证据：
+课后产出：
 
 - 第 8 周同伴 review。
 - 经典 NLP/evaluation 书面题。
@@ -523,7 +523,7 @@ Quick check：
 - KV cache 公式里的 2 表示什么？
 - 平均延迟为什么不能替代 P95？
 
-课后证据：
+课后产出：
 
 - Ch10 KV cache 测试通过。
 - 推理项目提案。
@@ -553,14 +553,14 @@ Quick check：
 - RAG 失败一定是模型生成错了吗？
 - INT8 降低的是权重显存、KV cache 还是两者？
 
-课后证据：
+课后产出：
 
 - A9 RAG/quantization/benchmark 测试通过。
 - 推理 capstone 初版。
 
 ## Week 10 Lecture 19: Capstone Reproducibility Workshop
 
-对应材料：两个 capstone README、project report rubric、frontier source audit。
+对应材料：两个 capstone README、project report rubric、frontier reading notes。
 
 目标：
 
@@ -583,10 +583,10 @@ Quick check：
 - “本实验条件下成立”和“一般成立”有什么区别？
 - 没有失败案例的项目报告可信度如何？
 
-课后证据：
+课后产出：
 
 - capstone 最终报告草稿。
-- source audit 表格。
+- reading notes 表格。
 
 ## Week 10 Lecture 20: Final Presentation、Poster Session 与课程回顾
 
@@ -596,7 +596,7 @@ Quick check：
 
 - 完成项目展示、问答和同伴 review。
 - 回顾从 tokenizer 到 serving 的端到端数据流。
-- 明确学生最终应能独立复现和解释的证据。
+- 明确学生最终应能独立复现和解释的产出。
 
 核心推导：
 
@@ -610,10 +610,10 @@ Quick check：
 
 Quick check：
 
-- 你的项目中最强证据和最大风险各是什么？
+- 你的项目中最强产出和最大风险各是什么？
 - 哪个结论需要更多数据或更强 benchmark 才能支撑？
 
-课后证据：
+课后产出：
 
 - 最终报告、复现包、展示材料、同伴 review 修改说明。
 

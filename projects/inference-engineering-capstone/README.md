@@ -1,12 +1,12 @@
 # LLM Inference Engineering Capstone
 
-这个项目把课程最后几章落成一个可验收的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线检查清单。
+这个项目把课程最后几章落成一个可运行的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线检查清单。
 
 默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目的 CPU baseline、GPU/API 额度、成本记录和降级路径按 [Compute Resource and Cost Guide](../../docs/compute-resource-guide.md) 执行。
 
 ## 你要交付什么
 
-| 模块 | 最低要求 | 验收证据 |
+| 模块 | 最低要求 | 交付内容 |
 |------|----------|----------|
 | API | `POST /v1/chat/completions`，兼容 OpenAI 风格请求/响应 | `curl` 能返回 `choices[0].message.content` |
 | Streaming | `stream=true` 返回 SSE token 流 | 客户端逐 chunk 收到 `data: ...` |
@@ -31,7 +31,7 @@ pip install -r requirements.txt
 uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-一键验收：
+一键运行：
 
 ```bash
 python acceptance.py --port 8020 --requests 8 --concurrency 2
@@ -60,7 +60,7 @@ curl -N http://127.0.0.1:8000/v1/chat/completions \
 ```bash
 curl -s http://127.0.0.1:8000/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"mock-llm","response_format":{"type":"json_object"},"messages":[{"role":"user","content":"输出推理服务验收结果"}],"max_tokens":256}'
+  -d '{"model":"mock-llm","response_format":{"type":"json_object"},"messages":[{"role":"user","content":"输出推理服务运行结果"}],"max_tokens":256}'
 ```
 
 工具调用请求：
@@ -78,7 +78,7 @@ python benchmark.py --url http://127.0.0.1:8000 --requests 50 --concurrency 5 \
   --json-output benchmark_report.json
 ```
 
-SLO 门禁：
+SLO 目标：
 
 ```bash
 python slo_check.py --benchmark-json benchmark_report.json \
@@ -112,10 +112,10 @@ python capacity_plan.py \
 | TensorRT-LLM | 调用部署好的 TRT-LLM endpoint | 关注模型编译、engine 版本和 GPU 绑定 |
 | llama.cpp | 调用 llama-server OpenAI-compatible API | 关注 GGUF 量化、CPU/RAM、Apple Metal |
 
-## 上线验收清单
+## 上线检查清单
 
 - P95 TTFT、P95 TPOT、P99 total latency 已测。
-- SLO 门禁可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
+- SLO 目标可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
 - 最大 prompt 长度、最大输出长度、并发上限已测。
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
 - 每 1M tokens 的 GPU 成本已估算，且知道成本对 tokens/s 和 GPU 小时价格的敏感性。

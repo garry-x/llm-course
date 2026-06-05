@@ -43,7 +43,7 @@
     <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
     <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>评估证据：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告和上线检查清单；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告和上线检查清单；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
 </section>
 
@@ -296,8 +296,8 @@ print(f"DeepSeek-V4 MLA: KV Cache {v4['total_cache_gb']:.2f} GB "
 
   <h4>V4 如何组合：跨层交替</h4>
   <p>V4 模型卡描述的组合方式不是把两种注意力简单加权求和，而是<strong>跨 Transformer 层交替</strong>使用 CSA 与 HCA——稀疏精确层负责"看清局部 + 学到的关键远端 token"，超压缩全局层负责"廉价地看全局"。模型卡报告称，两者配合后，1M 上下文的单 token 计算量约为 V3.2 的 <strong>27%</strong>、KV Cache 约为 <strong>10%</strong>。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>V4 规格（按 2026-06-04 复核的模型卡）：</strong>V4-Pro 1.6T 总参 / 49B 激活，V4-Flash 284B；原生 <strong>1M token 上下文</strong>、384K 最大输出；训练 32T tokens。模型卡还报告了三档 reasoning effort modes；这可以理解为把可选思考预算产品化，但不应写成“R1 推理线已被官方并入或取代”。</div></div>
-  <div class="info-box tip"><span class="icon">📚</span><div><strong>来源说明：</strong>DSA 参考 <a href="https://api-docs.deepseek.com/news/news250929" target="_blank">DeepSeek V3.2-Exp 发布说明</a>；V4-Pro 规格、CSA+HCA、mHC、Muon、1M context 和 reasoning modes 参考 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro" target="_blank">DeepSeek-V4-Pro 模型卡</a>。Engram 在本章只作为“模型内建外部记忆 + LSH 检索”的待复核教学案例。阅读这些前沿段落时，请把它们视为<strong>模型技术报告/模型卡驱动的工程案例</strong>，与前 1-8 章的基础 Transformer 原理区分开来。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>V4 规格示例：</strong>V4-Pro 1.6T 总参 / 49B 激活，V4-Flash 284B；原生 <strong>1M token 上下文</strong>、384K 最大输出；训练 32T tokens。模型卡还报告了三档 reasoning effort modes；这可以理解为把可选思考预算产品化，但不应写成“R1 推理线已被官方并入或取代”。</div></div>
+  <div class="info-box tip"><span class="icon">📚</span><div><strong>阅读提示：</strong>DSA、CSA+HCA、mHC、Muon、1M context 和 reasoning modes 都适合作为“前沿系统如何围绕长上下文、显存、吞吐和推理预算做取舍”的工程案例。学习时应把它们与前 1-8 章的基础 Transformer 原理区分开来。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -903,7 +903,7 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
       <tr><td>耦合</td><td>松耦合（拼进 prompt）</td><td>与前向传播紧耦合</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>来源边界：</strong>Engram 是本节用于讲解“模型内建外部记忆 + LSH 检索”的前沿案例。具体 NIAH、MRCR 或 CorpusQA 数字必须以 V4 技术报告/模型卡的评测设置为准；未逐条复核前，不把单个 benchmark 数字作为作业或考试事实。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>阅读提示：</strong>Engram 在本节用于讲解“模型内建外部记忆 + LSH 检索”的前沿思路。重点是理解外部记忆如何改变检索时机、索引结构和前向传播路径，而不是背诵单个 benchmark 数字。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -976,7 +976,7 @@ class LSHMemory:
       <tr><td><strong>V3</strong></td><td>MoE + MTP + FP8</td><td><strong>删参数</strong> — 671B 总参，每步只激活 ~37B（约 5.5%）</td></tr>
       <tr><td><strong>R1</strong></td><td>GRPO</td><td><strong>删 Critic</strong> — 组内白化替代价值网络，纯 RL 涌现推理</td></tr>
       <tr><td><strong>V3.2</strong></td><td>DSA</td><td><strong>删注意力(稀疏)</strong> — 可学习 top-k，<span class="katex-inline" data-expr="O(n^2)\to O(n\cdot k)" aria-label="O(n^2)\to O(n\cdot k)" role="img"></span></td></tr>
-      <tr><td><strong>V4 / 前沿案例</strong></td><td>CSA+HCA + mHC + Muon；Engram 作待复核记忆案例</td><td><strong>删注意力(压缩)+加记忆</strong> — V4 模型卡报告 1M 上下文 27% FLOPs / 10% KV；Engram 具体 benchmark 不作为稳定事实</td></tr>
+      <tr><td><strong>V4 / 前沿案例</strong></td><td>CSA+HCA + mHC + Muon；Engram 外部记忆案例</td><td><strong>删注意力(压缩)+加记忆</strong> — 以长上下文、压缩注意力和外部记忆说明前沿系统的成本取舍</td></tr>
     </table>
   </div>
   <p>这个表格是一种教学抽象：每一代都在针对当时的瓶颈减少冗余计算、显存或训练开销。它不能替代完整技术报告，也不意味着未来一定会抛弃标准 Transformer；Mamba 等状态空间模型提供了另一条长序列建模路线，但在不同任务、硬件和生态下仍有各自取舍。</p>
@@ -1014,7 +1014,7 @@ class LSHMemory:
 <!-- ================================================================ -->
 <section class="card" id="s10-20">
   <h3>10.20 多模态 LLM——让模型看见世界</h3>
-  <p>许多前沿助理模型已经把文本、图像、音频或视频能力接入同一个交互接口。课程在这里关注稳定的架构抽象：把非文本模态编码为向量序列，再投影到 LLM 可以处理的表示空间；具体产品能力、上下文长度和延迟必须按模型卡或 API 文档复核。</p>
+  <p>许多前沿助理模型已经把文本、图像、音频或视频能力接入同一个交互接口。课程在这里关注稳定的架构抽象：把非文本模态编码为向量序列，再投影到 LLM 可以处理的表示空间；具体产品能力、上下文长度和延迟会随模型和 API 版本变化。</p>
 
   <h4>核心架构：Vision Encoder + Projection + LLM</h4>
   <ol>
@@ -1118,17 +1118,7 @@ def forward(image, text_prompt):
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
-</section>
-<section class="card source-guidance">
-  <h3>本章来源与准确性复核</h3>
-  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
-  <ul>
-    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
-    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
-    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
-  </ul>
-</section>
-</article>
+</section></article>
 
 <nav class="chapter-nav">
   <a href="ch09.html" class="btn btn-outline" rel="prev">← 上一章</a>

@@ -39,8 +39,8 @@
       <span class="hero-tag">🤖 融入 DeepSeek V2–V4</span>
       <span class="hero-tag">📱 iPad Pro 优化</span>
     </div>
-    <h2>从代码出发，构建大语言模型</h2>
-    <p>10 章 · 127 小节 · 103 道练习<br>从 BPE Tokenizer 到 GRPO 推理对齐，每一行代码都值得自己敲一遍。</p>
+    <h2>系统学习大语言模型：表示、架构、训练、生成、对齐与服务</h2>
+    <p>10 章 · 127 小节 · 103 道练习<br>先建立 LLM 的完整计算图，再逐步进入训练工程、推理工程和对齐方法。</p>
     <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
     <div class="hero-deep-links" aria-label="章节首节快速入口">
       <a href="chapters/ch01.html#s1-1">Ch01</a>
@@ -57,14 +57,23 @@
   </section>
 
   <section class="learning-path">
-    <h3>初学者推荐路线</h3>
+    <h3>LLM 知识主线</h3>
     <div class="path-grid">
-      <div class="path-step"><strong>第一遍：主线必学</strong><span>Ch01-Ch06，把文本变成 token，搭出能前向传播的 GPT。</span></div>
-      <div class="path-step"><strong>第二遍：跑起来</strong><span>Ch07-Ch08，理解训练目标、损失、采样和生成质量。</span></div>
-      <div class="path-step"><strong>第三遍：进阶选读</strong><span>Ch09-Ch10，再看对齐、RAG、推理引擎和 DeepSeek 前沿技术。</span></div>
+      <div class="path-step"><strong>1. 表示层</strong><span>Ch01-Ch02：BPE、token id、embedding lookup、位置编码与 RoPE，回答“文本如何进入神经网络”。</span></div>
+      <div class="path-step"><strong>2. Transformer 核心</strong><span>Ch03-Ch06：Q/K/V、causal mask、MHA/GQA/MLA、Norm、FFN、MoE 与完整 GPT 前向传播。</span></div>
+      <div class="path-step"><strong>3. 训练闭环</strong><span>Ch07：next-token maximum likelihood、cross entropy、PPL、AdamW、scheduler、checkpoint 与分布式训练。</span></div>
+      <div class="path-step"><strong>4. 生成与推理</strong><span>Ch08-Ch10：prefill/decode、sampling、speculative decoding、KV cache、FlashAttention、RAG 与推理服务。</span></div>
+      <div class="path-step"><strong>5. 微调与对齐</strong><span>Ch09：SFT、LoRA、preference modeling、DPO、GRPO，以及对齐收益和能力退化的权衡。</span></div>
+      <div class="path-step"><strong>6. 前沿取舍</strong><span>贯穿 Ch04-Ch10：DeepSeek MLA/MoE/FP8/GRPO/稀疏注意力作为工程案例，而不是孤立热点。</span></div>
     </div>
-    <div class="role-actions">
-      <a class="role-project-link" href="docs/university-course-quality-audit.md">高校课程质量审计与升级路线 →</a>
+  </section>
+
+  <section class="learning-path">
+    <h3>三遍学习法</h3>
+    <div class="path-grid">
+      <div class="path-step"><strong>第一遍：能画出计算图</strong><span>读 Ch01-Ch06，手写核心模块，重点检查每一步输入、输出、shape、mask 和参数来源。</span></div>
+      <div class="path-step"><strong>第二遍：能让 loss 下降</strong><span>读 Ch07-Ch08，跑训练、看曲线、解释 PPL、采样温度、top-p 和重复生成失败。</span></div>
+      <div class="path-step"><strong>第三遍：能做系统取舍</strong><span>读 Ch09-Ch10，对比微调/对齐/RAG/推理引擎，在质量、延迟、显存、成本之间做工程判断。</span></div>
     </div>
   </section>
 
@@ -79,7 +88,7 @@
       <span>RAG / Agent 上线评测</span>
     </div>
     <div class="role-actions">
-      <a class="role-project-link" href="inference-engineer-curriculum.html">毕业验收路线 →</a>
+      <a class="role-project-link" href="inference-engineer-curriculum.html">学习路线 →</a>
       <a class="role-project-link" href="projects/inference-engineering-capstone/">最终项目：部署 OpenAI-compatible 推理服务 →</a>
     </div>
   </section>
@@ -87,15 +96,15 @@
   <section class="role-path">
     <h3>LLM 训练工程师能力地图</h3>
     <div class="role-grid">
-      <span>数据审计与 Token 预算</span>
+      <span>数据分析与 Token 预算</span>
       <span>PyTorch 训练循环</span>
       <span>Loss / Optimizer / Scheduler</span>
       <span>Checkpoint 与 Resume</span>
-      <span>Metrics 与验证集监控</span>
+      <span>Metrics 与开发集监控</span>
       <span>FSDP / ZeRO / 训练成本</span>
     </div>
     <div class="role-actions">
-      <a class="role-project-link" href="training-engineer-curriculum.html">毕业验收路线 →</a>
+      <a class="role-project-link" href="training-engineer-curriculum.html">学习路线 →</a>
       <a class="role-project-link" href="projects/training-engineering-capstone/">最终项目：交付 PyTorch 训练闭环 →</a>
     </div>
   </section>

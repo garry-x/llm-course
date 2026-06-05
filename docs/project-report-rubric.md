@@ -1,6 +1,6 @@
 # Capstone 项目报告 Rubric
 
-本 rubric 用于默认最终项目、训练工程和推理工程两个 Capstone。自动验收只证明项目能跑通；高校课程评分还需要检查复现性、实验设计、统计不确定性、错误分析和工程判断。默认最终项目的任务包见 [Default Final Project Guide](default-final-project-guide.md)，学生最终报告建议按 [Project Report Template and Reproducibility Checklist](project-report-template.md) 提交；proposal、milestone、final report、presentation 和 archive candidate 的提交包按 [Project Submission Dossier](project-submission-dossier.md) 复核；展示后的项目答辩和个人口头追问按 [Capstone Defense and Oral Exam Question Bank](capstone-defense-oral-exam-bank.md) 记录；实验比较、confidence interval、seed sensitivity 和 significance claim gate 按 [Experimental Rigor and Evaluation Statistics Guide](experimental-rigor-evaluation-statistics.md) 执行；安全、伦理与社会影响案例按 [Safety and Societal Impact Casebook](safety-societal-impact-casebook.md) 复核。A/B/C/not_passing 报告证据样例见 [Project Report Exemplar Pack](project-report-exemplar-pack.md)。
+本 rubric 用于默认最终项目、训练工程和推理工程两个 Capstone。自动检查只证明项目能跑通；高校课程评分还需要检查复现性、实验设计、统计不确定性、错误分析和工程判断。默认最终项目的任务包见 Default Final Project Guide，学生最终报告建议按 Project Report Template and Reproducibility Checklist 提交；proposal、milestone、final report、presentation 和 archive candidate 的提交包按 Project Submission Dossier 检查；展示后的项目答辩和个人口头追问按 Capstone Defense and Oral Exam Question Bank 记录；实验比较、confidence interval、seed sensitivity 和 significance claim gate 按 Experimental Rigor and Evaluation Statistics Guide 执行；安全、伦理与社会影响案例按 Safety and Societal Impact Casebook 检查。A/B/C/not_passing 报告产出样例见 Project Report Exemplar Pack。
 
 ## 通用评分
 
@@ -13,12 +13,12 @@
 | 错误分析 | 14 | 至少 3 个失败案例，按原因分类并提出改进 |
 | 工程判断 | 14 | 能解释成本、延迟、稳定性、内存或数据质量取舍 |
 | 表达与引用 | 8 | 报告结构清晰，引用论文/文档/模型卡，图表可读 |
-| 数据与伦理 | 8 | 按 [Data and Ethics Review](data-ethics-review.md) 提交数据来源、许可证、隐私、偏见、污染、安全边界和残余风险 |
-| 贡献与归档 | 6 | 团队项目有贡献声明，自定义项目说明外部协助；优秀项目归档需符合 [Capstone Project Gallery and Idea Bank](capstone-project-gallery.md) |
+| 数据与伦理 | 8 | 按 Data and Ethics Review 提交数据来源、许可证、隐私、偏见、污染、安全边界和残余风险 |
+| 贡献与归档 | 6 | 团队项目有贡献声明，自定义项目说明外部协助；优秀项目归档需符合 Capstone Project Gallery and Idea Bank |
 
 ## 训练工程加分检查
 
-- 数据审计覆盖长度分布、重复、异常样本和 token 预算。
+- 数据分析覆盖长度分布、重复、异常样本和 token 预算。
 - 训练曲线包含 train/val loss、perplexity、lr、grad_norm、tokens/s。
 - checkpoint resume 后 step 单调增加，配置和优化器状态被恢复。
 - 报告说明 loss spike、NaN、过拟合或吞吐下降的排查顺序。
@@ -49,5 +49,5 @@
 - 只展示成功样例，没有失败分析。
 - 指标只报告平均值，没有 P95/P99 或边界情况。
 - 写“显著提升”“稳健”“更快”“更安全”或“泛化”，但没有 confidence interval、paired comparison、seed sensitivity、load-test variance 或明确 single_seed_limit。
-- 没有 split_card、metric_card、uncertainty_record 或 claim_audit。
+- 没有 split_card、metric_card、uncertainty_record 或 claim_profile。
 - 缺少必要的数据与伦理审查，或公开了敏感数据、密钥、私有文档、未授权数据。

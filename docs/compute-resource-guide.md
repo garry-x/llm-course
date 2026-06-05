@@ -1,6 +1,6 @@
 # Compute Resource and Cost Guide
 
-本指南用于管理课程中的 CPU/GPU、云额度、API 调用和成本复现实验。它补充 [课程 Syllabus](syllabus.md)、[LLM Training Engineering Capstone](../projects/training-engineering-capstone/)、[LLM Inference Engineering Capstone](../projects/inference-engineering-capstone/)、[Capstone Proposal and Milestone Guide](capstone-proposal-milestone.md)、[Data and Ethics Review](data-ethics-review.md) 和 [Course Staff Runbook](staff-runbook.md)。
+本指南用于管理课程中的 CPU/GPU、云额度、API 调用和成本复现实验。它补充 [课程 Syllabus](syllabus.md)、[LLM Training Engineering Capstone](../projects/training-engineering-capstone/)、[LLM Inference Engineering Capstone](../projects/inference-engineering-capstone/)、Capstone Proposal and Milestone Guide、Data and Ethics Review 和 Course Staff Runbook。
 
 高校 LLM 课程不能只要求学生“跑大模型”，还必须说明：哪些任务 CPU 可完成，哪些任务需要 GPU，额度如何公平分配，成本如何记录，失败时如何降级，项目报告如何证明实验不是浪费算力或不可复现。
 
@@ -16,7 +16,7 @@
 
 | 档位 | 适用任务 | 资源 | 通过标准 |
 |------|----------|------|----------|
-| CPU baseline | Ch01-Ch11 作业、两个 capstone acceptance | 4-8 CPU cores, 8-16GB RAM | `.venv/bin/python verify_course.py` 和公开测试通过 |
+| CPU baseline | Ch01-Ch11 作业、两个 capstone acceptance | 4-8 CPU cores, 8-16GB RAM | `.venv/bin/python run_assignment_tests.py` 和公开测试通过 |
 | Small GPU | LoRA/SFT 小实验、训练 capstone 扩展 | 1 张 8-24GB GPU | 相同 seed 下日志、loss 曲线和 checkpoint 可复现 |
 | Serving GPU | vLLM/SGLang/llama.cpp/TensorRT-LLM 替换实验 | 1 张 24-80GB GPU 或量化 CPU/GPU 混合 | 报告 TTFT、TPOT、P95/P99、tokens/s 和显存 |
 | Cloud/API budget | RAG、结构化输出、工具调用或外部模型评测 | 固定额度 API key 或云 credit | 记录模型名、日期、价格假设、请求数和失败重试 |
@@ -63,7 +63,7 @@
 | 失败次数 | failed runs and first failure reason |
 | 降级路径 | CPU command or smaller config that reproduces the claim |
 
-项目报告中的成本表不得只写“用了 GPU”；必须能让助教复核数字是否来自日志、容量规划或平台账单。
+项目报告中的成本表不得只写“用了 GPU”；必须能让助教检查数字是否来自日志、容量规划或平台账单。
 
 ## CPU Fallback 要求
 
@@ -80,7 +80,7 @@
 ## 安全与数据边界
 
 - 不上传包含 PII、受限许可证或未获授权的数据到外部云或第三方 API。
-- 使用外部 API 时，必须按 [Data and Ethics Review](data-ethics-review.md) 检查数据来源、隐私、模型卡和使用条款。
+- 使用外部 API 时，必须按 Data and Ethics Review 检查数据来源、隐私、模型卡和使用条款。
 - 不把课程 API key、云凭证或私有 endpoint 写入代码、日志、报告或截图。
 - 对可能产生有害内容的评测，必须记录安全边界和拒答策略；不得用共享额度做无约束红队探索。
 - 若平台条款禁止某类 benchmark、数据用途或模型用途，课程要求自动降级，不得以项目需求为理由绕过。
@@ -102,7 +102,7 @@
 |--------|----------|
 | CPU baseline | 所有必交作业和 capstone acceptance 无 GPU 可通过 |
 | 配额规则 | 共享资源、云额度和 API key 有公平使用规则 |
-| 成本模板 | 项目报告有可复核的资源、运行时长、成本和失败重跑记录 |
+| 成本模板 | 项目报告有可检查的资源、运行时长、成本和失败重跑记录 |
 | 降级路径 | 每个 GPU/API 实验有 CPU 或小配置 fallback |
 | 安全边界 | 数据、隐私、凭证和平台条款有明确约束 |
 | Staff 流程 | staff runbook 或 operations log 能记录额度、事故和改进项 |

@@ -1,12 +1,12 @@
 # Python and PyTorch Review Session
 
-本 handout 用于 Week 1 Python Review Session 和 Week 2 PyTorch Tutorial Session。它补充 [Prerequisite Diagnostic](prerequisite-diagnostic.md)、[数学与 PyTorch 先修复习](math-prerequisites.md)、[Environment and Reproducibility Guide](environment-reproducibility.md)、[Course Calendar and Deadline Ledger](course-calendar-deadline-ledger.md)、[10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[Student FAQ and Troubleshooting Guide](student-faq-troubleshooting.md) 和 [Assignment Submission and Release Guide](assignment-submission-guide.md)。
+本 handout 用于 Week 1 Python Review Session 和 Week 2 PyTorch Tutorial Session。它补充 Prerequisite Diagnostic、[数学与 PyTorch 先修复习](math-prerequisites.md)、Environment and Reproducibility Guide、Course Calendar and Deadline Ledger、[10 周 / 20 讲 Lecture Plan](lecture-plan.md)、Student FAQ and Troubleshooting Guide 和 Assignment Submission and Release Guide。
 
 参照 CS224N Winter 2026 公开 schedule：Week 1 安排 Python Review Session，Week 2 安排 PyTorch Tutorial Session。本课程把两次 review 合并为可移植 handout：学生先确认环境和 Python helper，再进入 PyTorch tensor、`nn.Module`、loss、autograd 和作业提交日志。
 
 ## Session 目标
 
-| Session | 时长 | 面向对象 | 通过证据 |
+| Session | 时长 | 面向对象 | 通过产出 |
 |---------|:--:|----------|----------|
 | Python Review Session | 80-90 分钟 | Python 基础 Borderline、跨语言转入、未完成 Ch01 helper 的学生 | 能实现 pair counting、non-overlapping merge、文件读取和异常边界 |
 | PyTorch Tutorial Session | 80-90 分钟 | PyTorch 基础 Borderline、shape 推导不稳、未完成 Ch02 starter 的学生 | 能解释 `[B,T,D]` 到 logits，计算 next-token CE，并定位一个失败测试 |
@@ -17,12 +17,12 @@
 
 ```bash
 .venv/bin/python -c "import sys, torch; print(sys.version.split()[0], torch.__version__, torch.cuda.is_available())"
-.venv/bin/python verify_course.py
+.venv/bin/python run_assignment_tests.py
 STUDENT_MODULE=starter .venv/bin/python assignments/ch01_bpe/tests.py
 STUDENT_MODULE=starter .venv/bin/python assignments/ch02_embeddings/tests.py
 ```
 
-如果 `.venv/bin/python verify_course.py` 失败，先按 [Environment and Reproducibility Guide](environment-reproducibility.md) 记录 `Python executable`、`PyTorch version`、`CUDA available` 和第一个失败项。
+如果 `.venv/bin/python run_assignment_tests.py` 失败，先按 Environment and Reproducibility Guide 记录 `Python executable`、`PyTorch version`、`CUDA available` 和第一个失败项。
 
 ## Python Review Session 议程
 
@@ -66,7 +66,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch02_embeddings/tests.py
 - logits `[B,T,V]` 和 labels `[B,T]` 计算 CE 时，batch/time 维度必须对齐。
 - `.reshape` 比 `.view` 更适合可能不连续的张量。
 - `model.train()` / `model.eval()` 会影响 dropout 或部分 normalization 行为。
-- `loss.backward()` 后应检查关键参数 `.grad is not None`，但不要把梯度值是否全相同当作正确性证据。
+- `loss.backward()` 后应检查关键参数 `.grad is not None`，但不要把梯度值是否全相同当作正确性产出。
 
 ## 常见失败与处理
 
@@ -99,16 +99,16 @@ Question for office hours:
 
 | 时间 | 动作 |
 |------|------|
-| Week 1 前 | 根据 [Prerequisite Diagnostic](prerequisite-diagnostic.md) 标记 Python/PyTorch Borderline 学生 |
+| Week 1 前 | 根据 Prerequisite Diagnostic 标记 Python/PyTorch Borderline 学生 |
 | Python Review Session 前 | 确认 Ch01 helper tests 能在 `.venv/bin/python` 下运行 |
 | PyTorch Tutorial Session 前 | 确认 Ch02 embedding/RoPE tests 能在 CPU 下运行 |
-| Session 后 24 小时 | 将高频失败模式写入 [Student FAQ and Troubleshooting Guide](student-faq-troubleshooting.md) 或 operations log |
+| Session 后 24 小时 | 将高频失败模式写入 Student FAQ and Troubleshooting Guide 或 operations log |
 | Week 2 前 | 对仍不能解释 shape trace 的学生安排 office hours 检查 |
 
 ## 发布前 Checklist
 
-- [Course Calendar and Deadline Ledger](course-calendar-deadline-ledger.md) 中列出 Python Review Session 和 PyTorch Tutorial Session。
+- Course Calendar and Deadline Ledger 中列出 Python Review Session 和 PyTorch Tutorial Session。
 - [10 周 / 20 讲 Lecture Plan](lecture-plan.md) 的 Week 1/2 能映射到本 handout。
-- [Prerequisite Diagnostic](prerequisite-diagnostic.md) 的 Borderline 学生有明确补救路径。
-- [Environment and Reproducibility Guide](environment-reproducibility.md) 的命令与本 handout 一致。
-- 运行 `.venv/bin/python verify_course.py`；正式期末发布或站点大改版前运行 `.venv/bin/python verify_course.py --capstone --training`。
+- Prerequisite Diagnostic 的 Borderline 学生有明确补救路径。
+- Environment and Reproducibility Guide 的命令与本 handout 一致。
+- 运行 `.venv/bin/python run_assignment_tests.py`；正式期末发布或站点大改版前运行 `.venv/bin/python run_assignment_tests.py`。

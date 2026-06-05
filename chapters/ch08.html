@@ -43,7 +43,7 @@
     <li><strong>课后阅读：</strong>比较 greedy、beam、temperature、top-k、top-p、typical sampling 和约束解码在质量/多样性/可靠性上的取舍。</li>
     <li><strong>本章产出：</strong>一个能用不同采样策略生成文本的 Generator。</li>
     <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
-    <li><strong>评估证据：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
+    <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
   </ul>
 </section>
 
@@ -479,7 +479,7 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
     <li><strong>训练增益：</strong>更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测下下个 token。这可能促使模型学习更长距离的依赖。DeepSeek-V3 报告给出过 MTP 带来的训练效率收益；具体幅度依赖模型、数据和训练设置，正文不把它外推为通用比例。</li>
     <li><strong>推理增益：</strong>MTP Head 在推理时可以作为<strong>推测解码的草稿模型</strong>。由于 MTP Head 的参数远小于完整 Transformer，它们可以快速生成候选 token，然后由主模型一次性验证。</li>
   </ul>
-  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 报告选择 <span class="katex-inline" data-expr="D = 1" aria-label="D = 1" role="img"></span>（额外预测 1 个 token），因为其实验中更大的 <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 带来的边际收益递减。若后续模型卡或技术报告声称把 MTP 与推测解码更紧密结合，应按 <a href="../docs/frontier-source-audit.md">前沿模型来源等级与复核记录</a> 重新标注来源和日期。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 报告选择 <span class="katex-inline" data-expr="D = 1" aria-label="D = 1" role="img"></span>（额外预测 1 个 token），因为其实验中更大的 <span class="katex-inline" data-expr="D" aria-label="D"></span> 带来的边际收益递减。学习这里的重点是理解“多预测头可以服务训练，也可以服务草稿生成”，而不是记住某个固定收益比例。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -626,7 +626,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
       <tr><td>DeepSeek-V4 模型卡</td><td>模型卡报告 1M context</td><td>说明前沿模型规格必须带来源和日期</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>来源边界：</strong>上表只作“长上下文规格如何阅读”的教学示例。正式作业或项目报告若引用具体上下文长度、价格或 benchmark，必须写明模型版本、来源链接、访问日期和评测设置；课程发布前按 <a href="../docs/external-source-verification.md">External Source Verification Guide</a> 复核。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>阅读提示：</strong>长上下文数字经常随模型版本、API 形态和计费策略变化。学习时应把这些数字当作理解工程取舍的例子：窗口越长，注意力、KV Cache、检索质量、延迟和价格都需要一起分析。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -752,17 +752,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
-</section>
-<section class="card source-guidance">
-  <h3>本章来源与准确性复核</h3>
-  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
-  <ul>
-    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
-    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
-    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
-  </ul>
-</section>
-</article>
+</section></article>
 
 <nav class="chapter-nav">
   <a href="ch07.html" class="btn btn-outline" rel="prev">← 上一章</a>

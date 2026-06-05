@@ -38,9 +38,9 @@ def main() -> int:
     except ModuleNotFoundError as exc:
         raise RuntimeError("PyTorch is required. Run: pip install -r requirements.txt") from exc
 
-    audit = json.loads(run([sys.executable, "data_audit.py", "--data", "sample_corpus.txt"]))
-    require(audit["characters"] >= 128, "sample corpus is too small")
-    require(audit["duplicate_non_empty_lines"] >= 1, "data audit should detect the intentional duplicate line")
+    profile = json.loads(run([sys.executable, "data_profile.py", "--data", "sample_corpus.txt"]))
+    require(profile["characters"] >= 128, "sample corpus is too small")
+    require(profile["duplicate_non_empty_lines"] >= 1, "data profile should detect the intentional duplicate line")
 
     plan_output = run(
         [

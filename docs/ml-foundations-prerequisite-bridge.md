@@ -1,10 +1,10 @@
 # ML Foundations Prerequisite Bridge
 
-本 handout 补齐 CS224N 风格先修中的 college calculus、probability/statistics 和 foundations of machine learning。它不是独立机器学习课程，而是把学生需要带入本课程的最小概念映射到 LLM 章节、作业、书面题和项目报告。它补充 [Prerequisite Diagnostic](prerequisite-diagnostic.md)、[数学与 PyTorch 先修复习](math-prerequisites.md)、[Python and PyTorch Review Session](python-pytorch-review-session.md)、[逐周阅读清单与复盘 Handout](reading-list.md)、[Course Outcome Map](course-outcome-map.md) 和 [Project Report Template and Reproducibility Checklist](project-report-template.md)。
+本 handout 补齐 CS224N 风格先修中的 college calculus、probability/statistics 和 foundations of machine learning。它不是独立机器学习课程，而是把学生需要带入本课程的最小概念映射到 LLM 章节、作业、书面题和项目报告。它补充 Prerequisite Diagnostic、[数学与 PyTorch 先修复习](math-prerequisites.md)、[Python and PyTorch Review Session](python-pytorch-review-session.md)、[逐周阅读清单与复盘 Handout](reading-list.md)、Course Outcome Map 和 Project Report Template and Reproducibility Checklist。
 
 ## 覆盖范围
 
-| 先修主题 | 本课程用途 | 最低掌握证据 |
+| 先修主题 | 本课程用途 | 最低掌握产出 |
 |----------|------------|--------------|
 | Calculus / gradients | loss、backprop、optimizer、LayerNorm、DPO/GRPO | 能解释 chain rule、partial derivative、gradient direction 和局部线性近似 |
 | Probability | language model likelihood、softmax、sampling、perplexity、preference data | 能写出条件概率、联合分解、期望、方差和 log probability |
@@ -16,7 +16,7 @@
 
 ## Diagnostic Add-on
 
-若学生未修过系统 ML 课程，应在 Week 0 / Week 1 完成以下短诊断。它可作为 [Prerequisite Diagnostic](prerequisite-diagnostic.md) 的补充分项。
+若学生未修过系统 ML 课程，应在 Week 0 / Week 1 完成以下短诊断。它可作为 Prerequisite Diagnostic 的补充分项。
 
 | 模块 | 题目 | 通过标准 |
 |------|------|----------|
@@ -89,7 +89,7 @@ log P(x_1, ..., x_T) = sum_t log P(x_t | x_<t)
 
 ## Mini-Lecture: ML Objectives and Generalization
 
-| 概念 | 最小解释 | 本课程证据 |
+| 概念 | 最小解释 | 本课程产出 |
 |------|----------|------------|
 | maximum likelihood | 提高数据中目标 token 或标签的概率 | Ch07 CE、Ch09 SFT |
 | empirical risk | 在样本上的平均 loss | train/val loss table |
@@ -107,9 +107,9 @@ log P(x_1, ..., x_T) = sum_t log P(x_t | x_<t)
 - 失败案例如何分类。
 - 哪个结论只在当前数据、seed、模型或硬件条件下成立。
 
-## Project Evidence Checklist
+## Project Learning output Checklist
 
-| evidence_id | 要求 |
+| learning output_id | 要求 |
 |-------------|------|
 | objective_mapping | loss、reward、metric 或 SLO 对应项目目标 |
 | baseline_result | 至少一个简单 baseline 或 no-system baseline |
@@ -122,7 +122,7 @@ log P(x_1, ..., x_T) = sum_t log P(x_t | x_<t)
 
 ## 补救任务
 
-| 薄弱项 | 补救任务 | 验收 |
+| 薄弱项 | 补救任务 | 检查 |
 |--------|----------|------|
 | calculus | 手推 CE 梯度或 DPO log-ratio 方向 | 能解释更新方向，而不是只写公式 |
 | probability | 完成 language model likelihood 分解和 top-p/top-k 对比 | 能说明概率分布和采样候选集 |
@@ -142,4 +142,4 @@ log P(x_1, ..., x_T) = sum_t log P(x_t | x_<t)
 
 - syllabus、prerequisite diagnostic、math prerequisites、reading list 和 CS224N crosswalk 均链接本 handout。
 - `scripts/build_course_site_release.py` 把本文件列入学生安全文档。
-- `.venv/bin/python verify_course.py` 通过。
+- `.venv/bin/python run_assignment_tests.py` 通过。

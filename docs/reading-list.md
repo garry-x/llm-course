@@ -1,16 +1,16 @@
 # 逐周阅读清单与复盘 Handout
 
-本 handout 把 10 周课程的阅读材料集中为可布置、可评分、可引用的清单。阅读复盘评分样例和 A/B/C/not-passing 校准标准见 [Paper Recap Calibration Pack](paper-recap-calibration-pack.md)；可直接用于课堂讨论、reading recap、paper-to-code drill、quiz/checkpoint 和 capstone clinic 的问题见 [Reading Discussion Question Bank](reading-discussion-question-bank.md)；核心论文到章节、推导、作业测试和项目证据的映射见 [Paper-to-Code Traceability Matrix](paper-to-code-traceability-matrix.md)；每周阅读时间预算和降载规则见 [Workload and Pacing Calibration](workload-pacing-calibration.md)。阅读分为三类：
+本 handout 把 10 周课程的阅读材料集中为可布置、可评分、可引用的清单。阅读复盘评分样例和 A/B/C/not-passing 校准标准见 Paper Recap Calibration Pack；可直接用于课堂讨论、reading recap、paper-to-code drill、quiz/checkpoint 和 capstone clinic 的问题见 Reading Discussion Question Bank；核心论文到章节、推导、作业测试和项目产出的映射见 Paper-to-Code Traceability Matrix；每周阅读时间预算和降载规则见 Workload and Pacing Calibration。阅读分为三类：
 
 - 必读：课堂讨论和作业默认依赖。
 - 选读：用于项目、报告或加深理解。
-- 来源审计：用于训练学生区分论文、官方文档、模型卡、博客和社区材料。
+- 来源辨析：用于训练学生区分论文、官方文档、模型卡、博客和社区材料。
 
 每次阅读复盘必须写明：阅读对象、核心结论、一个公式或实验设计、一个局限、与本课程代码或项目的连接、引用链接和访问日期。
 
 ## Week 0: 先修与 ML Foundations Bridge
 
-对应材料：[Prerequisite Diagnostic](prerequisite-diagnostic.md)、[数学与 PyTorch 先修复习](math-prerequisites.md)、[ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)。
+对应材料：Prerequisite Diagnostic、[数学与 PyTorch 先修复习](math-prerequisites.md)、[ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)。
 
 必读：
 
@@ -30,7 +30,7 @@
 | 核心结论 | 25 | 能用自己的话说明论文或文档解决的问题、方法和结论 |
 | 技术细节 | 25 | 至少解释一个公式、结构图、算法步骤或实验设置 |
 | 代码连接 | 20 | 明确指出对应章节代码、作业函数或 capstone 模块 |
-| 来源审计 | 20 | 标注来源等级、发布日期或访问日期，并说明不确定性 |
+| 来源辨析 | 20 | 标注来源等级、发布日期或访问日期，并说明不确定性 |
 | 批判性问题 | 10 | 提出一个可讨论的问题、反例、失败模式或复现实验 |
 
 ## Week 1: Tokenization 与 Word Vectors
@@ -130,7 +130,7 @@
 复盘问题：
 
 - AdamW 的 weight decay 为什么不能简单等同于 Adam 里的 L2 penalty？
-- 训练日志里 loss 下降但验证集变差时，应该先查哪些证据？
+- 训练日志里 loss 下降但开发集变差时，应该先查哪些产出？
 
 ## Week 6: Generation、Search 与 Speculative Decoding
 
@@ -216,17 +216,17 @@
 - TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？
 - RAG 评测为什么必须同时看检索质量和生成质量？
 
-## Week 10: Capstone 报告、复现与前沿来源审计
+## Week 10: Capstone 报告、复现与前沿来源辨析
 
-对应材料：两个 capstone README、项目报告 rubric、展示互评 rubric、前沿来源审计、[Frontier Seminar Handout](frontier-seminar-handout.md)。
+对应材料：两个 capstone README、项目报告 rubric、展示互评 rubric、前沿来源辨析、Frontier Seminar Handout。
 
 必读：
 
 - Stanford CS224N coursework/final project 页面：重点看 assignment、project proposal、milestone、poster/report 的分工。
 - 本课程 [Capstone 项目报告 Rubric](project-report-rubric.md)。
-- 本课程 [项目展示与同伴 Review Rubric](presentation-peer-review.md)。
-- 本课程 [前沿模型来源等级与复核记录](frontier-source-audit.md)。
-- 本课程 [Frontier Seminar Handout](frontier-seminar-handout.md) 中 interpretability、multimodality、social impact 和 open questions 的最低交付。
+- 本课程 项目展示与同伴 Review Rubric。
+- 本课程 前沿模型来源等级与检查记录。
+- 本课程 Frontier Seminar Handout 中 interpretability、multimodality、social impact 和 open questions 的最低交付。
 
 选读：
 
@@ -236,7 +236,7 @@
 
 复盘问题：
 
-- 你的项目最强证据是什么？最弱证据是什么？
+- 你的项目最强产出是什么？最弱产出是什么？
 - 报告中哪些结论只能说“本实验条件下成立”，不能推广为一般事实？
 
 ## 来源等级速查
@@ -258,7 +258,7 @@
 
 1. 核心问题：
 2. 方法或公式：
-3. 实验或证据：
+3. 实验或产出：
 4. 局限或失败模式：
 5. 对应课程代码/作业：
 6. 我的问题：

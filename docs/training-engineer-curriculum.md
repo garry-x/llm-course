@@ -1,20 +1,20 @@
-# LLM 训练工程师课程路线与毕业验收
+# LLM 训练工程师课程路线与学习成果
 
 这份文档把课程中的模型实现、训练循环、微调对齐和大规模训练优化整理成“LLM 训练工程师”岗位路线。训练工程师的核心产出不是一个 notebook，而是一套可复现、可恢复、可观测、成本可解释的训练系统。
 
 ## 目标画像
 
-完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做验证集评估，并能解释显存、吞吐、GPU 小时和训练成本之间的关系。
+完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，并能解释显存、吞吐、GPU 小时和训练成本之间的关系。
 
 ## 学习路径
 
-| 阶段 | 章节与项目 | 主要问题 | 产出证据 |
+| 阶段 | 章节与项目 | 主要问题 | 产出产出 |
 |------|------------|----------|----------|
 | 1. 模型可训练性 | Ch01-Ch06 | 数据如何变成 logits，梯度如何穿过模型 | 能解释 token、shape、参数量、梯度路径 |
 | 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint |
 | 3. 微调与对齐 | Ch09 | 如何把预训练模型变成可用助手 | SFT/LoRA/DPO/GRPO 训练数据、loss masking、偏好优化 |
 | 4. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP/TP/PP、FP8/FP4、MFU、tokens/s 解释 |
-| 5. 工程验收 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划报告 |
+| 5. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划报告 |
 
 ## 能力清单
 
@@ -24,7 +24,7 @@
 - 能计算 token budget、batch size、sequence length、gradient accumulation 对总 step 的影响。
 - 能发现空样本、重复样本、过长样本、编码异常和数据泄漏风险。
 
-**对应内容：**Ch01、Ch07 7.3，Training Capstone `data_audit.py`。
+**对应内容：**Ch01、Ch07 7.3，Training Capstone `data_profile.py`。
 
 ### B. 训练循环与优化
 
@@ -46,7 +46,7 @@
 
 - 能记录 train_loss、val_loss、perplexity、lr、grad_norm、tokens/s、samples/s。
 - 能用 JSONL/CSV/W&B/TensorBoard 记录实验，并保留 config。
-- 能用固定验证集判断训练是否真的改进，而不是只看训练 loss。
+- 能用固定开发集判断训练是否真的改进，而不是只看训练 loss。
 
 **对应内容：**Ch07，Ch09，Training Capstone `metrics.jsonl`。
 
@@ -66,18 +66,18 @@
 
 **对应内容：**Training Capstone `plan_training.py`。
 
-## 毕业验收
+## 学习成果
 
-| 验收项 | 合格标准 | 证据 |
+| 项目项 | 合格标准 | 产出 |
 |--------|----------|------|
-| 数据审计 | 能输出样本数、空样本、重复率、长度分布 | `data_audit.py` 输出 |
+| 数据分析 | 能输出样本数、空样本、重复率、长度分布 | `data_profile.py` 输出 |
 | 训练运行 | 能跑完整训练并持续记录 metrics | `train.py` + `metrics.jsonl` |
 | Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复 | `acceptance.py` resume 检查 |
-| 验证集 | 能记录 val_loss / perplexity | `metrics.jsonl` |
+| 开发集 | 能记录 val_loss / perplexity | `metrics.jsonl` |
 | 监控指标 | 至少记录 loss、lr、grad_norm、tokens/s | `metrics.jsonl` |
 | 训练规划 | 能估算 steps、GPU hours、成本、checkpoint 存储 | `plan_training.py` 输出 |
 | 异常处理 | 能说明 nan/loss spike/吞吐下降时的排查顺序 | 复盘文档 |
-| 最终验收 | 一条命令跑通训练工程闭环 | `python acceptance.py` 输出 `ACCEPTANCE: PASS` |
+| 最终运行 | 一条命令跑通训练工程闭环 | `python acceptance.py` 输出 `ACCEPTANCE: PASS` |
 
 ## 推荐 8 周节奏
 
@@ -89,7 +89,7 @@
 | 4 | Ch07 后半 | 实现 AMP、gradient clipping、训练日志和 loss 曲线 |
 | 5 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 练习，理解不同 loss |
 | 6 | Ch07 分布式专题 | 学 ZeRO/FSDP/TP/PP、FP8/FP4、MFU |
-| 7 | Training Capstone | 跑数据审计、训练、checkpoint/resume、规划脚本 |
+| 7 | Training Capstone | 跑数据分析、训练、checkpoint/resume、规划脚本 |
 | 8 | 复盘 | 写训练报告：配置、曲线、成本、失败排查、下一步 |
 
 ## 最终交付模板

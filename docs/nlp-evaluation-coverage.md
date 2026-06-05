@@ -1,10 +1,10 @@
 # 经典 NLP 与评测覆盖说明
 
-本课程主线是 LLM 构建与工程化，不是传统 NLP 全覆盖课程。为了接近 Stanford CS224N 这类高校课程的覆盖宽度，授课时需要明确哪些主题已覆盖、哪些主题作为专题或项目阅读补齐。专题讲义见 [经典 NLP 专题 Handout](classic-nlp-handout.md)，可独立拆成 2-4 讲的扩展授课材料见 [Classic NLP Deep-Dive Teaching Module](classic-nlp-deep-dive-module.md)，书面题见 [书面推导与概念题题库](written-problem-set.md)，可运行补充作业见 `assignments/ch11_classic_nlp/`。项目和扩展实验中的统计不确定性、split、contamination 和 claim 强度按 [Experimental Rigor and Evaluation Statistics Guide](experimental-rigor-evaluation-statistics.md) 复核。
+本课程主线是 LLM 构建与工程化，不是传统 NLP 全覆盖课程。为了接近 Stanford CS224N 这类高校课程的覆盖宽度，授课时需要明确哪些主题已覆盖、哪些主题作为专题或项目阅读补齐。专题讲义见 [经典 NLP 专题 Handout](classic-nlp-handout.md)，可独立拆成 2-4 讲的扩展授课材料见 [Classic NLP Deep-Dive Teaching Module](classic-nlp-deep-dive-module.md)，书面题见 [书面推导与概念题题库](written-problem-set.md)，可运行补充作业见 `assignments/ch11_classic_nlp/`。项目和扩展实验中的统计不确定性、split、contamination 和 claim 强度按 Experimental Rigor and Evaluation Statistics Guide 检查。
 
 ## 已覆盖主线
 
-| 主题 | 课程位置 | 证据 |
+| 主题 | 课程位置 | 产出 |
 |------|----------|------|
 | Tokenization / BPE | Ch01 | BPE 作业与测试 |
 | Word/Token Embedding | Ch02 | TokenEmbedding、Sinusoidal、RoPE 作业 |
@@ -37,7 +37,7 @@
 - 一个 contamination/leakage gate 记录，说明 train/test duplicate、prompt leakage、retrieval contamination 或 benchmark contamination 如何处理。
 - 对失败案例的分类，例如事实错误、格式错误、检索失败、过度拒答、延迟超标。
 
-推理工程项目必须报告 `TTFT`、`TPOT`、`tokens/s`、错误率和 P95 latency。训练工程项目必须报告 `train_loss`、`val_loss`、`perplexity`、`grad_norm`、`tokens/s` 和 checkpoint resume 证据。
+推理工程项目必须报告 `TTFT`、`TPOT`、`tokens/s`、错误率和 P95 latency。训练工程项目必须报告 `train_loss`、`val_loss`、`perplexity`、`grad_norm`、`tokens/s` 和 checkpoint resume 产出。
 
 ## 推荐阅读
 

@@ -1,14 +1,13 @@
 # Worked Example Pack
 
-复核日期：2026-06-05
 
-本包把章节正文、lecture notes、recitation worksheet、书面题和编程作业中的核心概念落成可复算例子。它补充 [Core Concept Glossary](core-concept-glossary.md)、[Topic Dependency and Spiral Review Map](topic-dependency-map.md)、[Lecture Note Sample Pack](lecture-note-sample-pack.md)、[Recitation Worksheet Pack](recitation-worksheet-pack.md)、[Notation and Shape Glossary](notation-shape-glossary.md)、[Mathematical Derivation Audit](mathematical-derivation-audit.md)、[Chapter Claim Audit Ledger](chapter-claim-audit-ledger.md)、[Assignment Handout Pack](assignment-handout-pack.md)、[书面推导与概念题题库](written-problem-set.md) 和 [Paper-to-Code Traceability Matrix](paper-to-code-traceability-matrix.md)。
+本包把章节正文、lecture notes、recitation worksheet、书面题和编程作业中的核心概念落成可复算例子。它补充 Core Concept Glossary、Topic Dependency and Spiral Review Map、Lecture Note Sample Pack、Recitation Worksheet Pack、Notation and Shape Glossary、Mathematical Derivation Audit、Chapter Claim Audit Ledger、Assignment Handout Pack、[书面推导与概念题题库](written-problem-set.md) 和 Paper-to-Code Traceability Matrix。
 
 使用规则：
 
 - 每个 worked example 必须能被学生用纸笔或少量 PyTorch 张量复算。
-- 每个例子必须说明输入、shape、关键公式、预期中间量、常见错误、关联作业和评估证据。
-- 前沿模型、benchmark、API、价格或硬件性能不能从 worked example 外推为课程事实；相关边界按 [External Source Verification Guide](external-source-verification.md) 和 [前沿模型来源等级与复核记录](frontier-source-audit.md) 维护。
+- 每个例子必须说明输入、shape、关键公式、预期中间量、常见错误、关联作业和评估产出。
+- 前沿模型、benchmark、API、价格或硬件性能不能从 worked example 外推为课程事实；相关边界按 External Source Verification Guide 和 前沿模型来源等级与检查记录 维护。
 - 例子可以进入 student site release；不得包含隐藏测试输入、reference_solution.py、评分私有样例或真实学生提交。
 
 ## Example Schema
@@ -21,7 +20,7 @@
 | inputs and shapes | Concrete tensors, token sequences, dimensions, masks, or metric tables. |
 | worked trace | Intermediate values sufficient to reproduce the result. |
 | common failure | A plausible wrong answer and the diagnostic signal. |
-| assessment link | Assignment, written problem, recitation worksheet, quiz, or capstone evidence. |
+| assessment link | Assignment, written problem, recitation worksheet, quiz, or capstone learning output. |
 | source boundary | Stable theory, implementation detail, course inference, or volatile external claim. |
 
 ## Core Worked Examples
@@ -42,7 +41,7 @@
 
 ## Recitation Use
 
-| recitation_id | examples | activity | exit evidence |
+| recitation_id | examples | activity | exit learning output |
 | --- | --- | --- | --- |
 | WE-R1-SHAPE | WE-CH02-ROPE, WE-CH03-ATTN | Students fill shape tables and identify where the mask or rotation enters. | one corrected shape trace |
 | WE-R2-SYSTEMS | WE-CH04-GQA, WE-CH10-KVCACHE | Students compute memory ratios and explain latency consequences. | one memory/latency calculation with units |
@@ -63,15 +62,15 @@
 
 1. When a chapter formula, starter API, assignment test, or source boundary changes, update the corresponding `WE-*` row in this pack.
 2. If a worked trace becomes too long for a table, move the expanded trace into lecture notes and keep the `WE-*` row as the index record.
-3. If an example depends on a volatile external model or benchmark claim, record it in the source audit before using it in assessment.
-4. Run `.venv/bin/python verify_course.py` after editing this pack or any linked chapter/assignment.
+3. If an example depends on a volatile external model or benchmark claim, record it in the reading notes before using it in assessment.
+4. Run `.venv/bin/python run_assignment_tests.py` after editing this pack or any linked chapter/assignment.
 
 ## Release Checklist
 
 - Example Schema includes identifier, learning target, inputs/shapes, worked trace, common failure, assessment link, and source boundary.
 - Core Worked Examples include WE-CH01-BPE through WE-CH11-METRICS.
 - Each core example has an assessment link and a source boundary.
-- Recitation Use maps examples to exit evidence.
+- Recitation Use maps examples to exit learning output.
 - Assessment Coverage includes programming assignments, written assessment, recitation, quiz/checkpoint, and paper recap.
 - Maintenance Workflow specifies update triggers and verification command.
 - Student site release excludes hidden tests, reference_solution.py, private grading samples, and real student submissions.

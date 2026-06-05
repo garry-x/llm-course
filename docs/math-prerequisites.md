@@ -1,6 +1,6 @@
 # 数学与 PyTorch 先修复习
 
-本附录补齐高校课程中常见的线性代数、概率、反向传播和张量求导前置知识。它不是独立数学课，而是服务于本课程的实现、推导和代码审查。微积分、统计和机器学习基础到本课程项目证据的桥接见 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)。
+本附录补齐高校课程中常见的线性代数、概率、反向传播和张量求导前置知识。它不是独立数学课，而是服务于本课程的实现、推导和代码审查。微积分、统计和机器学习基础到本课程项目产出的桥接见 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)。
 
 ## 线性代数最小集合
 
@@ -46,7 +46,7 @@ perplexity 是 `exp(loss)`，表示平均每一步仍有多少等价候选。
 - overfitting、data leakage 和 benchmark contamination。
 - objective、metric 和 generalization boundary 的区别。
 
-这些内容按 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md) 补救，并在训练/推理 capstone proposal、milestone 和 final report 中作为评分证据。
+这些内容按 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md) 补救，并在训练/推理 capstone proposal、milestone 和 final report 中作为评分依据。
 
 ## 反向传播核心规则
 

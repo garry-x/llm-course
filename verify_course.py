@@ -3990,6 +3990,7 @@ def check_reading_discussion_question_bank() -> None:
 
 def check_paper_to_code_traceability_matrix() -> None:
     text = read("docs/paper-to-code-traceability-matrix.md")
+    derivation_audit = read("docs/mathematical-derivation-audit.md")
     issues = []
 
     for marker in [
@@ -4017,6 +4018,8 @@ def check_paper_to_code_traceability_matrix() -> None:
     seen_ids = set()
     source_tiers = set()
     row_text = []
+    assignment_test_paths = set()
+    referenced_derivations = set()
     for cells in rows[1:]:
         if len(cells) != 9:
             issues.append(f"paper-to-code row expected 9 cells, got {len(cells)}: {cells[:2]}")
@@ -4024,6 +4027,8 @@ def check_paper_to_code_traceability_matrix() -> None:
         row_id, source, tier, anchor, week, derivation, evidence, deliverable, boundary = cells
         seen_ids.add(row_id)
         row_text.append(" ".join(cells))
+        assignment_test_paths.update(re.findall(r"`(assignments/[^`]+/tests\.py)`", evidence))
+        referenced_derivations.update(re.findall(r"\bDER-\d{2}\b", derivation))
         for tier_part in [part.strip() for part in tier.split("/")]:
             source_tiers.add(tier_part)
         for field_name, value in [
@@ -4054,9 +4059,17 @@ def check_paper_to_code_traceability_matrix() -> None:
             issues.append(f"paper-to-code missing source tier: {required_tier}")
 
     combined_text = "\n".join(row_text)
+    audited_derivations = set(re.findall(r"\|\s*(DER-\d{2})\s*\|", derivation_audit))
+    for der_id in sorted(referenced_derivations):
+        if der_id not in audited_derivations:
+            issues.append(f"paper-to-code references unknown derivation id: {der_id}")
     for der_id in [f"DER-{index:02d}" for index in range(1, 15)]:
         if der_id not in combined_text and der_id not in text:
             issues.append(f"paper-to-code missing derivation coverage: {der_id}")
+
+    for assignment_test_path in sorted(assignment_test_paths):
+        if not (ROOT / assignment_test_path).exists():
+            issues.append(f"paper-to-code assignment test path does not exist: {assignment_test_path}")
 
     for assignment_dir in [
         "assignments/ch01_bpe",

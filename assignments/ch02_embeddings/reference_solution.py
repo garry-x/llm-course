@@ -19,6 +19,18 @@ class TokenEmbedding(nn.Module):
         return self.embed(x) * math.sqrt(self.d_model)
 
 
+def embedding_lookup_as_matmul(token_ids, embedding_weight):
+    if embedding_weight.dim() != 2:
+        raise ValueError("embedding_weight must have shape [V, D]")
+    vocab_size = embedding_weight.size(0)
+    ids = token_ids.to(device=embedding_weight.device, dtype=torch.long)
+    if ids.numel() > 0 and (ids.min().item() < 0 or ids.max().item() >= vocab_size):
+        raise ValueError("token id out of vocabulary range")
+
+    one_hot = F.one_hot(ids, num_classes=vocab_size).to(dtype=embedding_weight.dtype)
+    return one_hot @ embedding_weight
+
+
 def build_cooccurrence_matrix(token_ids, vocab_size, window_size):
     if vocab_size <= 0:
         raise ValueError("vocab_size must be positive")

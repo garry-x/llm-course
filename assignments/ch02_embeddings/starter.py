@@ -15,6 +15,11 @@ class TokenEmbedding(nn.Module):
         raise NotImplementedError
 
 
+def embedding_lookup_as_matmul(token_ids, embedding_weight):
+    """Return one_hot(token_ids) @ embedding_weight, matching embedding_weight[token_ids]."""
+    raise NotImplementedError
+
+
 def build_cooccurrence_matrix(token_ids, vocab_size, window_size):
     """Count directed center->context co-occurrences inside a fixed window."""
     raise NotImplementedError

@@ -21,7 +21,7 @@
 
 ## Ch02 Embedding / Position Encoding / RoPE
 
-1. 从 one-hot 矩阵乘法推导 embedding lookup，说明为什么 `E[token_id]` 等价于 `one_hot @ E`。
+1. 从 one-hot 矩阵乘法推导 embedding lookup，说明为什么 `E[token_id]` 等价于 `one_hot @ E`；再用一个形状为 `[B,T]` 的 token id 张量说明 `one_hot(token_ids)`、`E` 和输出张量的形状分别是什么。
 2. 给定 token 序列 `[0,1,2,1]` 和 window size 1，手算 directed co-occurrence matrix；再给定 center/positive/negative 向量，写出 SGNS loss；从共现矩阵计算 PMI 与 shifted PMI；给定非零共现计数、word/context 向量和 bias，计算一项 GloVe weighted least-squares residual。
 3. 给定 5 个二维词向量，计算 cosine similarity matrix，并用 3CosAdd 解 `man:king :: woman:?`；说明为什么必须排除输入词。
 4. 比较 skip-gram negative sampling 与 GloVe：它们分别从局部上下文样本和全局共现矩阵中学习什么统计信号？SGNS 与 shifted PMI 的关系说明了什么？为什么类比推理不是训练目标直接保证的性质？

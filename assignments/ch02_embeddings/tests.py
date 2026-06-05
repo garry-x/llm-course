@@ -33,6 +33,28 @@ class TestTokenEmbedding(unittest.TestCase):
         expected = weight[x] * math.sqrt(6)
         self.assertTrue(torch.allclose(out.detach(), expected, atol=1e-6))
 
+    def test_embedding_lookup_as_matmul_matches_indexing(self):
+        weight = torch.tensor(
+            [
+                [1.0, 0.0],
+                [0.0, 2.0],
+                [3.0, 4.0],
+            ]
+        )
+        token_ids = torch.tensor([[0, 2], [1, 0]])
+        out = submission.embedding_lookup_as_matmul(token_ids, weight)
+
+        self.assertEqual(tuple(out.shape), (2, 2, 2))
+        self.assertTrue(torch.allclose(out, weight[token_ids], atol=1e-6))
+
+    def test_embedding_lookup_as_matmul_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.embedding_lookup_as_matmul(torch.tensor([0]), torch.randn(2, 3, 4))
+        with self.assertRaises(ValueError):
+            submission.embedding_lookup_as_matmul(torch.tensor([3]), torch.randn(3, 2))
+        with self.assertRaises(ValueError):
+            submission.embedding_lookup_as_matmul(torch.tensor([-1]), torch.randn(3, 2))
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch02 embedding tests")
 class TestWordVectorObjectives(unittest.TestCase):

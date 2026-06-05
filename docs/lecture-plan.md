@@ -67,7 +67,7 @@ Quick check：
 
 课堂 demo：
 
-- 比较 learned embedding 与 one-hot matmul 的 shape 和内存。
+- 比较 learned embedding lookup、显式 one-hot matmul 的 shape、参数共享和内存开销。
 - 手算 `[0,1,2,1]` 在 window size 1 下的共现矩阵，再计算一个 SGNS loss 和 shifted PMI。
 - 手造 `man/king/woman/queen` 向量，跑 3CosAdd。
 - 检查 RoPE 是否保持向量范数。
@@ -79,7 +79,7 @@ Quick check：
 
 课后产出：
 
-- Ch02 embedding/RoPE 测试通过。
+- Ch02 embedding lookup、word-vector objectives 和 RoPE 测试通过。
 - 书面题：RoPE 点积相对位置推导。
 
 ## Week 2 Lecture 3: Scaled Dot-Product Attention

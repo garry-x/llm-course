@@ -137,17 +137,18 @@
 <!-- ================================================================ -->
 <section class="card" id="s2-2">
   <h3>2.2 编程练习 1：实现 TokenEmbedding</h3>
-  <p>PyTorch 的 <code>nn.Embedding(V, d)</code> 本质上就是一个可训练的查表操作。让我们亲手包装它。</p>
+  <p>PyTorch 的 <code>nn.Embedding(V, d)</code> 本质上就是一个可训练的查表操作。若嵌入矩阵 <span class="katex-inline" data-expr="E\in\mathbb{R}^{V\times d}" aria-label="E in R V by d" role="img"></span>，token id 的 one-hot 行向量 <span class="katex-inline" data-expr="e_i" aria-label="e_i" role="img"></span> 满足 <span class="katex-inline" data-expr="e_iE=E_i" aria-label="e_i E equals E_i" role="img"></span>。实际工程直接索引 <code>E[token_id]</code>，避免显式构造巨大 one-hot 张量；Ch02 作业中的 <code>embedding_lookup_as_matmul</code> 让学生写出这个等价关系。</p>
 
   <div class="coding-exercise">
     <h4>🖥️ 练习 1：TokenEmbedding 模块</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>TokenEmbedding</code> 模块，将 token ID 序列映射为稠密向量序列。</p>
+      <p><strong>任务：</strong>实现 <code>TokenEmbedding</code> 模块，并实现 <code>embedding_lookup_as_matmul(token_ids, embedding_weight)</code>，用显式 one-hot 矩阵乘法复现 <code>embedding_weight[token_ids]</code>。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>继承 <code>nn.Module</code></li>
         <li>使用 <code>nn.Embedding(vocab_size, d_model)</code> 作为内部查表</li>
         <li><code>forward(x)</code> 输入形状 <code>(batch, seq_len)</code>，输出形状 <code>(batch, seq_len, d_model)</code></li>
+        <li><code>one_hot(token_ids)</code> 的形状应为 <code>(batch, seq_len, vocab_size)</code>，与 <code>embedding_weight</code> 相乘后得到 <code>(batch, seq_len, d_model)</code></li>
         <li>输出乘以 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span>（GPT-2 风格的缩放初始化）</li>
         <li>让 <code>forward</code> 返回的输出的 L2 范数大约为 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span></li>
       </ul>
@@ -163,6 +164,7 @@ print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
     <div class="solution"><div class="code-block" data-lang="python">
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
 
 class TokenEmbedding(nn.Module):
@@ -176,6 +178,11 @@ class TokenEmbedding(nn.Module):
         # x: (batch, seq_len)
         out = self.embed(x)  # (batch, seq_len, d_model)
         return out * math.sqrt(self.d_model)
+
+def embedding_lookup_as_matmul(token_ids, embedding_weight):
+    vocab_size = embedding_weight.size(0)
+    one_hot = F.one_hot(token_ids, num_classes=vocab_size).to(embedding_weight.dtype)
+    return one_hot @ embedding_weight
 
 emb = TokenEmbedding(50000, 768)
 x = torch.randint(0, 50000, (2, 16))

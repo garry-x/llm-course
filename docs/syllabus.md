@@ -11,7 +11,7 @@
 - 推导或解释关键公式：BPE merge、RoPE 相对位置、attention scaling、LayerNorm/RMSNorm、cross entropy、DPO/GRPO、KV Cache 显存。
 - 读懂 LLM 论文和模型报告中的核心技术选择，区分数学假设、实验结论和工程取舍。
 - 设计训练与推理实验，解释 loss、PPL、latency、throughput、quality、safety 和 cost 指标。
-- 理解经典 NLP 专题与现代 LLM 的关系：dependency parsing、seq2seq/NMT、BERT/encoder-only、BLEU/ROUGE/F1/EM 和安全评测。
+- 理解经典 NLP 专题与现代 LLM 的关系：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT/encoder-only、BLEU/ROUGE/F1/EM 和安全评测。
 
 ## 先修要求
 
@@ -38,7 +38,7 @@
 | 训练闭环 | Week 5 | Ch07 | MLE、cross entropy、PPL、AdamW、scheduler、checkpoint、分布式训练概念 |
 | 生成方法 | Week 6 | Ch08 | greedy、temperature、top-k/top-p、speculative decoding、structured decoding |
 | 微调与对齐 | Week 7 | Ch09 | SFT、LoRA、preference model、DPO、GRPO、alignment tax |
-| 经典 NLP 与评测 | Week 8 | Classic NLP handout | dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM |
+| 经典 NLP 与评测 | Week 8 | Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM |
 | 推理工程 | Week 9 | Ch10 | KV Cache、quantization、FlashAttention、RAG、vLLM/SGLang、Triton |
 | 项目展示 | Week 10 | Capstone | 训练项目、推理项目、报告、演示和讨论 |
 
@@ -78,7 +78,7 @@
 | 5 | Training Loop | Ch07；reading-list Week 5 | A5：dataset/CE/AdamW/scheduler/train；训练项目提案 |
 | 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO；训练 capstone 初版 |
-| 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：dependency/seq2seq/BERT/evaluation 书面题；同伴 review |
+| 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：RNN/dependency/seq2seq/BERT/evaluation 书面题；同伴 review |
 | 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark/metric card/多模态评估；推理项目提案 |
 | 10 | Capstone 展示与前沿 seminar | 两个 capstone README；reading-list Week 10 | 训练 capstone + 推理 capstone 报告、演示、复现包 |
 

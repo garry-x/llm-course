@@ -180,12 +180,14 @@
 - 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
 - GRPO 的组内 advantage 白化依赖什么采样假设？
 
-## Week 8: 经典 NLP、Encoder-only、Evaluation 与 Ethics
+## Week 8: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics
 
 对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。
 
 必读：
 
+- Elman. [Finding Structure in Time](https://crl.ucsd.edu/~elman/Papers/fsit.pdf). 重点看 recurrent hidden state 如何表示前缀。
+- Hochreiter and Schmidhuber. [Long Short-Term Memory](https://www.bioinf.jku.at/publications/older/2604.pdf). 重点看 gate 与 cell state 如何缓解长程梯度问题。
 - Chen and Manning. [A Fast and Accurate Dependency Parser using Neural Networks](https://aclanthology.org/D14-1082/). 重点看 transition-based parsing。
 - Sutskever, Vinyals, Le. [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215). 重点看 encoder-decoder 和 teacher forcing。
 - Devlin et al. [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805). 重点看 MLM/NSP 与 encoder-only 表示。
@@ -198,6 +200,7 @@
 
 复盘问题：
 
+- RNN 的 BPTT 梯度连乘为什么会导致长程依赖困难？LSTM 改变了哪条路径？
 - dependency parsing 与 decoder-only LLM 在结构归纳偏置上有什么差异？
 - encoder-decoder cross-attention 和 decoder-only causal self-attention 的 K/V 来源有什么不同？
 - BERT MLM labels 中为什么未 mask token 要使用 ignore index？

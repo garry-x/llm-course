@@ -438,18 +438,20 @@ Quick check：
 - A7 DPO/GRPO 测试通过。
 - 阅读复盘：R1/GRPO 的来源边界。
 
-## Week 8 Lecture 15: Dependency Parsing、Seq2Seq 与 BERT
+## Week 8 Lecture 15: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT
 
 对应材料：classic NLP handout、Classic NLP Deep-Dive Teaching Module、reading-list Week 8。
 
 目标：
 
-- 补齐 CS224N 式经典神经 NLP 主线：dependency parsing、seq2seq/NMT、BERT。
+- 补齐 CS224N 式经典神经 NLP 主线：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。
 - 比较 structured prediction、encoder-decoder 和 encoder-only 表示。
 - 说明这些主题与 decoder-only LLM 的关系和边界。
 
 核心推导：
 
+- 标量 RNN recurrence 与 BPTT 梯度连乘。
+- LSTM gate 如何改变长期信息路径。
 - UAS/LAS 指标。
 - seq2seq teacher forcing 与 exposure bias。
 - MLM 与 causal LM 的 mask 方向差异。
@@ -458,19 +460,21 @@ Quick check：
 课堂 demo：
 
 - 手写一个 transition parsing 状态序列。
+- 手算 3 步标量 RNN hidden state 和 recurrent gradient factors。
 - 对比 BERT MLM 输入和 GPT causal LM 输入。
 - 用 beam candidate table 展示 length-normalized score 如何改变排序。
 
 Quick check：
 
+- RNN 为什么难以直接学习很远的依赖？LSTM 缓解了什么但没有解决什么？
 - BERT 是 decoder-only 模型吗？
 - BLEU 高是否代表事实正确？
 
 课后产出：
 
 - 经典 NLP 专题书面题。
-- 阅读复盘：BERT 或 seq2seq 的一个 inductive bias。
-- Deep-dive in-class check：DP-1、S2S-2 或 BERT-1 至少完成一项。
+- 阅读复盘：RNN/LSTM、BERT 或 seq2seq 的一个 inductive bias。
+- Deep-dive in-class check：RNN-1、DP-1、S2S-2 或 BERT-1 至少完成一项。
 
 ## Week 8 Lecture 16: Evaluation、Ethics、Safety 与同伴 Review
 

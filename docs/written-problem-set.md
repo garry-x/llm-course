@@ -97,8 +97,9 @@
 
 ## 经典 NLP 专题题
 
-1. Dependency Parsing：给定句子和 gold arcs，用 arc-standard transition system 写出一条合法 shift/reduce 序列，并计算 UAS/LAS。
-2. Seq2Seq/NMT：画出 encoder-decoder attention 的信息流，解释 exposure bias 和 beam search length bias。
-3. BERT/Encoder-only：比较 MLM 与 causal LM 的 mask 方式、训练目标和下游 fine-tuning 输入格式。
-4. Evaluation：比较 perplexity、BLEU、ROUGE、F1、exact match 和 LLM-as-judge 的适用范围与失效模式。
-5. Ethics/Safety：列出一个 RAG 医疗问答系统的隐私、幻觉、偏见和评测污染风险，并给出缓解方案。
+1. RNN/LSTM：给定标量 RNN 参数，手算 hidden state、BPTT 梯度连乘，并说明 LSTM 的 forget/input/output gate 如何改变长期信息路径。
+2. Dependency Parsing：给定句子和 gold arcs，用 arc-standard transition system 写出一条合法 shift/reduce 序列，并计算 UAS/LAS。
+3. Seq2Seq/NMT：画出 encoder-decoder attention 的信息流，解释 exposure bias 和 beam search length bias。
+4. BERT/Encoder-only：比较 MLM 与 causal LM 的 mask 方式、训练目标和下游 fine-tuning 输入格式。
+5. Evaluation：比较 perplexity、BLEU、ROUGE、F1、exact match 和 LLM-as-judge 的适用范围与失效模式。
+6. Ethics/Safety：列出一个 RAG 医疗问答系统的隐私、幻觉、偏见和评测污染风险，并给出缓解方案。

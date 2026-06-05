@@ -11,6 +11,16 @@ def attachment_scores(gold_heads, gold_labels, pred_heads, pred_labels):
     raise NotImplementedError
 
 
+def scalar_rnn_forward(inputs, w_xh, w_hh, h0=0.0):
+    """Run a scalar tanh RNN: h_t = tanh(w_xh * x_t + w_hh * h_{t-1})."""
+    raise NotImplementedError
+
+
+def recurrent_gradient_factors(hidden_states, w_hh):
+    """Return local dh_t/dh_{t-1} factors for a scalar tanh RNN."""
+    raise NotImplementedError
+
+
 def sentence_bleu(candidate, references, max_n=4):
     """Compute sentence BLEU with clipped n-gram precision."""
     raise NotImplementedError

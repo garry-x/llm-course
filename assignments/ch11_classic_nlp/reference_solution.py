@@ -35,6 +35,19 @@ def attachment_scores(gold_heads, gold_labels, pred_heads, pred_labels):
     }
 
 
+def scalar_rnn_forward(inputs, w_xh, w_hh, h0=0.0):
+    hidden_states = []
+    h_prev = float(h0)
+    for x_t in inputs:
+        h_prev = math.tanh(float(w_xh) * float(x_t) + float(w_hh) * h_prev)
+        hidden_states.append(h_prev)
+    return hidden_states
+
+
+def recurrent_gradient_factors(hidden_states, w_hh):
+    return [float(w_hh) * (1.0 - float(h_t) ** 2) for h_t in hidden_states]
+
+
 def _ngrams(tokens, n):
     return [tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
 

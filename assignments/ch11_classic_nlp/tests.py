@@ -28,6 +28,28 @@ class TestDependencyParsingMetrics(unittest.TestCase):
             solution.attachment_scores([], [], [], [])
 
 
+class TestRNNFoundations(unittest.TestCase):
+    def test_scalar_rnn_forward_matches_manual_tanh_recurrence(self):
+        states = solution.scalar_rnn_forward([1.0, 0.5, -1.0], w_xh=0.8, w_hh=0.4, h0=0.0)
+        h1 = math.tanh(0.8)
+        h2 = math.tanh(0.8 * 0.5 + 0.4 * h1)
+        h3 = math.tanh(0.8 * -1.0 + 0.4 * h2)
+        self.assertEqual(len(states), 3)
+        self.assertAlmostEqual(states[0], h1)
+        self.assertAlmostEqual(states[1], h2)
+        self.assertAlmostEqual(states[2], h3)
+
+    def test_recurrent_gradient_factors_show_vanishing_path(self):
+        states = [0.0, 0.5, 0.9]
+        factors = solution.recurrent_gradient_factors(states, w_hh=0.8)
+        self.assertEqual(len(factors), 3)
+        self.assertAlmostEqual(factors[0], 0.8)
+        self.assertAlmostEqual(factors[1], 0.8 * (1 - 0.25))
+        self.assertAlmostEqual(factors[2], 0.8 * (1 - 0.81))
+        product = math.prod(factors)
+        self.assertLess(product, factors[0])
+
+
 class TestBleuRougeEvaluation(unittest.TestCase):
     def test_sentence_bleu_exact_match_is_one(self):
         candidate = "the cat sat on the mat".split()

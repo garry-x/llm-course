@@ -2,7 +2,7 @@
 
 本模块用于把 [经典 NLP 专题 Handout](classic-nlp-handout.md) 从讨论课材料扩展为可独立授课的 2-4 讲专题。它补充 [10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[逐周阅读材料与复盘 Handout](reading-list.md)、[书面推导与概念题题库](written-problem-set.md) 和 `assignments/ch11_classic_nlp/`。
 
-目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释 CS224N 风格神经 NLP 主线中三类非 decoder-only 模型：structured prediction、encoder-decoder 和 encoder-only representation learning。
+目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释 CS224N 风格神经 NLP 主线中的 RNN/LSTM、structured prediction、encoder-decoder 和 encoder-only representation learning。
 
 ## Module Outcomes
 
@@ -11,10 +11,11 @@
 | outcome_id | 学习结果 | 可评分依据 |
 |------------|----------|------------|
 | CL-NLP-1 | 用 transition system 描述 dependency parsing，并计算 UAS/LAS | 手写 stack/buffer/arcs trace；Ch11 `attachment_scores` 测试 |
-| CL-NLP-2 | 写出 seq2seq teacher forcing 和 beam search 的目标、搜索状态和 length bias | 书面题；beam table；metric failure case |
-| CL-NLP-3 | 区分 encoder-decoder attention alignment 与 decoder-only causal self-attention | 信息流图；错误解释短答 |
-| CL-NLP-4 | 构造 BERT-style MLM input、labels、loss mask 和 `[CLS]` fine-tuning 产出 | Ch11 `build_mlm_example` 测试；书面题 |
-| CL-NLP-5 | 判断 BLEU/ROUGE/EM/F1 与人工评价各自能支持什么 claim | 指标反例；项目 metric_card |
+| CL-NLP-2 | 计算标量 RNN hidden state 和 BPTT 梯度连乘，解释 LSTM 为什么缓解长程依赖 | Ch11 `scalar_rnn_forward` 与 `recurrent_gradient_factors` 测试；手算题 |
+| CL-NLP-3 | 写出 seq2seq teacher forcing 和 beam search 的目标、搜索状态和 length bias | 书面题；beam table；metric failure case |
+| CL-NLP-4 | 区分 encoder-decoder attention alignment 与 decoder-only causal self-attention | 信息流图；错误解释短答 |
+| CL-NLP-5 | 构造 BERT-style MLM input、labels、loss mask 和 `[CLS]` fine-tuning 产出 | Ch11 `build_mlm_example` 测试；书面题 |
+| CL-NLP-6 | 判断 BLEU/ROUGE/EM/F1 与人工评价各自能支持什么 claim | 指标反例；项目 metric_card |
 
 最低通过标准：学生不能只背术语。每个主题都必须给出一个状态/张量/指标的可计算例子，并说明该例子不能证明什么。
 
@@ -22,13 +23,14 @@
 
 | 版本 | 讲次 | 内容 | 交付 |
 |------|------|------|------|
-| 10 周压缩版 | L15 | Dependency parsing、seq2seq、BERT 关键差异 | Ch11 written drill + tests |
+| 10 周压缩版 | L15 | RNN/LSTM、dependency parsing、seq2seq、BERT 关键差异 | Ch11 written drill + tests |
 | 12 周扩展版 A | L15 | Dependency parsing and structured prediction | UAS/LAS drill |
-| 12 周扩展版 B | L16 | Seq2Seq/NMT, attention alignment, beam search | beam search / BLEU drill |
-| 12 周扩展版 C | L17 | BERT/encoder-only and representation fine-tuning | MLM label mask drill |
-| 12 周扩展版 D | L18 | Evaluation failure cases and ethics | metric_card + failure taxonomy |
+| 12 周扩展版 B | L16 | RNN/LSTM language modeling and BPTT | scalar recurrence + gradient path drill |
+| 12 周扩展版 C | L17 | Seq2Seq/NMT, attention alignment, beam search | beam search / BLEU drill |
+| 12 周扩展版 D | L18 | BERT/encoder-only and representation fine-tuning | MLM label mask drill |
+| 12 周扩展版 E | L19 | Evaluation failure cases and ethics | metric_card + failure taxonomy |
 
-如果课时有限，依然应保留 dependency parsing、seq2seq、BERT 三者与 decoder-only LM 的对比表；否则学生容易把所有 NLP 任务都误解为 prompt-based generation。
+如果课时有限，依然应保留 RNN/LSTM、dependency parsing、seq2seq、BERT 与 decoder-only LM 的对比表；否则学生容易把所有 NLP 任务都误解为 prompt-based generation。
 
 ## Dependency Parsing Deep Dive
 
@@ -93,6 +95,50 @@ p(a_t | state_t) = softmax(W h(state_t) + b)
 - action classifier 的局部准确率不等于最终 tree 合法性。
 - greedy parsing 快但会累积错误；beam 或 dynamic oracle 可缓解但增加复杂度。
 - attention heatmap 不能自动替代 dependency tree。
+
+## RNN / LSTM Deep Dive
+
+### Scalar RNN Recurrence
+
+课堂先用标量版本避免学生被矩阵符号淹没：
+
+```text
+h_t = tanh(w_x x_t + w_h h_{t-1})
+o_t = W_o h_t
+p(x_{t+1} | x_{\le t}) = softmax(o_t)
+```
+
+给定 `x=[1.0, 0.5, -1.0]`、`w_x=0.8`、`w_h=0.4`、`h_0=0`，学生应能手算：
+
+```text
+h_1 = tanh(0.8)
+h_2 = tanh(0.8 * 0.5 + 0.4 * h_1)
+h_3 = tanh(0.8 * -1.0 + 0.4 * h_2)
+```
+
+Ch11 的 `scalar_rnn_forward` 对应这个递推。这个小例子强调两点：RNN hidden state 是前缀摘要；同一个参数在每个时间步共享。
+
+### BPTT Gradient Path
+
+对同一个标量 RNN：
+
+```text
+dh_t / dh_{t-1} = w_h * (1 - h_t^2)
+dL / dh_1 = dL / dh_T * product_{t=2..T} w_h * (1 - h_t^2)
+```
+
+Ch11 的 `recurrent_gradient_factors` 返回每一步局部因子。若 `|w_h * (1 - h_t^2)| < 1` 持续出现，早期 token 的梯度会迅速衰减；若因子持续大于 1，训练可能不稳定。这个推导解释了为什么 CS224N 传统主线会讲 gradient clipping、LSTM/GRU 和 attention。
+
+### LSTM Gate Interpretation
+
+LSTM 把 hidden state 拆成 cell state 与 output state：
+
+```text
+c_t = f_t * c_{t-1} + i_t * \tilde{c}_t
+h_t = o_t * tanh(c_t)
+```
+
+其中 `f_t` 决定保留多少旧记忆，`i_t` 决定写入多少新信息，`o_t` 决定输出多少。LSTM 的课程价值在于：它展示了“为梯度路径设计结构”的思想，而 Transformer 则进一步用 attention 缩短跨位置路径并提高训练并行性。
 
 ## Seq2Seq / NMT Deep Dive
 
@@ -212,6 +258,7 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 
 | check_id | prompt | expected learning output |
 |----------|--------|-------------------|
+| RNN-1 | 给定标量 RNN 参数和 3 个输入，计算 hidden states 与 BPTT gradient factors | 正确使用 `tanh` recurrence 与 `w_h * (1 - h_t^2)` |
 | DP-1 | 给定 4-token sentence 和 gold arcs，写出合法 transition sequence | stack/buffer/arcs 表，action 合法 |
 | DP-2 | 给定 pred/gold heads 和 labels，计算 UAS/LAS | 分母、head match、label match 正确 |
 | S2S-1 | 画 encoder-decoder attention 信息流 | source encoder states、decoder state、cross-attention context |
@@ -221,11 +268,12 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 
 ### Written Problem Templates
 
-1. Dependency parsing：给出 sentence、gold arcs 和 transition system，要求学生写 action trace 并说明一个非法 action。
-2. Seq2Seq/NMT：给出 source/target 和 decoder step，要求学生写 `p(y_t | y_<t, x)` 的依赖项、attention context 和 exposure bias。
-3. Beam search：给出候选 log probabilities，要求比较 unnormalized、length-normalized 和 length penalty 后的排名。
-4. BERT/MLM：给出 tokens 与 mask positions，要求写 masked input、labels、loss mask，并和 causal LM labels 对比。
-5. Evaluation：给出一个高 BLEU/低人工质量或低 BLEU/高人工质量例子，要求判断 claim strength。
+1. RNN/LSTM：给出标量 recurrence 和 hidden states，要求学生计算 BPTT gradient product，并说明 LSTM gate 的作用。
+2. Dependency parsing：给出 sentence、gold arcs 和 transition system，要求学生写 action trace 并说明一个非法 action。
+3. Seq2Seq/NMT：给出 source/target 和 decoder step，要求学生写 `p(y_t | y_<t, x)` 的依赖项、attention context 和 exposure bias。
+4. Beam search：给出候选 log probabilities，要求比较 unnormalized、length-normalized 和 length penalty 后的排名。
+5. BERT/MLM：给出 tokens 与 mask positions，要求写 masked input、labels、loss mask，并和 causal LM labels 对比。
+6. Evaluation：给出一个高 BLEU/低人工质量或低 BLEU/高人工质量例子，要求判断 claim strength。
 
 ### Programming Learning output
 
@@ -233,6 +281,8 @@ labels:   -100  -100 cat   -100 -100 mat    -100
 
 | function | concept learning output |
 |----------|------------------|
+| `scalar_rnn_forward` | recurrent hidden state 递推 |
+| `recurrent_gradient_factors` | BPTT 局部梯度因子与长程路径 |
 | `attachment_scores` | UAS/LAS head 与 label 对齐 |
 | `sentence_bleu` | clipped precision 与 brevity penalty |
 | `rouge_l_f1` | LCS-based precision/recall/F1 |

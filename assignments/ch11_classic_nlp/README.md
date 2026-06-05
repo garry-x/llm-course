@@ -1,6 +1,6 @@
 # Supplemental Assignment: Classic NLP and Evaluation
 
-本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 dependency parsing、BERT/MLM mask、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
+本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 RNN 长程依赖、dependency parsing、BERT/MLM mask、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
 
 ## Files
 
@@ -23,6 +23,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 ## Requirements
 
 - `attachment_scores` 计算 UAS/LAS，必须检查 heads 与 labels 长度一致。
+- `scalar_rnn_forward` 和 `recurrent_gradient_factors` 展示 tanh RNN 的状态递推与 BPTT 梯度乘积。
 - `sentence_bleu` 使用 clipped n-gram precision 和 brevity penalty。
 - `rouge_l_f1` 使用最长公共子序列计算 precision、recall 和 F1。
 - `exact_match_and_f1` 对 QA 字符串做标准化，再计算 exact match 和 token F1。
@@ -31,6 +32,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 ## Written Drill Expectations
 
 - 按 `classic-nlp-handout.md` 的 `I saw her` worked example，写出 stack / buffer / arcs transition table。
+- 给定标量 RNN 参数，手算 3 步 hidden state 和 `prod_t w_hh * (1 - h_t^2)`，解释梯度消失或爆炸。
 - 写出 seq2seq 的 `p(y | x)` 条件概率分解、teacher forcing loss，并解释 cross-attention 中 `alpha_{t,i}` 与 `c_t` 的含义。
 - 给定一组 beam candidates，比较 sum log prob、length-normalized score 和 length penalty 后的排序。
 - 给定 BERT tokens 和 mask positions，写出 masked input、labels 和 loss positions。
@@ -41,6 +43,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 40 | 解释 dependency parsing、seq2seq/cross-attention、beam search length bias、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
-| Programming parts | 50 | 实现 UAS/LAS、BLEU、ROUGE-L、QA EM/F1 和 MLM mask example |
+| Written questions | 40 | 解释 RNN 长程依赖、dependency parsing、seq2seq/cross-attention、beam search length bias、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
+| Programming parts | 50 | 实现 RNN recurrence、BPTT gradient factors、UAS/LAS、BLEU、ROUGE-L、QA EM/F1 和 MLM mask example |
 | Analysis / style | 10 | 构造至少 2 个指标高但人工质量差的例子，并说明指标局限 |

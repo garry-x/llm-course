@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第2章 嵌入层与位置编码</h2>
   <p class="subtitle">实现 TokenEmbedding + Sinusoidal + RoPE——让模型理解语义与顺序</p>
-  <div class="reading-time">⏱ 预计阅读: 85 分钟 · 11 小节 · 4 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 12 小节 · 4 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -82,6 +82,40 @@
   </ul>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>参数量：</strong>嵌入矩阵 <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span>。GPT-2 124M 中 <span class="katex-inline" data-expr="V=50257, d=768" aria-label="V=50257, d=768" role="img"></span>，嵌入层约 3860 万参数——占模型总参数的 31%！嵌入矩阵通常与 LM Head（输出投影）共享权重（weight tying），进一步复用参数。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 2.1A Word vectors -->
+<!-- ================================================================ -->
+<section class="card" id="s2-1a">
+  <h3>2.1A 从 word2vec/GloVe 到 LLM Token Embedding</h3>
+  <p>CS224N 这类课程通常从 word vectors 开始，因为它们展示了一个核心思想：语义不是手写规则，而是可以从上下文统计中学习出来。现代 LLM 的 <code>nn.Embedding</code> 不再单独训练成静态词向量，但它仍继承了同一个表示学习问题：如何把离散 token 映射到可微、可比较、可组合的连续空间。</p>
+
+  <h4>Skip-gram with Negative Sampling</h4>
+  <p>word2vec 的 skip-gram 目标是：给定中心词 <span class="katex-inline" data-expr="w_t" aria-label="w_t" role="img"></span>，预测窗口内上下文词 <span class="katex-inline" data-expr="w_{t+j}" aria-label="w_{t+j}" role="img"></span>。负采样版本把“真实上下文词”与“随机噪声词”区分开：</p>
+  <div class="math-box"><div class="label">Skip-gram Negative Sampling</div>
+    <div class="katex" data-expr="\log \sigma(\mathbf{u}_o^\top \mathbf{v}_c) + \sum_{k=1}^{K} \mathbb{E}_{w_k \sim P_n(w)}\left[\log \sigma(-\mathbf{u}_{w_k}^\top \mathbf{v}_c)\right]" aria-label="\log \sigma(\mathbf{u}_o^\top \mathbf{v}_c) + \sum_{k=1}^{K} \mathbb{E}_{w_k \sim P_n(w)}\left[\log \sigma(-\mathbf{u}_{w_k}^\top \mathbf{v}_c)\right]" role="img"></div>
+  </div>
+  <p>这里 <span class="katex-inline" data-expr="\mathbf{v}_c" aria-label="\mathbf{v}_c" role="img"></span> 是中心词向量，<span class="katex-inline" data-expr="\mathbf{u}_o" aria-label="\mathbf{u}_o" role="img"></span> 是真实上下文词的输出向量，负样本来自噪声分布 <span class="katex-inline" data-expr="P_n(w)" aria-label="P_n(w)" role="img"></span>。如果两个词经常共享上下文，它们会在训练中获得相似的向量方向。</p>
+
+  <h4>GloVe：从全局共现矩阵学习</h4>
+  <p>GloVe 从全局词-词共现矩阵 <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span> 出发，用加权最小二乘拟合共现对数：</p>
+  <div class="math-box"><div class="label">GloVe Objective</div>
+    <div class="katex" data-expr="J = \sum_{i,j} f(X_{ij})\left(\mathbf{w}_i^\top \tilde{\mathbf{w}}_j + b_i + \tilde{b}_j - \log X_{ij}\right)^2" aria-label="J = \sum_{i,j} f(X_{ij})\left(\mathbf{w}_i^\top \tilde{\mathbf{w}}_j + b_i + \tilde{b}_j - \log X_{ij}\right)^2" role="img"></div>
+  </div>
+  <p>与 skip-gram 主要利用局部窗口样本不同，GloVe 显式建模全局共现统计。两者都说明：向量空间中的相似性来自训练目标和语料统计，而不是 one-hot ID 本身。</p>
+
+  <h4>静态词向量与 LLM 嵌入的区别</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>维度</th><th>word2vec/GloVe</th><th>LLM Token Embedding</th></tr>
+      <tr><td>训练方式</td><td>通常先在语料上独立训练，再用于下游任务</td><td>与 Transformer、LM head 和 loss 端到端共同训练</td></tr>
+      <tr><td>表示对象</td><td>多为 word 或 subword 的静态向量</td><td>token 的输入向量，后续层会生成上下文化表示</td></tr>
+      <tr><td>同一词多义</td><td>一个词通常只有一个向量，难区分语境</td><td>同一 token 的初始向量相同，但经过 attention 后上下文表示不同</td></tr>
+      <tr><td>类比现象</td><td>常用于观察线性结构，如 gender/country-capital</td><td>不是主要评价方式，LLM 能力更多来自多层上下文计算</td></tr>
+    </table>
+  </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>连接到下一节：</strong><code>nn.Embedding</code> 只负责把 token id 查成初始向量；真正的上下文语义要经过位置编码、注意力和多层 Transformer 才逐步形成。不要把“embedding 相似”误解为模型最终理解的全部。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -509,6 +543,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
   <ul>
     <li>✅ <strong>TokenEmbedding</strong> —— 从 token ID 到稠密向量的可训练查表</li>
     <li>✅ 理解了 One-Hot 的<strong>维度灾难</strong>和<strong>分布式表示</strong>的语义优势</li>
+    <li>✅ 区分了 <strong>word2vec/GloVe 静态词向量</strong>与 LLM 的端到端 token embedding</li>
     <li>✅ 掌握了<strong>置换等变性</strong>——为什么位置编码是必需的</li>
     <li>✅ <strong>SinusoidalEncoding</strong> —— 多尺度频率的固定位置编码</li>
     <li>✅ <strong>RoPE</strong> —— 旋转位置编码，点积仅依赖相对位置</li>

@@ -34,6 +34,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch02_embeddings/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 embedding 参数量，解释 one-hot 与 lookup 等价性，证明 self-attention 的置换等变性，推导 RoPE 点积依赖相对位置 |
+| Written questions | 35 | 推导 embedding 参数量，解释 one-hot 与 lookup 等价性，比较 word2vec/GloVe 的统计目标，证明 self-attention 的置换等变性，推导 RoPE 点积依赖相对位置 |
 | Programming parts | 55 | 实现 `TokenEmbedding`、`SinusoidalEncoding`、`RoPE` 和相对位置数值验证 |
 | Analysis / style | 10 | 说明 RoPE 外推失败模式、odd head dimension 拒绝策略和 dtype/device 迁移 |

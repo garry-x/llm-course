@@ -21,8 +21,9 @@
 ## Ch02 Embedding / Position Encoding / RoPE
 
 1. 从 one-hot 矩阵乘法推导 embedding lookup，说明为什么 `E[token_id]` 等价于 `one_hot @ E`。
-2. 证明 sinusoidal position encoding 的相对位移可以由线性变换表示，即 `PE(pos+k)` 可以由 `PE(pos)` 的 sin/cos block 旋转得到。
-3. 证明 RoPE 点积只依赖相对位置：`(R_m q)^T (R_n k) = q^T R_{n-m} k`，并解释为什么这对长上下文外推有帮助但不是充分条件。
+2. 比较 skip-gram negative sampling 与 GloVe：它们分别从局部上下文样本和全局共现矩阵中学习什么统计信号？为什么类比推理不是训练目标直接保证的性质？
+3. 证明 sinusoidal position encoding 的相对位移可以由线性变换表示，即 `PE(pos+k)` 可以由 `PE(pos)` 的 sin/cos block 旋转得到。
+4. 证明 RoPE 点积只依赖相对位置：`(R_m q)^T (R_n k) = q^T R_{n-m} k`，并解释为什么这对长上下文外推有帮助但不是充分条件。
 
 ## Ch03 Scaled Dot-Product Attention
 

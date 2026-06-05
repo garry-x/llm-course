@@ -58,6 +58,32 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     return (positive_loss + negative_loss).mean()
 
 
+def glove_weighted_loss(word_vectors, context_vectors, word_biases, context_biases, cooccurrence, x_max=100.0, alpha=0.75):
+    if word_vectors.dim() != 2 or context_vectors.dim() != 2:
+        raise ValueError("word_vectors and context_vectors must have shape [V, D]")
+    if word_vectors.shape != context_vectors.shape:
+        raise ValueError("word_vectors and context_vectors must have the same shape")
+    vocab_size = word_vectors.size(0)
+    if word_biases.shape != (vocab_size,) or context_biases.shape != (vocab_size,):
+        raise ValueError("bias vectors must have shape [V]")
+    if cooccurrence.shape != (vocab_size, vocab_size):
+        raise ValueError("cooccurrence must have shape [V, V]")
+    if x_max <= 0 or alpha <= 0:
+        raise ValueError("x_max and alpha must be positive")
+
+    counts = cooccurrence.to(word_vectors.device, dtype=word_vectors.dtype)
+    nonzero = counts > 0
+    if not torch.any(nonzero):
+        raise ValueError("cooccurrence must contain at least one positive count")
+
+    word_indices, context_indices = torch.nonzero(nonzero, as_tuple=True)
+    x_ij = counts[word_indices, context_indices]
+    weights = torch.clamp((x_ij / float(x_max)).pow(alpha), max=1.0)
+    dot = torch.sum(word_vectors[word_indices] * context_vectors[context_indices], dim=-1)
+    residual = dot + word_biases[word_indices] + context_biases[context_indices] - x_ij.log()
+    return (weights * residual.pow(2)).mean()
+
+
 def cosine_similarity_matrix(vectors):
     if vectors.dim() != 2:
         raise ValueError("vectors must have shape [V, D]")

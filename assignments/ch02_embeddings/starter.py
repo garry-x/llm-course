@@ -25,6 +25,11 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     raise NotImplementedError
 
 
+def glove_weighted_loss(word_vectors, context_vectors, word_biases, context_biases, cooccurrence, x_max=100.0, alpha=0.75):
+    """Return GloVe weighted least-squares loss over nonzero co-occurrences."""
+    raise NotImplementedError
+
+
 def cosine_similarity_matrix(vectors):
     """Return pairwise cosine similarities for a [V, D] embedding matrix."""
     raise NotImplementedError

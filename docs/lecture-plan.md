@@ -61,7 +61,7 @@ Quick check：
 核心推导：
 
 - `one_hot @ E = E[token_id]`。
-- directed co-occurrence matrix 与 SGNS loss。
+- directed co-occurrence matrix、SGNS loss 与 GloVe weighted least-squares residual。
 - 3CosAdd 查询向量：`v_b - v_a + v_c`，并排除输入词。
 - `R_m^T R_n = R_{n-m}`。
 

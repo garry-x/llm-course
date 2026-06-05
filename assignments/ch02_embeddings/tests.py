@@ -81,6 +81,37 @@ class TestWordVectorObjectives(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.skipgram_negative_sampling_loss(torch.randn(2, 3), torch.randn(2, 3), torch.randn(2, 4))
 
+    def test_glove_weighted_loss_matches_manual_nonzero_counts(self):
+        word = torch.tensor([[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]])
+        context = torch.tensor([[0.5, 0.0], [0.0, 0.25], [2.0, -1.0]])
+        word_bias = torch.tensor([0.1, -0.2, 0.3])
+        context_bias = torch.tensor([0.0, 0.4, -0.1])
+        counts = torch.tensor(
+            [
+                [0.0, 4.0, 0.0],
+                [2.0, 0.0, 0.0],
+                [0.0, 0.0, 8.0],
+            ]
+        )
+        loss = submission.glove_weighted_loss(word, context, word_bias, context_bias, counts, x_max=4.0, alpha=0.5)
+
+        terms = []
+        for i, j in [(0, 1), (1, 0), (2, 2)]:
+            x_ij = counts[i, j]
+            weight = min((x_ij / 4.0).sqrt().item(), 1.0)
+            residual = (word[i] * context[j]).sum() + word_bias[i] + context_bias[j] - x_ij.log()
+            terms.append(weight * residual.pow(2))
+        expected = torch.stack(terms).mean()
+        self.assertTrue(torch.allclose(loss, expected, atol=1e-6))
+
+    def test_glove_weighted_loss_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.glove_weighted_loss(torch.randn(2, 3), torch.randn(2, 4), torch.zeros(2), torch.zeros(2), torch.ones(2, 2))
+        with self.assertRaises(ValueError):
+            submission.glove_weighted_loss(torch.randn(2, 3), torch.randn(2, 3), torch.zeros(2), torch.zeros(2), torch.zeros(2, 2))
+        with self.assertRaises(ValueError):
+            submission.glove_weighted_loss(torch.randn(2, 3), torch.randn(2, 3), torch.zeros(2), torch.zeros(2), torch.ones(2, 2), x_max=0)
+
     def test_cosine_similarity_matrix_normalizes_rows(self):
         vectors = torch.tensor([[3.0, 0.0], [0.0, 4.0], [6.0, 0.0]])
         sims = submission.cosine_similarity_matrix(vectors)

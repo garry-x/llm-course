@@ -112,7 +112,7 @@
   <div class="math-box"><div class="label">GloVe Objective</div>
     <div class="katex" data-expr="J = \sum_{i,j} f(X_{ij})\left(\mathbf{w}_i^\top \tilde{\mathbf{w}}_j + b_i + \tilde{b}_j - \log X_{ij}\right)^2" aria-label="J = \sum_{i,j} f(X_{ij})\left(\mathbf{w}_i^\top \tilde{\mathbf{w}}_j + b_i + \tilde{b}_j - \log X_{ij}\right)^2" role="img"></div>
   </div>
-  <p>与 skip-gram 主要利用局部窗口样本不同，GloVe 显式建模全局共现统计。两者都说明：向量空间中的相似性来自训练目标和语料统计，而不是 one-hot ID 本身。</p>
+  <p>与 skip-gram 主要利用局部窗口样本不同，GloVe 显式建模全局共现统计。Ch02 作业中的 <code>glove_weighted_loss</code> 要求学生只在非零共现项上计算加权残差，并使用 <code>min((X_ij / x_max)^alpha, 1)</code> 降低极低频或极高频共现对目标的支配。两者都说明：向量空间中的相似性来自训练目标和语料统计，而不是 one-hot ID 本身。</p>
 
   <h4>静态词向量与 LLM 嵌入的区别</h4>
   <div class="table-wrap">

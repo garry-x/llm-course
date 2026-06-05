@@ -513,7 +513,7 @@ Quick check：
 - LSTM gate 如何改变长期信息路径。
 - UAS/LAS 指标。
 - seq2seq teacher forcing 与 exposure bias。
-- MLM 与 causal LM 的 mask 方向差异。
+- MLM 与 causal LM 的 mask 方向差异；MLM cross entropy 只在 masked positions 上求平均。
 - BIO tagging 如何把 token classification 转成 entity spans。
 - Viterbi DP：emission + transition scores 下的最优 tag path。
 - CRF forward algorithm：用 logsumexp 计算所有 tag paths 的 log-partition。
@@ -526,7 +526,7 @@ Quick check：
 - 手算 3 步标量 RNN hidden state 和 recurrent gradient factors。
 - 给定 BIO tags，解码 NER spans，并讨论非法 `I-` 标签的处理策略。
 - 给定小型 emission/transition table，手算 Viterbi scores、backpointers、CRF forward alpha 和 gold path NLL。
-- 对比 BERT MLM 输入和 GPT causal LM 输入。
+- 对比 BERT MLM 输入和 GPT causal LM 输入，并手算一个 masked-token cross entropy。
 - 用 beam candidate table 展示 length-normalized score 如何改变排序。
 
 Quick check：

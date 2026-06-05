@@ -60,6 +60,11 @@ def build_mlm_example(tokens, mask_positions, mask_token="[MASK]"):
     raise NotImplementedError
 
 
+def masked_lm_loss_from_logits(logits, labels, ignore_index=None):
+    """Compute MLM cross entropy and accuracy only on non-ignored label positions."""
+    raise NotImplementedError
+
+
 def bio_tags_to_spans(tokens, tags):
     """Decode BIO sequence-labeling tags into entity spans."""
     raise NotImplementedError

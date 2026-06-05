@@ -187,6 +187,36 @@ class TestQAMetricsAndMLM(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.build_mlm_example(["a", "b"], [1, 1])
 
+    def test_masked_lm_loss_uses_only_masked_positions(self):
+        logits = [
+            [4.0, 0.0, 0.0],
+            [0.0, 1.0, 3.0],
+            [0.0, 2.0, 1.0],
+        ]
+        labels = [None, 2, 0]
+        result = solution.masked_lm_loss_from_logits(logits, labels)
+
+        def nll(row, label):
+            max_logit = max(row)
+            log_z = max_logit + math.log(sum(math.exp(value - max_logit) for value in row))
+            return log_z - row[label]
+
+        expected = (nll(logits[1], 2) + nll(logits[2], 0)) / 2
+        self.assertAlmostEqual(result["loss"], expected)
+        self.assertEqual(result["num_masked"], 2)
+        self.assertEqual(result["positions"], [1, 2])
+        self.assertAlmostEqual(result["accuracy"], 0.5)
+
+    def test_masked_lm_loss_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            solution.masked_lm_loss_from_logits([], [])
+        with self.assertRaises(ValueError):
+            solution.masked_lm_loss_from_logits([[1.0], [1.0, 2.0]], [0, 1])
+        with self.assertRaises(ValueError):
+            solution.masked_lm_loss_from_logits([[1.0, 2.0]], [None])
+        with self.assertRaises(ValueError):
+            solution.masked_lm_loss_from_logits([[1.0, 2.0]], [2])
+
     def test_bio_tags_to_spans_decodes_sequence_labels(self):
         tokens = ["John", "lives", "in", "New", "York", "."]
         tags = ["B-PER", "O", "O", "B-LOC", "I-LOC", "O"]

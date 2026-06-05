@@ -315,6 +315,43 @@ def build_mlm_example(tokens, mask_positions, mask_token="[MASK]"):
     return token_list, labels
 
 
+def masked_lm_loss_from_logits(logits, labels, ignore_index=None):
+    if not logits:
+        raise ValueError("logits must not be empty")
+    vocab_size = len(logits[0])
+    if vocab_size == 0:
+        raise ValueError("logit rows must not be empty")
+    if any(len(row) != vocab_size for row in logits):
+        raise ValueError("logits must be rectangular")
+    if len(labels) != len(logits):
+        raise ValueError("labels length must match logits length")
+
+    losses = []
+    correct = 0
+    positions = []
+    for position, (row, label) in enumerate(zip(logits, labels)):
+        if label is None or label == ignore_index:
+            continue
+        if label < 0 or label >= vocab_size:
+            raise ValueError("label ids must be inside the vocabulary")
+        max_logit = max(float(value) for value in row)
+        normalizer = sum(math.exp(float(value) - max_logit) for value in row)
+        log_z = max_logit + math.log(normalizer)
+        losses.append(log_z - float(row[label]))
+        pred = max(range(vocab_size), key=lambda idx: float(row[idx]))
+        correct += int(pred == label)
+        positions.append(position)
+
+    if not losses:
+        raise ValueError("at least one non-ignored MLM label is required")
+    return {
+        "loss": sum(losses) / len(losses),
+        "accuracy": correct / len(losses),
+        "num_masked": len(losses),
+        "positions": positions,
+    }
+
+
 def bio_tags_to_spans(tokens, tags):
     if len(tokens) != len(tags):
         raise ValueError("tokens and tags must have equal length")

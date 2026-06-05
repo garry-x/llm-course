@@ -104,7 +104,7 @@
 
 <section class="card" id="s11-5">
   <h3>11.5 BERT / Encoder-only：MLM、分类与抽取式 QA</h3>
-  <p>BERT-style encoder 可以双向看见输入中的左右上下文，不是自回归生成器。它的预训练目标之一是 Masked Language Modeling：只在被 mask 的位置计算 cross entropy，未 mask 的 token 使用 ignore index。</p>
+  <p>BERT-style encoder 可以双向看见输入中的左右上下文，不是自回归生成器。它的预训练目标之一是 Masked Language Modeling：只在被 mask 的位置计算 cross entropy，未 mask 的 token 使用 ignore index。课程作业中的 <code>masked_lm_loss_from_logits</code> 会显式返回 masked-token loss、accuracy 和参与 loss 的位置，帮助区分“输入中有哪些 token 可见”和“哪些位置贡献训练目标”。</p>
   <table>
     <tr><th>维度</th><th>Encoder-only / BERT</th><th>Decoder-only / GPT</th></tr>
     <tr><td>可见性</td><td>双向 self-attention</td><td>causal mask，只看左侧前缀</td></tr>
@@ -166,7 +166,7 @@
     <tr><td><code>scalar_rnn_forward</code>, <code>recurrent_gradient_factors</code></td><td>RNN recurrence 与 BPTT</td><td>为什么长距离梯度会消失或爆炸</td></tr>
     <tr><td><code>run_arc_standard_transitions</code>, <code>attachment_scores</code></td><td>Dependency parsing 与 UAS/LAS</td><td>结构化预测和 attention 诊断有什么区别</td></tr>
     <tr><td><code>additive_attention_context</code></td><td>Seq2Seq alignment</td><td>decoder step 如何读取源序列</td></tr>
-    <tr><td><code>build_mlm_example</code></td><td>BERT MLM label mask</td><td>为什么未 mask 位置不进入 loss</td></tr>
+    <tr><td><code>build_mlm_example</code>, <code>masked_lm_loss_from_logits</code></td><td>BERT MLM label mask 与 loss</td><td>为什么未 mask 位置不进入 loss 分母</td></tr>
     <tr><td><code>bio_tags_to_spans</code></td><td>BIO sequence labeling</td><td>如何把 token classification 输出变成实体 span</td></tr>
     <tr><td><code>viterbi_decode</code></td><td>Linear-chain structured decoding</td><td>为什么最优 tag path 不等于逐 token argmax</td></tr>
     <tr><td><code>linear_chain_log_partition</code></td><td>CRF forward algorithm</td><td>如何对所有 tag paths 做 logsumexp 归一化</td></tr>

@@ -183,6 +183,27 @@ class TestBlockResourceEstimates(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.estimate_block_resources(0, 4, 8, 2)
 
+    def test_activation_checkpointing_tradeoff_saves_memory_for_recompute(self):
+        tradeoff = submission.activation_checkpointing_tradeoff(
+            activation_bytes=1000,
+            forward_flops=300,
+            checkpointed_fraction=0.5,
+        )
+        self.assertEqual(tradeoff["saved_activation_bytes"], 500)
+        self.assertEqual(tradeoff["remaining_activation_bytes"], 500)
+        self.assertEqual(tradeoff["recompute_flops"], 150)
+        self.assertEqual(tradeoff["baseline_training_flops"], 900)
+        self.assertEqual(tradeoff["checkpointed_training_flops"], 1050)
+        self.assertAlmostEqual(tradeoff["training_flops_multiplier"], 1050 / 900)
+
+    def test_activation_checkpointing_tradeoff_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.activation_checkpointing_tradeoff(0, 100)
+        with self.assertRaises(ValueError):
+            submission.activation_checkpointing_tradeoff(100, 0)
+        with self.assertRaises(ValueError):
+            submission.activation_checkpointing_tradeoff(100, 100, checkpointed_fraction=1.5)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

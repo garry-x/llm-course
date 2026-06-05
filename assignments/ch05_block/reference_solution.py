@@ -245,3 +245,25 @@ def estimate_block_resources(batch_size, seq_len, d_model, n_heads, d_ff=None, d
         "activation_bytes": activation_bytes,
         "activation_mb": activation_bytes / (1024**2),
     }
+
+
+def activation_checkpointing_tradeoff(activation_bytes, forward_flops, checkpointed_fraction=1.0):
+    if activation_bytes <= 0 or forward_flops <= 0:
+        raise ValueError("activation_bytes and forward_flops must be positive")
+    if checkpointed_fraction < 0 or checkpointed_fraction > 1:
+        raise ValueError("checkpointed_fraction must be between 0 and 1")
+
+    saved_activation_bytes = activation_bytes * checkpointed_fraction
+    remaining_activation_bytes = activation_bytes - saved_activation_bytes
+    recompute_flops = forward_flops * checkpointed_fraction
+    baseline_training_flops = 3 * forward_flops
+    checkpointed_training_flops = baseline_training_flops + recompute_flops
+    return {
+        "checkpointed_fraction": checkpointed_fraction,
+        "saved_activation_bytes": saved_activation_bytes,
+        "remaining_activation_bytes": remaining_activation_bytes,
+        "recompute_flops": recompute_flops,
+        "baseline_training_flops": baseline_training_flops,
+        "checkpointed_training_flops": checkpointed_training_flops,
+        "training_flops_multiplier": checkpointed_training_flops / baseline_training_flops,
+    }

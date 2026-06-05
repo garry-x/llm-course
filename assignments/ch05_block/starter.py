@@ -93,3 +93,8 @@ def count_params(model):
 def estimate_block_resources(batch_size, seq_len, d_model, n_heads, d_ff=None, dtype_bytes=2):
     """Estimate parameters, major FLOPs, and activation memory for one Transformer block."""
     raise NotImplementedError
+
+
+def activation_checkpointing_tradeoff(activation_bytes, forward_flops, checkpointed_fraction=1.0):
+    """Estimate activation memory saved and extra recompute FLOPs from checkpointing."""
+    raise NotImplementedError

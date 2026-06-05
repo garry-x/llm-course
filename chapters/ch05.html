@@ -483,8 +483,9 @@ print(f"比例: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for
   <h4>FLOPs 与激活显存</h4>
   <p>课程作业中的 <code>estimate_block_resources</code> 使用常见矩阵乘法约定：一次 <code>[m,k] @ [k,n]</code> 约为 <span class="katex-inline" data-expr="2mkn" aria-label="2mkn" role="img"></span> FLOPs。它分别估算 QKV 投影、attention score、attention value mixing、输出投影和 SwiGLU 三个线性层的主要 FLOPs。</p>
   <p>激活显存估算包含主要张量：Q/K/V、SwiGLU 的 gate/value 中间激活、attention scores 以及残差流。attention scores 的大小是 <span class="katex-inline" data-expr="B \times H \times T^2" aria-label="B \times H \times T^2" role="img"></span>，这就是为什么长序列训练比短序列训练贵得多。FlashAttention 可以避免完整物化 attention matrix，但普通教学实现会显式保存它。</p>
+  <p><strong>Activation checkpointing</strong> 的取舍不同：它不改变参数量，也不改变最终数学函数，而是在 forward 时少保存部分中间激活，backward 时重新计算这些激活。Ch05 作业中的 <code>activation_checkpointing_tradeoff</code> 用一个简化模型估算：若 checkpoint fraction 为 <code>c</code>，大约节省 <code>c * activation_bytes</code>，同时在反向传播中额外支付 <code>c * forward_flops</code> 的重算成本。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>使用边界：</strong>这是课程级量级估算，不包含 kernel fusion、optimizer state、activation checkpointing、dropout mask、通信、allocator 碎片或具体硬件效率。它的作用是让学生能解释“哪个项随 T 二次增长，哪个项随 d_model 和 d_ff 增长”。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>使用边界：</strong>这是课程级量级估算，不包含 kernel fusion、optimizer state、dropout mask、通信、allocator 碎片或具体硬件效率。它的作用是让学生能解释“哪个项随 T 二次增长，哪个项随 d_model 和 d_ff 增长”，以及 checkpointing 为什么是用计算换训练显存。</div></div>
 </section>
 
 <!-- ================================================================ -->

@@ -38,10 +38,10 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>训练的主线只有四步：取一段 token、让模型预测下一个 token、用交叉熵计算错误、反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练是大规模优化专题，第一遍可作为“知道为什么需要它们”。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 6 章 GPTModel、交叉熵、optimizer 的基本概念。</li>
-    <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释 perplexity、AdamW、warmup、gradient clipping 与混合精度的作用。</li>
+    <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释 perplexity、calibration/ECE、AdamW、warmup、gradient clipping 与混合精度的作用。</li>
     <li><strong>课前阅读：</strong>阅读 cross-entropy/MLE 复习材料、AdamW 论文摘要和 Chinchilla scaling law 摘要。</li>
     <li><strong>课后阅读：</strong>阅读 DeepSpeed/ZeRO、FSDP、DeepSeek-V3 FP8 训练段落，区分单机教学实现与大规模训练系统。</li>
-    <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity 变化的训练循环。</li>
+    <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity/calibration 变化的训练循环。</li>
     <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
     <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
@@ -295,6 +295,13 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   <h4>Mask 对梯度的影响</h4>
   <p>在 padding、SFT label mask 或 packed sequence 中，被设为 ignore index 的位置不应该贡献 loss，也不应该贡献梯度。实现上不是把这些位置的概率设为 0，而是在 reduction 前把对应 NLL 从平均中排除。否则模型会被迫预测 padding、prompt 或无效位置，训练目标就会偏离真实任务。</p>
   <p>课程作业中的 <code>cross_entropy_logits_gradient</code> 要求把这个规则写成张量计算：有效位置的梯度是 <code>(softmax(logits) - one_hot(target)) / N_valid</code>，被忽略位置整行梯度为 0。这个函数把书面推导和 PyTorch autograd 的实际梯度对齐起来。</p>
+
+  <h4>概率校准：模型说“90%”时真的有 90% 对吗？</h4>
+  <p>Perplexity 衡量模型给真实 token 的平均概率，但它不直接告诉我们模型置信度是否可信。校准关注另一个问题：把所有 confidence 约为 0.9 的预测放在一起，正确率是否也约为 0.9？如果一个模型经常以 0.95 confidence 预测错误，它不适合直接把 softmax probability 当作拒答阈值、风险分数或自动化决策依据。</p>
+  <div class="math-box"><div class="label">公式 7.8B Expected Calibration Error</div>
+    <div class="katex" data-expr="\text{ECE}=\sum_{b=1}^{B}\frac{|S_b|}{N}\left|\text{acc}(S_b)-\text{conf}(S_b)\right|" aria-label="\text{ECE}=\sum_{b=1}^{B}\frac{|S_b|}{N}\left|\text{acc}(S_b)-\text{conf}(S_b)\right|" role="img"></div>
+  </div>
+  <p>其中 <span class="katex-inline" data-expr="S_b" aria-label="S_b" role="img"></span> 是第 <span class="katex-inline" data-expr="b" aria-label="b" role="img"></span> 个置信度桶，<span class="katex-inline" data-expr="\text{acc}(S_b)" aria-label="\text{acc}(S_b)" role="img"></span> 是桶内预测正确率，<span class="katex-inline" data-expr="\text{conf}(S_b)" aria-label="\text{conf}(S_b)" role="img"></span> 是桶内平均最大 softmax 概率。Ch07 作业中的 <code>expected_calibration_error(logits, targets, n_bins)</code> 要求学生从 logits 计算 confidence、prediction、correctness 和分桶 ECE，并沿用 <code>ignore_index</code> 避免 padding 或 prompt 位置污染评估。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Cross entropy 不只是一个标量分数。它给 logits 的更新方向非常明确：提高正确 token，压低模型自己认为可能但实际错误的 token，并通过链式法则把这个信号传回整个 Transformer。</div></div>
 </section>

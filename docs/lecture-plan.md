@@ -292,6 +292,7 @@ Quick check：
 
 - CE gradient `p_i - 1[i=y]`。
 - `ignore_index` 位置不进入 mean CE 的分母，logits 梯度整行为 0。
+- ECE：按 confidence 分桶比较 accuracy 与 mean confidence。
 - n-gram repetition / overlap 的分母和结论边界。
 - AdamW 的 decoupled weight decay 更新项。
 
@@ -299,11 +300,13 @@ Quick check：
 
 - 打印 dataset 样本，确认 input 和 target 右移。
 - 对一段 toy token 序列计算重复率和 train/eval 重叠率。
+- 给定 logits 和 labels，计算 confidence、accuracy bucket 与 ECE。
 - 手算 AdamW 单步更新并与测试对齐。
 
 Quick check：
 
 - perplexity 是正确率吗？
+- softmax probability 可以直接当作答案可信度吗？
 - warmup 解决什么早期训练问题？
 
 课后产出：

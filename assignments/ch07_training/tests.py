@@ -205,5 +205,48 @@ class TestTrainLoop(unittest.TestCase):
         self.assertAlmostEqual(submission.perplexity(2.0), math.exp(2.0))
 
 
+@unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
+class TestCalibrationMetrics(unittest.TestCase):
+    def test_expected_calibration_error_bins_confidence_and_accuracy(self):
+        logits = torch.tensor(
+            [
+                [3.0, 0.0],
+                [0.0, 3.0],
+                [3.0, 0.0],
+                [0.2, 0.0],
+            ]
+        )
+        targets = torch.tensor([0, 1, 1, 0])
+        result = submission.expected_calibration_error(logits, targets, n_bins=2)
+
+        probs = torch.softmax(logits, dim=-1)
+        confidence, predictions = probs.max(dim=-1)
+        correct = (predictions == targets).float()
+        low_bin = (confidence >= 0.0) & (confidence < 0.5)
+        high_bin = (confidence >= 0.5) & (confidence <= 1.0)
+        self.assertEqual(int(low_bin.sum()), 0)
+        self.assertEqual(int(result["bin_counts"][1].item()), 4)
+
+        expected_acc = correct[high_bin].mean()
+        expected_conf = confidence[high_bin].mean()
+        expected_ece = torch.abs(expected_acc - expected_conf).item()
+        self.assertAlmostEqual(result["bin_accuracy"][1].item(), expected_acc.item())
+        self.assertAlmostEqual(result["bin_confidence"][1].item(), expected_conf.item())
+        self.assertAlmostEqual(result["ece"], expected_ece)
+
+    def test_expected_calibration_error_respects_ignore_index_and_shapes(self):
+        logits = torch.tensor([[[2.0, 0.0], [0.0, 2.0], [2.0, 0.0]]])
+        targets = torch.tensor([[0, -100, 1]])
+        result = submission.expected_calibration_error(logits, targets, n_bins=5, ignore_index=-100)
+        self.assertEqual(int(result["bin_counts"].sum().item()), 2)
+
+        with self.assertRaises(ValueError):
+            submission.expected_calibration_error(logits, targets, n_bins=0)
+        with self.assertRaises(ValueError):
+            submission.expected_calibration_error(torch.randn(2, 3), torch.randn(2, 2).long())
+        with self.assertRaises(ValueError):
+            submission.expected_calibration_error(logits, torch.full((1, 3), -100), ignore_index=-100)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

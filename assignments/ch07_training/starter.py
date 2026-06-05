@@ -83,3 +83,8 @@ def train(model, dataloader, optimizer, scheduler, config, loss_history=None):
 
 def perplexity(loss):
     raise NotImplementedError
+
+
+def expected_calibration_error(logits, targets, n_bins=10, ignore_index=None):
+    """Compute confidence calibration bins and expected calibration error."""
+    raise NotImplementedError

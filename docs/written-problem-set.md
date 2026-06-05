@@ -70,8 +70,9 @@
 5. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16`、训练预算 `D=20B tokens` 和 dense LM 参数量 `N=1B`，计算 global batch tokens、训练 step 数和近似训练 FLOPs，并说明这会如何影响 learning rate schedule、checkpoint 间隔与 GPU hours。
 6. 给定 train token 序列和 eval token 序列，计算 n-gram repetition rate 与 train/eval overlap rate，并说明它们如何影响 val loss 和泛化判断。
 7. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。
-8. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
-9. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
+8. 给定一组 logits、targets 和 confidence bins，计算每个桶的 accuracy、mean confidence 与 ECE，并说明模型过度自信会如何影响拒答阈值或风险控制。
+9. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
+10. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
 
 ## Ch08 Generation / Decoding
 

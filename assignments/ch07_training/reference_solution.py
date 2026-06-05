@@ -230,3 +230,55 @@ def train(model, dataloader, optimizer, scheduler, config, loss_history=None):
 
 def perplexity(loss):
     return math.exp(float(loss))
+
+
+def expected_calibration_error(logits, targets, n_bins=10, ignore_index=None):
+    if n_bins <= 0:
+        raise ValueError("n_bins must be positive")
+    if logits.dim() < 2:
+        raise ValueError("logits must have a class dimension")
+    if logits.shape[:-1] != targets.shape:
+        raise ValueError("targets must match logits without the class dimension")
+
+    flat_logits = logits.reshape(-1, logits.size(-1)).float()
+    flat_targets = targets.reshape(-1)
+    if ignore_index is not None:
+        valid = flat_targets != ignore_index
+        flat_logits = flat_logits[valid]
+        flat_targets = flat_targets[valid]
+    if flat_targets.numel() == 0:
+        raise ValueError("at least one target position is required")
+
+    probabilities = F.softmax(flat_logits, dim=-1)
+    confidence, predictions = probabilities.max(dim=-1)
+    correct = (predictions == flat_targets).float()
+
+    bin_accuracy = torch.zeros(n_bins, device=logits.device)
+    bin_confidence = torch.zeros(n_bins, device=logits.device)
+    bin_counts = torch.zeros(n_bins, device=logits.device)
+    ece = torch.zeros((), device=logits.device)
+    total = float(flat_targets.numel())
+
+    for bin_idx in range(n_bins):
+        lower = bin_idx / n_bins
+        upper = (bin_idx + 1) / n_bins
+        if bin_idx == n_bins - 1:
+            in_bin = (confidence >= lower) & (confidence <= upper)
+        else:
+            in_bin = (confidence >= lower) & (confidence < upper)
+        count = in_bin.sum()
+        bin_counts[bin_idx] = count
+        if count.item() == 0:
+            continue
+        acc = correct[in_bin].mean()
+        conf = confidence[in_bin].mean()
+        bin_accuracy[bin_idx] = acc
+        bin_confidence[bin_idx] = conf
+        ece = ece + (count.float() / total) * torch.abs(acc - conf)
+
+    return {
+        "ece": ece.item(),
+        "bin_accuracy": bin_accuracy,
+        "bin_confidence": bin_confidence,
+        "bin_counts": bin_counts,
+    }

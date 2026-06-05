@@ -45,7 +45,7 @@
 
 ### D. 监控与实验管理
 
-- 能记录 train_loss、val_loss、perplexity、lr、grad_norm、tokens/s、samples/s。
+- 能记录 train_loss、val_loss、perplexity、calibration/ECE、lr、grad_norm、tokens/s、samples/s。
 - 能用 JSONL/CSV/W&B/TensorBoard 记录实验，并保留 config。
 - 能用固定开发集判断训练是否真的改进，而不是只看训练 loss。
 
@@ -82,7 +82,7 @@
 | 数据分析 | 能输出样本数、空样本、重复率、长度分布 | `data_profile.py` 输出 |
 | 训练运行 | 能跑完整训练并持续记录 metrics | `train.py` + `metrics.jsonl` |
 | Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复 | `acceptance.py` resume 检查 |
-| 开发集 | 能记录 val_loss / perplexity | `metrics.jsonl` |
+| 开发集 | 能记录 val_loss / perplexity / ECE | `metrics.jsonl` |
 | 监控指标 | 至少记录 loss、lr、grad_norm、tokens/s | `metrics.jsonl` |
 | 训练规划 | 能估算 steps、GPU hours、成本、checkpoint 存储 | `plan_training.py` 输出 |
 | 实验结论 | 项目有研究问题、baseline、ablation 和结论边界 | proposal / milestone / final report |

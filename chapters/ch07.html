@@ -296,6 +296,13 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   <p>在 padding、SFT label mask 或 packed sequence 中，被设为 ignore index 的位置不应该贡献 loss，也不应该贡献梯度。实现上不是把这些位置的概率设为 0，而是在 reduction 前把对应 NLL 从平均中排除。否则模型会被迫预测 padding、prompt 或无效位置，训练目标就会偏离真实任务。</p>
   <p>课程作业中的 <code>cross_entropy_logits_gradient</code> 要求把这个规则写成张量计算：有效位置的梯度是 <code>(softmax(logits) - one_hot(target)) / N_valid</code>，被忽略位置整行梯度为 0。这个函数把书面推导和 PyTorch autograd 的实际梯度对齐起来。</p>
 
+  <h4>Label smoothing：不把目标分布当成绝对 one-hot</h4>
+  <p>标准 next-token CE 把正确 token 的目标概率设为 1，其余 token 设为 0。Label smoothing 把少量概率质量 <span class="katex-inline" data-expr="\epsilon" aria-label="\epsilon" role="img"></span> 分给非目标类：</p>
+  <div class="math-box"><div class="label">Label-smoothed target</div>
+    <div class="katex" data-expr="q_i=\begin{cases}1-\epsilon, & i=y\\ \epsilon/(V-1), & i\ne y\end{cases},\qquad \mathcal{L}=-\sum_i q_i\log p_\theta(i)" aria-label="q_i=\begin{cases}1-\epsilon, & i=y\\ \epsilon/(V-1), & i\ne y\end{cases},\qquad \mathcal{L}=-\sum_i q_i\log p_\theta(i)" role="img"></div>
+  </div>
+  <p>这会降低模型对单个标签的过度自信，常见于分类、机器翻译和早期 seq2seq 训练。它不是“让答案变模糊”，而是在训练目标里表达标签噪声、同义候选和有限标注不确定性。Ch07 作业中的 <code>label_smoothed_cross_entropy</code> 要求学生显式构造平滑目标分布，并保持 <code>ignore_index</code> 不进入平均；这也是理解 distillation soft targets 的前置步骤。</p>
+
   <h4>概率校准：模型说“90%”时真的有 90% 对吗？</h4>
   <p>Perplexity 衡量模型给真实 token 的平均概率，但它不直接告诉我们模型置信度是否可信。校准关注另一个问题：把所有 confidence 约为 0.9 的预测放在一起，正确率是否也约为 0.9？如果一个模型经常以 0.95 confidence 预测错误，它不适合直接把 softmax probability 当作拒答阈值、风险分数或自动化决策依据。</p>
   <div class="math-box"><div class="label">公式 7.8B Expected Calibration Error</div>

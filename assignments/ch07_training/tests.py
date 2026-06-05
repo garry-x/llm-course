@@ -146,6 +146,39 @@ class TestLossOptimizerScheduler(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.cross_entropy_logits_gradient(torch.randn(1, 2, 4), torch.tensor([[-100, -100]]), ignore_index=-100)
 
+    def test_label_smoothed_cross_entropy_matches_manual_distribution(self):
+        logits = torch.tensor(
+            [
+                [[2.0, 0.0, -1.0], [0.0, 1.0, 2.0]],
+                [[1.0, -1.0, 0.0], [3.0, 0.0, -2.0]],
+            ]
+        )
+        targets = torch.tensor([[0, 2], [1, -100]])
+        epsilon = 0.2
+        loss = submission.label_smoothed_cross_entropy(logits, targets, epsilon=epsilon, ignore_index=-100)
+
+        log_probs = torch.log_softmax(logits, dim=-1)
+        terms = []
+        for b, t in [(0, 0), (0, 1), (1, 0)]:
+            target = targets[b, t].item()
+            distribution = torch.full((3,), epsilon / 2)
+            distribution[target] = 1.0 - epsilon
+            terms.append(-(distribution * log_probs[b, t]).sum())
+        expected = torch.stack(terms).mean()
+        self.assertTrue(torch.allclose(loss, expected, atol=1e-6))
+
+    def test_label_smoothed_cross_entropy_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.label_smoothed_cross_entropy(torch.randn(2, 3), torch.ones(2, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.label_smoothed_cross_entropy(torch.randn(2, 3, 4), torch.ones(2, 2), epsilon=1.0)
+        with self.assertRaises(ValueError):
+            submission.label_smoothed_cross_entropy(torch.randn(1, 2, 1), torch.zeros(1, 2, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.label_smoothed_cross_entropy(torch.randn(1, 1, 3), torch.tensor([[4]]))
+        with self.assertRaises(ValueError):
+            submission.label_smoothed_cross_entropy(torch.randn(1, 2, 3), torch.tensor([[-100, -100]]), ignore_index=-100)
+
     def test_adamw_single_step_matches_expected_update(self):
         p = torch.nn.Parameter(torch.tensor([1.0, -2.0]))
         p.grad = torch.tensor([0.1, -0.2])

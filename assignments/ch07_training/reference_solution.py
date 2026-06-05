@@ -136,6 +136,35 @@ def cross_entropy_logits_gradient(logits, targets, ignore_index=None):
     return grad / valid_count
 
 
+def label_smoothed_cross_entropy(logits, targets, epsilon=0.1, ignore_index=None):
+    if logits.dim() != 3:
+        raise ValueError("logits must have shape [batch, seq_len, vocab_size]")
+    if targets.shape != logits.shape[:2]:
+        raise ValueError("targets must have shape [batch, seq_len]")
+    if not 0.0 <= epsilon < 1.0:
+        raise ValueError("epsilon must be in [0, 1)")
+    vocab_size = logits.size(-1)
+    if vocab_size < 2:
+        raise ValueError("vocab_size must be at least 2 for label smoothing")
+
+    valid = torch.ones_like(targets, dtype=torch.bool)
+    gather_targets = targets
+    if ignore_index is not None:
+        valid = targets != ignore_index
+        gather_targets = targets.masked_fill(~valid, 0)
+    if torch.any((gather_targets[valid] < 0) | (gather_targets[valid] >= vocab_size)):
+        raise ValueError("target token id out of vocabulary range")
+    if not torch.any(valid):
+        raise ValueError("at least one non-ignored target is required")
+
+    log_probs = F.log_softmax(logits.float(), dim=-1)
+    nll = -log_probs.gather(dim=-1, index=gather_targets.unsqueeze(-1)).squeeze(-1)
+    non_target_log_probs = log_probs.sum(dim=-1) - log_probs.gather(dim=-1, index=gather_targets.unsqueeze(-1)).squeeze(-1)
+    smooth_loss = -non_target_log_probs / (vocab_size - 1)
+    loss = (1.0 - float(epsilon)) * nll + float(epsilon) * smooth_loss
+    return loss[valid].mean()
+
+
 class AdamW:
     def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1):
         self.params = list(params)

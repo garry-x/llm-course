@@ -125,6 +125,11 @@
     <div class="katex" data-expr="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" aria-label="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" role="img"></div>
   </div>
   <p>Viterbi 动态规划在第 <code>t</code> 步保存“以某个 tag 结尾的最佳路径分数”和 backpointer，复杂度为 <code>O(TK^2)</code>。Ch11 作业中的 <code>viterbi_decode</code> 让学生手写这个解码过程，理解结构化预测如何把局部分类器输出变成全局一致的标签序列。</p>
+  <p>训练 CRF 时还需要归一化所有可能路径，而不是只看最优路径。Forward algorithm 把 Viterbi 里的 <code>max</code> 换成 <code>logsumexp</code>，计算 log-partition：</p>
+  <div class="math-box"><div class="label">公式 11.8 CRF log-partition</div>
+    <div class="katex" data-expr="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" aria-label="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" role="img"></div>
+  </div>
+  <p>Ch11 作业中的 <code>linear_chain_log_partition</code> 用 log-space forward DP 计算这个归一化项。它和 <code>viterbi_decode</code> 的状态形状相同，但语义不同：Viterbi 用于预测最优路径，log-partition 用于训练时比较 gold path 与所有竞争路径。</p>
 </section>
 
 <section class="card" id="s11-6">
@@ -164,6 +169,7 @@
     <tr><td><code>build_mlm_example</code></td><td>BERT MLM label mask</td><td>为什么未 mask 位置不进入 loss</td></tr>
     <tr><td><code>bio_tags_to_spans</code></td><td>BIO sequence labeling</td><td>如何把 token classification 输出变成实体 span</td></tr>
     <tr><td><code>viterbi_decode</code></td><td>Linear-chain structured decoding</td><td>为什么最优 tag path 不等于逐 token argmax</td></tr>
+    <tr><td><code>linear_chain_log_partition</code></td><td>CRF forward algorithm</td><td>如何对所有 tag paths 做 logsumexp 归一化</td></tr>
     <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>如何选择合法 answer span 与 no-answer</td></tr>
     <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>为什么指标选择会改变结论</td></tr>
   </table>

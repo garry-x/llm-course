@@ -70,6 +70,11 @@ def viterbi_decode(emissions, transitions, start_scores=None, end_scores=None):
     raise NotImplementedError
 
 
+def linear_chain_log_partition(emissions, transitions, start_scores=None, end_scores=None):
+    """Compute the CRF log-partition function with the forward algorithm."""
+    raise NotImplementedError
+
+
 def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
     """Select the best BERT-style extractive QA answer span from start/end logits."""
     raise NotImplementedError

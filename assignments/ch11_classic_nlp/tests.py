@@ -1,4 +1,5 @@
 import importlib
+import itertools
 import math
 import os
 import unittest
@@ -248,6 +249,38 @@ class TestQAMetricsAndMLM(unittest.TestCase):
             solution.viterbi_decode([[0.0, 1.0]], [[0.0, 1.0]])
         with self.assertRaises(ValueError):
             solution.viterbi_decode([[0.0, 1.0]], [[0.0, 0.0], [0.0, 0.0]], start_scores=[0.0])
+
+    def test_linear_chain_log_partition_matches_enumerating_all_paths(self):
+        emissions = [
+            [0.2, -0.1],
+            [0.0, 0.3],
+            [0.4, -0.2],
+        ]
+        transitions = [
+            [0.1, -0.2],
+            [0.0, 0.2],
+        ]
+        start_scores = [0.0, -0.3]
+        end_scores = [0.2, 0.0]
+        result = solution.linear_chain_log_partition(emissions, transitions, start_scores, end_scores)
+
+        path_scores = []
+        for path in itertools.product(range(2), repeat=3):
+            score = start_scores[path[0]] + emissions[0][path[0]]
+            for position in range(1, 3):
+                score += transitions[path[position - 1]][path[position]] + emissions[position][path[position]]
+            score += end_scores[path[-1]]
+            path_scores.append(score)
+        expected = math.log(sum(math.exp(score) for score in path_scores))
+        self.assertAlmostEqual(result["log_partition"], expected)
+        self.assertEqual(len(result["alpha"]), 3)
+        self.assertEqual(len(result["alpha"][0]), 2)
+
+    def test_linear_chain_log_partition_rejects_bad_shapes(self):
+        with self.assertRaises(ValueError):
+            solution.linear_chain_log_partition([], [[0.0]])
+        with self.assertRaises(ValueError):
+            solution.linear_chain_log_partition([[0.0, 1.0]], [[0.0, 0.0]], end_scores=[0.0])
 
     def test_select_extractive_qa_span_uses_start_and_end_logits(self):
         tokens = ["[CLS]", "the", "quick", "brown", "fox", "[SEP]"]

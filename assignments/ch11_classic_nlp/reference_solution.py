@@ -416,6 +416,53 @@ def viterbi_decode(emissions, transitions, start_scores=None, end_scores=None):
     }
 
 
+def _validate_linear_chain_inputs(emissions, transitions, start_scores=None, end_scores=None):
+    if not emissions:
+        raise ValueError("emissions must not be empty")
+    num_tags = len(emissions[0])
+    if num_tags == 0:
+        raise ValueError("emission rows must not be empty")
+    if any(len(row) != num_tags for row in emissions):
+        raise ValueError("emissions must be rectangular")
+    if len(transitions) != num_tags or any(len(row) != num_tags for row in transitions):
+        raise ValueError("transitions must have shape num_tags x num_tags")
+    if start_scores is not None and len(start_scores) != num_tags:
+        raise ValueError("start_scores length must match num_tags")
+    if end_scores is not None and len(end_scores) != num_tags:
+        raise ValueError("end_scores length must match num_tags")
+    return num_tags
+
+
+def _logsumexp(values):
+    maximum = max(values)
+    return maximum + math.log(sum(math.exp(value - maximum) for value in values))
+
+
+def linear_chain_log_partition(emissions, transitions, start_scores=None, end_scores=None):
+    num_tags = _validate_linear_chain_inputs(emissions, transitions, start_scores, end_scores)
+    starts = [0.0] * num_tags if start_scores is None else [float(score) for score in start_scores]
+    ends = [0.0] * num_tags if end_scores is None else [float(score) for score in end_scores]
+    transition_scores = [[float(score) for score in row] for row in transitions]
+
+    alpha = [starts[tag] + float(emissions[0][tag]) for tag in range(num_tags)]
+    alpha_table = [list(alpha)]
+    for position in range(1, len(emissions)):
+        next_alpha = []
+        for current_tag in range(num_tags):
+            candidates = [
+                alpha[previous_tag]
+                + transition_scores[previous_tag][current_tag]
+                + float(emissions[position][current_tag])
+                for previous_tag in range(num_tags)
+            ]
+            next_alpha.append(_logsumexp(candidates))
+        alpha = next_alpha
+        alpha_table.append(list(alpha))
+
+    log_partition = _logsumexp([alpha[tag] + ends[tag] for tag in range(num_tags)])
+    return {"log_partition": log_partition, "alpha": alpha_table}
+
+
 def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
     if not tokens:
         raise ValueError("tokens must not be empty")

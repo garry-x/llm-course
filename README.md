@@ -53,6 +53,7 @@
 | 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器和 checkpoint 如何工作 |
 | 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG 和推理服务如何取舍 |
 | 微调与对齐 | Ch09 | SFT、LoRA、偏好建模、DPO、GRPO 如何改变模型行为 |
+| 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
 | 前沿工程案例 | Ch04-Ch10 | DeepSeek MLA/MoE/FP8/GRPO/稀疏注意力等设计解决了哪些工程瓶颈 |
 
 高校课程水准的关键不在材料数量，而在每个知识点都能回答三件事：
@@ -68,8 +69,9 @@
 - [逐周阅读清单与复盘 Handout](docs/reading-list.md)：论文阅读、关键问题和复盘要求。
 - [书面推导与概念题题库](docs/written-problem-set.md)：公式推导、复杂度分析和概念辨析。
 - [Worked Example Pack](docs/worked-example-pack.md)：BPE、RoPE、attention、GQA、Norm、AdamW、DPO、KV cache 等可复算小例子。
+- [经典 NLP 专题 Handout](docs/classic-nlp-handout.md)：dependency parsing、seq2seq/NMT、BERT、BLEU/ROUGE/F1/EM 与现代 LLM 的关系。
 
-章节作业入口：[assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/)。
+章节作业入口：[assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/) · [assignments/ch11_classic_nlp/](assignments/ch11_classic_nlp/)。
 
 ## 面向 LLM 推理工程师的能力路线
 
@@ -173,8 +175,9 @@ PORT=3000 docker compose up -d
 | 8 | **文本生成** — 采样策略 + MTP 推测解码 + 约束生成 | 文本生成器 ~60行 | 6+5 |
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO + R1 推理 | SFT + LoRA + GRPO ~190行 | 6+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + LSH + 服务蓝图 | 6+5 |
+| 专题 | **经典 NLP 与评测** — dependency parsing / seq2seq / BERT / metrics | UAS/LAS + BLEU/ROUGE/EM/F1 + MLM mask | Ch11 |
 
-> **总计：53 道编程练习 + 50 道概念练习，127 小节，约 10+ 小时学习时间**
+> **总计：58 道编程练习 + 50 道概念练习，经典 NLP 专题作业 1 组，约 10+ 小时学习时间**
 
 ## DeepSeek 技术融入
 

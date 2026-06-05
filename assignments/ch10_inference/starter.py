@@ -40,6 +40,11 @@ def reciprocal_rank_at_k(retrieved_ids, relevant_ids, k):
     raise NotImplementedError
 
 
+def ndcg_at_k(retrieved_ids, relevance_scores, k):
+    """Compute normalized discounted cumulative gain for graded relevance labels."""
+    raise NotImplementedError
+
+
 def reciprocal_rank_fusion(rankings, k=60):
     """Fuse multiple ranked document-id lists with reciprocal rank fusion."""
     raise NotImplementedError

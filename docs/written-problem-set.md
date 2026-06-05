@@ -98,7 +98,7 @@
 
 1. 推导 KV Cache 显存公式，必须包含 batch size、layers、kv heads、head dim、context length 和 dtype bytes。
 2. 区分 TTFT、TPOT、tokens/s、吞吐、并发和 P95 latency；说明它们分别对应哪个用户体验或成本问题。
-3. 给定 dense 检索排序、BM25 排序、retrieved document ids、relevant document ids 和 `k`，计算 RRF 融合排序、Recall@k 与 reciprocal rank，并说明它们分别衡量 RAG 检索的哪一类问题。
+3. 给定 dense 检索排序、BM25 排序、retrieved document ids、relevant document ids、graded relevance scores 和 `k`，计算 RRF 融合排序、Recall@k、reciprocal rank 与 nDCG@k，并说明它们分别衡量 RAG 检索的哪一类问题。
 4. 给定一个 RAG 失败案例，判断可能是 chunking、embedding、retrieval、reranking、prompt assembly 还是 generation 的问题。
 5. 比较 INT8 weight-only quantization、KV Cache quantization 和 FP8/FP4 mixed precision 的目标、风险和验证指标。
 6. 说明为什么前沿模型 benchmark 数字必须标注来源、日期、任务设置和评测版本。

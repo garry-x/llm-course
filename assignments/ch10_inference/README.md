@@ -26,7 +26,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 - KV Cache 显存公式必须包含 batch size、层数、KV 头数、head dim、序列长度和 dtype bytes。
 - INT8 量化使用 per-output-channel 对称 scale，零权重不能产生 NaN。
 - RAG 检索使用余弦相似度，返回按相关性降序排列的 chunk。
-- `recall_at_k` 和 `reciprocal_rank_at_k` 必须把检索是否命中、相关文档排在第几位分开度量。
+- `recall_at_k`、`reciprocal_rank_at_k` 和 `ndcg_at_k` 必须把是否命中、首个相关结果位置和分级相关性排序质量分开度量。
 - `reciprocal_rank_fusion` 和 `rerank_documents` 必须能把 dense/sparse 排序融合，并用 query-document scorer 对候选文档重排。
 - benchmark summary 应报告 TTFT、TPOT、tokens/s 和显存。
 - metric card 应记录任务、样本量、baseline、指标、风险、不确定性和结论边界。
@@ -36,6 +36,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 KV cache 显存、量化误差、RAG chunk/overlap、Recall@k/MRR、RAG 失败分解、多模态 token 成本、TTFT/TPOT/tokens/s 和 SLO 的上线意义 |
+| Written questions | 35 | 推导 KV cache 显存、量化误差、RAG chunk/overlap、Recall@k/MRR/nDCG、RAG 失败分解、多模态 token 成本、TTFT/TPOT/tokens/s 和 SLO 的上线意义 |
 | Programming parts | 55 | 实现 KV cache、显存估算、INT8 量化、RAG/LSH、检索质量指标、RRF/rerank、benchmark 指标汇总和 metric card |
 | Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、多模态失败模式和前沿 benchmark 来源边界 |

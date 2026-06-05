@@ -77,6 +77,24 @@ class TestRetrievalMetrics(unittest.TestCase):
         self.assertAlmostEqual(submission.reciprocal_rank_at_k(retrieved, relevant, k=3), 1 / 2)
         self.assertEqual(submission.reciprocal_rank_at_k(["doc9", "doc8"], relevant, k=2), 0.0)
 
+    def test_ndcg_at_k_rewards_better_ordering_with_graded_relevance(self):
+        relevance = {"doc1": 3.0, "doc2": 2.0, "doc3": 1.0}
+        ideal = ["doc1", "doc2", "doc3"]
+        poor = ["doc3", "doc2", "doc1"]
+        self.assertAlmostEqual(submission.ndcg_at_k(ideal, relevance, k=3), 1.0)
+        self.assertLess(submission.ndcg_at_k(poor, relevance, k=3), 1.0)
+
+        expected = (
+            (2**1 - 1) / np.log2(2)
+            + (2**2 - 1) / np.log2(3)
+            + (2**3 - 1) / np.log2(4)
+        ) / (
+            (2**3 - 1) / np.log2(2)
+            + (2**2 - 1) / np.log2(3)
+            + (2**1 - 1) / np.log2(4)
+        )
+        self.assertAlmostEqual(submission.ndcg_at_k(poor, relevance, k=3), expected)
+
     def test_retrieval_metrics_reject_invalid_inputs(self):
         with self.assertRaises(ValueError):
             submission.recall_at_k(["doc1"], {"doc1"}, k=0)
@@ -84,6 +102,12 @@ class TestRetrievalMetrics(unittest.TestCase):
             submission.recall_at_k(["doc1"], set(), k=1)
         with self.assertRaises(ValueError):
             submission.reciprocal_rank_at_k(["doc1"], set(), k=1)
+        with self.assertRaises(ValueError):
+            submission.ndcg_at_k(["doc1"], {}, k=1)
+        with self.assertRaises(ValueError):
+            submission.ndcg_at_k(["doc1"], {"doc1": -1.0}, k=1)
+        with self.assertRaises(ValueError):
+            submission.ndcg_at_k(["doc1"], {"doc1": 1.0}, k=0)
 
     def test_reciprocal_rank_fusion_combines_ranked_lists(self):
         dense = ["docA", "docB", "docC"]

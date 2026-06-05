@@ -514,7 +514,7 @@ class SimpleRAG:
 
   <h4>离线评估与线上指标</h4>
   <p>离线阶段先构造 query-answer-document 三元组：每个问题对应一个标准答案和应命中的文档片段。检索模块报告 Recall@k、MRR、nDCG；生成模块报告答案正确率、引用一致性和未命中时是否拒绝编造。线上阶段再看延迟、成本和用户行为：检索耗时、rerank 耗时、prompt token 数、回答 token 数、用户追问率、人工接管率。</p>
-  <p>Ch10 作业中的 <code>recall_at_k(retrieved_ids, relevant_ids, k)</code> 和 <code>reciprocal_rank_at_k(...)</code> 分别对应两个最基础的问题：top-k 里是否包含应命中的文档，以及第一个相关文档排在第几位。若 Recall@5 很低，生成模型通常没有足够上下文；若 Recall@5 高但 reciprocal rank 很低，说明相关 chunk 被排在后面，容易被 prompt 截断或被无关上下文干扰。作业还加入 <code>reciprocal_rank_fusion</code> 与 <code>rerank_documents</code>，让学生实现 hybrid search 合并排序和 cross-encoder rerank 的最小版本。</p>
+  <p>Ch10 作业中的 <code>recall_at_k(retrieved_ids, relevant_ids, k)</code>、<code>reciprocal_rank_at_k(...)</code> 和 <code>ndcg_at_k(retrieved_ids, relevance_scores, k)</code> 分别对应三个问题：top-k 里是否包含应命中的文档、第一个相关文档排在第几位、分级相关性更高的文档是否排得更靠前。nDCG 的 DCG 项通常写作 <code>(2^rel - 1) / log2(rank + 1)</code>，再除以理想排序的 IDCG，使分数落在 0 到 1 附近。若 Recall@5 很低，生成模型通常没有足够上下文；若 Recall@5 高但 reciprocal rank 或 nDCG 低，说明相关 chunk 被排在后面，容易被 prompt 截断或被无关上下文干扰。作业还加入 <code>reciprocal_rank_fusion</code> 与 <code>rerank_documents</code>，让学生实现 hybrid search 合并排序和 cross-encoder rerank 的最小版本。</p>
 
   <h4>一个可复现实验设置</h4>
   <ol>

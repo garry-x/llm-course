@@ -103,6 +103,31 @@ def reciprocal_rank_at_k(retrieved_ids, relevant_ids, k):
     return 0.0
 
 
+def ndcg_at_k(retrieved_ids, relevance_scores, k):
+    if k <= 0:
+        raise ValueError("k must be positive")
+    if not relevance_scores:
+        raise ValueError("relevance_scores must not be empty")
+
+    labels = {doc_id: float(score) for doc_id, score in relevance_scores.items()}
+    if any(score < 0 for score in labels.values()):
+        raise ValueError("relevance scores must be non-negative")
+
+    def gain(score):
+        return (2.0**score - 1.0)
+
+    dcg = 0.0
+    for rank, doc_id in enumerate(retrieved_ids[:k], start=1):
+        score = labels.get(doc_id, 0.0)
+        dcg += gain(score) / np.log2(rank + 1)
+
+    ideal_scores = sorted(labels.values(), reverse=True)[:k]
+    ideal_dcg = sum(gain(score) / np.log2(rank + 1) for rank, score in enumerate(ideal_scores, start=1))
+    if ideal_dcg == 0.0:
+        return 0.0
+    return dcg / ideal_dcg
+
+
 def reciprocal_rank_fusion(rankings, k=60):
     if k <= 0:
         raise ValueError("k must be positive")

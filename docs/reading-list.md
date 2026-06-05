@@ -171,6 +171,7 @@
 复盘问题：
 
 - DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
+- 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
 - GRPO 的组内 advantage 白化依赖什么采样假设？
 
 ## Week 8: 经典 NLP、Encoder-only、Evaluation 与 Ethics

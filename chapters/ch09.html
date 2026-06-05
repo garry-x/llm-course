@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第9章 微调与对齐</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO——从预训练到有用助手的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 85 分钟 · 14 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 15 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -354,6 +354,35 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
   </div>
   <p>核心含义：在上述建模假设下，我们可以不训练独立 Reward Model，而用 <strong>policy/reference 的 log 概率比值</strong>构造一个与偏好概率相关的隐式奖励差。DPO 优化的是由 chosen/rejected 偏好对诱导出的分类式损失，而不是任意意义上的“直接最大化奖励”。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO vs RLHF：</strong>DPO 的主要优势是简化训练管线：在常见实现中不需要单独训练 reward model，也不需要 PPO 的 Actor-Critic rollout，而是用 policy/reference 在 chosen/rejected 上的 log 概率比值构造损失。它通常比 PPO 式 RLHF 更容易实现和调参，但稳定性仍取决于偏好数据质量、reference model、<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span>、长度偏差和优化设置，不能写成无条件优于所有 RLHF 方案。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 9.6A Preference data quality -->
+<!-- ================================================================ -->
+<section class="card" id="s9-6a">
+  <h3>9.6A 偏好数据质量：DPO/RLHF 的真实约束</h3>
+  <p>偏好优化的输入通常写成 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，但这不是“真理标签”。它是某个标注协议、标注者群体、采样策略和候选生成模型共同产生的相对判断。DPO、RLHF 和 GRPO 的目标函数再漂亮，也不能自动修复偏好数据中的系统性偏差。</p>
+
+  <h4>偏好数据中的常见偏差</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>问题</th><th>表现</th><th>对训练的影响</th></tr>
+      <tr><td>长度偏差</td><td>标注者或 judge 偏好更长、更详细的回答</td><td>模型学会冗长输出，未必更正确</td></tr>
+      <tr><td>风格偏差</td><td>偏好礼貌、格式整齐或“看起来专业”的回答</td><td>奖励表面流畅度，而非事实性或推理正确性</td></tr>
+      <tr><td>标注者分歧</td><td>同一对回答在不同人群中偏好不同</td><td>单一 chosen/rejected 标签掩盖任务、文化或专业差异</td></tr>
+      <tr><td>候选分布偏移</td><td>偏好对由旧模型生成，新模型推理时分布不同</td><td>offline preference learning 可能在分布外 prompt 上失效</td></tr>
+      <tr><td>奖励漏洞</td><td>模型找到提高 reward 的捷径</td><td>分数上升但真实质量、安全性或可验证性下降</td></tr>
+    </table>
+  </div>
+
+  <h4>为什么 reference model 很关键</h4>
+  <p>DPO 中的核心比较不是 <span class="katex-inline" data-expr="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" aria-label="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" role="img"></span>，而是 policy 相对 reference 的提升：</p>
+  <div class="math-box"><div class="label">公式 9.7a DPO 的相对偏好边际</div>
+    <div class="katex" data-expr="\Delta_\theta = \left[\log \pi_\theta(y_w|x) - \log \pi_{\text{ref}}(y_w|x)\right] - \left[\log \pi_\theta(y_l|x) - \log \pi_{\text{ref}}(y_l|x)\right]" aria-label="\Delta_\theta = \left[\log \pi_\theta(y_w|x) - \log \pi_{\text{ref}}(y_w|x)\right] - \left[\log \pi_\theta(y_l|x) - \log \pi_{\text{ref}}(y_l|x)\right]" role="img"></div>
+  </div>
+  <p>reference model 提供了“不要离原模型太远”的锚点。如果省略 reference，模型可能通过提高高频模板、拉长输出或放大某些格式 token 来赢得偏好对，而不是学到稳定的任务能力。<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span> 控制这个偏好边际进入 sigmoid 的强度：太小会学得慢，太大容易过度拟合偏好对或放大噪声。</p>
+
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>课程判断：</strong>看到“DPO accuracy 上升”不能直接推出“模型更好”。还要看 chosen/rejected 的采样方式、长度分布、标注一致性、reference model、held-out prompt、拒答/安全指标和人工错误分析。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -847,6 +876,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>Bradley-Terry 与 RLHF 三步曲</strong> — SFT → RM → PPO</li>
     <li>✅ <strong>编程练习 2：LoRA</strong> — 低秩适配，99% 参数节省</li>
     <li>✅ <strong>DPO 数学等价性</strong> — 策略 log 比值作为隐式奖励函数</li>
+    <li>✅ <strong>偏好数据质量</strong> — 长度偏差、标注分歧、reference model 和 reward hacking 边界</li>
     <li>✅ <strong>编程练习 3：DPO Loss</strong> — 直接偏好优化</li>
     <li>✅ <strong>GRPO 组内白化</strong> — 无需 Critic 的策略优化</li>
     <li>✅ <strong>编程练习 4：GRPO 优势估计</strong> — 组内白化 + PPO-clip + KL</li>

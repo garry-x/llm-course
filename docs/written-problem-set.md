@@ -68,8 +68,9 @@
 
 1. 给定 prompt/response token 序列，标出 SFT labels 中应为 `-100` 的位置，并解释原因。
 2. 从 Bradley-Terry 偏好模型写出 DPO loss 中 chosen/rejected log-ratio 的含义。
-3. 说明 GRPO 组内白化如何减少不同 prompt reward scale 的影响，以及它不能解决哪些 reward hacking 问题。
-4. 比较 LoRA rank、alpha、target modules 对训练参数量、表达能力和合并推理的影响。
+3. 给定一组 chosen/rejected 回答，指出可能的长度偏差、风格偏差或标注者分歧，并说明这些偏差如何影响 DPO 或 RLHF。
+4. 说明 GRPO 组内白化如何减少不同 prompt reward scale 的影响，以及它不能解决哪些 reward hacking 问题。
+5. 比较 LoRA rank、alpha、target modules 对训练参数量、表达能力和合并推理的影响。
 
 ## Ch10 Inference / RAG / Serving
 

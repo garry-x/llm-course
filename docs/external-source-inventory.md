@@ -66,6 +66,38 @@
 | Git clone 示例 | `https://github.com/garry-x/llm-learner.git` | 仓库使用说明；不支撑课程事实 |
 | CDN asset | KaTeX CSS/JS | 若离线授课，应准备本地替代 |
 
+## 精确 URL 覆盖补充
+
+下列 URL 已在章节、README、阅读清单或 seminar handout 中出现；本节用于确保新增外链不只按域名粗略覆盖，而能被发布前检查精确追踪。
+
+| URL | 课程用途 | 层级 | 边界 |
+|-----|----------|------|------|
+| `https://aclanthology.org/W04-1013/` | ROUGE 阅读与经典 NLP evaluation | A-stable | 自动摘要指标不能单独证明开放式生成质量 |
+| `https://arxiv.org/abs/1607.06450` | LayerNorm 原始论文 | A-stable | normalization 选择不保证任意训练设置最优 |
+| `https://arxiv.org/abs/1708.02182` | MoE / sparsely-gated expert 背景 | A-stable | sparse activation 不等于端到端成本线性降低 |
+| `https://arxiv.org/abs/1811.03115` | blockwise / parallel decoding 阅读 | A-stable | 并行候选生成收益依赖模型和系统瓶颈 |
+| `https://arxiv.org/abs/1909.10690` | Multi-query / shared KV attention 背景 | A-stable | KV 共享不保证所有任务质量保持 |
+| `https://arxiv.org/abs/1910.07467` | RMSNorm 阅读 | A-stable | RMS scaling 不等同于 LayerNorm centering |
+| `https://arxiv.org/abs/1911.02150` | ALiBi / positional bias 背景 | A-stable | 位置偏置结果不替代 RoPE 长上下文验证 |
+| `https://arxiv.org/abs/2002.05202` | GLU / SwiGLU FFN 阅读 | A-stable | FFN 变体收益依赖规模、数据和训练设置 |
+| `https://arxiv.org/abs/2005.11401` | RAG 原始论文 | A-stable | RAG 成功依赖检索、生成和评测联合证据 |
+| `https://arxiv.org/abs/2005.14165` | GPT-3 few-shot 背景 | A-stable | few-shot prompting 不等价于参数微调 |
+| `https://arxiv.org/abs/2101.03961` | Switch Transformer / MoE 阅读 | A-stable | routing 和 capacity 结论需绑定模型设置 |
+| `https://arxiv.org/abs/2104.08696` | FFN / Transformer variant 背景 | A-stable | 架构变体不支撑通用最佳方案声明 |
+| `https://arxiv.org/abs/2104.09864` | RoPE / RoFormer 阅读 | A-stable | RoPE 相对位置性质不保证无限外推 |
+| `https://arxiv.org/abs/2108.12409` | position encoding / long-context 背景 | A-stable | 长上下文行为需要任务和训练长度证据 |
+| `https://arxiv.org/abs/2203.11171` | interpretability / attribution seminar | A-stable | 可解释性方法不能自动作为因果解释 |
+| `https://arxiv.org/abs/2205.14135` | FlashAttention / IO-aware attention | A-stable | kernel 性能结论依赖硬件、shape 和实现版本 |
+| `https://arxiv.org/abs/2206.04615` | chain-of-thought / reasoning seminar | A-stable | reasoning prompt 观察不能推广为可靠推理保证 |
+| `https://arxiv.org/abs/2210.17323` | inference / serving 背景阅读 | A-stable | 系统性能结论必须绑定 workload 和硬件 |
+| `https://arxiv.org/abs/2211.09110` | tool use / open question seminar | A-stable | agent/tool 结果不等于安全或可靠部署 |
+| `https://arxiv.org/abs/2302.01318` | decoding / generation 背景 | A-stable | decoding 指标不能单独证明回答质量 |
+| `https://arxiv.org/abs/2305.13245` | GQA 阅读 | A-stable | KV cache 节省不保证所有 checkpoint 质量 |
+| `https://arxiv.org/abs/2504.19667` | normalization / architecture frontier reading | A-volatile | 新近论文进入课程事实前需复核版本和实验设置 |
+| `https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js` | HTML 公式渲染运行资源 | Runtime asset | 只影响展示；离线授课需本地替代 |
+| `https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf` | GPT-2 报告镜像 | A-stable | GPT-2 报告不代表现代 chat API 行为 |
+| `https://www.youtube.com/playlist?list=PLAqhIrjkxBUWIvTOCzB7XwZBt03h4H3kW` | Karpathy Zero to Hero 学习资源 | C-background | 视频只作辅助学习，不支撑评分事实 |
+
 ## 发布前 Checklist
 
 | 检查项 | 通过标准 |

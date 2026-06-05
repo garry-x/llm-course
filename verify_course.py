@@ -2929,6 +2929,7 @@ def check_external_source_inventory_coverage() -> None:
 
     inventory = inventory_path.read_text(encoding="utf-8")
     missing_domains: dict[str, set[str]] = {}
+    missing_exact_urls: dict[str, set[str]] = {}
     discovered_domains: set[str] = set()
     discovered_urls = 0
     for path in external_source_files():
@@ -2952,6 +2953,9 @@ def check_external_source_inventory_coverage() -> None:
             if domain not in inventory:
                 rel = str(path.relative_to(ROOT))
                 missing_domains.setdefault(domain, set()).add(rel)
+            if url not in inventory:
+                rel = str(path.relative_to(ROOT))
+                missing_exact_urls.setdefault(url, set()).add(rel)
 
     if missing_domains:
         details = "; ".join(
@@ -2959,6 +2963,12 @@ def check_external_source_inventory_coverage() -> None:
             for domain, paths in sorted(missing_domains.items())[:10]
         )
         fail(f"external source inventory missing domains: {details}")
+    if missing_exact_urls:
+        details = "; ".join(
+            f"{url} in {', '.join(sorted(paths)[:3])}"
+            for url, paths in sorted(missing_exact_urls.items())[:10]
+        )
+        fail(f"external source inventory missing exact URLs: {details}")
 
     ok(f"external source inventory covers {len(discovered_domains)} domains / {discovered_urls} external URLs")
 

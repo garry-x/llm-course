@@ -571,10 +571,10 @@ class MLA(nn.Module):
   <div class="coding-exercise">
     <h4>🖥️ 练习 5：KV Cache 大小分析器</h4>
     <div class="task">
-      <p><strong>任务：</strong>写一个函数 <code>compute_kv_cache_size</code>，计算给定配置下 MHA、GQA、MLA 在 <strong>128K 上下文</strong>时的 KV Cache 大小。</p>
+      <p><strong>任务：</strong>写 <code>compute_kv_cache_size</code> 和 <code>compare_kv_cache_budget</code>，计算给定配置下 MHA、GQA、MLA 在长上下文和多 batch / 多层部署时的 KV Cache 大小。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>输入参数：<code>d_model, n_heads, n_kv_heads (for GQA), d_latent (for MLA), seq_len</code></li>
+        <li>输入参数：<code>d_model, n_heads, n_kv_heads (for GQA), d_latent (for MLA), seq_len</code>；预算版还包含 <code>batch_size, n_layers, dtype_bytes</code></li>
         <li>计算每种机制的每 token 缓存大小（float32 = 4 bytes）</li>
         <li>计算 128K 上下文的总缓存大小（以 GB 为单位）</li>
         <li>使用标准配置：d_model=7168, n_heads=64, n_kv_heads=8, d_latent=512, seq_len=131072</li>
@@ -633,6 +633,7 @@ compute_kv_cache_size(
     n_kv_heads=8, d_latent=512,
     seq_len=131072
 )</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预算单位：</strong>每 token 元素数只适合比较架构；真实部署显存还要乘以 <code>batch_size * n_layers * seq_len * dtype_bytes</code>。Ch04 作业中的 <code>compare_kv_cache_budget</code> 要求把这些维度纳入同一张表，避免把 per-token ratio 误当成整机显存。</p>
     </div>
   </div>
 </section>

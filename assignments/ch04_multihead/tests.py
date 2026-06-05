@@ -110,6 +110,34 @@ class TestKVCacheAnalysis(unittest.TestCase):
         self.assertGreater(result["mha_total_gb"], result["gqa_total_gb"])
         self.assertGreater(result["gqa_total_gb"], result["mla_total_gb"])
 
+    def test_kv_cache_budget_includes_batch_layers_and_dtype(self):
+        result = submission.compare_kv_cache_budget(
+            d_model=4096,
+            n_heads=32,
+            n_kv_heads=8,
+            d_latent=512,
+            seq_len=2048,
+            batch_size=4,
+            n_layers=24,
+            dtype_bytes=2,
+        )
+        self.assertEqual(result["head_dim"], 128)
+        self.assertEqual(result["per_token_elements"]["mha"], 8192)
+        self.assertEqual(result["per_token_elements"]["gqa"], 2048)
+        self.assertEqual(result["per_token_elements"]["mla"], 512)
+        expected_mha_bytes = 8192 * 2048 * 4 * 24 * 2
+        self.assertEqual(result["total_bytes"]["mha"], expected_mha_bytes)
+        self.assertAlmostEqual(result["compression_vs_mha"]["gqa"], 4.0)
+        self.assertAlmostEqual(result["compression_vs_mha"]["mla"], 16.0)
+
+    def test_kv_cache_budget_rejects_invalid_configs(self):
+        with self.assertRaises(ValueError):
+            submission.compare_kv_cache_budget(10, 3, 1, 4, 128)
+        with self.assertRaises(ValueError):
+            submission.compare_kv_cache_budget(12, 6, 4, 4, 128)
+        with self.assertRaises(ValueError):
+            submission.compare_kv_cache_budget(12, 6, 3, 4, 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

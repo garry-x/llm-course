@@ -165,12 +165,12 @@ Quick check：
 
 - 标准 MHA 投影参数量与同宽度单头相同。
 - GQA head mapping：`query_head // (n_heads / n_kv_heads)`。
-- KV cache 元素数 `2 * n_kv_heads * head_dim`。
+- KV cache 元素数 `2 * n_kv_heads * head_dim`；总显存还要乘以 `batch * layers * seq_len * dtype_bytes`。
 
 课堂 demo：
 
 - 用小模型打印 Q/K/V reshape 后的 shape。
-- 计算 MHA 与 GQA 在 32/8 heads 下的 cache ratio。
+- 计算 MHA、GQA 与 MLA 在 32/8 heads、batch、layers 和 fp16 下的 cache budget。
 - 写出 8 个 Q heads、2 个 KV heads 的映射列表。
 
 Quick check：
@@ -182,7 +182,7 @@ Quick check：
 课后产出：
 
 - Ch04 MHA/GQA 测试通过。
-- 书面题：GQA cache 压缩比。
+- 书面题：GQA/MLA cache 压缩比和跨层显存预算。
 
 ## Week 3 Lecture 6: MLA、Norm、FFN 与 Transformer Block
 

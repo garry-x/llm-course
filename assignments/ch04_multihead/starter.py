@@ -50,3 +50,17 @@ def gqa_head_mapping(n_heads, n_kv_heads):
 
 def compute_kv_cache_size(d_model, n_heads, n_kv_heads, d_latent, seq_len):
     raise NotImplementedError
+
+
+def compare_kv_cache_budget(
+    d_model,
+    n_heads,
+    n_kv_heads,
+    d_latent,
+    seq_len,
+    batch_size=1,
+    n_layers=1,
+    dtype_bytes=2,
+):
+    """Compare total KV-cache memory for MHA, GQA, and MLA."""
+    raise NotImplementedError

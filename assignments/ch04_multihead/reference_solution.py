@@ -150,3 +150,46 @@ def compute_kv_cache_size(d_model, n_heads, n_kv_heads, d_latent, seq_len):
         "gqa_total_gb": gqa_per_token * seq_len * bytes_per_float / (1024**3),
         "mla_total_gb": mla_per_token * seq_len * bytes_per_float / (1024**3),
     }
+
+
+def compare_kv_cache_budget(
+    d_model,
+    n_heads,
+    n_kv_heads,
+    d_latent,
+    seq_len,
+    batch_size=1,
+    n_layers=1,
+    dtype_bytes=2,
+):
+    if d_model <= 0 or n_heads <= 0 or n_kv_heads <= 0 or d_latent <= 0:
+        raise ValueError("model dimensions and head counts must be positive")
+    if d_model % n_heads != 0:
+        raise ValueError("d_model must be divisible by n_heads")
+    if n_heads % n_kv_heads != 0:
+        raise ValueError("n_heads must be divisible by n_kv_heads")
+    if seq_len <= 0 or batch_size <= 0 or n_layers <= 0 or dtype_bytes <= 0:
+        raise ValueError("seq_len, batch_size, n_layers, and dtype_bytes must be positive")
+
+    d_k = d_model // n_heads
+    per_token_elements = {
+        "mha": 2 * n_heads * d_k,
+        "gqa": 2 * n_kv_heads * d_k,
+        "mla": d_latent,
+    }
+    total_bytes = {
+        name: elements * seq_len * batch_size * n_layers * dtype_bytes
+        for name, elements in per_token_elements.items()
+    }
+    total_gb = {name: bytes_value / (1024**3) for name, bytes_value in total_bytes.items()}
+    return {
+        "head_dim": d_k,
+        "per_token_elements": per_token_elements,
+        "total_bytes": total_bytes,
+        "total_gb": total_gb,
+        "compression_vs_mha": {
+            "mha": 1.0,
+            "gqa": total_bytes["mha"] / total_bytes["gqa"],
+            "mla": total_bytes["mha"] / total_bytes["mla"],
+        },
+    }

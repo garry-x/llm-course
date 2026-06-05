@@ -125,6 +125,27 @@ class TestLossOptimizerScheduler(unittest.TestCase):
         reference = F.cross_entropy(logits.reshape(-1, 11), targets.reshape(-1))
         self.assertTrue(torch.allclose(manual, reference, atol=1e-5, rtol=1e-5))
 
+    def test_cross_entropy_logits_gradient_matches_autograd(self):
+        torch.manual_seed(3)
+        logits = torch.randn(2, 4, 7, dtype=torch.float64, requires_grad=True)
+        targets = torch.tensor([[1, 2, -100, 4], [0, -100, 3, 6]])
+        loss = F.cross_entropy(logits.reshape(-1, 7), targets.reshape(-1), ignore_index=-100)
+        loss.backward()
+
+        manual = submission.cross_entropy_logits_gradient(logits.detach(), targets, ignore_index=-100)
+        self.assertTrue(torch.allclose(manual, logits.grad, atol=1e-10, rtol=1e-10))
+        self.assertTrue(torch.all(manual[targets == -100] == 0.0))
+
+    def test_cross_entropy_logits_gradient_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.cross_entropy_logits_gradient(torch.randn(2, 3), torch.ones(2, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.cross_entropy_logits_gradient(torch.randn(2, 3, 4), torch.ones(2, 2, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.cross_entropy_logits_gradient(torch.randn(1, 1, 4), torch.tensor([[9]]))
+        with self.assertRaises(ValueError):
+            submission.cross_entropy_logits_gradient(torch.randn(1, 2, 4), torch.tensor([[-100, -100]]), ignore_index=-100)
+
     def test_adamw_single_step_matches_expected_update(self):
         p = torch.nn.Parameter(torch.tensor([1.0, -2.0]))
         p.grad = torch.tensor([0.1, -0.2])

@@ -64,7 +64,7 @@
 ## Ch07 Training Loop
 
 1. 从自回归分解推导 next-token negative log likelihood，并说明它与 cross entropy 的关系。
-2. 推导单样本 cross entropy 对 logits 的梯度 `p_i - 1[i=y]`。
+2. 推导单样本 cross entropy 对 logits 的梯度 `p_i - 1[i=y]`；若 batch 中有 `ignore_index` 位置，说明 mean reduction 的分母为什么应是有效 token 数，且被忽略位置的 logits 梯度应为 0。
 3. 设 tied LM head 为 `z_t = h_t E^T`，说明 CE 梯度如何更新正确 token、错误 token 的 output embedding 行，以及它如何继续传回 Transformer hidden state。
 4. 解释 AdamW 中“解耦权重衰减”和 L2 regularization 的区别，并说明 warmup + cosine decay 的作用。
 5. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16`、训练预算 `D=20B tokens` 和 dense LM 参数量 `N=1B`，计算 global batch tokens、训练 step 数和近似训练 FLOPs，并说明这会如何影响 learning rate schedule、checkpoint 间隔与 GPU hours。

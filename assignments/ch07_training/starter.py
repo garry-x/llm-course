@@ -47,6 +47,11 @@ def cross_entropy_manual(logits, targets):
     raise NotImplementedError
 
 
+def cross_entropy_logits_gradient(logits, targets, ignore_index=None):
+    """Return d mean_cross_entropy / d logits for next-token targets."""
+    raise NotImplementedError
+
+
 class AdamW:
     def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1):
         raise NotImplementedError

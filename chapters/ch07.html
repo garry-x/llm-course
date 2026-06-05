@@ -294,6 +294,7 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
 
   <h4>Mask 对梯度的影响</h4>
   <p>在 padding、SFT label mask 或 packed sequence 中，被设为 ignore index 的位置不应该贡献 loss，也不应该贡献梯度。实现上不是把这些位置的概率设为 0，而是在 reduction 前把对应 NLL 从平均中排除。否则模型会被迫预测 padding、prompt 或无效位置，训练目标就会偏离真实任务。</p>
+  <p>课程作业中的 <code>cross_entropy_logits_gradient</code> 要求把这个规则写成张量计算：有效位置的梯度是 <code>(softmax(logits) - one_hot(target)) / N_valid</code>，被忽略位置整行梯度为 0。这个函数把书面推导和 PyTorch autograd 的实际梯度对齐起来。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Cross entropy 不只是一个标量分数。它给 logits 的更新方向非常明确：提高正确 token，压低模型自己认为可能但实际错误的 token，并通过链式法则把这个信号传回整个 Transformer。</div></div>
 </section>

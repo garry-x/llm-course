@@ -104,6 +104,38 @@ def cross_entropy_manual(logits, targets):
     return nll.mean()
 
 
+def cross_entropy_logits_gradient(logits, targets, ignore_index=None):
+    if logits.dim() != 3:
+        raise ValueError("logits must have shape [batch, seq_len, vocab_size]")
+    if targets.shape != logits.shape[:2]:
+        raise ValueError("targets must have shape [batch, seq_len]")
+
+    vocab_size = logits.size(-1)
+    probs = F.softmax(logits, dim=-1)
+    grad = probs.clone()
+
+    if ignore_index is None:
+        valid = torch.ones_like(targets, dtype=torch.bool)
+        safe_targets = targets
+    else:
+        valid = targets != ignore_index
+        safe_targets = targets.masked_fill(~valid, 0)
+
+    if torch.any((safe_targets[valid] < 0) | (safe_targets[valid] >= vocab_size)):
+        raise ValueError("target token id out of vocabulary range")
+
+    grad.scatter_add_(
+        dim=-1,
+        index=safe_targets.unsqueeze(-1),
+        src=-valid.to(logits.dtype).unsqueeze(-1),
+    )
+    valid_count = int(valid.sum().item())
+    if valid_count == 0:
+        raise ValueError("at least one non-ignored target is required")
+    grad = grad * valid.to(logits.dtype).unsqueeze(-1)
+    return grad / valid_count
+
+
 class AdamW:
     def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1):
         self.params = list(params)

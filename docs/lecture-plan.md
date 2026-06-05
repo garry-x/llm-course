@@ -291,6 +291,7 @@ Quick check：
 核心推导：
 
 - CE gradient `p_i - 1[i=y]`。
+- `ignore_index` 位置不进入 mean CE 的分母，logits 梯度整行为 0。
 - n-gram repetition / overlap 的分母和结论边界。
 - AdamW 的 decoupled weight decay 更新项。
 

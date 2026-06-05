@@ -63,6 +63,7 @@ dz/dx = dz/dy * dy/dx
 - `Embedding`: 只有被索引到的 token 行收到梯度。
 - `LayerNorm`: 梯度必须考虑均值和方差对所有特征维度的耦合。
 - `Attention`: `Q/K/V` 都通过 scores、softmax 和 weighted sum 收到梯度。
+- `Cross entropy`: 有效 token 的 logits 梯度是 `softmax(z)-one_hot(y)`；被 `ignore_index` 屏蔽的位置不进入平均，也不向 logits 传梯度。
 
 ## Cross Entropy 推导检查
 

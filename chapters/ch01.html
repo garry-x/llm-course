@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第1章 BPE 分词器</h2>
   <p class="subtitle">从零实现 Byte Pair Encoding——LLM 的"第一道门"</p>
-  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 13 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 14 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -515,6 +515,32 @@ def encode(text, merges):
 </section>
 
 <!-- ================================================================ -->
+<!-- 1.12A Tokenizer 评价 -->
+<!-- ================================================================ -->
+<section class="card" id="s1-12a">
+  <h3>1.12A 如何评价一个 Tokenizer</h3>
+  <p>实现 BPE 只是第一步。真正训练 LLM 时，tokenizer 会影响序列长度、嵌入参数量、上下文窗口利用率、推理延迟和多语言覆盖。一个词表不是“越大越好”或“越小越好”，而是在数据分布、模型规模和部署成本之间做取舍。</p>
+
+  <h4>核心评价维度</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>维度</th><th>问题</th><th>常用度量</th><th>风险</th></tr>
+      <tr><td>压缩率</td><td>同一文本需要多少 token</td><td>tokens/character、tokens/word、平均序列长度</td><td>压缩差会抬高训练 FLOPs 和推理延迟</td></tr>
+      <tr><td>可逆性</td><td>encode 后是否能无损 decode</td><td>round-trip 测试、Unicode 覆盖</td><td>破坏空格、标点或多字节字符会污染数据</td></tr>
+      <tr><td>语言公平性</td><td>不同语言是否承担相近 token 成本</td><td>按语言统计 token/character</td><td>CJK、代码、少数语言可能被过度切碎</td></tr>
+      <tr><td>词表预算</td><td>词表大小是否匹配模型规模</td><td><code>V * d_model</code> 嵌入参数量</td><td>小模型使用超大词表会把参数浪费在 embedding 上</td></tr>
+      <tr><td>特殊 token</td><td>系统、用户、工具、padding 是否有稳定边界</td><td>特殊 token ID 表、冲突测试</td><td>聊天模板或工具调用边界不清会影响对齐和服务</td></tr>
+      <tr><td>领域适配</td><td>代码、数学、医学等语料是否切分合理</td><td>领域样本 token 数、常见符号切分</td><td>代码缩进、公式符号或术语被切得过碎</td></tr>
+    </table>
+  </div>
+
+  <h4>一个小实验</h4>
+  <p>选取英文、中文、代码、数学公式和 emoji/混合文本各 100 条，分别用不同 vocab size 或不同 tokenizer 编码，报告平均 token 数、P95 token 数、round-trip 是否成功，以及 embedding 参数量 <span class="katex-inline" data-expr="V \times d_{\text{model}}" aria-label="V \times d_{\text{model}}" role="img"></span>。如果中文平均 token 数是英文的 2-3 倍，那么同样 8K context 对中文用户的有效文本容量就更小；这不是模型能力问题，而是分词器成本问题。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tokenizer 是模型架构的一部分。它决定“文本长度”在模型眼里是多少，也决定 embedding、attention 和 KV Cache 的实际成本。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 1.13 总结 -->
 <!-- ================================================================ -->
 <section class="card" id="s1-13">
@@ -525,6 +551,7 @@ def encode(text, merges):
     <li>✅ <strong>train</strong> —— 完整的 BPE 训练循环，从字节到目标词表</li>
     <li>✅ <strong>encode / decode</strong> —— 使用训练好的 merges 和 vocab 进行推理</li>
     <li>✅ 理解了 BPE 的<strong>数据压缩本质</strong>和频率选择的<strong>信息论基础</strong></li>
+    <li>✅ 能从压缩率、可逆性、多语言成本、词表预算和特殊 token 评价 tokenizer</li>
   </ul>
   <p>全部代码约 <strong>50 行</strong>，但这是一个可用的 BPE 分词器核心。生产分词器（如 tiktoken）会在同一思想上加入正则预分词、特殊 token、工程优化和兼容性处理；课程实现只保留最小可解释内核。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>

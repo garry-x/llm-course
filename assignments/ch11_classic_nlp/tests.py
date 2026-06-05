@@ -186,6 +186,34 @@ class TestQAMetricsAndMLM(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.build_mlm_example(["a", "b"], [1, 1])
 
+    def test_bio_tags_to_spans_decodes_sequence_labels(self):
+        tokens = ["John", "lives", "in", "New", "York", "."]
+        tags = ["B-PER", "O", "O", "B-LOC", "I-LOC", "O"]
+        spans = solution.bio_tags_to_spans(tokens, tags)
+        self.assertEqual(
+            spans,
+            [
+                {"type": "PER", "start": 0, "end": 1, "tokens": ["John"], "text": "John"},
+                {"type": "LOC", "start": 3, "end": 5, "tokens": ["New", "York"], "text": "New York"},
+            ],
+        )
+
+    def test_bio_tags_to_spans_starts_new_entity_on_invalid_i_tag(self):
+        tokens = ["San", "Francisco", "OpenAI"]
+        tags = ["I-LOC", "I-LOC", "I-ORG"]
+        spans = solution.bio_tags_to_spans(tokens, tags)
+        self.assertEqual([span["type"] for span in spans], ["LOC", "ORG"])
+        self.assertEqual(spans[0]["tokens"], ["San", "Francisco"])
+        self.assertEqual(spans[1]["tokens"], ["OpenAI"])
+
+    def test_bio_tags_to_spans_rejects_bad_tags(self):
+        with self.assertRaises(ValueError):
+            solution.bio_tags_to_spans(["a"], ["B-X", "O"])
+        with self.assertRaises(ValueError):
+            solution.bio_tags_to_spans(["a"], ["X-PER"])
+        with self.assertRaises(ValueError):
+            solution.bio_tags_to_spans(["a"], ["B-"])
+
     def test_select_extractive_qa_span_uses_start_and_end_logits(self):
         tokens = ["[CLS]", "the", "quick", "brown", "fox", "[SEP]"]
         start_logits = [0.1, 0.2, 3.0, 1.0, 0.4, -1.0]

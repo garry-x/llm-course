@@ -117,6 +117,8 @@
     <div class="katex" data-expr="\text{score}(i,j)=s_i+e_j,\quad 0\le i\le j,\quad j-i+1\le L_{\max}" aria-label="\text{score}(i,j)=s_i+e_j,\quad 0\le i\le j,\quad j-i+1\le L_{\max}" role="img"></div>
   </div>
   <p>若 <code>[CLS]</code> 的 no-answer 分数最高，模型应返回空答案。这和 decoder-only LLM 生成“我不知道”不同：BERT QA 的答案必须绑定到输入 token span。</p>
+  <h4>BIO sequence labeling</h4>
+  <p>NER、slot filling 和 token classification 常把每个 token 标成 <code>B-TYPE</code>、<code>I-TYPE</code> 或 <code>O</code>。<code>B-ORG I-ORG</code> 表示一个连续组织实体，<code>O</code> 表示实体外部。课程作业中的 <code>bio_tags_to_spans(tokens, tags)</code> 把 token-level 标签解码成 span-level 输出，例如 <code>["B-LOC", "I-LOC"]</code> 对应一个 LOC span。若一个序列以 <code>I-LOC</code> 开头，很多评测脚本会把它容错为新实体开始；严格系统也可以选择直接报错，但必须在数据协议中写清楚。</p>
 </section>
 
 <section class="card" id="s11-6">
@@ -154,6 +156,7 @@
     <tr><td><code>run_arc_standard_transitions</code>, <code>attachment_scores</code></td><td>Dependency parsing 与 UAS/LAS</td><td>结构化预测和 attention 诊断有什么区别</td></tr>
     <tr><td><code>additive_attention_context</code></td><td>Seq2Seq alignment</td><td>decoder step 如何读取源序列</td></tr>
     <tr><td><code>build_mlm_example</code></td><td>BERT MLM label mask</td><td>为什么未 mask 位置不进入 loss</td></tr>
+    <tr><td><code>bio_tags_to_spans</code></td><td>BIO sequence labeling</td><td>如何把 token classification 输出变成实体 span</td></tr>
     <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>如何选择合法 answer span 与 no-answer</td></tr>
     <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>为什么指标选择会改变结论</td></tr>
   </table>

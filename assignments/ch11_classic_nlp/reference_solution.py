@@ -315,6 +315,54 @@ def build_mlm_example(tokens, mask_positions, mask_token="[MASK]"):
     return token_list, labels
 
 
+def bio_tags_to_spans(tokens, tags):
+    if len(tokens) != len(tags):
+        raise ValueError("tokens and tags must have equal length")
+
+    spans = []
+    current_type = None
+    start = None
+
+    def close(end):
+        if current_type is None:
+            return
+        span_tokens = list(tokens[start:end])
+        spans.append(
+            {
+                "type": current_type,
+                "start": start,
+                "end": end,
+                "tokens": span_tokens,
+                "text": " ".join(span_tokens),
+            }
+        )
+
+    for index, tag in enumerate(tags):
+        if tag == "O":
+            close(index)
+            current_type = None
+            start = None
+            continue
+        if "-" not in tag:
+            raise ValueError("BIO tags must be O or PREFIX-TYPE")
+        prefix, entity_type = tag.split("-", 1)
+        if prefix not in {"B", "I"} or not entity_type:
+            raise ValueError("BIO tags must use B-TYPE or I-TYPE")
+
+        starts_new_entity = (
+            prefix == "B"
+            or current_type is None
+            or entity_type != current_type
+        )
+        if starts_new_entity:
+            close(index)
+            current_type = entity_type
+            start = index
+
+    close(len(tokens))
+    return spans
+
+
 def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
     if not tokens:
         raise ValueError("tokens must not be empty")

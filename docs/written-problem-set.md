@@ -87,6 +87,7 @@
 3. 给定一个 RAG 失败案例，判断可能是 chunking、embedding、retrieval、reranking、prompt assembly 还是 generation 的问题。
 4. 比较 INT8 weight-only quantization、KV Cache quantization 和 FP8/FP4 mixed precision 的目标、风险和验证指标。
 5. 说明为什么前沿模型 benchmark 数字必须标注来源、日期、任务设置和评测版本。
+6. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。
 
 ## 经典 NLP 专题题
 

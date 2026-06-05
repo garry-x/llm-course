@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / CSA+HCA / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 120 分钟 · 20 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 130 分钟 · 21 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -490,6 +490,40 @@ class SimpleRAG:
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>进阶 RAG 技巧：</strong>1) Hybrid Search = 稠密检索 + BM25 稀疏检索，通过 RRF 合并排序；2) Reranking：检索 Top-50 后用交叉编码器重排，只取 Top-3；3) Query Rewriting：检索前让 LLM 改写查询（消歧、指代消解）。这些技巧常能提高召回和答案忠实性，但提升幅度必须在固定数据集、query 分布和评价指标上报告。</p>
     </div>
   </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.8A RAG 评估与失败分解 -->
+<!-- ================================================================ -->
+<section class="card" id="s10-8a">
+  <h3>10.8A RAG 评估：把错误拆成检索错误和生成错误</h3>
+  <p>RAG 系统的难点不在于“把文档塞进 prompt”，而在于判断失败发生在哪一层。一个回答错了，可能是文档分块切断了关键信息，embedding 没召回正确 chunk，reranker 排错，上下文拼装超过窗口，或者生成模型没有忠实使用检索内容。课程级 RAG 评估必须把这些环节拆开看。</p>
+
+  <h4>失败分解</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>环节</th><th>要问的问题</th><th>常用指标</th><th>常见改法</th></tr>
+      <tr><td>Chunking</td><td>答案所需信息是否被完整保留在 chunk 中</td><td>答案覆盖率、chunk 长度分布</td><td>按标题/段落分块，调大 overlap，保留元数据</td></tr>
+      <tr><td>Embedding</td><td>查询和相关文档是否在向量空间接近</td><td>Recall@k、MRR、nDCG</td><td>换领域 embedding，加入 query rewriting，混合 BM25</td></tr>
+      <tr><td>Retrieval</td><td>top-k 是否包含足够的相关上下文</td><td>Context recall、命中率、重复 chunk 比例</td><td>调 top-k、过滤低分、按来源去重</td></tr>
+      <tr><td>Reranking</td><td>最有用的 chunk 是否排在前面</td><td>nDCG@k、top-1 relevance</td><td>交叉编码器重排，多阶段检索</td></tr>
+      <tr><td>Prompt assembly</td><td>上下文是否被正确组织进模型窗口</td><td>截断率、引用位置、token 占用</td><td>压缩上下文，按相关性和新鲜度排序</td></tr>
+      <tr><td>Generation</td><td>回答是否忠实于检索内容</td><td>答案正确率、faithfulness、引用一致性</td><td>要求基于上下文回答，无法支持时明确说明</td></tr>
+    </table>
+  </div>
+
+  <h4>离线评估与线上指标</h4>
+  <p>离线阶段先构造 query-answer-document 三元组：每个问题对应一个标准答案和应命中的文档片段。检索模块报告 Recall@k、MRR、nDCG；生成模块报告答案正确率、引用一致性和未命中时是否拒绝编造。线上阶段再看延迟、成本和用户行为：检索耗时、rerank 耗时、prompt token 数、回答 token 数、用户追问率、人工接管率。</p>
+
+  <h4>一个可复现实验设置</h4>
+  <ol>
+    <li><strong>固定数据切片：</strong>FAQ、长文档、多跳问题、时间敏感问题、相似实体问题分别统计，不用一个总分替代所有场景。</li>
+    <li><strong>逐层消融：</strong>比较 dense-only、BM25-only、hybrid、hybrid+rerank、不同 chunk size/overlap 的变化。</li>
+    <li><strong>分开报告检索和生成：</strong>如果 Recall@5 很低，先修检索；如果 Recall@5 高但答案错，重点看 prompt assembly 和 generation。</li>
+    <li><strong>记录成本维度：</strong>top-k 越大不一定越好，它会提高 token 成本、TTFT 和上下文干扰。</li>
+  </ol>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>RAG 的质量不是一个“相似度分数”。上线前至少要知道：相关文档是否被召回、是否排在前面、是否进入 prompt、模型是否忠实使用它，以及这些改动对延迟和成本的影响。</div></div>
 </section>
 
 <!-- ================================================================ -->

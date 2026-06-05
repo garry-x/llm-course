@@ -40,6 +40,16 @@ def reciprocal_rank_at_k(retrieved_ids, relevant_ids, k):
     raise NotImplementedError
 
 
+def reciprocal_rank_fusion(rankings, k=60):
+    """Fuse multiple ranked document-id lists with reciprocal rank fusion."""
+    raise NotImplementedError
+
+
+def rerank_documents(query, candidates, scorer, top_k=None):
+    """Rerank candidate (doc_id, text) pairs with a query-document scorer."""
+    raise NotImplementedError
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         raise NotImplementedError

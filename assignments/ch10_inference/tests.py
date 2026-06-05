@@ -85,6 +85,38 @@ class TestRetrievalMetrics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.reciprocal_rank_at_k(["doc1"], set(), k=1)
 
+    def test_reciprocal_rank_fusion_combines_ranked_lists(self):
+        dense = ["docA", "docB", "docC"]
+        sparse = ["docB", "docD", "docA"]
+        fused = submission.reciprocal_rank_fusion([dense, sparse], k=60)
+        fused_ids = [doc_id for doc_id, _score in fused]
+        self.assertEqual(fused_ids[0], "docB")
+        self.assertIn("docA", fused_ids[:2])
+        self.assertGreater(dict(fused)["docB"], dict(fused)["docD"])
+
+    def test_rerank_documents_uses_query_document_scorer(self):
+        candidates = [
+            ("doc1", "apple car"),
+            ("doc2", "apple banana fruit"),
+            ("doc3", "engine car"),
+        ]
+
+        def scorer(query, text):
+            return len(set(query.split()) & set(text.split()))
+
+        reranked = submission.rerank_documents("apple fruit", candidates, scorer, top_k=2)
+        self.assertEqual([item["doc_id"] for item in reranked], ["doc2", "doc1"])
+        self.assertEqual(reranked[0]["original_rank"], 2)
+        self.assertEqual(reranked[0]["score"], 2.0)
+
+    def test_reranking_helpers_reject_invalid_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.reciprocal_rank_fusion([], k=60)
+        with self.assertRaises(ValueError):
+            submission.reciprocal_rank_fusion([["doc"]], k=0)
+        with self.assertRaises(ValueError):
+            submission.rerank_documents("q", [("doc", "text")], lambda _q, _d: 1.0, top_k=0)
+
 
 class BagOfWordsEmbedder:
     def __init__(self):

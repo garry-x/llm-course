@@ -103,6 +103,41 @@ def reciprocal_rank_at_k(retrieved_ids, relevant_ids, k):
     return 0.0
 
 
+def reciprocal_rank_fusion(rankings, k=60):
+    if k <= 0:
+        raise ValueError("k must be positive")
+    if not rankings:
+        raise ValueError("rankings must not be empty")
+
+    scores = defaultdict(float)
+    first_seen = {}
+    order = 0
+    for ranking in rankings:
+        for rank, doc_id in enumerate(ranking, start=1):
+            if doc_id not in first_seen:
+                first_seen[doc_id] = order
+                order += 1
+            scores[doc_id] += 1.0 / (k + rank)
+    return sorted(scores.items(), key=lambda item: (-item[1], first_seen[item[0]]))
+
+
+def rerank_documents(query, candidates, scorer, top_k=None):
+    if not candidates:
+        return []
+    if top_k is not None and top_k <= 0:
+        raise ValueError("top_k must be positive")
+
+    reranked = []
+    for position, candidate in enumerate(candidates):
+        if len(candidate) != 2:
+            raise ValueError("candidates must contain (doc_id, text) pairs")
+        doc_id, text = candidate
+        score = float(scorer(query, text))
+        reranked.append({"doc_id": doc_id, "text": text, "score": score, "original_rank": position + 1})
+    reranked.sort(key=lambda item: (-item["score"], item["original_rank"]))
+    return reranked[:top_k] if top_k is not None else reranked
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         if overlap >= chunk_size:

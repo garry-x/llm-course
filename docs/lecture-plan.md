@@ -593,12 +593,14 @@ Quick check：
 - cosine similarity 与 normalized dot product。
 - quantization scale、dequantization error 和 ranking 误差。
 - RAG retrieval metrics：Recall@k 与 reciprocal rank。
+- RRF 融合 dense/BM25 排序；rerank 改善前排相关性但会增加延迟。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
 课堂 demo：
 
 - 运行 RAG toy retriever，制造 chunk overlap 错误。
 - 给定 retrieved/relevant ids，手算 Recall@k 和 reciprocal rank。
+- 给定 dense/BM25 排序，手算 RRF 分数，再用 reranker 分数调整 top-k。
 - 对 per-channel INT8 权重做 roundtrip。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 

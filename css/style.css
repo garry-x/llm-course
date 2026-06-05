@@ -186,6 +186,12 @@ body{
 .card p{margin-bottom:10px;color:var(--text-secondary)}
 .card ul,.card ol{margin:6px 0 14px 22px;color:var(--text-secondary)}
 .card li{margin-bottom:5px}
+.source-guidance{
+  border-left:4px solid var(--accent);
+  background:var(--accent-light)
+}
+.source-guidance h3{font-size:1.05rem}
+.source-guidance p,.source-guidance li{font-size:.9rem}
 
 /* ---- KaTeX Math ---- */
 .katex{font-size:1.05em!important}
@@ -559,6 +565,18 @@ td{color:var(--text-secondary)}
   padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;
   background:var(--accent-light);color:var(--accent);border:1px solid rgba(179,92,34,.15)
 }
+.hero-deep-links{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+  max-width:620px;margin:20px auto 0;position:relative
+}
+.hero-deep-links a{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:48px;min-height:36px;padding:4px 10px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text-secondary);background:var(--bg);
+  font-size:.76rem;font-weight:700;text-decoration:none
+}
+.hero-deep-links a:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ---- Dashboard Cards (homepage) ---- */
 .dashboard{

@@ -42,6 +42,76 @@
 
 **最低前置要求：**会 Python 函数、列表/字典、基础矩阵乘法，知道 PyTorch 张量的 `shape`。如果数学推导暂时吃力，先抓住每节的“输入是什么、输出是什么、形状怎么变”。
 
+## 高校课程规格
+
+如果目标是达到类似 Stanford CS224N 的高校课程水准，本课程不只要求“读完章节”，还要求可评分、可复现、可引用。建议按以下方式组织：
+
+| 评估项 | 权重 | 交付证据 |
+|--------|:--:|----------|
+| 章节编程作业 | 35% | 每章核心代码、运行输出、测试或错误分析 |
+| 书面推导与概念题 | 20% | 关键公式推导、复杂度分析、选择题解释 |
+| 训练工程 Capstone | 15% | 数据审计、训练日志、checkpoint/resume、成本估算 |
+| 推理工程 Capstone | 20% | API、压测、评测、SLO 与容量规划报告 |
+| 阅读复盘与同伴 review | 10% | 论文摘要、复现实验记录、互评反馈 |
+
+课程质量审计、CS224N 对标矩阵、当前 CS224N 公开页快照、推荐周历、内容准确性维护规则见 [高校课程质量审计与升级路线](docs/university-course-quality-audit.md#高校课程质量审计与升级路线)、[CS224N Benchmark Crosswalk](docs/cs224n-benchmark-crosswalk.md#cs224n-benchmark-crosswalk) 和 [CS224N Current Benchmark Snapshot](docs/cs224n-current-benchmark-snapshot.md#当前公开页要点)。正式授课安排、学习目标证据映射、20 讲计划、课程日历与截止日台账、课件大纲、lecture notes 索引、lecture notes 审稿标准、lecture notes 逐讲复核台账、lecture note 样例包、板书推导脚本、数学推导审计、课堂 demo runbook、课程材料索引、课程直播/录播/文字稿政策、版本归档政策、课程沟通与公告政策、学生可见 staff 与 office hours 目录、staff assistance 与 code review 边界、选课/旁听/公开使用政策、讨论课/答疑、学生 FAQ、环境复现、测验与阶段检查、assessment item bank、assessment administration、概念误区诊断、期中/期末样卷、课堂参与与反馈、guest speaker / external seminar 流程、staff 执行手册、政策、学术诚信个案处理与相似性检测流程、学生支持与可及性、先修诊断、Python/PyTorch review session、先修复习、ML foundations bridge、逐周阅读、paper recap 校准、paper-to-code traceability、前沿 seminar、逐章来源映射、逐章 claim 审计台账、claim 复核工作表、外部来源清单、外部来源复核、前沿来源证据卡、外部专家复核、作业 handout、书面题库、教师答案要点、评分校准、作业提交与发布、成绩册与 LMS 运行、隐藏测试设计、经典 NLP 专题、项目提案与里程碑、项目团队与导师政策、默认最终项目、项目报告模板、项目报告样例、实验严谨性与统计评测、项目展示与公开归档政策、项目选题与归档、算力资源与成本、数据与伦理审查、项目评分、展示互评、课程运行改进闭环和前沿来源复核见 [课程 Syllabus](docs/syllabus.md#课程目标)、[Course Outcome Map](docs/course-outcome-map.md#course-outcome-map)、[10 周 / 20 讲 Lecture Plan](docs/lecture-plan.md#授课结构)、[Course Calendar and Deadline Ledger](docs/course-calendar-deadline-ledger.md)、[Lecture Slide Outline](docs/lecture-slide-outline.md#slide-deck-模板)、[Lecture Notes Index](docs/lecture-notes-index.md#notes-发布状态)、[Lecture Notes Quality and Review Standard](docs/lecture-notes-quality-review.md)、[Lecture Notes Review Ledger](docs/lecture-notes-review-ledger.md)、[Lecture Note Sample Pack](docs/lecture-note-sample-pack.md)、[Board Derivation and Instructor Notes Pack](docs/board-derivation-pack.md#课堂板书脚本)、[Mathematical Derivation Audit](docs/mathematical-derivation-audit.md)、[Classroom Demo Runbook](docs/demo-runbook.md#demo-环境检查)、[Course Materials Index](docs/course-materials-index.md#course-materials-index)、[Lecture Media Access Policy](docs/lecture-media-access-policy.md)、[Material Versioning and Archive Policy](docs/material-versioning-archive-policy.md)、[Course Communication and Announcement Policy](docs/course-communication-policy.md)、[Course Staff and Office Hours Directory](docs/course-staff-office-hours-directory.md)、[Staff Assistance and Code Review Boundary Policy](docs/staff-assistance-code-review-policy.md)、[Enrollment, Audit, and Public Use Policy](docs/enrollment-audit-public-use-policy.md)、[Discussion Section and Office Hours Guide](docs/discussion-office-hours-guide.md)、[Student FAQ and Troubleshooting Guide](docs/student-faq-troubleshooting.md)、[Environment and Reproducibility Guide](docs/environment-reproducibility.md)、[Quiz and Checkpoint Guide](docs/quiz-checkpoint-guide.md)、[Assessment Item Bank Ledger](docs/assessment-item-bank-ledger.md)、[Assessment Administration and Exam Integrity Policy](docs/assessment-administration-policy.md)、[Concept Mastery and Misconception Map](docs/concept-misconception-map.md)、[Midterm and Final Review Pack](docs/midterm-final-review-pack.md)、[Participation and Feedback Guide](docs/participation-feedback-guide.md)、[Guest Speaker and External Seminar Policy](docs/guest-speaker-seminar-policy.md)、[Course Staff Runbook](docs/staff-runbook.md)、[课程政策](docs/course-policies.md)、[Academic Integrity Case Process](docs/academic-integrity-case-process.md)、[Accessibility and Student Support Guide](docs/accessibility-student-support.md)、[Prerequisite Diagnostic](docs/prerequisite-diagnostic.md)、[Python and PyTorch Review Session](docs/python-pytorch-review-session.md)、[数学与 PyTorch 先修复习](docs/math-prerequisites.md)、[ML Foundations Prerequisite Bridge](docs/ml-foundations-prerequisite-bridge.md)、[逐周阅读清单与复盘 Handout](docs/reading-list.md)、[Paper Recap Calibration Pack](docs/paper-recap-calibration-pack.md)、[Paper-to-Code Traceability Matrix](docs/paper-to-code-traceability-matrix.md)、[Frontier Seminar Handout](docs/frontier-seminar-handout.md)、[Chapter Source and Accuracy Map](docs/chapter-source-map.md)、[Chapter Claim Audit Ledger](docs/chapter-claim-audit-ledger.md)、[Claim Audit Worksheet](docs/claim-audit-worksheet.md)、[External Source Inventory](docs/external-source-inventory.md)、[External Source Verification Guide](docs/external-source-verification.md)、[Frontier Source Evidence Cards](docs/frontier-source-evidence-cards.md)、[External Expert Review Dossier](docs/external-expert-review-dossier.md)、[Assignment Handout Pack](docs/assignment-handout-pack.md)、[书面推导与概念题题库](docs/written-problem-set.md)、[Instructor Solution Guide](docs/instructor-solution-guide.md)、[Grading Calibration Guide](docs/grading-calibration.md)、[Assignment Submission and Release Guide](docs/assignment-submission-guide.md)、[Gradebook and LMS Operations Guide](docs/gradebook-lms-operations.md)、[Autograder 与隐藏测试设计指南](docs/autograder-hidden-tests.md)、[经典 NLP 专题 Handout](docs/classic-nlp-handout.md)、[Classic NLP Deep-Dive Teaching Module](docs/classic-nlp-deep-dive-module.md)、[经典 NLP 与评测覆盖说明](docs/nlp-evaluation-coverage.md)、[Capstone Proposal and Milestone Guide](docs/capstone-proposal-milestone.md)、[Project Team and Mentor Policy](docs/project-team-mentor-policy.md)、[Default Final Project Guide](docs/default-final-project-guide.md)、[Project Report Template and Reproducibility Checklist](docs/project-report-template.md)、[Project Report Exemplar Pack](docs/project-report-exemplar-pack.md)、[Experimental Rigor and Evaluation Statistics Guide](docs/experimental-rigor-evaluation-statistics.md)、[Final Project Showcase and Archive Policy](docs/final-project-showcase-archive-policy.md)、[Capstone Project Gallery and Idea Bank](docs/capstone-project-gallery.md)、[Compute Resource and Cost Guide](docs/compute-resource-guide.md)、[Data and Ethics Review](docs/data-ethics-review.md)、[Capstone 项目报告 Rubric](docs/project-report-rubric.md)、[项目展示与同伴 Review Rubric](docs/presentation-peer-review.md)、[Course Operations and Improvement Log](docs/course-operations-log.md) 和 [前沿模型来源等级与复核记录](docs/frontier-source-audit.md)。
+
+评估覆盖矩阵见 [Assessment Blueprint and Coverage Matrix](docs/assessment-blueprint-coverage-matrix.md)，用于把 CO1-CO6、programming/written/quiz/capstone/reading 渠道、认知层级和 grading gate 对齐。
+
+课程目标达成度报告见 [Learning Outcome Attainment Report](docs/learning-outcome-attainment-report.md)，用于把 CO1-CO6 的 direct/indirect evidence、达标阈值、dry-run 状态和下一轮改进动作汇总为可审计记录。
+
+题目质量统计复核见 [Assessment Item Analysis and Psychometrics Guide](docs/assessment-item-analysis-psychometrics.md)，用于在 quiz/checkpoint 后检查 item_difficulty_p、item_discrimination_d、distractor_efficiency、rubric fit、fairness flag 和 item retire/revise 决策。
+
+课堂同行观察、期中反馈 response memo、期末课程评估和下一轮改进闭环见 [Teaching Observation and Course Evaluation Dossier](docs/teaching-observation-course-evaluation.md)。
+
+助教训练、评分校准、office-hours 边界、项目 mentor、隐私/可及性/诚信 routing 的 staff-facing 签核见 [TA Training and Certification Dossier](docs/ta-training-certification.md)。
+
+评分锚点样例和学生可见反馈口径见 [Grading Anchor Sample Feedback Pack](docs/grading-anchor-sample-feedback-pack.md)，用于把 written、programming、capstone、reading、peer review 和 regrade 的双评边界落实为可复用 anchor sample。
+
+学生可见的讨论课 worksheet 见 [Recitation Worksheet Pack](docs/recitation-worksheet-pack.md)，覆盖 shape drill、failure drill、paper-to-code link、source boundary、exit ticket 和 capstone rehearsal。
+
+编程作业代码质量评分口径见 [Programming Assignment Code Quality Rubric](docs/programming-assignment-code-quality-rubric.md)，用于把 API contract、shape discipline、向量化 PyTorch、数值稳定、dtype/device、边界处理、可读性、复现和反硬编码纳入人工复核。
+
+学习数据触发补救教学的规则见 [Learning Analytics and Remediation Plan](docs/learning-analytics-remediation-plan.md)，用于把 quiz、作业、recitation、office hours、reading recap、project milestone 和 gradebook 聚合信号转化为 recap、worksheet、project clinic、FAQ 或评分校准动作。
+
+每周讲后复盘与下次课调整见 [Weekly Teaching Reflection and Adjustment Log](docs/weekly-teaching-reflection-adjustment-log.md)，用于把 quick check、exit ticket、office hours、作业失败类别、阅读复盘和项目 milestone 的聚合证据转化为下一讲 recap、worksheet、FAQ、handout、rubric 或 source patch。
+
+课程 workload、难度阶梯和 10/12 周节奏调整见 [Workload and Pacing Calibration](docs/workload-pacing-calibration.md)，用于校准每周 lecture、reading、assignment、recitation 和 capstone 负荷。
+
+代表性课件样例见 [Lecture Slide Sample Pack](docs/lecture-slide-sample-pack.md)，用于检查 slides 的 learning goals、visual plan、formula/shape、demo cue、quick check、accessibility text 和 source boundary。
+
+核心术语定义见 [Core Concept Glossary](docs/core-concept-glossary.md)，用于统一 BPE、embedding、RoPE、attention、GQA、MLA、LayerNorm、MoE、CE/PPL、DPO、RAG、SLO、evaluation metric 和 source boundary 等术语的课程内定义、不要误讲成什么、证据锚点和来源边界。
+
+知识点依赖、章节 unlock path 和 spiral review 路径见 [Topic Dependency and Spiral Review Map](docs/topic-dependency-map.md)，用于说明 RoPE、attention、training、alignment、RAG、serving metric 和 capstone evidence 之间的先修关系与补救入口。
+
+统一符号、shape、mask、cache、loss、optimizer、serving metric 和 classic NLP metric 单位见 [Notation and Shape Glossary](docs/notation-shape-glossary.md)，用于约束章节正文、作业、讨论课、paper recap 和 capstone 报告中的维度与单位写法。
+
+逐章可复算小例子见 [Worked Example Pack](docs/worked-example-pack.md)，用于把 BPE、RoPE、attention、GQA、Norm、GPT 参数、AdamW、top-p、DPO、KV cache 和经典 NLP metrics 的输入、shape、worked trace、常见错误和评估证据对齐。
+
+阅读讨论题库见 [Reading Discussion Question Bank](docs/reading-discussion-question-bank.md)，用于把逐周阅读、paper recap、paper-to-code drill、quiz/checkpoint 和 capstone clinic 连接成可评分的问题条目。
+
+综合复习路径见 [Comprehensive Review Study Guide](docs/comprehensive-review-study-guide.md)，用于把 midterm/final 样题、书面题、worked examples、阅读讨论题、错题日志和 capstone readiness 串成两轮复习计划。
+
+安全、伦理与社会影响案例见 [Safety and Societal Impact Casebook](docs/safety-societal-impact-casebook.md)，用于把 privacy、bias、safety、contamination、misuse、copyright、access 和 evaluation 风险落成可讨论、可评分、可复核的案例。
+
+模型卡、API 文档、leaderboard 和 benchmark 数字的引用模板见 [Model and Benchmark Card Guide](docs/model-benchmark-card-guide.md)，用于把 context length、价格、latency、tokens/s、安全和质量 claim 写成有来源日期、配置边界和不支持结论的证据卡。
+
+Capstone 展示后的项目答辩和个人口头追问题库见 [Capstone Defense and Oral Exam Question Bank](docs/capstone-defense-oral-exam-bank.md)，用于验证个人贡献、代码理解、实验边界、复现证据、来源 claim 和安全风险。
+
+教师私有 autograder 运行流程见 [Private Autograder Operations Guide](docs/private-autograder-operations.md) 和 [scripts/run_private_autograder.py](scripts/run_private_autograder.py)，用于生成公开 dry run、隐藏测试 manifest、LMS entrypoint 和复核归档证据。
+
+开课前 readiness 证据包见 [Pre-Semester Readiness Audit](docs/presemester-readiness-audit.md)，集中记录 CS224N current snapshot verifier、课程总门禁、student release safety、browser smoke、作业测试、capstone 验收要求和人工 sign-off 边界。
+
+机器可读 evidence manifest 由 [scripts/generate_course_evidence_manifest.py](scripts/generate_course_evidence_manifest.py) 生成，用于归档 readiness 文档、CS224N snapshot、release safety、capstone gate 和人工 sign-off 边界的可追踪证据。
+
+课程数据、模型、tokenizer、checkpoint、评测集合和 runtime asset 的资产级来源登记见 [Dataset, Model, and Artifact Provenance Registry](docs/dataset-model-artifact-registry.md)，用于把 data ethics、source inventory、环境复现和项目报告中的 provenance 要求落到可检查的 artifact ID。
+
+项目 proposal、milestone、final report、presentation 和 archive candidate 的统一提交包见 [Project Submission Dossier](docs/project-submission-dossier.md)，用于把 artifact_manifest、split_card、metric_card、uncertainty_record、claim_audit、leakage_check、run log 和贡献披露连成可审计证据链。
+
+课程内容勘误、修订、公告、验证和评分影响处理见 [Course Errata and Correction Ledger](docs/course-errata-correction-ledger.md)，用于记录学生或 staff 发现的问题如何进入 patch、verification、announcement 和 regrade/release closure。
+
+**章节作业测试：**第 1-10 章已提供可运行作业测试入口：[assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/)。经典 NLP 与评测补充作业见 [assignments/ch11_classic_nlp/](assignments/ch11_classic_nlp/)。
+
 ## 面向 LLM 推理工程师的能力矩阵
 
 如果你的目标是成为 LLM 推理工程师，学习目标不只是“懂 Transformer”，而是能把模型稳定、低成本、可观测地服务给真实用户。课程按以下能力组织：
@@ -110,10 +180,15 @@ PORT=3000 docker compose up -d
 
 ### 课程验证
 
+本仓库推荐使用根目录下的 `.venv` 运行本地验收；如果你已经激活等价虚拟环境，也可以把 `.venv/bin/python` 替换为 `python`。先确认 PyTorch 可导入：
+
 ```bash
-python verify_course.py               # 校验章节统计、链接、JS/Python 语法和 Capstone 用例
-python verify_course.py --capstone    # 额外运行 Capstone 一键验收
-python verify_course.py --training    # 额外运行 PyTorch 训练工程 Capstone 验收
+.venv/bin/python -c "import sys, torch; print(sys.version.split()[0], torch.__version__)"
+
+.venv/bin/python verify_course.py               # 校验章节统计、链接、Chromium 渲染、JS/Python 语法和 Capstone 用例
+.venv/bin/python run_assignment_tests.py         # 运行章节作业测试（当前覆盖 Ch01-Ch10 与 Ch11 经典 NLP；Ch02-Ch10 需要 PyTorch）
+.venv/bin/python scripts/generate_course_evidence_manifest.py --check  # 生成并检查课程 readiness evidence manifest
+.venv/bin/python verify_course.py --capstone --training  # 发布/期末门禁：运行推理与训练 Capstone 一键验收
 ```
 
 ### CLI 命令一览
@@ -127,7 +202,7 @@ python verify_course.py --training    # 额外运行 PyTorch 训练工程 Capsto
 | `docker-logs` | 实时 nginx 日志 | |
 | `docker-restart` | = down + up | |
 
-**环境要求：** Docker 或 Python 3.10+ / 现代浏览器（Safari / Chrome / Edge），推荐 iPad Pro 或桌面端阅读。
+**环境要求：** Docker 或 Python 3.10+ / 现代浏览器（Safari / Chrome / Edge），本地验收需要 Chromium/Chrome 执行章节渲染 smoke test；推荐 iPad Pro 或桌面端阅读。
 
 ## 课程大纲
 
@@ -148,18 +223,20 @@ python verify_course.py --training    # 额外运行 PyTorch 训练工程 Capsto
 
 ## DeepSeek 技术融入
 
-| 技术 | 来源 | 对应章节 | 要点 |
-|------|------|---------|------|
-| MLA (Multi-head Latent Attention) | V2 | Ch04 | KV Cache 压缩 93%，潜在向量解耦 RoPE |
-| GRPO (Group Relative Policy Optimization) | R1 | Ch09 | 无需 Critic，组内白化优势，纯 RL 涌现推理 |
-| DeepSeekMoE + Aux-Loss-Free | V3 | Ch06 | 671B→37B 稀疏激活，动态偏置负载均衡 |
-| FP8 Mixed Precision + DualPipe | V3 | Ch07 | 首个大规模 FP8 验证，通信计算重叠 |
-| MTP (Multi-Token Prediction) | V3 | Ch08 | 训练/推理双重增益，推测解码 ~1.8x 加速 |
-| DSA (DeepSeek Sparse Attention) | V3.2 | Ch10 | 可学习 top-k 稀疏，O(n²)→O(n·k) |
-| CSA + HCA Hybrid Attention | V4 | Ch10 | 压缩稀疏 + 128× 全局，1M 上下文 27% FLOPs / 10% KV |
-| Engram 外部记忆 | V4 | Ch10 | 类海马体 O(1) 检索 (LSH)，NIAH 84%→97% |
-| mHC (Manifold-Constrained Hyper-Connections) | V4 | Ch05 | Birkhoff 约束，Sinkhorn-Knopp，信号放大 1.6× |
-| Muon Optimizer | V4 | Ch07 | 动量矩阵正交化替代 AdamW，Newton-Schulz 迭代 |
+前沿模型信息变化很快。下表用于建立技术地图；具体数字和模型规格按 [前沿模型来源等级与复核记录](docs/frontier-source-audit.md) 维护，正文中的 V3.2/V4 结论应理解为“截至 2026-06-05 的模型卡/技术报告信息”；D 级 monitor-only 项不能作为作业、考试或项目评分事实。
+
+| 技术 | 来源等级 | 复核日期 | 对应章节 | 要点 |
+|------|----------|----------|---------|------|
+| MLA (Multi-head Latent Attention) | A：DeepSeek-V2/V3 技术报告 | 2026-06-05 | Ch04 | KV Cache 压缩，潜在向量解耦 RoPE |
+| GRPO (Group Relative Policy Optimization) | A：DeepSeek-R1 论文/Nature 条目 | 2026-06-05 | Ch09 | 无需 Critic，组内白化优势，RL 激励推理能力 |
+| DeepSeekMoE + Aux-Loss-Free | A：DeepSeek-V3 技术报告 | 2026-06-05 | Ch06 | 671B→37B 稀疏激活，动态偏置负载均衡 |
+| FP8 Mixed Precision + DualPipe | A：DeepSeek-V3 技术报告 | 2026-06-05 | Ch07 | FP8 混合精度，通信计算重叠 |
+| MTP (Multi-Token Prediction) | A：DeepSeek-V3 技术报告 | 2026-06-05 | Ch08 | 训练/推理双重增益，推测解码草稿信号 |
+| DSA (DeepSeek Sparse Attention) | A：DeepSeek API 新闻/DeepSeek-V3.2 论文 | 2026-06-05 | Ch10 | 可学习 top-k 稀疏，长上下文降计算成本 |
+| CSA + HCA Hybrid Attention | A：DeepSeek-V4 模型卡 | 2026-06-05 | Ch10 | 模型卡报告 1M 上下文 27% FLOPs / 10% KV |
+| Engram 外部记忆 | D：monitor-only，未保留具体 benchmark 数字 | 2026-06-05 | Ch10 | 仅作“模型内建外部记忆 + LSH 检索”的前沿案例，不作为课程事实 |
+| mHC (Manifold-Constrained Hyper-Connections) | A：DeepSeek-V4 模型卡/Transformers 配置 | 2026-06-05 | Ch05 | Birkhoff 约束，Sinkhorn-Knopp，残差连接扩展 |
+| Muon Optimizer | A：DeepSeek-V4 模型卡 | 2026-06-05 | Ch07 | 动量矩阵正交化替代 AdamW，Newton-Schulz 迭代 |
 
 ## 项目结构
 
@@ -192,7 +269,7 @@ llm-learner/
 │       ├── plan_training.py   # step、GPU hours、成本和 checkpoint 存储估算
 │       ├── train.py           # PyTorch tiny LM 训练循环 + checkpoint/resume
 │       └── sample_corpus.txt
-├── images/                    # 12 张 SVG 概念示意图（支持暗色模式）
+├── images/                    # 11 张 SVG 概念示意图 + favicon（支持暗色模式）
 │   ├── bpe-pipeline.svg       # BPE 训练与编解码流程
 │   ├── rope-rotation.svg      # RoPE 旋转位置编码原理
 │   ├── attention-flow.svg     # Scaled Dot-Product Attention 数据流
@@ -231,7 +308,7 @@ llm-learner/
 | ⌨️ **键盘导航** | ← → 切换章节，Esc 关闭侧边栏 |
 | 📱 **响应式** | 桌面 / iPad Pro / 手机三级断点（960/640px），触控 ≥44px |
 | 🔤 **可调字号** | 小(14px) / 中(16px) / 大(18px)，localStorage 持久化 |
-| 🖼️ **12 张 SVG 图表** | CSS filter 暗色适配（`invert + hue-rotate`） |
+| 🖼️ **11 张 SVG 图表** | CSS filter 暗色适配（`invert + hue-rotate`） |
 | 🏷️ **矢量 favicon** | SVG/PNG/ICO + apple-touch-icon (ComfyUI + FLUX.1-dev 生成) |
 
 ## 延伸阅读
@@ -242,7 +319,7 @@ llm-learner/
 - Hoffmann et al. (2022) — [Training Compute-Optimal Large Language Models (Chinchilla)](https://arxiv.org/abs/2203.15556)
 
 **DeepSeek 系列：**
-- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · V3.2 — [DSA 稀疏注意力](https://api-docs.deepseek.com/news/news250929) · R1 — [GRPO 推理涌现 (Nature 2025)](https://www.nature.com/articles/s41586-025-09422-z) · V4 — [CSA+HCA + Engram + mHC](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · V3.2 — [DSA 稀疏注意力](https://api-docs.deepseek.com/news/news250929) · R1 — [GRPO 推理涌现 (Nature 2025)](https://www.nature.com/articles/s41586-025-09422-z) · V4 — [CSA+HCA + mHC + Muon](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
 
 **动手实践：**
 - Andrej Karpathy — [Neural Networks: Zero to Hero](https://www.youtube.com/playlist?list=PLAqhIrjkxBUWIvTOCzB7XwZBt03h4H3kW) · [nanoGPT](https://github.com/karpathy/nanoGPT)

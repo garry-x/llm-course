@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先掌握贪心、temperature、top-k、top-p 这四种采样方式。推测解码、MTP 和 Attention Sink 是推理加速/长上下文优化，第一次学习时重点理解动机，不必追求一次写出工业级实现。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 6 章 logits、softmax、概率采样。</li>
+    <li><strong>学习目标：</strong>解释自回归生成、prefill/decode、采样分布截断、重复陷阱、曝光偏差、推测解码和结构化解码的数学基础。</li>
+    <li><strong>课前阅读：</strong>阅读 Holtzman et al. (2020) Nucleus Sampling、speculative decoding 摘要，并复习 categorical sampling。</li>
+    <li><strong>课后阅读：</strong>比较 greedy、beam、temperature、top-k、top-p、typical sampling 和约束解码在质量/多样性/可靠性上的取舍。</li>
     <li><strong>本章产出：</strong>一个能用不同采样策略生成文本的 Generator。</li>
     <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
+    <li><strong>评估证据：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
   </ul>
 </section>
 
@@ -53,17 +57,17 @@
   <h4>自回归分解</h4>
   <p>生成的数学基础依然是<strong>自回归分解</strong>——序列的联合概率分解为条件概率的乘积：</p>
   <div class="math-box"><div class="label">公式 8.1 自回归生成</div>
-    <div class="katex" data-expr="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})"></div>
+    <div class="katex" data-expr="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})" aria-label="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})" role="img"></div>
   </div>
-  <p>每一步，模型基于已有的前缀 <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]"></span>，输出一个词表上的概率分布 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})"></span>。然后从该分布中<strong>采样</strong>或<strong>取最大值</strong>得到 <span class="katex-inline" data-expr="x_t"></span>。这个过程是逐 token 进行的，直到生成结束 token 或达到最大长度。</p>
+  <p>每一步，模型基于已有的前缀 <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" aria-label="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" role="img"></span>，输出一个词表上的概率分布 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})" aria-label="P(x_t \mid x_{&lt;t})" role="img"></span>。然后从该分布中<strong>采样</strong>或<strong>取最大值</strong>得到 <span class="katex-inline" data-expr="x_t" aria-label="x_t" role="img"></span>。这个过程是逐 token 进行的，直到生成结束 token 或达到最大长度。</p>
 
   <h4>Prefilling 与 Decoding 两阶段</h4>
   <p>生成过程分为两个计算特征完全不同的阶段：</p>
   <ul>
     <li><strong>Prefilling（预填充）：</strong>将用户输入的 prompt 一次性送入模型。这是<strong>计算密集</strong>阶段——大量矩阵乘法并行执行。瓶颈在 GPU 算力（FLOPS）。首 token 延迟（TTFT）由这个阶段主导。</li>
-    <li><strong>Decoding（解码）：</strong>逐 token 生成，每次只输入一个 token，利用 KV Cache 增量计算。这是<strong>带宽密集</strong>阶段——GPU 利用率仅 3-5%。后续吞吐（TPS）由这个阶段主导。</li>
+    <li><strong>Decoding（解码）：</strong>逐 token 生成，每次只输入一个 token，利用 KV Cache 增量计算。这通常是<strong>带宽密集</strong>阶段——小 batch 或低并发时 GPU 算力利用率可能明显低于 prefill，后续吞吐（TPS/TPOT）由这个阶段主导。</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>重要概念：</strong>TTFT（Time to First Token）由 Prefilling 主导，用户感知为"等待第一个字出现的时间"；TPS（Tokens Per Second）由 Decoding 主导，用户感知为"打字速度"。ChatGPT 的 TTFT 约 200-500ms，TPS 约 30-60 tok/s。这两个指标是独立的优化目标。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>重要概念：</strong>TTFT（Time to First Token）主要受 prefill、排队、网络和路由影响，用户感知为"等待第一个字出现的时间"；TPS/TPOT 主要受 decoding、batching、KV cache 和带宽影响，用户感知为"打字速度"。不同模型、上下文长度、并发和服务商的数值差异很大，因此课程项目要求学生自己用固定 benchmark 报告这些指标。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -79,23 +83,23 @@
 
 <section class="card" id="s8-2">
   <h3>8.2 为什么贪心解码会失败？——重复陷阱与曝光偏差</h3>
-  <p>贪心解码（Greedy Decoding）每一步选择概率最高的 token：<span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})"></span>。它是最简单的策略，但有两个根本缺陷。</p>
+  <p>贪心解码（Greedy Decoding）每一步选择概率最高的 token：<span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>。它是最简单的策略，但有两个根本缺陷。</p>
 
   <h4>缺陷一：重复陷阱（Repetition Loop）</h4>
-  <p>模型一旦生成了一个高频 token（如"的"或"the"），后续 <code>argmax</code> 很可能继续选择同一个 token。这是因为高频 token 的 logits 通常远高于其他候选，在 self-attention 中，"的"的 Key 和 Query 会产生高分数的匹配，形成"自激振荡"——每一步的输出都在强化之前的选择。结果就是无穷无尽的重复输出。</p>
+  <p>模型一旦进入某个高概率局部模式，后续 <code>argmax</code> 可能持续选择相似或相同 token，尤其在训练数据中常见短语、标点或功能词附近更明显。原因通常是条件分布过于尖锐、上下文里已有重复模式、缺少随机探索和停止约束等因素共同作用；这会让贪心解码陷入重复循环，但不能简单归因于某个 token 的 Key/Query 必然自我强化。</p>
 
   <h4>缺陷二：曝光偏差（Exposure Bias）</h4>
-  <p>训练时，模型每一步看到的是<strong>真实的</strong> ground truth token。但推理时，模型看到的是<strong>自己生成的</strong> token。这两种情况下的分布不同——训练时的条件分布是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{真实}})"></span>，推理时是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{生成}})"></span>。一步的误差会在后续步中被放大，这就是<strong>误差累积</strong>（error accumulation）。</p>
+  <p>训练时，模型每一步看到的是<strong>真实的</strong> ground truth token。但推理时，模型看到的是<strong>自己生成的</strong> token。这两种情况下的分布不同——训练时的条件分布是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{真实}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{真实}})" role="img"></span>，推理时是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{生成}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{生成}})" role="img"></span>。一步的误差会在后续步中被放大，这就是<strong>误差累积</strong>（error accumulation）。</p>
 
   <h4>温度参数的熵控制视角</h4>
-  <p>解决方案是引入<strong>随机性</strong>——从概率分布中采样而不是取最大值。温度参数 <span class="katex-inline" data-expr="T"></span> 控制这个随机性的程度：</p>
+  <p>解决方案是引入<strong>随机性</strong>——从概率分布中采样而不是取最大值。温度参数 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 控制这个随机性的程度：</p>
   <div class="math-box"><div class="label">公式 8.2 温度采样</div>
-    <div class="katex" data-expr="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}"></div>
+    <div class="katex" data-expr="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}" aria-label="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}" role="img"></div>
   </div>
   <ul>
-    <li><span class="katex-inline" data-expr="T \to 0"></span>：退化为 argmax（完全确定）</li>
-    <li><span class="katex-inline" data-expr="T = 1"></span>：原始分布</li>
-    <li><span class="katex-inline" data-expr="T \to \infty"></span>：退化为均匀分布（完全随机）</li>
+    <li><span class="katex-inline" data-expr="T \to 0" aria-label="T \to 0" role="img"></span>：退化为 argmax（完全确定）</li>
+    <li><span class="katex-inline" data-expr="T = 1" aria-label="T = 1" role="img"></span>：原始分布</li>
+    <li><span class="katex-inline" data-expr="T \to \infty" aria-label="T \to \infty" role="img"></span>：退化为均匀分布（完全随机）</li>
   </ul>
   <p>温度的"热力学类比"：在 Boltzmann 分布中，温度控制系统的"探索"程度——高温使系统探索更多状态（更多样的词汇），低温使系统利用已知高概率模式（更确定的输出）。</p>
 </section>
@@ -154,7 +158,7 @@ def generate_greedy(model, input_ids, max_new_tokens=100):
 <!-- ================================================================ -->
 <section class="card" id="s8-4">
   <h3>8.4 编程练习 2：实现 Temperature Sampling</h3>
-  <p>温度采样通过在 logits 上应用除法 <span class="katex-inline" data-expr="z_i / T"></span> 来控制分布的"锐度"。核心变化是：<strong>argmax → softmax + multinomial</strong>。</p>
+  <p>温度采样通过在 logits 上应用除法 <span class="katex-inline" data-expr="z_i / T" aria-label="z_i / T" role="img"></span> 来控制分布的"锐度"。核心变化是：<strong>argmax → softmax + multinomial</strong>。</p>
 
   <div class="coding-exercise">
     <h4>练习 2：温度采样</h4>
@@ -164,7 +168,7 @@ def generate_greedy(model, input_ids, max_new_tokens=100):
       <ul>
         <li>logits 除以 temperature 后再做 softmax</li>
         <li>使用 <code>torch.multinomial</code> 从分布中采样</li>
-        <li>处理 <span class="katex-inline" data-expr="T=0"></span> 的特殊情况：退化为 argmax（避免除零）</li>
+        <li>处理 <span class="katex-inline" data-expr="T=0" aria-label="T=0" role="img"></span> 的特殊情况：退化为 argmax（避免除零）</li>
         <li>接受相同 prompt 多次运行应产生不同结果（因为随机采样）</li>
       </ul>
       <pre># 预期用法
@@ -208,7 +212,7 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
             break
 
     return input_ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>T=0 的处理：</strong>当 T→0 时，<span class="katex-inline" data-expr="z_i/0 \to \infty"></span> 会导致数值溢出。实际实现中从不除以真正的 0——T=0 时直接用 argmax，T>0 时才做采样。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>T=0 的处理：</strong>当 T→0 时，<span class="katex-inline" data-expr="z_i/0 \to \infty" aria-label="z_i/0 \to \infty" role="img"></span> 会导致数值溢出。实际实现中从不除以真正的 0——T=0 时直接用 argmax，T>0 时才做采样。</p>
     </div>
   </div>
 </section>
@@ -218,7 +222,7 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
 <!-- ================================================================ -->
 <section class="card" id="s8-5">
   <h3>8.5 从 Temperature 到 Top-K / Top-P：截断"无聊的尾部"</h3>
-  <p>温度采样虽好，但有一个问题：当词表很大时（如 50257），softmax 的尾部包含大量概率极低的 token。即使使用 <span class="katex-inline" data-expr="T=0.8"></span>，模型仍有小概率采样到这些"无意义"的 token，生成出一个荒谬的词。Top-K 和 Top-P 就是用来截断这个"无聊的尾部"的。</p>
+  <p>温度采样虽好，但有一个问题：当词表很大时（如 50257），softmax 的尾部包含大量概率极低的 token。即使使用 <span class="katex-inline" data-expr="T=0.8" aria-label="T=0.8" role="img"></span>，模型仍有小概率采样到这些"无意义"的 token，生成出一个荒谬的词。Top-K 和 Top-P 就是用来截断这个"无聊的尾部"的。</p>
 
   <h4>Top-K 的逻辑</h4>
   <p>只保留概率最高的 K 个 token，重新归一化后从中采样。K 是一个固定值（GPT-2 默认 K=40）。</p>
@@ -234,10 +238,10 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
   <p>Top-P（Holtzman et al., 2020）不固定 K，而是选择累积概率达到 P 的最小 token 集合：</p>
   <ol>
     <li>将 token 按概率从高到低排序</li>
-    <li>从最高概率开始累加，直到累积概率 <span class="katex-inline" data-expr="\geq P"></span>（典型值 0.9 或 0.95）</li>
+    <li>从最高概率开始累加，直到累积概率 <span class="katex-inline" data-expr="\geq P" aria-label="\geq P" role="img"></span>（典型值 0.9 或 0.95）</li>
     <li>只从这个"核心集"（nucleus）中采样</li>
   </ol>
-  <p>当分布尖锐时核心集很小（"华盛顿"的例子可能只有 1-3 个 token），当分布平缓时核心集自动扩大。完全数据驱动，无需手动调整 K。这也是当前工业界最主流的采样策略。</p>
+  <p>当分布尖锐时核心集很小（"华盛顿"的例子可能只有 1-3 个 token），当分布平缓时核心集自动扩大。它不需要手动固定 K，是开放式生成中常见的采样策略之一；实际部署仍会结合 temperature、repetition penalty、stop 条件和任务约束调参。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -298,7 +302,7 @@ def generate_topk(model, input_ids, max_new_tokens=100,
       <p><strong>要求：</strong></p>
       <ul>
         <li>对概率分布降序排序，计算累积概率</li>
-        <li><strong>关键：</strong>用 <code>cumsum - sorted_probs > p</code> 来 mask（而非 <code>cumsum > p</code>）——确保累积概率恰好超过 p 的那个 token 也被包含</li>
+        <li><strong>关键：</strong>先用 <code>cumsum &gt;= p</code> 标记超过 nucleus 的位置，再将 mask 右移一位——确保第一个达到或超过 p 的 token 被保留，且 nucleus 尽可能小</li>
         <li>mask 后将剩余概率重新归一化（确保求和为 1）</li>
         <li>从归一化后的分布中采样</li>
       </ul>
@@ -326,7 +330,9 @@ def generate_topp(model, input_ids, max_new_tokens=100,
 
         # 累积概率，mask 尾部
         cumsum = torch.cumsum(sorted_probs, dim=-1)
-        mask = cumsum - sorted_probs > p  # 注意这个技巧
+        mask = cumsum >= p
+        mask[..., 1:] = mask[..., :-1].clone()
+        mask[..., 0] = False
         sorted_probs = sorted_probs.masked_fill(mask, 0.0)
 
         # 重新归一化
@@ -340,7 +346,7 @@ def generate_topp(model, input_ids, max_new_tokens=100,
         if next_token.item() == model.tokenizer.eos_token_id:
             break
     return input_ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么用 <code>cumsum - sorted_probs > p</code> 而非 <code>cumsum > p</code>？</strong><code>cumsum[t]</code> 是前 t 个 token 概率和。<code>cumsum[t] - sorted_probs[t]</code> 是排除当前 token 后的累积概率。如果这个值 > p，说明<strong>即使不包括当前 token</strong>累积概率已经超过 p——所以当前 token 应该被 mask。这确保恰好使累积概率超过 p 的那个 token 被包含在核心集中。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么要右移 mask？</strong><code>cumsum &gt;= p</code> 会标记第一个达到阈值的 token；把 mask 右移一位后，这个 token 被保留，后面的尾部 token 被移除。这样得到的是累计概率达到 p 的最小 nucleus。</p>
     </div>
   </div>
 </section>
@@ -416,7 +422,9 @@ class Generator:
                 probs = torch.softmax(scaled, dim=-1)
                 sorted_p, sorted_i = torch.sort(probs, descending=True, dim=-1)
                 cumsum = torch.cumsum(sorted_p, dim=-1)
-                mask = cumsum - sorted_p > p
+                mask = cumsum >= p
+                mask[..., 1:] = mask[..., :-1].clone()
+                mask[..., 0] = False
                 sorted_p = sorted_p.masked_fill(mask, 0.0)
                 sorted_p /= sorted_p.sum(dim=-1, keepdim=True)
                 idx = torch.multinomial(sorted_p, 1)
@@ -447,7 +455,7 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
     print(f"=== {strategy} ===")
     print(text[:200])
     print(f"   distinct-1: {d1:.2f}, distinct-2: {d2:.2f}\n")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>Greedy 的 distinct 分数最低（重复最多），Top-P 的 distinct 分数最高（多样性最好）。Temperature 单独使用时 distinct 可能高但质量不一定好——这就是为什么工业界几乎所有模型默认使用 Top-P + Temperature 的组合。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>Greedy 往往更容易重复；Top-P 通常会提高候选多样性，但 distinct 分数和人工质量不总是一致。实际部署常把 Top-P、temperature、repetition penalty 和 stop 条件组合调参，不能把单一指标当作质量结论。</p>
     </div>
   </div>
 </section>
@@ -460,18 +468,18 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
   <p><strong>多 Token 预测（Multi-Token Prediction, MTP）</strong>是 DeepSeek-V3 的一项重要技术创新。传统语言模型每次只预测<strong>一个</strong>未来的 token，而 MTP 让模型一次预测<strong>多个</strong>未来 token。</p>
 
   <h4>训练时的 MTP：多输出头架构</h4>
-  <p>标准语言模型只有一个输出头（LM Head），将最后一层隐藏状态 <span class="katex-inline" data-expr="\mathbf{h}_t"></span> 映射到词表 logits，预测 <span class="katex-inline" data-expr="x_{t+1}"></span>。MTP 添加 <span class="katex-inline" data-expr="D"></span> 个额外的输出头（MTP Heads），每个头预测不同偏移的未来 token：</p>
+  <p>标准语言模型只有一个输出头（LM Head），将最后一层隐藏状态 <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> 映射到词表 logits，预测 <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。MTP 添加 <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 个额外的输出头（MTP Heads），每个头预测不同偏移的未来 token：</p>
   <div class="math-box"><div class="label">公式 8.3 MTP 损失</div>
-    <div class="katex" data-expr="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})"></div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})" aria-label="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})" role="img"></div>
   </div>
   <p>每个 MTP Head 是一个小 MLP + LayerNorm，参数量远小于主 Transformer。它们共享底层特征表示，只在输出层有独立参数。</p>
 
   <h4>双重增益</h4>
   <ul>
-    <li><strong>训练增益：</strong>更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测下下个 token。这迫使模型学习更长距离的依赖。DeepSeek-V3 的实验表明 MTP 使训练效率提升约 15-20%。</li>
+    <li><strong>训练增益：</strong>更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测下下个 token。这可能促使模型学习更长距离的依赖。DeepSeek-V3 报告给出过 MTP 带来的训练效率收益；具体幅度依赖模型、数据和训练设置，正文不把它外推为通用比例。</li>
     <li><strong>推理增益：</strong>MTP Head 在推理时可以作为<strong>推测解码的草稿模型</strong>。由于 MTP Head 的参数远小于完整 Transformer，它们可以快速生成候选 token，然后由主模型一次性验证。</li>
   </ul>
-  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 选择 <span class="katex-inline" data-expr="D = 1"></span>（额外预测 1 个 token），因为实验发现更大的 <span class="katex-inline" data-expr="D"></span> 带来的边际收益递减。DeepSeek-V4 将 MTP 进一步扩展，与推测解码深度集成。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 报告选择 <span class="katex-inline" data-expr="D = 1" aria-label="D = 1" role="img"></span>（额外预测 1 个 token），因为其实验中更大的 <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 带来的边际收益递减。若后续模型卡或技术报告声称把 MTP 与推测解码更紧密结合，应按 <a href="../docs/frontier-source-audit.md">前沿模型来源等级与复核记录</a> 重新标注来源和日期。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -479,18 +487,18 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
 <!-- ================================================================ -->
 <section class="card" id="s8-9">
   <h3>8.9 编程练习 6：实现简化版推测解码</h3>
-  <p><strong>推测解码（Speculative Decoding）</strong>的核心思想非常巧妙：用一个<strong>小模型（草稿模型）</strong>快速生成候选 tokens，然后由<strong>大模型（目标模型）</strong>并行验证这些候选，在<strong>不改变输出分布</strong>的前提下实现 ~1.8x-3x 的加速。</p>
+  <p><strong>推测解码（Speculative Decoding）</strong>的核心思想非常巧妙：用一个<strong>小模型（草稿模型）</strong>快速生成候选 tokens，然后由<strong>大模型（目标模型）</strong>并行验证这些候选。满足拒绝采样条件时，它可以保持目标模型采样分布；实际加速比取决于草稿模型速度、接受率、batching 和系统瓶颈，论文与系统报告中常见约 1.x 到数倍的提升。</p>
 
   <h4>算法流程</h4>
   <ol>
-    <li><strong>草稿阶段：</strong>用轻量草稿模型（如 100M）自回归生成 <span class="katex-inline" data-expr="\gamma"></span> 个候选 token（通常 <span class="katex-inline" data-expr="\gamma = 4"></span> 或 5）</li>
+    <li><strong>草稿阶段：</strong>用轻量草稿模型（如 100M）自回归生成 <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span> 个候选 token（通常 <span class="katex-inline" data-expr="\gamma = 4" aria-label="\gamma = 4" role="img"></span> 或 5）</li>
     <li><strong>验证阶段：</strong>将候选 tokens + 前缀送入目标模型（如 7B），一次 forward 获得所有位置的 logits</li>
     <li><strong>拒绝采样：</strong>逐位置检查目标/草稿模型的概率分布——分歧过大则拒绝，从修正分布中重新采样</li>
     <li><strong>接受：</strong>被接受的 token 和重新采样的 token 一起加入输出序列</li>
   </ol>
 
   <div class="math-box"><div class="label">公式 8.4 接受/拒绝准则</div>
-    <div class="katex" data-expr="\text{Accept } x_t \text{ with prob } \min\left(1, \frac{p_{\text{target}}(x_t)}{p_{\text{draft}}(x_t)}\right)"></div>
+    <div class="katex" data-expr="\text{Accept } x_t \text{ with prob } \min\left(1, \frac{p_{\text{target}}(x_t)}{p_{\text{draft}}(x_t)}\right)" aria-label="\text{Accept } x_t \text{ with prob } \min\left(1, \frac{p_{\text{target}}(x_t)}{p_{\text{draft}}(x_t)}\right)" role="img"></div>
   </div>
 
   <div class="coding-exercise">
@@ -520,7 +528,7 @@ print(f"生成 {output.size(1)} tokens")</pre>
 def speculative_decoding(target_model, draft_model, tokenizer,
                          input_ids, gamma=4, max_new_tokens=100):
     """
-    推测解码：草稿 → 验证 → 拒绝采样 → 无损加速
+    推测解码：草稿 → 验证 → 拒绝采样 → 分布保持加速
     """
     device = next(target_model.parameters()).device
     prefix = input_ids.to(device)
@@ -587,7 +595,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
         ], dim=-1)
 
     return prefix</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>无损性分析：</strong>拒绝采样保证最终输出分布<strong>在数学上等价于</strong>直接用目标模型自回归生成。加速比 ≈ <span class="katex-inline" data-expr="\gamma / (1 + \alpha \gamma)"></span>，其中 <span class="katex-inline" data-expr="\alpha = t_{\text{draft}} / t_{\text{target}}"></span>。当 <span class="katex-inline" data-expr="\alpha \approx 0.1, \gamma = 4"></span> 时，加速约 2.8x。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>分布保持分析：</strong>在草稿/目标概率、采样温度和拒绝采样实现都满足论文假设时，最终输出分布可与直接用目标模型采样保持一致。加速比可用 <span class="katex-inline" data-expr="\gamma / (1 + \alpha \gamma)" aria-label="\gamma / (1 + \alpha \gamma)" role="img"></span> 作一阶估算，其中 <span class="katex-inline" data-expr="\alpha = t_{\text{draft}} / t_{\text{target}}" aria-label="\alpha = t_{\text{draft}} / t_{\text{target}}" role="img"></span>；真实收益还取决于接受率、batching、kernel 和服务调度。</p>
     </div>
   </div>
 </section>
@@ -608,16 +616,17 @@ def speculative_decoding(target_model, draft_model, tokenizer,
   <p>近期的研究发现了一个有趣的现象——在长序列中，模型会将大量的注意力权重分配给初始 token（通常是 <code>&lt;BOS&gt;</code> 或句首 token），即使这些 token 与当前生成的内容无关。这被称为 <strong>Attention Sink</strong>（Xiao et al., 2024）。</p>
   <p>成因：训练时序列长度有限（如 4K），模型会产生"残差注意力偏移"——初始 token 吸收了多余的注意力分数。当推理时序列变长，这种偏移被放大，模型浪费大量注意力在无关的早期 token 上。</p>
 
-  <h4>当前模型上下文窗口</h4>
+  <h4>上下文窗口示例</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>模型</th><th>最大上下文</th><th>约可容纳</th></tr>
-      <tr><td>GPT-4</td><td>128K</td><td>9 万字</td></tr>
-      <tr><td>Claude 3</td><td>200K</td><td>15 万字</td></tr>
-      <tr><td>Gemini 1.5 Pro</td><td>1M</td><td>《三体》三部曲</td></tr>
-      <tr><td>DeepSeek-V4</td><td>1M</td><td>同上（CSA+HCA 优化）</td></tr>
+      <tr><th>模型/报告示例</th><th>公开规格示例</th><th>教学用途</th></tr>
+      <tr><td>GPT-4 系列长上下文版本</td><td>百 K 级上下文</td><td>说明产品规格会随版本和 API 变化</td></tr>
+      <tr><td>Claude 3 系列</td><td>约 200K 级上下文</td><td>说明长上下文仍受价格、延迟和召回质量约束</td></tr>
+      <tr><td>Gemini 1.5 Pro</td><td>百万级上下文公开案例</td><td>说明 context length 不等于稳定检索能力</td></tr>
+      <tr><td>DeepSeek-V4 模型卡</td><td>模型卡报告 1M context</td><td>说明前沿模型规格必须带来源和日期</td></tr>
     </table>
   </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>来源边界：</strong>上表只作“长上下文规格如何阅读”的教学示例。正式作业或项目报告若引用具体上下文长度、价格或 benchmark，必须写明模型版本、来源链接、访问日期和评测设置；课程发布前按 <a href="../docs/external-source-verification.md">External Source Verification Guide</a> 复核。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -630,9 +639,9 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <li>✅ <strong>编程练习 1：Greedy Decoding</strong> — argmax 策略，暴露重复陷阱和曝光偏差</li>
     <li>✅ <strong>编程练习 2：Temperature Sampling</strong> — 温度控制分布熵，T→0 退化为贪心</li>
     <li>✅ <strong>编程练习 3：Top-K Sampling</strong> — 固定 K 截断，缺点是无法自适应</li>
-    <li>✅ <strong>编程练习 4：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，当前最主流</li>
+    <li>✅ <strong>编程练习 4：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，开放式生成常用策略之一</li>
     <li>✅ <strong>编程练习 5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
-    <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，无损加速</li>
+    <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，理解分布保持加速的适用条件</li>
     <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
     <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>
   </ul>
@@ -656,7 +665,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
   <h4>约束解码原理</h4>
   <p>约束解码在<strong>采样的每一步</strong>根据目标语法动态修改 logits：将不符合语法的 token 概率设为 -inf，确保生成符合指定格式。</p>
   <div class="math-box"><div class="label">约束解码</div>
-    <div class="katex" data-expr="	ext{logits}_i' = egin{cases} 	ext{logits}_i & 	ext{token } i 	ext{ 合法} \ -\infty & 	ext{否则} \end{cases}"></div>
+    <div class="katex" data-expr="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ 合法} \\ -\infty & \text{否则} \end{cases}" aria-label="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ 合法} \\ -\infty & \text{否则} \end{cases}" role="img"></div>
   </div>
 
   <h4>实现：基于 JSON Schema 的 Token 过滤</h4>
@@ -668,11 +677,11 @@ def speculative_decoding(target_model, draft_model, tokenizer,
       <tr><th>工具</th><th>原理</th><th>支持引擎</th></tr>
       <tr><td><strong>Outlines</strong></td><td>JSON Schema → 索引，高效 token 过滤</td><td>vLLM, llama.cpp</td></tr>
       <tr><td><strong>guidance</strong></td><td>正则自动机，每步过滤 token</td><td>HuggingFace, vLLM</td></tr>
-      <tr><td><strong>OpenAI Structured Outputs</strong></td><td>内置约束解码，100% 可靠</td><td>GPT-4o, GPT-4</td></tr>
+      <tr><td><strong>OpenAI Structured Outputs</strong></td><td>服务端结构化输出能力，提高 schema 遵循率；应用侧仍应校验</td><td>OpenAI API</td></tr>
       <tr><td><strong>SGLang</strong></td><td>RadixAttention + 原生约束解码</td><td>SGLang</td></tr>
     </table>
   </div>
-  <div class="info-box tip"><span class="icon">💡</span><div>构建 API 或 Agent 时，<strong>务必使用约束解码</strong>——不要依赖 prompt engineering 保证 JSON 格式。outlines + vLLM 是当前开源首选。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>构建 API 或 Agent 时，应优先使用结构化输出或约束解码，并在应用侧做 schema 校验。只依赖 prompt engineering 很难稳定保证 JSON 格式；outlines、vLLM、SGLang、llama.cpp 等工具可按部署环境选择。</div></div>
 </section>
 
 
@@ -705,12 +714,12 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="推测解码通过拒绝采样保证数学等价。接受/拒绝准则 min(1, p/q) 确保最后的采样分布与实际直接用目标模型采样完全一致。这是一种"无损"加速方法。">
-    <h4>练习 3：推测解码为什么能实现"无损"加速？</h4>
+  <div class="exercise" data-answer="2" data-explain="在论文假设成立时，推测解码通过拒绝采样保持目标模型的采样分布。接受/拒绝准则 min(1, p/q) 是分布校正的关键；真实系统中的收益仍取决于接受率、草稿模型速度和调度实现。">
+    <h4>练习 3：推测解码为什么能保持目标采样分布？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q3" value="0"> A. 因为它使用量化减少精度</label>
       <label><input type="radio" name="q3" value="1"> B. 因为它只在简单上下文中加速</label>
-      <label><input type="radio" name="q3" value="2"> C. 因为拒绝采样保证了输出分布与目标模型直接采样等价</label>
+      <label><input type="radio" name="q3" value="2"> C. 因为在论文假设成立时，拒绝采样会校正草稿分布，使最终采样分布与目标模型采样一致</label>
       <label><input type="radio" name="q3" value="3"> D. 因为它跳过了一些不必要的注意力计算</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
@@ -718,7 +727,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="Prefilling 阶段并行处理整个 prompt，计算量大但 GPU 利用率高。Decoding 阶段每步只处理一个 token，大部分时间在等待数据从显存搬运到计算单元，GPU 利用率仅 3-5%。">
+  <div class="exercise" data-answer="1" data-explain="Prefilling 阶段并行处理整个 prompt，矩阵乘法规模大，通常更容易把算力用满。Decoding 阶段每步只处理少量新 token，低并发或小 batch 时常受权重/KV cache 读取和调度开销限制，因此更容易表现为 memory-bound。">
     <h4>练习 4：为什么 Decoding 阶段 GPU 利用率远低于 Prefilling 阶段？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 因为 Decoding 需要更多层计算</label>
@@ -743,6 +752,15 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>不要先背公式。先记住 Q 是“我要找什么”，K 是“我有什么标签”，V 是“真正取回的信息”。本章最重要的是看懂 <code>Q @ K.T</code> 得到权重，再用权重加权 <code>V</code>。</div></div>
   <ul>
     <li><strong>前置知识：</strong>矩阵乘法、softmax、张量最后一维的含义。</li>
+    <li><strong>学习目标：</strong>从 RNN 长程依赖问题引出自注意力，推导 Q/K/V、缩放因子、softmax 温度、causal mask 和注意力复杂度。</li>
+    <li><strong>课前阅读：</strong>阅读 Attention Is All You Need 的 Scaled Dot-Product Attention 部分，并复习 softmax、矩阵乘法和雅可比矩阵。</li>
+    <li><strong>课后阅读：</strong>阅读 The Annotated Transformer、FlashAttention 摘要，以及关于 attention 可解释性的反例材料。</li>
     <li><strong>本章产出：</strong>单头 Scaled Dot-Product Attention 和 Causal Mask。</li>
     <li><strong>完成标准：</strong>你能解释为什么生成第 t 个 token 时不能看未来 token。</li>
+    <li><strong>评估证据：</strong>提交手写 attention、mask 单元测试、缩放因子的方差推导，以及一张 attention heatmap 分析；可用 <a href="../assignments/ch03_attention/" target="_blank">Ch03 注意力作业测试</a> 验收核心实现。</li>
   </ul>
 </section>
 
@@ -48,26 +52,26 @@
 <!-- ================================================================ -->
 <section class="card" id="s3-1">
   <h3>3.1 为什么需要注意力？——RNN 的困境与注意力的突破</h3>
-  <p>在 Transformer（2017）出现之前，序列建模由 RNN/LSTM 主导了整整二十年。理解它们的<strong>根本缺陷</strong>，才能真正理解注意力机制的必然性。</p>
+  <p>在 Transformer（2017）出现之前，序列建模长期由 RNN/LSTM 主导。理解它们在并行性和长程依赖上的<strong>结构性局限</strong>，才能真正理解注意力机制为什么成为后续架构的关键选择。</p>
 
   <h4>RNN 的工作原理：迭代式压缩</h4>
-  <p>RNN 将序列处理看作一个逐步"压缩"的过程：每读入一个 token <span class="katex-inline" data-expr="\mathbf{x}_t"></span>，就将之前的所有信息（存储在隐状态 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}"></span> 中）和当前输入一起"融合"，产生新的隐状态：</p>
+  <p>RNN 将序列处理看作一个逐步"压缩"的过程：每读入一个 token <span class="katex-inline" data-expr="\mathbf{x}_t" aria-label="\mathbf{x}_t" role="img"></span>，就将之前的所有信息（存储在隐状态 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span> 中）和当前输入一起"融合"，产生新的隐状态：</p>
   <div class="math-box"><div class="label">RNN 状态更新</div>
-    <div class="katex" data-expr="\mathbf{h}_t = \tanh(\mathbf{W}_h \mathbf{h}_{t-1} + \mathbf{W}_x \mathbf{x}_t + \mathbf{b})"></div>
+    <div class="katex" data-expr="\mathbf{h}_t = \tanh(\mathbf{W}_h \mathbf{h}_{t-1} + \mathbf{W}_x \mathbf{x}_t + \mathbf{b})" aria-label="\mathbf{h}_t = \tanh(\mathbf{W}_h \mathbf{h}_{t-1} + \mathbf{W}_x \mathbf{x}_t + \mathbf{b})" role="img"></div>
   </div>
 
-  <h4>两个根本性缺陷</h4>
-  <p><strong>缺陷一：顺序计算瓶颈（Sequential Bottleneck）。</strong>计算 <span class="katex-inline" data-expr="\mathbf{h}_t"></span> 必须先知道 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}"></span>，这造成了严格的顺序依赖。在 GPU 上，这意味着 1000 个 token 需要 1000 个串行步骤——你无法并行处理序列中的不同位置。训练时间随序列长度线性增长。</p>
+  <h4>两个结构性局限</h4>
+  <p><strong>缺陷一：顺序计算瓶颈（Sequential Bottleneck）。</strong>计算 <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> 必须先知道 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span>，这造成了严格的顺序依赖。在 GPU 上，这意味着 1000 个 token 需要 1000 个串行步骤——你无法并行处理序列中的不同位置。训练时间随序列长度线性增长。</p>
   <p><strong>缺陷二：长程依赖衰减（Long-Range Dependency Decay）。</strong>隐状态是一个固定维度的"瓶颈"——无论前面的信息有多丰富，都必须压缩到一个固定大小的向量里。当信息从位置 1 传到位置 1000 时，需要经过 999 次非线性变换。在这个过程中，梯度以指数级衰减（梯度消失）或增长（梯度爆炸）：</p>
   <div class="math-box"><div class="label">梯度传播（简化）</div>
-    <div class="katex" data-expr="\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \cdot \prod_{t=2}^{T} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}"></div>
+    <div class="katex" data-expr="\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \cdot \prod_{t=2}^{T} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}" aria-label="\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \cdot \prod_{t=2}^{T} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}" role="img"></div>
   </div>
-  <p>当连乘项中每个因子都小于 1 时，T 步后梯度趋近于零——模型无法学习到远程依赖。LSTM 的门控机制只是延缓了这个问题，并没有从根本上解决它。</p>
+  <p>当连乘项中许多因子小于 1 时，T 步后梯度会趋近于零，模型很难学习远程依赖。LSTM 的门控机制能显著缓解梯度传播问题，但仍保留顺序计算路径和固定维度状态瓶颈。</p>
 
   <h4>注意力的突破：用检索代替记忆</h4>
   <p>Transformer 的核心洞见非常简洁：<strong>不要让信息"穿过"中间位置才能到达目标位置</strong>。每个位置应该可以直接"看见"序列中的任意其他位置，直接从源头提取信息。</p>
   <p>这就好比：RNN 是让一个人依次经过 1000 个房间，到达最后一个房间时，他只能靠"记忆"来回忆第一个房间的内容。而注意力是给每个房间都装了<strong>监控摄像头</strong>——任何时候都可以直接查看任意房间的状况。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>注意力本质：信息路径长度 O(1)。</strong>任何两个位置之间的信息传递只需要一次注意力计算，不需要经过中间层的逐层传递。这是 Transformer 能训练到 100+ 层、处理 128K+ 上下文的基础。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>注意力的优势：单层内任意两位置的信息路径长度为 O(1)。</strong>一个位置可以在同一层直接读取其他位置的 value，而不是沿时间步逐个传递。这有利于并行训练和长程依赖建模；实际能处理多长上下文还取决于注意力复杂度、位置编码、训练分布和推理系统。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -89,11 +93,11 @@
   <p>Q 和 K 的非对称性使得注意力能学习<strong>有向的</strong>依赖关系——"A 关注 B"和"B 关注 A"是不同的。</p>
 
   <h4>从输入到 Q、K、V：线性投影</h4>
-  <p>给定输入序列 <span class="katex-inline" data-expr="\mathbf{X} \in \mathbb{R}^{n \times d}"></span>（n 个 token，每个 d 维），Q、K、V 都通过<strong>可学习的线性变换</strong>从同一个输入产生：</p>
+  <p>给定输入序列 <span class="katex-inline" data-expr="\mathbf{X} \in \mathbb{R}^{n \times d}" aria-label="\mathbf{X} \in \mathbb{R}^{n \times d}" role="img"></span>（n 个 token，每个 d 维），Q、K、V 都通过<strong>可学习的线性变换</strong>从同一个输入产生：</p>
   <div class="math-box"><div class="label">线性投影</div>
-    <div class="katex" data-expr="\mathbf{Q} = \mathbf{X}\mathbf{W}^Q,\quad \mathbf{K} = \mathbf{X}\mathbf{W}^K,\quad \mathbf{V} = \mathbf{X}\mathbf{W}^V"></div>
+    <div class="katex" data-expr="\mathbf{Q} = \mathbf{X}\mathbf{W}^Q,\quad \mathbf{K} = \mathbf{X}\mathbf{W}^K,\quad \mathbf{V} = \mathbf{X}\mathbf{W}^V" aria-label="\mathbf{Q} = \mathbf{X}\mathbf{W}^Q,\quad \mathbf{K} = \mathbf{X}\mathbf{W}^K,\quad \mathbf{V} = \mathbf{X}\mathbf{W}^V" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}"></span> 是可训练的权重矩阵。投影的目的不是"创造信息"，而是<strong>重新组织信息</strong>——让同一个输入在不同的角色（查询者、被查者、信息提供者）下表现出不同的特征。</p>
+  <p>其中 <span class="katex-inline" data-expr="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" aria-label="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" role="img"></span> 是可训练的权重矩阵。投影的目的不是"创造信息"，而是<strong>重新组织信息</strong>——让同一个输入在不同的角色（查询者、被查者、信息提供者）下表现出不同的特征。</p>
   <p>这就是"自注意力"中"自"的含义：Q、K、V 都来自<strong>同一个序列 X</strong>——每个 token 在和自己及其他 token 之间建立关系。</p>
 </section>
 
@@ -167,7 +171,7 @@ class QKVProjection(nn.Module):
     <div class="task">
       <p><strong>任务：</strong>实现完整的 Scaled Dot-Product Attention 前向计算。</p>
       <p><strong>核心公式：</strong></p>
-      <div class="katex" data-expr="\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}"></div>
+      <div class="katex" data-expr="\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}" aria-label="\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}" role="img"></div>
       <p><strong>要求：</strong></p>
       <ul>
         <li>输入 Q、K、V 形状均为 <code>(batch, seq_len, d_k)</code></li>
@@ -218,16 +222,16 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <p>这是 Transformer 论文中看似简单但极为深刻的一个设计细节。让我们从概率论的角度来理解它。</p>
 
   <h4>问题：不缩放会发生什么？</h4>
-  <p>假设 Q 和 K 的每个元素是独立同分布的，均值为 0，方差为 1。那么点积 <span class="katex-inline" data-expr="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}"></span> 是一个 <span class="katex-inline" data-expr="d_k"></span> 个独立随机变量之和。</p>
+  <p>假设 Q 和 K 的每个元素是独立同分布的，均值为 0，方差为 1。那么点积 <span class="katex-inline" data-expr="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" aria-label="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" role="img"></span> 是一个 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 个独立随机变量之和。</p>
   <p>根据<strong>独立随机变量之和的方差性质</strong>：</p>
   <div class="math-box"><div class="label">点积的方差</div>
-    <div class="katex" data-expr="\text{Var}(s_{ij}) = \sum_{m=1}^{d_k} \text{Var}(q_{im} k_{jm}) = \sum_{m=1}^{d_k} \text{Var}(q_{im}) \cdot \text{Var}(k_{jm}) = d_k \cdot 1 \cdot 1 = d_k"></div>
+    <div class="katex" data-expr="\text{Var}(s_{ij}) = \sum_{m=1}^{d_k} \text{Var}(q_{im} k_{jm}) = \sum_{m=1}^{d_k} \text{Var}(q_{im}) \cdot \text{Var}(k_{jm}) = d_k \cdot 1 \cdot 1 = d_k" aria-label="\text{Var}(s_{ij}) = \sum_{m=1}^{d_k} \text{Var}(q_{im} k_{jm}) = \sum_{m=1}^{d_k} \text{Var}(q_{im}) \cdot \text{Var}(k_{jm}) = d_k \cdot 1 \cdot 1 = d_k" role="img"></div>
   </div>
-  <p>点积的标准差是 <span class="katex-inline" data-expr="\sqrt{d_k}"></span>。当 <span class="katex-inline" data-expr="d_k = 64"></span> 时，点积的标准差是 8；当 <span class="katex-inline" data-expr="d_k = 128"></span> 时，标准差是 11.3。</p>
+  <p>点积的标准差是 <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span>。当 <span class="katex-inline" data-expr="d_k = 64" aria-label="d_k = 64" role="img"></span> 时，点积的标准差是 8；当 <span class="katex-inline" data-expr="d_k = 128" aria-label="d_k = 128" role="img"></span> 时，标准差是 11.3。</p>
 
   <h4>大量值的 softmax 会怎样？</h4>
-  <p>Softmax 的梯度正比于 <span class="katex-inline" data-expr="p_i(1-p_i)"></span>。当输入值很大时，softmax 输出趋近于 <strong>one-hot 分布</strong>（某个位置概率 ≈1，其余 ≈0），此时梯度近乎为零——模型无法学习。</p>
-  <p>除以 <span class="katex-inline" data-expr="\sqrt{d_k}"></span> 将点积的方差归一化为 1，使得 softmax 输入保持在合理范围内，梯度可以正常流动。</p>
+  <p>Softmax 的梯度正比于 <span class="katex-inline" data-expr="p_i(1-p_i)" aria-label="p_i(1-p_i)" role="img"></span>。当输入值很大时，softmax 输出趋近于 <strong>one-hot 分布</strong>（某个位置概率 ≈1，其余 ≈0），此时梯度近乎为零——模型无法学习。</p>
+  <p>除以 <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span> 将点积的方差归一化为 1，使得 softmax 输入保持在合理范围内，梯度可以正常流动。</p>
 
   <h4>经验验证</h4>
   <p>你可以自己验证：用 <code>torch.randn</code> 生成两组随机向量，计算点积的方差，看除以 √dₖ 前后的分布变化。</p>
@@ -242,18 +246,18 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <p>在实现了基础的 Scaled Dot-Product Attention 之后，让我们深入理解 softmax 在这个过程中的数学行为。</p>
 
   <h4>Softmax 函数的梯度</h4>
-  <p>设 <span class="katex-inline" data-expr="\mathbf{p} = \text{softmax}(\mathbf{z})"></span>，softmax 对输入的雅可比矩阵（Jacobian）为：</p>
+  <p>设 <span class="katex-inline" data-expr="\mathbf{p} = \text{softmax}(\mathbf{z})" aria-label="\mathbf{p} = \text{softmax}(\mathbf{z})" role="img"></span>，softmax 对输入的雅可比矩阵（Jacobian）为：</p>
   <div class="math-box"><div class="label">Softmax 梯度（雅可比矩阵）</div>
-    <div class="katex" data-expr="\frac{\partial p_i}{\partial z_j} = \begin{cases} p_i(1-p_i) & i=j \\ -p_i p_j & i \neq j \end{cases}"></div>
+    <div class="katex" data-expr="\frac{\partial p_i}{\partial z_j} = \begin{cases} p_i(1-p_i) & i=j \\ -p_i p_j & i \neq j \end{cases}" aria-label="\frac{\partial p_i}{\partial z_j} = \begin{cases} p_i(1-p_i) & i=j \\ -p_i p_j & i \neq j \end{cases}" role="img"></div>
   </div>
   <p>这意味着：</p>
   <ul>
-    <li>当 <span class="katex-inline" data-expr="p_i \approx 1"></span>（即某个 token 的注意力极度集中），<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0"></span>——梯度消失，停止学习</li>
-    <li>当 <span class="katex-inline" data-expr="p_i \approx 0.5"></span>（注意力分散），<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0.25"></span>——梯度最大</li>
+    <li>当 <span class="katex-inline" data-expr="p_i \approx 1" aria-label="p_i \approx 1" role="img"></span>（即某个 token 的注意力极度集中），<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0" aria-label="p_i(1-p_i) \approx 0" role="img"></span>——梯度消失，停止学习</li>
+    <li>当 <span class="katex-inline" data-expr="p_i \approx 0.5" aria-label="p_i \approx 0.5" role="img"></span>（注意力分散），<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0.25" aria-label="p_i(1-p_i) \approx 0.25" role="img"></span>——梯度最大</li>
   </ul>
 
   <h4>温度参数 τ 的作用</h4>
-  <p>如果在 softmax 之前除以温度 τ：<span class="katex-inline" data-expr="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}"></span></p>
+  <p>如果在 softmax 之前除以温度 τ：<span class="katex-inline" data-expr="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" aria-label="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" role="img"></span></p>
   <ul>
     <li><strong>τ &lt; 1：</strong>分布更尖锐（peaked），模型更"确定"，但梯度更小</li>
     <li><strong>τ &gt; 1：</strong>分布更平滑（smooth），模型更"不确定"，梯度更大</li>
@@ -261,8 +265,8 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <p>训练时温度固定为 1，但推理时调整温度可以<strong>控制生成文本的随机性</strong>——这将在第 8 章中实际应用。</p>
 
   <h4>√dₖ 与温度的等价性</h4>
-  <p>除以 √dₖ 等价于使用温度 <span class="katex-inline" data-expr="\tau = \sqrt{d_k}"></span>。当 dₖ 增大时，如果不缩放，相当于在用一个越来越小的温度——softmax 越来越尖锐，梯度越来越小。√dₖ 缩放恰好将"有效温度"恒定为 1。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：√dₖ 是一个<em>梯度保持机制</em>。</strong>它不改变注意力分布的相对排序（因为除以常量是单调变换），但确保梯度始终在有效范围内。这就是为什么你不应该随意去掉它。</div></div>
+  <p>除以 √dₖ 等价于在注意力 logits 上使用温度 <span class="katex-inline" data-expr="\tau = \sqrt{d_k}" aria-label="\tau = \sqrt{d_k}" role="img"></span>。在 Q/K 各维近似独立、方差约为 1 的初始化假设下，未缩放点积的方差会随 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 增长；缩放后 logits 的量级回到较稳定范围，避免 softmax 过早饱和。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：√dₖ 是一个<em>logit 尺度控制机制</em>。</strong>它不改变同一 query 下各 key 的相对排序（因为除以正数是单调变换），但会改变 softmax 分布的尖锐程度和梯度尺度。它有助于训练稳定，但不能保证所有层、所有数据分布下梯度都“始终有效”。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -273,7 +277,7 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <p>在自回归（GPT 风格）语言模型中，位置 t 只能看到位置 1..t，不能看到未来的 token。这通过一个<strong>上三角掩码</strong>实现。</p>
 
   <div class="math-box"><div class="label">Causal Mask 矩阵（n=4 示例）</div>
-    <div class="katex" data-expr="\mathbf{M} = \begin{pmatrix} 0 & -\infty & -\infty & -\infty \\ 0 & 0 & -\infty & -\infty \\ 0 & 0 & 0 & -\infty \\ 0 & 0 & 0 & 0 \end{pmatrix}"></div>
+    <div class="katex" data-expr="\mathbf{M} = \begin{pmatrix} 0 & -\infty & -\infty & -\infty \\ 0 & 0 & -\infty & -\infty \\ 0 & 0 & 0 & -\infty \\ 0 & 0 & 0 & 0 \end{pmatrix}" aria-label="\mathbf{M} = \begin{pmatrix} 0 & -\infty & -\infty & -\infty \\ 0 & 0 & -\infty & -\infty \\ 0 & 0 & 0 & -\infty \\ 0 & 0 & 0 & 0 \end{pmatrix}" role="img"></div>
   </div>
 
   <div class="coding-exercise">
@@ -379,7 +383,7 @@ def plot_attention(attn_weights, tokens, title="Attention Weights"):
     plt.show()
 
 # 示例
-tokens = ['<s>', 'The', 'cat', 'sat', 'on', 'the', 'mat']
+tokens = ['&lt;s&gt;', 'The', 'cat', 'sat', 'on', 'the', 'mat']
 Q = K = V = torch.randn(1, 7, 64)
 _, attn = causal_attention(Q, K, V)
 plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
@@ -396,7 +400,7 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
   <p>现在你对单头注意力有了完整的理解和实现，让我们诚实地面对它的最大问题。</p>
 
   <h4>计算与内存瓶颈</h4>
-  <p>注意力分数矩阵 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top"></span> 的大小是 <span class="katex-inline" data-expr="n \times n"></span>，其中 n 是序列长度。当 n=128K（如 GPT-4 的上下文窗口）：</p>
+  <p>注意力分数矩阵 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> 的大小是 <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>，其中 n 是序列长度。当 n=128K（如 GPT-4 的上下文窗口）：</p>
   <ul>
     <li>注意力矩阵：128K × 128K = <strong>16B 个元素</strong></li>
     <li>FP16 下：32 GB 显存——仅为了存储注意力分数</li>
@@ -404,7 +408,7 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
   </ul>
 
   <h4>FlashAttention：IO 感知的解决方案</h4>
-  <p>FlashAttention（Dao et al., 2022）的核心洞见：<strong>瓶颈不在计算量，而在数据传输</strong>。GPU 的 HBM（高带宽显存）和 SRAM（片上缓存）之间的带宽差距巨大。传统实现将完整的 Q、K、V、注意力矩阵都写入 HBM，而 FlashAttention 用 tiling 技术将计算切分为小块，在 SRAM 中完成 softmax——全程不将完整的注意力矩阵写入 HBM。</p>
+  <p>FlashAttention（Dao et al., 2022）的核心洞见：在许多实际 GPU 配置中，attention 的性能瓶颈不只是 FLOPs，还包括 HBM（高带宽显存）和 SRAM（片上缓存）之间的数据搬运。传统实现会物化完整注意力矩阵，而 FlashAttention 用 tiling 技术将计算切分为小块，在 SRAM 中完成 softmax——全程不将完整的注意力矩阵写入 HBM。</p>
   <p>这不仅节省了显存（从 O(n²) 降到 O(n)），还因为减少了 HBM 读写次数而变得<strong>更快</strong>。</p>
 
   <h4>DeepSeek MLA：从"少算"到"少存"</h4>
@@ -441,7 +445,7 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
   </div>
 
   <h4>为什么"可微"是关键</h4>
-  <p>如果匹配是硬的（0 或 1），梯度无法传播——你不知道"稍微改变一下匹配度"会如何影响输出。Softmax 将匹配变为<strong>连续的概率分布</strong>，使得梯度可以流畅地从输出传播到 Q、K、V 的投影矩阵 <span class="katex-inline" data-expr="W^Q, W^K, W^V"></span>。这就是为什么注意力能被端到端训练的数学基础。</p>
+  <p>如果匹配是硬的（0 或 1），梯度无法传播——你不知道"稍微改变一下匹配度"会如何影响输出。Softmax 将匹配变为<strong>连续的概率分布</strong>，使得梯度可以流畅地从输出传播到 Q、K、V 的投影矩阵 <span class="katex-inline" data-expr="W^Q, W^K, W^V" aria-label="W^Q, W^K, W^V" role="img"></span>。这就是为什么注意力能被端到端训练的数学基础。</p>
 
   <h4>与卷积的对比</h4>
   <p><strong>卷积（Convolution）：</strong>每个位置只关注<strong>固定窗口</strong>内的邻居。窗口大小是预设的（如 3×3），不随内容改变。计算复杂度 O(n·k²)，k 是窗口大小。</p>
@@ -539,6 +543,15 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

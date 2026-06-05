@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先区分 SFT、LoRA、DPO、GRPO 各自解决什么问题：SFT 学格式，LoRA 降低微调成本，DPO 学偏好，GRPO 强化推理。公式很多，但第一次学习时先掌握数据长什么样、loss 在比较什么。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 7 章训练循环、第 8 章生成，以及 log probability。</li>
+    <li><strong>学习目标：</strong>区分预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO、GRPO 的损失信号。</li>
+    <li><strong>课前阅读：</strong>阅读 InstructGPT、LoRA、DPO 和 DeepSeek-R1/GRPO 摘要，列出每种方法需要的数据格式。</li>
+    <li><strong>课后阅读：</strong>阅读 alignment tax、reward hacking、RLHF 安全评估材料，并比较 offline preference learning 与 on-policy RL。</li>
     <li><strong>本章产出：</strong>SFT/LoRA/DPO/GRPO 的最小实现和适用场景地图。</li>
     <li><strong>完成标准：</strong>你能判断一个需求应该用 SFT、LoRA、DPO 还是 RL 类方法。</li>
+    <li><strong>评估证据：</strong>提交 masked SFT、LoRA 参数统计、DPO/GRPO toy 实验、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
   </ul>
 </section>
 
@@ -197,7 +201,7 @@ def sft_step(model, batch, optimizer):
     loss.backward()
     optimizer.step()
     return loss.item()</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>shift 操作：</strong>模型在位置 t 的输出 logits 预测的是 <span class="katex-inline" data-expr="x_{t+1}"></span>。所以我们需要 <code>logits[:, :-1]</code>（去掉最后一个位置的预测）对应 <code>labels[:, 1:]</code>（去掉第一个位置的标签）。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>shift 操作：</strong>模型在位置 t 的输出 logits 预测的是 <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。所以我们需要 <code>logits[:, :-1]</code>（去掉最后一个位置的预测）对应 <code>labels[:, 1:]</code>（去掉第一个位置的标签）。</p>
     </div>
   </div>
 </section>
@@ -210,22 +214,22 @@ def sft_step(model, batch, optimizer):
   <p>RLHF（Reinforcement Learning from Human Feedback）由 InstructGPT 论文（Ouyang et al., 2022）提出。它的理论基础是<strong>Bradley-Terry 偏好模型</strong>。</p>
 
   <h4>Bradley-Terry 模型</h4>
-  <p>假设我们有偏好数据 <span class="katex-inline" data-expr="(x, y_w, y_l)"></span>，其中人类判断回答 <span class="katex-inline" data-expr="y_w"></span> 优于 <span class="katex-inline" data-expr="y_l"></span>。Bradley-Terry 模型假设存在一个潜在的奖励函数 <span class="katex-inline" data-expr="r(x, y)"></span>，偏好概率为：</p>
+  <p>假设我们有偏好数据 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，其中人类判断回答 <span class="katex-inline" data-expr="y_w" aria-label="y_w" role="img"></span> 优于 <span class="katex-inline" data-expr="y_l" aria-label="y_l" role="img"></span>。Bradley-Terry 模型假设存在一个潜在的奖励函数 <span class="katex-inline" data-expr="r(x, y)" aria-label="r(x, y)" role="img"></span>，偏好概率为：</p>
   <div class="math-box"><div class="label">公式 9.1 Bradley-Terry 偏好模型</div>
-    <div class="katex" data-expr="P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l)) = \frac{1}{1 + e^{-(r_w - r_l)}}"></div>
+    <div class="katex" data-expr="P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l)) = \frac{1}{1 + e^{-(r_w - r_l)}}" aria-label="P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l)) = \frac{1}{1 + e^{-(r_w - r_l)}}" role="img"></div>
   </div>
-  <p>这意味着我们从偏好数据中学习奖励函数 <span class="katex-inline" data-expr="r"></span>，使得偏好回答的奖励高于次优回答。训练 RM 的损失就是最大化这个概率的 log 似然：</p>
+  <p>这意味着我们从偏好数据中学习奖励函数 <span class="katex-inline" data-expr="r" aria-label="r" role="img"></span>，使得偏好回答的奖励高于次优回答。训练 RM 的损失就是最大化这个概率的 log 似然：</p>
   <div class="math-box"><div class="label">公式 9.2 RM 损失</div>
-    <div class="katex" data-expr="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]"></div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" aria-label="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" role="img"></div>
   </div>
 
   <h4>RLHF 三步曲</h4>
   <ol>
     <li><strong>SFT</strong> — 在高质量指令-回答对上微调，获得初始化策略</li>
     <li><strong>Reward Model 训练</strong> — 用人类偏好对训练一个奖励模型 RM</li>
-    <li><strong>PPO 优化</strong> — 用 RM 的分数作为奖励信号，通过 PPO 优化策略。同时加 KL 惩罚防止偏离 SFT 模型太远：<span class="katex-inline" data-expr="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})"></span></li>
+    <li><strong>PPO 优化</strong> — 用 RM 的分数作为奖励信号，通过 PPO 优化策略。同时加 KL 惩罚防止偏离 SFT 模型太远：<span class="katex-inline" data-expr="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" aria-label="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" role="img"></span></li>
   </ol>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>RLHF 的问题：</strong>需要同时维护 4 个模型（Actor、Reference、Reward Model、Critic），训练不稳定，超参数敏感。DPO 和 GRPO 分别从不同角度解决了这些问题。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>RLHF 的工程难点：</strong>PPO 式 RLHF 常需要同时维护 Actor、Reference、Reward Model、Critic 等组件，训练和调参成本较高。DPO 和 GRPO 分别从不同角度简化管线或减少组件，但它们仍依赖偏好/奖励数据质量、KL 控制和优化设置。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -233,12 +237,12 @@ def sft_step(model, batch, optimizer):
 <!-- ================================================================ -->
 <section class="card" id="s9-5">
   <h3>9.5 编程练习 2：实现 LoRA——低秩适配</h3>
-  <p><strong>LoRA</strong>（Low-Rank Adaptation, Hu et al., 2021）的核心洞察：模型微调时权重矩阵的变化量 <span class="katex-inline" data-expr="\Delta W"></span> 具有<strong>低秩</strong>特性。LoRA 的做法是不直接更新 <span class="katex-inline" data-expr="W_0"></span>，而是在旁边添加一个低秩分解的增量：</p>
+  <p><strong>LoRA</strong>（Low-Rank Adaptation, Hu et al., 2021）的核心洞察：模型微调时权重矩阵的变化量 <span class="katex-inline" data-expr="\Delta W" aria-label="\Delta W" role="img"></span> 具有<strong>低秩</strong>特性。LoRA 的做法是不直接更新 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>，而是在旁边添加一个低秩分解的增量：</p>
 
   <div class="math-box"><div class="label">公式 9.3 LoRA 前向</div>
-    <div class="katex" data-expr="h = W_0 x + \Delta W x = W_0 x + BA x, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}"></div>
+    <div class="katex" data-expr="h = W_0 x + \Delta W x = W_0 x + BA x, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}" aria-label="h = W_0 x + \Delta W x = W_0 x + BA x, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}" role="img"></div>
   </div>
-  <p>训练时只更新 <span class="katex-inline" data-expr="A, B"></span>，<span class="katex-inline" data-expr="W_0"></span> 冻结。推理时可以将 <span class="katex-inline" data-expr="BA"></span> 合并回 <span class="katex-inline" data-expr="W_0"></span>（<span class="katex-inline" data-expr="W' = W_0 + BA"></span>），推理零额外开销。</p>
+  <p>训练时只更新 <span class="katex-inline" data-expr="A, B" aria-label="A, B" role="img"></span>，<span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 冻结。推理时可以将 <span class="katex-inline" data-expr="BA" aria-label="BA" role="img"></span> 合并回 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>（<span class="katex-inline" data-expr="W' = W_0 + BA" aria-label="W' = W_0 + BA" role="img"></span>），推理零额外开销。</p>
 
   <div class="coding-exercise">
     <h4>练习 2：实现 LoRA 层和应用函数</h4>
@@ -246,7 +250,7 @@ def sft_step(model, batch, optimizer):
       <p><strong>任务：</strong>实现 <code>LoRALayer</code> 和 <code>apply_lora</code> 函数。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li><code>LoRALayer</code> 实现 <span class="katex-inline" data-expr="W' = W_0 + BA"></span>，支持缩放因子 <code>alpha / r</code></li>
+        <li><code>LoRALayer</code> 实现 <span class="katex-inline" data-expr="W' = W_0 + BA" aria-label="W' = W_0 + BA" role="img"></span>，支持缩放因子 <code>alpha / r</code></li>
         <li><code>apply_lora</code> 递归遍历模型的子模块，将指定的 <code>nn.Linear</code> 替换为 LoRA 版本</li>
         <li>冻结所有非 LoRA 参数（<code>requires_grad = False</code>）</li>
         <li>只对 LoRA 的 A 和 B 矩阵设置 <code>requires_grad = True</code></li>
@@ -271,43 +275,47 @@ import torch.nn.functional as F
 
 class LoRALayer(nn.Module):
     """LoRA 低秩适配层: W' = W + BA"""
-    def __init__(self, in_features, out_features, r=8, alpha=16.0, dropout=0.1):
+    def __init__(self, base_layer, r=8, alpha=16.0, dropout=0.1):
         super().__init__()
+        in_features = base_layer.in_features
+        out_features = base_layer.out_features
         self.r = r
         self.scaling = alpha / r
-        self.W = None  # 冻结的原始权重，外部设置
-        # 低秩矩阵: B 初始化为 0，A 初始化为随机
-        self.A = nn.Parameter(torch.randn(r, out_features) * 0.01)
-        self.B = nn.Parameter(torch.zeros(in_features, r))
+        self.weight = nn.Parameter(base_layer.weight.detach().clone(), requires_grad=False)
+        self.bias = None
+        if base_layer.bias is not None:
+            self.bias = nn.Parameter(base_layer.bias.detach().clone(), requires_grad=False)
+        # 低秩矩阵: B 初始化为 0，A 初始化为随机；B@A 与 Linear weight 同形状
+        self.A = nn.Parameter(torch.randn(r, in_features) * 0.01)
+        self.B = nn.Parameter(torch.zeros(out_features, r))
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        if self.W is None:
-            raise ValueError("请先设置原始权重 W")
-        # x @ W^T + x @ B @ A * scaling
-        result = F.linear(x, self.W)
-        result += self.dropout(x) @ self.B @ self.A * self.scaling
-        return result
+        base = F.linear(x, self.weight, self.bias)
+        lora = F.linear(F.linear(self.dropout(x), self.A), self.B) * self.scaling
+        return base + lora
+
+    def delta_weight(self):
+        return (self.B @ self.A) * self.scaling
 
 def apply_lora(model, r=8, alpha=16.0, target_modules=None):
     """将指定模块替换为 LoRA 版本，冻结非 LoRA 参数"""
     if target_modules is None:
         target_modules = ["q_proj", "v_proj"]
 
+    for param in model.parameters():
+        param.requires_grad = False
+
     for name, module in model.named_children():
         if name in target_modules and isinstance(module, nn.Linear):
-            lora_layer = LoRALayer(
-                module.in_features, module.out_features, r=r, alpha=alpha)
-            lora_layer.W = module.weight.data.clone()
+            lora_layer = LoRALayer(module, r=r, alpha=alpha)
             setattr(model, name, lora_layer)
         else:
             apply_lora(module, r=r, alpha=alpha, target_modules=target_modules)
 
-    # 冻结非 LoRA 参数
-    for param in model.parameters():
-        param.requires_grad = False
+    # 只开放 LoRA 参数
     for name, param in model.named_parameters():
-        if "lora.A" in name or "lora.B" in name:
+        if name.endswith(".A") or name.endswith(".B"):
             param.requires_grad = True
 
     # 统计
@@ -315,7 +323,7 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
     total = sum(p.numel() for p in model.parameters())
     print(f"可训练参数: {trainable:,} / {total:,} ({trainable/total*100:.2f}%)")
     return model</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 B 初始化为 0？</strong>这样在训练开始时，<span class="katex-inline" data-expr="BA = 0"></span>，LoRA 路径对输出没有影响。模型从原始权重开始，然后逐步学习微调方向。如果 B 和 A 都随机初始化，模型一开始就有随机偏移，可能破坏预训练知识。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 B 初始化为 0？</strong>这样在训练开始时，<span class="katex-inline" data-expr="BA = 0" aria-label="BA = 0" role="img"></span>，LoRA 路径对输出没有影响。模型从原始权重开始，然后逐步学习微调方向。如果 B 和 A 都随机初始化，模型一开始就有随机偏移，可能破坏预训练知识。</p>
     </div>
   </div>
 </section>
@@ -325,27 +333,27 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
 <!-- ================================================================ -->
 <section class="card" id="s9-6">
   <h3>9.6 DPO 的数学等价性——为什么不需要 Reward Model？</h3>
-  <p><strong>DPO（Direct Preference Optimization）</strong>（Rafailov et al., 2023）是一个深刻的理论贡献。它证明了：在 Bradley-Terry 偏好模型下，RLHF 的最优策略可以<strong>不用显式训练 Reward Model</strong> 而直接推导出来。</p>
+  <p><strong>DPO（Direct Preference Optimization）</strong>（Rafailov et al., 2023）是一个重要的理论贡献。它说明：在 Bradley-Terry 偏好模型和 KL 正则化奖励最大化等假设下，可以把奖励函数重参数化为 policy/reference 的 log 概率比值，从而直接从偏好对构造优化目标，而不必先显式训练一个独立的 Reward Model。</p>
 
   <h4>核心推导</h4>
-  <p>RLHF 的目标是最大化奖励 <span class="katex-inline" data-expr="r(x, y)"></span> 同时保持接近参考策略 <span class="katex-inline" data-expr="\pi_{\text{ref}}"></span>：</p>
+  <p>RLHF 的目标是最大化奖励 <span class="katex-inline" data-expr="r(x, y)" aria-label="r(x, y)" role="img"></span> 同时保持接近参考策略 <span class="katex-inline" data-expr="\pi_{\text{ref}}" aria-label="\pi_{\text{ref}}" role="img"></span>：</p>
   <div class="math-box"><div class="label">公式 9.4 RLHF 的带 KL 约束的目标</div>
-    <div class="katex" data-expr="\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta}[r(x, y)] - \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{ref}})"></div>
+    <div class="katex" data-expr="\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta}[r(x, y)] - \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{ref}})" aria-label="\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta}[r(x, y)] - \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{ref}})" role="img"></div>
   </div>
-  <p>这个约束优化有<strong>闭式解</strong>：</p>
+  <p>在固定 prompt、参考策略和奖励函数的理想化设置下，这个约束优化有<strong>闭式形式</strong>：</p>
   <div class="math-box"><div class="label">公式 9.5 RLHF 的最优策略</div>
-    <div class="katex" data-expr="\pi_\theta^*(y \mid x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y \mid x) \exp\left(\frac{r(x, y)}{\beta}\right)"></div>
+    <div class="katex" data-expr="\pi_\theta^*(y \mid x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y \mid x) \exp\left(\frac{r(x, y)}{\beta}\right)" aria-label="\pi_\theta^*(y \mid x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y \mid x) \exp\left(\frac{r(x, y)}{\beta}\right)" role="img"></div>
   </div>
   <p>反过来，奖励函数可以表示为策略的封闭形式：</p>
   <div class="math-box"><div class="label">公式 9.6 奖励作为策略的函数</div>
-    <div class="katex" data-expr="r(x, y) = \beta \log\frac{\pi_\theta(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x)"></div>
+    <div class="katex" data-expr="r(x, y) = \beta \log\frac{\pi_\theta(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x)" aria-label="r(x, y) = \beta \log\frac{\pi_\theta(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x)" role="img"></div>
   </div>
-  <p>代入 Bradley-Terry 模型，消去 <span class="katex-inline" data-expr="Z(x)"></span>：</p>
+  <p>代入 Bradley-Terry 模型，消去 <span class="katex-inline" data-expr="Z(x)" aria-label="Z(x)" role="img"></span>：</p>
   <div class="math-box"><div class="label">公式 9.7 DPO 损失</div>
-    <div class="katex" data-expr="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]"></div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" aria-label="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" role="img"></div>
   </div>
-  <p>核心含义：我们不需要训练一个独立的 Reward Model——<strong>策略的 log 概率比值本身就是一个隐式的奖励函数</strong>。DPO 直接优化这个比值。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO vs RLHF：</strong>DPO 的最大优势是简化——不需要 RM，不需要 PPO 的 Actor-Critic，不需要对抗采样。只需要在偏好数据上做一次 forward pass，计算两个回答的 log 概率比值。训练稳定性远超 RLHF，唯一需要调节的关键超参数是 <span class="katex-inline" data-expr="\beta"></span>。</div></div>
+  <p>核心含义：在上述建模假设下，我们可以不训练独立 Reward Model，而用 <strong>policy/reference 的 log 概率比值</strong>构造一个与偏好概率相关的隐式奖励差。DPO 优化的是由 chosen/rejected 偏好对诱导出的分类式损失，而不是任意意义上的“直接最大化奖励”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO vs RLHF：</strong>DPO 的主要优势是简化训练管线：在常见实现中不需要单独训练 reward model，也不需要 PPO 的 Actor-Critic rollout，而是用 policy/reference 在 chosen/rejected 上的 log 概率比值构造损失。它通常比 PPO 式 RLHF 更容易实现和调参，但稳定性仍取决于偏好数据质量、reference model、<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span>、长度偏差和优化设置，不能写成无条件优于所有 RLHF 方案。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -361,7 +369,7 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>sequence_log_probs(model, input_ids, attention_mask, labels)</code> 计算整个序列的 log 概率（忽略 -100 位置）</li>
-        <li><code>dpo_loss(...)</code> 计算 DPO 损失：<span class="katex-inline" data-expr="-\log \sigma(\beta \cdot (\text{chosen\_ratio} - \text{rejected\_ratio}))"></span></li>
+        <li><code>dpo_loss(...)</code> 计算 DPO 损失：<span class="katex-inline" data-expr="-\log \sigma(\beta \cdot (\text{chosen\_ratio} - \text{rejected\_ratio}))" aria-label="-\log \sigma(\beta \cdot (\text{chosen\_ratio} - \text{rejected\_ratio}))" role="img"></span></li>
         <li>返回 loss 和准确率（chosen ratio > rejected ratio 的比例）</li>
         <li>用 <code>F.logsigmoid</code> 实现（数值稳定）</li>
       </ul>
@@ -386,13 +394,15 @@ def sequence_log_probs(model, input_ids, attention_mask, labels):
 
     log_probs = F.log_softmax(shift_logits, dim=-1)
 
-    # 收集目标 token 的 log 概率
+    # 收集目标 token 的 log 概率；先替换 -100，避免 gather 越界
+    valid = shift_labels != -100
+    safe_labels = shift_labels.masked_fill(~valid, 0)
     per_token_logps = log_probs.gather(
-        dim=-1, index=shift_labels.unsqueeze(-1)
+        dim=-1, index=safe_labels.unsqueeze(-1)
     ).squeeze(-1)
 
     # 累加（忽略 -100 的位置）
-    mask = (shift_labels != -100).float()
+    mask = valid.float()
     return (per_token_logps * mask).sum(dim=1)
 
 def dpo_loss(policy_chosen_logps, policy_rejected_logps,
@@ -441,24 +451,24 @@ def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
 <section class="card" id="s9-8">
   <h3>9.8 GRPO——组相对策略优化 (DeepSeek-R1)</h3>
   <p><strong>GRPO（Group Relative Policy Optimization）</strong>是 DeepSeek-R1 使用的核心 RL 算法。它与 PPO 最大的区别是：<strong>不再需要 Critic 模型（价值网络）</strong>。</p>
-  <p>传统 PPO 需要：Actor + Critic + Reference + Reward Model = 4 个模型。GRPO 只需要：Actor + Reference + Reward Model = 3 个模型——去掉了最不稳定的 Critic。</p>
+  <p>常见 PPO 式 RLHF 管线需要 Actor、Critic、Reference 和 Reward Model 等组件。GRPO 去掉 Critic，用组内相对优势替代价值网络估计，从而减少一个容易带来额外方差、显存和调参成本的组件。</p>
 
   <h4>GRPO 的核心思想：组内白化</h4>
-  <p>对每个 prompt，从当前策略中采样 <span class="katex-inline" data-expr="G"></span> 个回答（通常 <span class="katex-inline" data-expr="G = 8"></span>），用这组回答的<strong>内部相对排名</strong>作为优势函数：</p>
+  <p>对每个 prompt，从当前策略中采样 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 个回答（通常 <span class="katex-inline" data-expr="G = 8" aria-label="G = 8" role="img"></span>），用这组回答的<strong>内部相对排名</strong>作为优势函数：</p>
   <div class="math-box"><div class="label">公式 9.8 GRPO 优势函数</div>
-    <div class="katex" data-expr="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}"></div>
+    <div class="katex" data-expr="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}" aria-label="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="r_i"></span> 是第 i 个回答的奖励，<span class="katex-inline" data-expr="\mu_r, \sigma_r"></span> 是组内均值和标准差。这个"组内白化"使优势函数只依赖于<strong>相对表现</strong>，有效解决了不同 prompt 之间奖励尺度不一致的问题。</p>
+  <p>其中 <span class="katex-inline" data-expr="r_i" aria-label="r_i" role="img"></span> 是第 i 个回答的奖励，<span class="katex-inline" data-expr="\mu_r, \sigma_r" aria-label="\mu_r, \sigma_r" role="img"></span> 是组内均值和标准差。这个"组内白化"使优势函数主要反映同一 prompt 下候选回答的<strong>相对表现</strong>，可以缓解不同 prompt 奖励尺度不一致的问题；它不是奖励设计、KL 控制或采样质量的替代品。</p>
 
   <h4>GRPO vs PPO</h4>
   <ul>
-    <li><strong>PPO：</strong>Critic 网络估计绝对价值 V(s)，优势 = 奖励 - V(s)。Critic 训练不稳定（梯度估计方差最大），且需要额外的训练循环。</li>
-    <li><strong>GRPO：</strong>组内回答的相对排名代替绝对价值。不需要额外训练，且对不同 prompt 的奖励尺度天然鲁棒。</li>
+    <li><strong>PPO：</strong>Critic 网络估计价值函数，优势通常由奖励和价值基线共同得到。Critic 会增加训练状态、显存和调参复杂度，估计质量也会影响策略更新。</li>
+    <li><strong>GRPO：</strong>组内回答的相对奖励代替独立 Critic 价值估计，减少组件数量，并对同组候选的奖励尺度更鲁棒；但仍需要控制 reward noise、KL、采样数量和任务覆盖。</li>
   </ul>
 
   <h4>R1-Zero 的"顿悟时刻"</h4>
-  <p>DeepSeek-R1-Zero 完全不使用人类标注的 CoT 数据，只通过 GRPO 在数学推理任务上训练。结果令人惊讶——模型在训练过程中<strong>自发地学会了自我反思和自我纠错</strong>。模型输出中出现了类似"Wait, let me re-examine..."的短语——这个行为从未在训练数据中出现过。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>启示：</strong>R1-Zero 证明 RL 可以在没有人类示范的情况下教会模型复杂的行为。只要奖励函数设计得当，模型就能自主发现更优的策略。这对 AI 对齐研究有深远意义：人类不需要知道"最优策略"是什么，只需要能评判生成的输出。</div></div>
+  <p>根据 DeepSeek-R1 报告，DeepSeek-R1-Zero 不使用人工标注 CoT 的 SFT 冷启动阶段，而是通过 GRPO 在数学推理任务上训练。报告观察到，模型在训练过程中出现了<strong>自我反思和自我纠错</strong>等行为，输出中会出现类似"Wait, let me re-examine..."的短语。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>启示：</strong>R1-Zero 说明奖励驱动的 RL 可以在某些任务分布上诱导复杂推理行为，但效果依赖奖励设计、任务覆盖、模型基座和安全边界。它不能简化为"只要能评判输出就足够"，更不能替代对奖励漏洞、泛化和对齐风险的评估。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -476,7 +486,7 @@ def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
         <li><code>grpo_advantages(rewards, group_size)</code> 计算组内白化后的优势函数</li>
         <li>对每组 G 个回答的奖励做 z-score 归一化（减去组均值，除以组标准差）</li>
         <li>实现带 PPO-clip 的策略梯度损失</li>
-        <li>包含 KL 惩罚（使用近似 KL：<span class="katex-inline" data-expr="e^{\log q - \log p} - (\log q - \log p) - 1"></span>）</li>
+        <li>包含 KL 惩罚（使用近似 KL：<span class="katex-inline" data-expr="e^{\log q - \log p} - (\log q - \log p) - 1" aria-label="e^{\log q - \log p} - (\log q - \log p) - 1" role="img"></span>）</li>
       </ul>
       <pre># 预期用法
 # rewards: (group_size, batch) 每组 G 个回答的奖励
@@ -714,7 +724,7 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
     <li><strong>深度推理：</strong>结合 Domain Specialist 引导（数学推理、代码）</li>
     <li><strong>超级推理：</strong>多专家投票 + 自我反思（竞赛级难题）</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>R1 推理线已被 V4 统一：</strong>2025 年 R1（Nature 2025）用纯 RL/GRPO 单独训练出推理能力；到 2026 年 4 月的 V4，推理被收进同一个模型的<strong>"可选思考模式"</strong>，不再需要独立的 R1 系列。换言之，本章的 GRPO（9.5）仍是底层训练信号，而 OPD + 思考模式是 V4 把"推理"产品化、与通用能力合一的方式。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>来源边界：</strong>R1 论文把 GRPO/RL 作为推理能力训练信号；V4 模型卡报告了 on-policy distillation 和多档 reasoning effort modes。可以把 V4 理解为把“可选思考模式”产品化到同一模型族中，但“是否不再需要独立 R1 系列”属于课程解释，不应当作官方结论。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -860,7 +870,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
 <section class="card">
   <h3>概念练习巩固</h3>
 
-  <div class="exercise" data-answer="1" data-explain="SFT 只对回答部分计算损失是因为指令由用户提供，模型不需要学习生成指令。如果对整个序列计算损失，模型会尝试学习生成"用户指令"，既浪费计算资源，也可能导致分布偏移。">
+  <div class="exercise" data-answer="1" data-explain="SFT 只对回答部分计算损失是因为指令由用户提供，模型不需要学习生成指令。如果对整个序列计算损失，模型会尝试学习生成“用户指令”，既浪费计算资源，也可能导致分布偏移。">
     <h4>练习 1：在 SFT 中，为什么只对回答部分（而非整个序列）计算损失？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q1" value="0"> A. 因为指令部分的 token 数量太大</label>
@@ -886,7 +896,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="GRPO 抛弃了 Critic 模型，使用"组内白化"计算优势函数。对同一 prompt 采样的 G 个回答，用奖励的组内均值和标准差归一化。这消除了 PPO 中最不稳定的组件。">
+  <div class="exercise" data-answer="0" data-explain="GRPO 不训练独立 Critic 模型，而是使用“组内白化”计算相对优势。对同一 prompt 采样的 G 个回答，用奖励的组内均值和标准差归一化，从而减少一个复杂组件；稳定性仍取决于奖励、KL、采样和优化设置。">
     <h4>练习 3：GRPO 与 PPO 的最大区别是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q3" value="0"> A. GRPO 不需要 Critic 模型，用组内白化的奖励作为优势函数</label>
@@ -924,6 +934,15 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

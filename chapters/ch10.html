@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>推理优化不是一堆孤立名词。KV Cache 解决重复计算，量化解决显存/带宽，FlashAttention 解决注意力 IO，RAG 解决知识更新，vLLM 解决服务吞吐。DeepSeek V3.2/V4、Triton、Engram 和多模态属于前沿地图，第一次学习先建立分类。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
+    <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、benchmark 与 SLO。</li>
+    <li><strong>课前阅读：</strong>阅读 vLLM/PagedAttention、FlashAttention、RAG 和 GPTQ/AWQ 摘要，记录每项技术主要优化哪个瓶颈。</li>
+    <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
     <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
+    <li><strong>评估证据：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告和上线检查清单；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
 </section>
 
@@ -76,16 +80,16 @@
   <p>在自回归生成中，每一步计算注意力时，我们都在重复计算之前所有 token 的 Key（K）和 Value（V）矩阵。<strong>KV Cache</strong> 的核心思想是将之前步的 K 和 V 缓存起来，避免重复计算。</p>
 
   <h4>计算量对比</h4>
-  <p>没有 KV Cache 时，第 t 步的输入序列长度为 t，注意力计算量是 <span class="katex-inline" data-expr="O(t^2)"></span>——序列变长时计算量平方增长。有 KV Cache 时，每步只需计算新增 token 的 K、V，注意力计算量降到 <span class="katex-inline" data-expr="O(t)"></span>：</p>
+  <p>没有 KV Cache 时，第 t 步的输入序列长度为 t，注意力计算量是 <span class="katex-inline" data-expr="O(t^2)" aria-label="O(t^2)" role="img"></span>——序列变长时计算量平方增长。有 KV Cache 时，每步只需计算新增 token 的 K、V，注意力计算量降到 <span class="katex-inline" data-expr="O(t)" aria-label="O(t)" role="img"></span>：</p>
   <div class="math-box"><div class="label">公式 10.1 KV Cache 更新</div>
-    <div class="katex" data-expr="K_{\text{cache}} = [K_{\text{cache}}; K_{\text{new}}], \quad V_{\text{cache}} = [V_{\text{cache}}; V_{\text{new}}]"></div>
+    <div class="katex" data-expr="K_{\text{cache}} = [K_{\text{cache}}; K_{\text{new}}], \quad V_{\text{cache}} = [V_{\text{cache}}; V_{\text{new}}]" aria-label="K_{\text{cache}} = [K_{\text{cache}}; K_{\text{new}}], \quad V_{\text{cache}} = [V_{\text{cache}}; V_{\text{new}}]" role="img"></div>
   </div>
   <div class="math-box"><div class="label">公式 10.2 单步注意力（KV Cache 版）</div>
-    <div class="katex" data-expr="\text{Attention}(Q_{\text{new}}, K_{\text{cache}}, V_{\text{cache}}) = \text{softmax}\left(\frac{Q_{\text{new}} K_{\text{cache}}^\top}{\sqrt{d}}\right) V_{\text{cache}}"></div>
+    <div class="katex" data-expr="\text{Attention}(Q_{\text{new}}, K_{\text{cache}}, V_{\text{cache}}) = \text{softmax}\left(\frac{Q_{\text{new}} K_{\text{cache}}^\top}{\sqrt{d}}\right) V_{\text{cache}}" aria-label="\text{Attention}(Q_{\text{new}}, K_{\text{cache}}, V_{\text{cache}}) = \text{softmax}\left(\frac{Q_{\text{new}} K_{\text{cache}}^\top}{\sqrt{d}}\right) V_{\text{cache}}" role="img"></div>
   </div>
 
   <h4>内存代价</h4>
-  <p>KV Cache 以计算换内存。缓存大小 = <span class="katex-inline" data-expr="2 \times L \times n_{\text{layers}} \times n_{\text{heads}} \times d_{\text{head}} \times 2 \text{ bytes}"></span>（FP16）。对于 Llama 3 8B（32 层，8K 上下文），KV Cache 占用 ~4GB——占模型参数（16GB）的 25%。对于 128K 上下文，没有 MLA 或 GQA 优化的话 KV Cache 会膨胀到 ~64GB——超过大多数单 GPU 的显存。</p>
+  <p>KV Cache 以计算换内存。缓存大小 = <span class="katex-inline" data-expr="2 \times L \times n_{\text{layers}} \times n_{\text{heads}} \times d_{\text{head}} \times 2 \text{ bytes}" aria-label="2 \times L \times n_{\text{layers}} \times n_{\text{heads}} \times d_{\text{head}} \times 2 \text{ bytes}" role="img"></span>（FP16）。对于 Llama 3 8B（32 层，8K 上下文），KV Cache 占用 ~4GB——占模型参数（16GB）的 25%。对于 128K 上下文，没有 MLA 或 GQA 优化的话 KV Cache 会膨胀到 ~64GB——超过大多数单 GPU 的显存。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -104,7 +108,7 @@
         <li>若无 cache（首步），正常计算所有位置的 K、V 并缓存</li>
         <li>若有 cache（后续步），拼接历史 K/V 与新计算的 K/V</li>
         <li>返回 <code>(output, new_cache)</code></li>
-        <li>实现因果掩码时注意 <span class="katex-inline" data-expr="L_Q \neq L_{KV}"></span> 的情况（<span class="katex-inline" data-expr="L_Q = 1"></span> 但 <span class="katex-inline" data-expr="L_{KV} = \text{历史} + 1"></span>）</li>
+        <li>实现因果掩码时注意 <span class="katex-inline" data-expr="L_Q \neq L_{KV}" aria-label="L_Q \neq L_{KV}" role="img"></span> 的情况（<span class="katex-inline" data-expr="L_Q = 1" aria-label="L_Q = 1" role="img"></span> 但 <span class="katex-inline" data-expr="L_{KV} = \text{历史} + 1" aria-label="L_{KV} = \text{历史} + 1" role="img"></span>）</li>
       </ul>
       <pre># 预期用法
 attn = AttentionWithCache(d_model=512, n_heads=8)
@@ -173,10 +177,10 @@ class AttentionWithCache(nn.Module):
 
     def _causal_mask(self, L_kv, L_q, device):
         """因果掩码：支持 L_kv > L_q（已有缓存时）"""
-        mask = torch.triu(torch.ones(L_q, L_kv, device=device), diagonal=1) == 0
-        if L_kv > L_q:
-            mask = mask[:, -L_kv:]  # 只保留最后 L_q 列
-        return mask
+        query_start = L_kv - L_q
+        q_pos = torch.arange(query_start, query_start + L_q, device=device).unsqueeze(1)
+        k_pos = torch.arange(L_kv, device=device).unsqueeze(0)
+        return k_pos <= q_pos
 
 # Decoding 循环
 cache = None
@@ -186,7 +190,7 @@ for step in range(max_len):
     logits = lm_head(out[:, -1, :])
     token_id = torch.multinomial(torch.softmax(logits, dim=-1), 1)
     x = embed(token_id)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Q 和 K/V 长度不同的掩码：</strong>当 <span class="katex-inline" data-expr="L_{KV} > L_Q"></span> 时（中间解码步骤），掩码矩阵的形状是 <span class="katex-inline" data-expr="L_Q \times L_{KV}"></span>，其中只有最后 <span class="katex-inline" data-expr="L_Q"></span> 列是因果的。之前缓存的 token 在对应位置应该全部可见。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Q 和 K/V 长度不同的掩码：</strong>当 <span class="katex-inline" data-expr="L_{KV} > L_Q" aria-label="L_{KV} > L_Q" role="img"></span> 时（中间解码步骤），掩码矩阵的形状是 <span class="katex-inline" data-expr="L_Q \times L_{KV}" aria-label="L_Q \times L_{KV}" role="img"></span>，其中只有最后 <span class="katex-inline" data-expr="L_Q" aria-label="L_Q" role="img"></span> 列是因果的。之前缓存的 token 在对应位置应该全部可见。</p>
     </div>
   </div>
 </section>
@@ -202,7 +206,7 @@ for step in range(max_len):
     <h4>练习 2：KV Cache 内存分析</h4>
     <div class="task">
       <p><strong>任务：</strong>实现 <code>kv_cache_memory_analysis</code> 函数，计算并打印 KV Cache 的显存占用。</p>
-      <p><strong>公式：</strong><span class="katex-inline" data-expr="\text{Cache} = 2 \times L \times n_{\text{layers}} \times n_{\text{heads}} \times d_{\text{head}} \times \text{bytes}"></span></p>
+      <p><strong>公式：</strong><span class="katex-inline" data-expr="\text{Cache} = 2 \times L \times n_{\text{layers}} \times n_{\text{heads}} \times d_{\text{head}} \times \text{bytes}" aria-label="\text{Cache} = 2 \times L \times n_{\text{layers}} \times n_{\text{heads}} \times d_{\text{head}} \times \text{bytes}" role="img"></span></p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>计算每层 KV Cache 的 MB 数</li>
@@ -230,7 +234,7 @@ def kv_cache_memory_analysis(n_layers, n_kv_heads, d_head, seq_len,
     Returns dict with cache_per_layer_mb, total_cache_gb, etc.
     """
     # 每层: K 和 V 各一份
-    cache_per_layer = 2 * seq_len * n_kv_heads * d_head * dtype_bytes
+    cache_per_layer = batch_size * 2 * seq_len * n_kv_heads * d_head * dtype_bytes
     total_cache = cache_per_layer * n_layers
 
     d_model = n_kv_heads * d_head
@@ -263,7 +267,7 @@ v4 = kv_cache_memory_analysis(60, 1, 128, 128000)
 v4_gqa = kv_cache_memory_analysis(60, 8, 128, 128000)
 print(f"DeepSeek-V4 MLA: KV Cache {v4['total_cache_gb']:.2f} GB "
       f"(标准 GQA: {v4_gqa['total_cache_gb']:.1f} GB)")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>MLA 为何如此有效？</strong>标准 MHA 每头独立 K/V，GQA 分组共享。MLA 更进一步——将 K/V 投影到低维潜空间（latent space），缓存压缩后的向量而非完整 K/V。DeepSeek-V2 声称将 KV Cache 减少了 8-16x。V4 的 CSA+HCA 在此基础上再次压缩注意力计算。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>MLA 为何如此有效？</strong>标准 MHA 每头独立 K/V，GQA 分组共享。MLA 更进一步——将 K/V 投影到低维潜空间（latent space），缓存压缩后的向量而非完整 K/V。DeepSeek-V2/V3 报告把 MLA 作为 KV cache 压缩方案；具体压缩率取决于 latent 维度、RoPE 分支和实现配置。V4 模型卡中的 CSA+HCA 主要进一步压缩长上下文注意力计算。</p>
     </div>
   </div>
 </section>
@@ -273,27 +277,27 @@ print(f"DeepSeek-V4 MLA: KV Cache {v4['total_cache_gb']:.2f} GB "
 <!-- ================================================================ -->
 <section class="card" id="s10-5">
   <h3>10.5 DeepSeek V3.2→V4：从 DSA 到 CSA+HCA 的稀疏注意力</h3>
-  <p>MLA（第 4 章）压掉了 KV Cache，但注意力计算本身仍是 <span class="katex-inline" data-expr="O(n^2)"></span>。从 <strong>V3.2-Exp</strong>（2025 年末）起，DeepSeek 把矛头对准这里，提出 <strong>DSA（DeepSeek Sparse Attention，可学习稀疏注意力）</strong>；<strong>V4</strong>（2026-04）在其上组合 <strong>CSA + HCA</strong> 两种压缩注意力，让 1M 上下文真正可用。</p>
+  <p>MLA（第 4 章）压缩了 KV Cache，但注意力计算本身仍随上下文长度快速增长。DeepSeek V3.2-Exp 发布说明把 DSA（DeepSeek Sparse Attention，可学习稀疏注意力）作为长上下文效率优化；V4 模型卡进一步报告 CSA + HCA 两种压缩注意力，用于降低 1M 上下文设置下的单 token 推理 FLOPs 和 KV cache。</p>
 
   <h4>DSA（V3.2）——可学习的 top-k 稀疏</h4>
-  <p>DSA 用一个轻量索引器为每个 query 给所有候选 KV 打分，只保留 <strong>top-k</strong> 个做精确注意力。复杂度从 <span class="katex-inline" data-expr="O(n^2)"></span> 降到 <span class="katex-inline" data-expr="O(n \cdot k)"></span>（<span class="katex-inline" data-expr="k \ll n"></span>），且"选哪些 KV"是<strong>端到端学习</strong>的，而非固定窗口。</p>
+  <p>DSA 用一个轻量索引器为每个 query 给候选 KV 打分，只保留 <strong>top-k</strong> 个做精确注意力。若每步只访问 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span> 个候选，主注意力项可从 <span class="katex-inline" data-expr="O(n^2)" aria-label="O(n^2)" role="img"></span> 降到近似 <span class="katex-inline" data-expr="O(n \cdot k)" aria-label="O(n \cdot k)" role="img"></span>（<span class="katex-inline" data-expr="k \ll n" aria-label="k \ll n" role="img"></span>）；但索引器、压缩器、跨层调度和硬件 kernel 仍会贡献额外开销。</p>
 
   <h4>CSA（Compressed Sparse Attention，压缩稀疏注意力）</h4>
   <p>V4 的 CSA 是 DSA 的"压缩版"：先用可学习压缩器把<strong>每 m 个相邻 token 的 KV 压成 1 个条目</strong>，再在这些压缩条目上做 top-k 稀疏选择。注意它<strong>不是固定滑动窗口</strong>——稀疏模式由数据驱动，可跨越长距离。</p>
   <div class="math-box"><div class="label">公式 10.3 CSA（概念式）</div>
-    <div class="katex" data-expr="\text{CSA}(q_t) = \text{Attn}\Big(q_t,\; \text{TopK}_k\big(\text{Compress}_m(K),\, \text{Compress}_m(V)\big)\Big)"></div>
+    <div class="katex" data-expr="\text{CSA}(q_t) = \text{Attn}\Big(q_t,\; \text{TopK}_k\big(\text{Compress}_m(K),\, \text{Compress}_m(V)\big)\Big)" aria-label="\text{CSA}(q_t) = \text{Attn}\Big(q_t,\; \text{TopK}_k\big(\text{Compress}_m(K),\, \text{Compress}_m(V)\big)\Big)" role="img"></div>
   </div>
 
   <h4>HCA（Heavily Compressed Attention，超压缩全局注意力）</h4>
   <p>HCA 走另一条路：对全序列 KV 做<strong>更激进的 128× 压缩</strong>（每 128 个 token 池化为 1 个表示），再在压缩表示上做<strong>稠密</strong>注意力。这给每一层一个廉价的"全局俯瞰"，弥补 CSA 稀疏选择可能漏掉的远端信息。</p>
   <div class="math-box"><div class="label">公式 10.4 HCA（概念式）</div>
-    <div class="katex" data-expr="\text{HCA}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Pool}_{128\times}(K)^\top}{\sqrt{d}}\right) \cdot \text{Pool}_{128\times}(V)"></div>
+    <div class="katex" data-expr="\text{HCA}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Pool}_{128\times}(K)^\top}{\sqrt{d}}\right) \cdot \text{Pool}_{128\times}(V)" aria-label="\text{HCA}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Pool}_{128\times}(K)^\top}{\sqrt{d}}\right) \cdot \text{Pool}_{128\times}(V)" role="img"></div>
   </div>
 
   <h4>V4 如何组合：跨层交替</h4>
-  <p>V4 不是把两种注意力简单加权求和，而是<strong>跨 Transformer 层交替</strong>使用 CSA 与 HCA——稀疏精确层负责"看清局部 + 学到的关键远端 token"，超压缩全局层负责"廉价地看全局"。两者配合，使 1M 上下文的单 token 计算量降到 V3.2 的约 <strong>27%</strong>、KV Cache 降到约 <strong>10%</strong>。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>V4 规格（2026-04 发布，MIT 许可开源）：</strong>V4-Pro 1.6T 总参 / 49B 激活，V4-Flash 284B；原生 <strong>1M token 上下文</strong>、384K 最大输出；训练 32T tokens。R1 的推理线也被并入 V4 的"可选思考模式"。</div></div>
-  <div class="info-box tip"><span class="icon">📚</span><div><strong>来源说明：</strong>DSA 参考 <a href="https://api-docs.deepseek.com/news/news250929" target="_blank">DeepSeek V3.2-Exp 发布说明</a>；V4-Pro 规格、CSA+HCA、Engram 与 mHC 参考 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro" target="_blank">DeepSeek-V4-Pro 模型卡</a>。阅读这些前沿段落时，请把它们视为<strong>模型技术报告/模型卡驱动的工程案例</strong>，与前 1-8 章的基础 Transformer 原理区分开来。</div></div>
+  <p>V4 模型卡描述的组合方式不是把两种注意力简单加权求和，而是<strong>跨 Transformer 层交替</strong>使用 CSA 与 HCA——稀疏精确层负责"看清局部 + 学到的关键远端 token"，超压缩全局层负责"廉价地看全局"。模型卡报告称，两者配合后，1M 上下文的单 token 计算量约为 V3.2 的 <strong>27%</strong>、KV Cache 约为 <strong>10%</strong>。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>V4 规格（按 2026-06-04 复核的模型卡）：</strong>V4-Pro 1.6T 总参 / 49B 激活，V4-Flash 284B；原生 <strong>1M token 上下文</strong>、384K 最大输出；训练 32T tokens。模型卡还报告了三档 reasoning effort modes；这可以理解为把可选思考预算产品化，但不应写成“R1 推理线已被官方并入或取代”。</div></div>
+  <div class="info-box tip"><span class="icon">📚</span><div><strong>来源说明：</strong>DSA 参考 <a href="https://api-docs.deepseek.com/news/news250929" target="_blank">DeepSeek V3.2-Exp 发布说明</a>；V4-Pro 规格、CSA+HCA、mHC、Muon、1M context 和 reasoning modes 参考 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro" target="_blank">DeepSeek-V4-Pro 模型卡</a>。Engram 在本章只作为“模型内建外部记忆 + LSH 检索”的待复核教学案例。阅读这些前沿段落时，请把它们视为<strong>模型技术报告/模型卡驱动的工程案例</strong>，与前 1-8 章的基础 Transformer 原理区分开来。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -307,13 +311,13 @@ print(f"DeepSeek-V4 MLA: KV Cache {v4['total_cache_gb']:.2f} GB "
     <h4>练习 3：对称 per-channel INT8 量化</h4>
     <div class="task">
       <p><strong>任务：</strong>实现对称 per-channel 的 INT8 量化和反量化。</p>
-      <p><strong>公式：</strong><span class="katex-inline" data-expr="x_q = \text{round}(\text{clamp}(x / s, -127, 127)), \quad \hat{x} = x_q \times s"></span></p>
+      <p><strong>公式：</strong><span class="katex-inline" data-expr="x_q = \text{round}(\text{clamp}(x / s, -127, 127)), \quad \hat{x} = x_q \times s" aria-label="x_q = \text{round}(\text{clamp}(x / s, -127, 127)), \quad \hat{x} = x_q \times s" role="img"></span></p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>quantize_per_channel(tensor)</code> 对矩阵的每一列（output channel）计算独立的缩放因子</li>
         <li><code>dequantize(quantized, scales)</code> 反量化回 FP32</li>
         <li>对称量化：零点固定在 0（不需要 zero_point）</li>
-        <li>计算量化误差（NRMSE %：<span class="katex-inline" data-expr="\sqrt{\text{MSE}} / \text{std(original)} \times 100"></span>）</li>
+        <li>计算量化误差（NRMSE %：<span class="katex-inline" data-expr="\sqrt{\text{MSE}} / \text{std(original)} \times 100" aria-label="\sqrt{\text{MSE}} / \text{std(original)} \times 100" role="img"></span>）</li>
       </ul>
       <pre># 预期用法
 weight = torch.randn(4096, 4096) * 0.02  # 模拟权重矩阵
@@ -361,7 +365,7 @@ print(f"INT8 量化误差: {nrmse(weight, dq_w):.2f}%")
 # GPTQ: 使用 Hessian 矩阵加权量化误差，逐列优化
 # AWQ: 识别 1% 的重要通道 (salient channels)，用缩放因子保护
 # 两者都在 INT4 下达到接近 FP16 的精度</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>SmoothQuant 的技巧：</strong>激活值中的 outlier 是量化的主要挑战。SmoothQuant 通过在数学上等价地将激活值的难度"迁移"到权重上——对激活除以 s，对权重重乘 s——使两者都更容易量化。这个技巧在 INT8 量化中被广泛采用。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>SmoothQuant 的技巧：</strong>激活值中的 outlier 是量化的主要挑战。SmoothQuant 通过等价缩放把一部分量化难度从激活迁移到权重上——对激活除以 s，对权重重乘 s。它是 INT8 量化的重要方法之一，但最终精度仍取决于校准数据、模型结构和部署 kernel。</p>
     </div>
   </div>
 </section>
@@ -374,7 +378,7 @@ print(f"INT8 量化误差: {nrmse(weight, dq_w):.2f}%")
   <p><strong>FlashAttention</strong>（Dao et al., 2022）是近年来最重要的注意力加速技术。它不改变数学结果，而是通过 <strong>IO-aware 算法</strong> 大幅减少 GPU HBM 访问次数。</p>
 
   <h4>标准注意力的问题：HBM 瓶颈</h4>
-  <p>标准注意力将 <span class="katex-inline" data-expr="S = QK^\top \in \mathbb{R}^{L \times L}"></span> 写入 HBM，读取算 softmax，再将 <span class="katex-inline" data-expr="P = \text{softmax}(S)"></span> 写回。这是 <span class="katex-inline" data-expr="O(L^2)"></span> 的 HBM 读写——当 L=128K 时，约 32GB 的 HBM 流量（仅存储一个中间矩阵）。</p>
+  <p>标准注意力将 <span class="katex-inline" data-expr="S = QK^\top \in \mathbb{R}^{L \times L}" aria-label="S = QK^\top \in \mathbb{R}^{L \times L}" role="img"></span> 写入 HBM，读取算 softmax，再将 <span class="katex-inline" data-expr="P = \text{softmax}(S)" aria-label="P = \text{softmax}(S)" role="img"></span> 写回。这是 <span class="katex-inline" data-expr="O(L^2)" aria-label="O(L^2)" role="img"></span> 的 HBM 读写——当 L=128K 时，约 32GB 的 HBM 流量（仅存储一个中间矩阵）。</p>
 
   <h4>FlashAttention 的三个关键思想</h4>
   <ul>
@@ -387,10 +391,10 @@ print(f"INT8 量化误差: {nrmse(weight, dq_w):.2f}%")
     HBM 访问量对比 (L=4096, d=128):
     标准注意力: ~4L² + 3Ld = ~68M 字节
     FlashAttention: ~4Ld = ~2M 字节
-    加速比 ≈ L / 4d = 8x!
-    当 L=128K: 加速比 ≈ 250x!
+    IO 读写量比例约 L / 4d（这里只是内存流量估算）
+    实际端到端加速取决于 GPU、dtype、kernel、batch 和序列长度
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>FlashAttention-3：</strong>利用 Hopper 架构的 Tensor Core 和异步拷贝，在 H100 上达到超过 60% 的理论 FLOPS 利用率。这一代将 FP8 支持与 FlashAttention 结合，进一步加速。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>FlashAttention-3：</strong>论文和项目报告在特定 Hopper/H100、dtype 和矩阵规模下报告过很高的 FLOPS 利用率。课程重点不是记住单个数字，而是理解 IO-aware tiling、online softmax 和硬件特性如何共同影响 attention kernel。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -398,7 +402,7 @@ print(f"INT8 量化误差: {nrmse(weight, dq_w):.2f}%")
 <!-- ================================================================ -->
 <section class="card" id="s10-8">
   <h3>10.8 编程练习 4：实现最小 RAG 流水线</h3>
-  <p><strong>RAG（检索增强生成）</strong>是解决 LLM 知识局限和幻觉的最实用方案。它给模型"开卷考试"——不需要把所有知识存储于参数中，只需知道如何阅读检索到的文本。</p>
+  <p><strong>RAG（检索增强生成）</strong>是缓解 LLM 知识过期、领域知识缺口和部分幻觉问题的常用方案。它给模型"开卷考试"——把外部文档检索后注入 prompt；但检索命中、上下文压缩和答案忠实性仍需要单独评测。</p>
 
   <div class="coding-exercise">
     <h4>练习 4：RAG 检索 + 生成流水线</h4>
@@ -429,6 +433,8 @@ class SimpleRAG:
     """简化的 RAG 系统：分块 → 嵌入 → 检索 → 增强生成"""
 
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
+        if overlap >= chunk_size:
+            raise ValueError("overlap must be smaller than chunk_size")
         self.embed_model = embed_model
         self.llm = llm
         self.chunk_size = chunk_size
@@ -445,6 +451,8 @@ class SimpleRAG:
             end = min(start + self.chunk_size, len(tokens))
             chunk = ' '.join(tokens[start:end])
             chunks.append(chunk)
+            if end == len(tokens):
+                break
             start += self.chunk_size - self.overlap
 
         self.documents.extend(chunks)
@@ -479,7 +487,7 @@ class SimpleRAG:
 
 请基于文档内容给出准确、简洁的回答。如果文档中没有相关信息，请明确说明。"""
         return self.llm.generate(prompt)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>进阶 RAG 技巧：</strong>1) Hybrid Search = 稠密检索 + BM25 稀疏检索，通过 RRF 合并排序；2) Reranking：检索 Top-50 后用交叉编码器重排，只取 Top-3；3) Query Rewriting：检索前让 LLM 改写查询（消歧、指代消解）。这些技巧可以将 RAG 的命中率从 60% 提升到 90%+。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>进阶 RAG 技巧：</strong>1) Hybrid Search = 稠密检索 + BM25 稀疏检索，通过 RRF 合并排序；2) Reranking：检索 Top-50 后用交叉编码器重排，只取 Top-3；3) Query Rewriting：检索前让 LLM 改写查询（消歧、指代消解）。这些技巧常能提高召回和答案忠实性，但提升幅度必须在固定数据集、query 分布和评价指标上报告。</p>
     </div>
   </div>
 </section>
@@ -489,7 +497,7 @@ class SimpleRAG:
 <!-- ================================================================ -->
 <section class="card" id="s10-9">
   <h3>10.9 Agent 模式——从生成到行动</h3>
-  <p><strong>Agent</strong> 是 LLM 的终极应用形态——模型不再是"一次性回答一个问题"，而是<strong>自主执行多步骤任务</strong>，包括使用工具、规划步骤、反思结果、修正错误。</p>
+  <p><strong>Agent</strong> 是 LLM 应用的一类重要形态：模型不再只是"一次性回答一个问题"，而是通过工具调用、规划步骤、观察结果和修正错误来执行多步骤任务。它适合讲工程能力边界，但不是所有 LLM 应用的终点。</p>
 
   <h4>Agentic Loop: Plan → Act → Observe → Reflect</h4>
   <p>Agent 的核心循环：</p>
@@ -628,7 +636,7 @@ print(f"{'+ Quant INT8':<20} {result_quant['ttft_ms']:<12.1f} "
 # 加速比计算
 print(f"\nKV Cache 加速: {result_no_cache['ms_per_token'] / result_cache['ms_per_token']:.1f}x")
 print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token']:.1f}x")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>KV Cache 通常能加速 Decoding 5-10x（从 O(L²) 到 O(L)）；INT8 量化能额外加速 1.5-2x（更少的内存搬运）。注意 KV Cache 会<strong>增加</strong>显存使用（缓存了 K/V），而量化<strong>减少</strong>显存使用（权重缩小 4 倍）。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>KV Cache 通常会显著降低 decode 阶段的重复计算；INT8 量化通常会减少权重显存和带宽压力。具体加速倍数依赖 prompt 长度、batch、GPU、kernel、量化方案和模型结构。注意 KV Cache 会<strong>增加</strong>缓存显存，而量化主要<strong>减少</strong>权重显存。</p>
     </div>
   </div>
 </section>
@@ -638,7 +646,7 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
 <!-- ================================================================ -->
 <section class="card" id="s10-11">
   <h3>10.11 vLLM——生产级 LLM 推理引擎</h3>
-  <p>如果你要把一个 LLM 部署到生产环境，处理成百上千的并发请求，单靠手写的 KV Cache 和量化是不够的。<strong>vLLM</strong> 是目前最广泛使用的开源 LLM 推理引擎之一，被 OpenAI、Anthropic、Meta 等公司的内部服务所采用或借鉴。</p>
+  <p>如果你要把一个 LLM 部署到生产环境，处理成百上千的并发请求，单靠手写的 KV Cache 和量化是不够的。<strong>vLLM</strong> 是开源生态中广泛使用的 LLM 推理引擎之一，其 PagedAttention、continuous batching 和 prefix caching 等设计也成为理解现代推理系统的重要案例。</p>
 
   <h4>核心创新一：PagedAttention</h4>
   <p>传统 KV Cache 为每个序列分配连续的显存块，就像 OS 中早期的内存管理——连续分配导致<strong>显存碎片化</strong>：一个 128K 序列的 KV Cache 需要连续的大块显存，释放后可能留下无法使用的碎片。PagedAttention 借鉴了<strong>操作系统虚拟内存的分页机制</strong>：</p>
@@ -648,20 +656,21 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
     <li>释放时逐 block 回收，没有碎片</li>
     <li>不同序列可以<strong>共享相同的 prompt prefix block</strong>（如 system prompt 只存一份）</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>类比：</strong>PagedAttention 之于 KV Cache = 虚拟内存之于物理内存。它把"分配连续显存"的问题变成了"管理页表"的问题，显存利用率从 ~30% 提升到 ~90%+。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>类比：</strong>PagedAttention 之于 KV Cache = 虚拟内存之于物理内存。它把"分配连续显存"的问题变成了"管理页表"的问题；论文和工程 benchmark 报告过显著的显存利用率提升，但具体数值取决于模型、请求长度分布、并发和调度策略。</div></div>
 
   <h4>核心创新二：Continuous Batching</h4>
   <p>传统 batch 处理：等所有请求都完成才开始下一个 batch。问题：一个长序列会阻塞整个 batch，短序列干等。</p>
   <p>Continuous Batching：<strong>每次前向传播后，完成生成的序列立即退出 batch，新请求立即加入</strong>。不需要等待整个 batch 完成。这就像餐厅的"翻台"——吃完的客人马上离座，排队的客人马上入座，而不是等整桌人都吃完。</p>
   <p>实现要点：每个 step 执行 "prefill + decode" 混合调度，kernel 需要支持不同的序列长度和张量形状。</p>
 
-  <h4>vLLM 的性能数据</h4>
+  <h4>vLLM 的性能数据如何阅读</h4>
+  <p>下面的数字只用于说明量级和指标口径，不是课程对任意模型/硬件的性能承诺。正式项目必须在自己的硬件、模型、context、batching 和并发设置下重新测量。</p>
   <div class="table-wrap">
     <table>
-      <tr><th>指标</th><th>基础实现</th><th>vLLM</th><th>提升</th></tr>
-      <tr><td>显存利用率</td><td>~30%</td><td>~90%</td><td>3x</td></tr>
-      <tr><td>吞吐 (Llama-7B)</td><td>~500 tok/s</td><td>~5000 tok/s</td><td>10x</td></tr>
-      <tr><td>并发请求数</td><td>~10</td><td>~100+</td><td>10x</td></tr>
+      <tr><th>指标</th><th>朴素实现常见问题</th><th>vLLM 优化方向</th><th>项目中应报告</th></tr>
+      <tr><td>显存利用率</td><td>连续 KV 分配导致碎片和预留浪费</td><td>PagedAttention block 管理</td><td>峰值显存、可服务 batch/context</td></tr>
+      <tr><td>吞吐</td><td>静态 batch 被长请求拖慢</td><td>continuous batching、chunked prefill</td><td>tokens/s、TPOT、并发曲线</td></tr>
+      <tr><td>并发请求数</td><td>完成时间不齐导致队列阻塞</td><td>动态加入/退出 batch</td><td>P50/P95/P99 latency、error_rate</td></tr>
     </table>
   </div>
 
@@ -694,7 +703,7 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
   </div>
 
   <h4>SGLang 的前缀树共享 (RadixAttention)</h4>
-  <p>当多个请求共享相同的 system prompt 或 few-shot 前缀时，vLLM 需要手动配置 prefix caching，而 SGLang 通过<strong>Radix Tree（基数树）自动检测和复用</strong>所有公共前缀的 KV Cache。在多轮对话中，第二轮开始的 prompt 前缀与第一轮完全重合——SGLang 自动复用，不需要额外逻辑。</p>
+  <p>当多个请求共享相同的 system prompt 或 few-shot 前缀时，推理引擎可以通过 prefix caching 复用已计算的 KV Cache。vLLM 和 SGLang 都提供了相关能力；SGLang 的 RadixAttention 使用<strong>Radix Tree（基数树）</strong>组织可复用前缀，适合多轮对话和结构化程序生成。实际复用率仍取决于 prompt 模板、缓存配置、调度策略和请求分布。</p>
 
   <h4>TensorRT-LLM 的图编译</h4>
   <p>TensorRT-LLM 将整个 LLM 的计算图编译为 NVIDIA GPU 最优化的执行计划。这包括：算子融合（如 QKV 投影合并为单个 GEMM）、kernel auto-tuning、FP8/INT4 精度支持。代价是<strong>编译时间较长</strong>（首次加载模型需数分钟），且只支持 NVIDIA GPU。</p>
@@ -854,7 +863,7 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
   <p>关键比率：<strong>SRAM 带宽是 HBM 的 ~10×，但容量只有 HBM 的 ~1/400</strong>。GPU 优化的本质就是：<strong>尽量在 SRAM 中完成计算，减少 HBM↔SRAM 之间的数据传输</strong>。</p>
 
   <h4>一个具体例子：矩阵乘法 (GEMM)</h4>
-  <p>假设我们要计算 <span class="katex-inline" data-expr="C = A \times B"></span>，其中 A 和 B 都是 1024×1024 的 FP16 矩阵。</p>
+  <p>假设我们要计算 <span class="katex-inline" data-expr="C = A \times B" aria-label="C = A \times B" role="img"></span>，其中 A 和 B 都是 1024×1024 的 FP16 矩阵。</p>
   <ul>
     <li><strong>朴素实现：</strong>每次计算 C[i,j] 时从 HBM 读取 A[i,:] 和 B[:,j]——需要读取 HBM 1024×1024×2048 ≈ <strong>2B 次</strong></li>
     <li><strong>Tiling：</strong>将 A 和 B 切分成小块（如 128×128），每块载入 SRAM 后反复使用——HBM 读取降至 ~128×128×... ≈ <strong>16M 次</strong></li>
@@ -878,8 +887,8 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 <!-- 10.16 Engram 外部记忆 -->
 <!-- ================================================================ -->
 <section class="card" id="s10-16">
-  <h3>10.16 Engram——类海马体的 O(1) 外部记忆</h3>
-  <p>RAG（10.8）把知识放在<strong>模型外部</strong>，靠向量检索召回。DeepSeek-V4 把这个思路<strong>内建进模型</strong>：<strong>Engram</strong>（取自神经科学"记忆痕迹"一词）是一套受海马体启发的外部知识库，与主干网络并行，提供 <strong>O(1)</strong> 速度的知识检索。</p>
+  <h3>10.16 Engram——类海马体的外部记忆案例</h3>
+  <p>RAG（10.8）把知识放在<strong>模型外部</strong>，靠向量检索召回。作为前沿设计案例，<strong>Engram</strong>（取自神经科学"记忆痕迹"一词）可以理解为把外部记忆更紧密地接入模型前向传播：它假设一套受海马体启发的知识库与主干网络并行，并通过哈希索引降低候选召回成本。这里的复杂度应理解为哈希桶查找的工程近似，不是对端到端问答质量或最坏情况检索复杂度的数学保证。</p>
 
   <h4>为什么需要它？</h4>
   <p>注意力代价随上下文增长，把事实性知识全塞进参数或上下文都很贵。Engram 把可枚举的知识条目放进一个<strong>独立、可更新</strong>的库，用<strong>局部敏感哈希（LSH）</strong>建索引——查询向量经同一组哈希函数映射到桶，命中桶内条目即为近邻，无需扫描全库。</p>
@@ -887,22 +896,22 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
   <h4>与 RAG 的区别</h4>
   <div class="table-wrap">
     <table>
-      <tr><th></th><th>传统 RAG</th><th>Engram (V4)</th></tr>
+      <tr><th></th><th>传统 RAG</th><th>Engram 风格内建记忆</th></tr>
       <tr><td>检索时机</td><td>生成前一次性检索</td><td>生成中按需、逐层访问</td></tr>
-      <tr><td>索引</td><td>外部向量库 (ANN)</td><td>模型内建 LSH，O(1) 查桶</td></tr>
+      <tr><td>索引</td><td>外部向量库 (ANN)</td><td>模型内建 LSH，近似常数时间查桶</td></tr>
       <tr><td>更新</td><td>重建向量库</td><td>直接写记忆库，无需重训</td></tr>
       <tr><td>耦合</td><td>松耦合（拼进 prompt）</td><td>与前向传播紧耦合</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>效果：</strong>V4 报告显示，引入 Engram 后多查询 NIAH（大海捞针）准确率从 V3.2 的 84.2% 跃升到 <strong>97.0%</strong>——把"长上下文里精确找事实"这件事做扎实了。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>来源边界：</strong>Engram 是本节用于讲解“模型内建外部记忆 + LSH 检索”的前沿案例。具体 NIAH、MRCR 或 CorpusQA 数字必须以 V4 技术报告/模型卡的评测设置为准；未逐条复核前，不把单个 benchmark 数字作为作业或考试事实。</div></div>
 </section>
 
 <!-- ================================================================ -->
 <!-- 编程练习 6: LSH 检索 (Engram 风格) -->
 <!-- ================================================================ -->
 <section class="card" id="s10-17">
-  <h3>10.17 编程练习 6：实现 LSH O(1) 检索（Engram 风格）</h3>
-  <p>Engram 的核心，是用 LSH 把"在百万条记忆里找近邻"从 O(N) 降到接近 O(1)。这个练习实现一个最小的<strong>随机超平面 LSH</strong>检索器。</p>
+  <h3>10.17 编程练习 6：实现 LSH 桶内检索（Engram 风格）</h3>
+  <p>Engram 风格外部记忆的核心动机，是用 LSH 把"在大量记忆里找近邻"从全库扫描降到少量候选桶内检索。这个练习实现一个最小的<strong>随机超平面 LSH</strong>检索器，用来理解近似召回和复杂度权衡。</p>
 
   <div class="coding-exercise">
     <h4>练习 6：随机超平面 LSH 检索器</h4>
@@ -910,10 +919,10 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
       <p><strong>任务：</strong>实现 <code>LSHMemory</code>，用 <code>n_bits</code> 个随机超平面把向量哈希成二进制桶键，支持 <code>add</code> 写入和 <code>query</code> 近邻召回。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>哈希：每个向量与 <code>n_bits</code> 个随机超平面点积，取符号位拼成整数桶键 <span class="katex-inline" data-expr="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i"></span></li>
+        <li>哈希：每个向量与 <code>n_bits</code> 个随机超平面点积，取符号位拼成整数桶键 <span class="katex-inline" data-expr="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i" aria-label="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i" role="img"></span></li>
         <li><code>add(vec, value)</code>：把 <code>value</code> 存进对应桶</li>
-        <li><code>query(vec)</code>：只在<strong>同桶</strong>条目里做精确最近邻（O(1) 查桶 + 桶内小规模比对）</li>
-        <li>哈希平面在 <code>__init__</code> 固定——同一组函数才能保证相似向量进同桶</li>
+        <li><code>query(vec)</code>：只在<strong>同桶</strong>条目里做精确最近邻（常数时间查桶 + 桶内小规模比对）</li>
+        <li>哈希平面在 <code>__init__</code> 固定——同一组函数才能让索引和查询使用一致的桶划分；相似向量只是更可能进同桶，不是必然</li>
       </ul>
       <pre># 预期用法
 mem = LSHMemory(dim=64, n_bits=8)
@@ -928,7 +937,7 @@ import torch
 from collections import defaultdict
 
 class LSHMemory:
-    """随机超平面 LSH——Engram 式 O(1) 近邻检索的最小实现"""
+    """随机超平面 LSH——Engram 式近似桶内检索的最小实现"""
     def __init__(self, dim, n_bits=8, seed=0):
         g = torch.Generator().manual_seed(seed)
         # n_bits 个随机超平面，固定不变
@@ -949,7 +958,7 @@ class LSHMemory:
         # 只在同桶候选里做精确比对（桶内规模远小于 N）
         sims = [torch.dot(vec, v) / (vec.norm() * v.norm() + 1e-9) for v, _ in cand]
         return cand[int(torch.tensor(sims).argmax())][1]</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么是 O(1)？</strong>哈希把全库切成许多小桶，查询只比对命中桶内的少量候选——与库总规模 N 几乎无关。代价是<strong>近似</strong>：相似向量大概率、但不保证进同桶。实践中用<strong>多张哈希表</strong>（multi-probe）取并集来提高召回，这正是 Engram 在百万级记忆上又快又准的关键。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么常说近似常数时间？</strong>哈希把全库切成许多小桶，查询通常只比对命中桶内的少量候选，平均查询成本可能远低于全库扫描。代价是<strong>近似</strong>：相似向量大概率、但不保证进同桶；最坏情况、桶分布和多表探测都会影响复杂度。课程把 Engram 只作为“外部记忆 + LSH 检索”的前沿案例，不把具体 benchmark 当作稳定事实。</p>
     </div>
   </div>
 </section>
@@ -966,11 +975,11 @@ class LSHMemory:
       <tr><td><strong>V2</strong></td><td>MLA</td><td><strong>删 KV</strong> — K/V 压到低维潜空间，仅缓存共享潜向量</td></tr>
       <tr><td><strong>V3</strong></td><td>MoE + MTP + FP8</td><td><strong>删参数</strong> — 671B 总参，每步只激活 ~37B（约 5.5%）</td></tr>
       <tr><td><strong>R1</strong></td><td>GRPO</td><td><strong>删 Critic</strong> — 组内白化替代价值网络，纯 RL 涌现推理</td></tr>
-      <tr><td><strong>V3.2</strong></td><td>DSA</td><td><strong>删注意力(稀疏)</strong> — 可学习 top-k，<span class="katex-inline" data-expr="O(n^2)\to O(n\cdot k)"></span></td></tr>
-      <tr><td><strong>V4</strong></td><td>CSA+HCA + Engram + mHC + Muon</td><td><strong>删注意力(压缩)+加记忆</strong> — 1M 上下文 27% FLOPs / 10% KV；Engram 外部记忆；R1 推理并入"思考模式"（1.6T/49B）</td></tr>
+      <tr><td><strong>V3.2</strong></td><td>DSA</td><td><strong>删注意力(稀疏)</strong> — 可学习 top-k，<span class="katex-inline" data-expr="O(n^2)\to O(n\cdot k)" aria-label="O(n^2)\to O(n\cdot k)" role="img"></span></td></tr>
+      <tr><td><strong>V4 / 前沿案例</strong></td><td>CSA+HCA + mHC + Muon；Engram 作待复核记忆案例</td><td><strong>删注意力(压缩)+加记忆</strong> — V4 模型卡报告 1M 上下文 27% FLOPs / 10% KV；Engram 具体 benchmark 不作为稳定事实</td></tr>
     </table>
   </div>
-  <p>每一代的创新都遵循同一个模式：<strong>找到当前架构中最浪费的部分，然后系统性地优化它</strong>。这个趋势的终点可能是完全不用"标准" Transformer——如 Mamba 等状态空间模型试图彻底干掉注意力机制。</p>
+  <p>这个表格是一种教学抽象：每一代都在针对当时的瓶颈减少冗余计算、显存或训练开销。它不能替代完整技术报告，也不意味着未来一定会抛弃标准 Transformer；Mamba 等状态空间模型提供了另一条长序列建模路线，但在不同任务、硬件和生态下仍有各自取舍。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -993,8 +1002,8 @@ class LSHMemory:
       <tr><td>10. 推理优化</td><td>KV Cache + Quant + RAG + Agent</td><td>工程落地、1M 上下文</td></tr>
     </table>
   </div>
-  <p><strong>你已经亲手实现了一个现代 LLM 的核心流水线</strong>——从分词器到训练循环，从生成策略到微调对齐，从 KV Cache 到量化推理。每个组件虽然简化，但与主流模型（GPT-4、Llama 3、DeepSeek-V4）中的对应组件<strong>在原理上是完全一致的</strong>。</p>
-  <div class="info-box key"><span class="icon">🚀</span><div><strong>最后的思考：</strong>2023-2026 年是 LLM 技术发展最迅猛的三年。DeepSeek 从 V2 到 V4 的演进展示了中国 AI 社区在全球前沿的创新能力。理解底层原理比追逐最新模型更重要——因为原理不变，而模型会变。你在这门课中学到的"动手"能力，将是你理解未来所有 AI 技术进化的基石。</div></div>
+  <p><strong>你已经亲手实现了一个现代 LLM 的核心流水线</strong>——从分词器到训练循环，从生成策略到微调对齐，从 KV Cache 到量化推理。每个组件虽然是教学简化版，但对应了主流模型和推理系统中的真实设计问题：表示、优化、采样、对齐、显存、延迟和评测。</p>
+  <div class="info-box key"><span class="icon">🚀</span><div><strong>最后的思考：</strong>2023-2026 年 LLM 技术变化很快，DeepSeek V2 到 V4 提供了一个观察工业模型如何压缩 KV、参数、训练通信和长上下文注意力的案例。理解底层原理比追逐最新模型更重要：具体模型会变，但表示、优化、采样、对齐、显存、延迟和评测这些问题会长期存在。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1005,7 +1014,7 @@ class LSHMemory:
 <!-- ================================================================ -->
 <section class="card" id="s10-20">
   <h3>10.20 多模态 LLM——让模型看见世界</h3>
-  <p>GPT-4V、Claude 3、Gemini——所有顶级 LLM 现在都是<strong>多模态</strong>的。它们不仅能理解文本，还能"看"图像、图表、PDF。</p>
+  <p>许多前沿助理模型已经把文本、图像、音频或视频能力接入同一个交互接口。课程在这里关注稳定的架构抽象：把非文本模态编码为向量序列，再投影到 LLM 可以处理的表示空间；具体产品能力、上下文长度和延迟必须按模型卡或 API 文档复核。</p>
 
   <h4>核心架构：Vision Encoder + Projection + LLM</h4>
   <ol>
@@ -1037,15 +1046,15 @@ def forward(image, text_prompt):
   <p><strong>阶段 2：</strong>解冻 LLM，使用多模态指令数据（图文问答、OCR、图表理解）微调——教会模型根据指令关注图像的特定区域。</p>
 
   <h4>音频与视频</h4>
-  <p>同样的 "Encoder + Projection + LLM" 范式也适用于音频（Whisper → LLM）和视频（帧采样 → ViT → 时序 pooling → LLM）。GPT-4o 的实时语音延迟已低于 300ms。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心洞察：</strong>LLM 不是"语言"模型，而是<strong>序列建模引擎</strong>。只要能将其他模态转化为 token 序列并投影到嵌入空间，LLM 就能"理解"它们。视觉、音频、代码、蛋白质——全是"语言"。</div></div>
+  <p>同样的 "Encoder + Projection + LLM" 范式也适用于音频（如语音编码器 → LLM）和视频（帧采样 → 视觉编码器 → 时序 pooling → LLM）。实时语音系统的端到端延迟取决于音频分块、编码器、LLM 解码、网络和播放缓冲；课程报告应记录实测环境，而不是引用一个脱离配置的固定毫秒数。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心洞察：</strong>LLM 可以被看作强大的序列建模骨干。只要其他模态能被编码为合适的 token 或向量序列，并且训练数据提供跨模态对齐信号，模型就可以学习在视觉、音频、代码等输入上执行任务；这不等于任意模态天然都等同于自然语言。</div></div>
 </section>
 
 
 <section class="card">
   <h3>概念练习巩固</h3>
 
-  <div class="exercise" data-answer="1" data-explain="KV Cache 将之前步计算的 K 和 V 矩阵缓存到显存中。Decoding 每步只需计算新 token 的 Q、K、V，注意力计算量从 O(L²) 降到 O(L)。但它需要占用额外显存存储缓存的 K/V。">
+  <div class="exercise" data-answer="1" data-explain="KV Cache 将之前步计算的 K 和 V 矩阵缓存到显存中。Decoding 每步只需计算新 token 的 Q、K、V，并与缓存做注意力，避免重复计算完整前缀。但它需要占用额外显存存储缓存的 K/V。">
     <h4>练习 1：KV Cache 的核心作用是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q1" value="0"> A. 降低模型参数量</label>
@@ -1084,7 +1093,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="RAG 解决的是 LLM 的知识局限和幻觉问题。通过从外部知识库检索相关信息注入 prompt，模型不需要把所有知识存储在参数中，可以实时获取最新信息。">
+  <div class="exercise" data-answer="1" data-explain="RAG 主要用于缓解 LLM 的知识局限、知识过期和部分幻觉问题。它从外部知识库检索相关信息注入 prompt，但检索质量、上下文压缩和答案忠实性仍需要评测。">
     <h4>练习 4：RAG（检索增强生成）解决 LLM 的什么问题？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 推理速度慢</label>
@@ -1097,7 +1106,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="DeepSeek 三代演化：V2 用 MLA 删 KV Cache → V3 用 MoE 删参数（稀疏激活） → V4 用 CSA+HCA 删注意力计算。每代都针对最浪费的部分进行系统优化。">
+  <div class="exercise" data-answer="2" data-explain="这是一种教学抽象：V2 用 MLA 压缩 KV Cache，V3 用 MoE 做稀疏激活，V4 模型卡报告 CSA+HCA 降低长上下文注意力计算与 KV cache。真实系统收益仍取决于模型、数据、硬件和服务配置。">
     <h4>练习 5：DeepSeek V2→V4 的"删减哲学"正确顺序是？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q5" value="0"> A. 删参数 → 删 KV → 删注意力</label>
@@ -1109,6 +1118,15 @@ def forward(image, text_prompt):
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

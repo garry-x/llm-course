@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先把 <code>nn.Embedding</code> 理解成“用 token id 查一行向量”，再理解为什么 Transformer 不知道顺序，所以必须加入位置编码。RoPE 的矩阵推导可以第二遍再细看。</div></div>
   <ul>
     <li><strong>前置知识：</strong>张量形状、矩阵查表、sin/cos 的基本概念。</li>
+    <li><strong>学习目标：</strong>从 One-Hot 推导到可训练嵌入，解释分布假说、位置编码必要性，并证明 RoPE 点积只依赖相对位置。</li>
+    <li><strong>课前阅读：</strong>阅读 word2vec/GloVe 的核心动机、Vaswani et al. (2017) 位置编码段落，以及 RoFormer 的 RoPE 定义。</li>
+    <li><strong>课后阅读：</strong>比较 Sinusoidal、Learned PE、RoPE、ALiBi、NTK-aware scaling 的外推能力和工程取舍。</li>
     <li><strong>本章产出：</strong>TokenEmbedding、Sinusoidal 位置编码和 RoPE。</li>
     <li><strong>完成标准：</strong>你能跟踪形状从 <code>[batch, seq]</code> 变成 <code>[batch, seq, d_model]</code>。</li>
+    <li><strong>评估证据：</strong>提交嵌入/位置编码实现、RoPE 相对位置数值验证图，以及一页关于外推失败模式的短报告；可用 <a href="../assignments/ch02_embeddings/" target="_blank">Ch02 位置编码作业测试</a> 验收核心实现。</li>
   </ul>
 </section>
 
@@ -55,29 +59,29 @@
 <!-- ================================================================ -->
 <section class="card" id="s2-1">
   <h3>2.1 从 One-Hot 到稠密嵌入——为什么需要分布式表示</h3>
-  <p>第 1 章将文本转化为 token 序列 <span class="katex-inline" data-expr="[t_1, t_2, ..., t_n]"></span>，其中每个 <span class="katex-inline" data-expr="t_i \in \{0,1,...,V-1\}"></span>。现在的问题是：如何将这个整数转化为神经网络可以处理的向量？</p>
+  <p>第 1 章将文本转化为 token 序列 <span class="katex-inline" data-expr="[t_1, t_2, ..., t_n]" aria-label="[t_1, t_2, ..., t_n]" role="img"></span>，其中每个 <span class="katex-inline" data-expr="t_i \in \{0,1,...,V-1\}" aria-label="t_i \in \{0,1,...,V-1\}" role="img"></span>。现在的问题是：如何将这个整数转化为神经网络可以处理的向量？</p>
 
   <h4>One-Hot 编码及其问题</h4>
-  <p>最直接的想法是 One-Hot 编码：将 token <span class="katex-inline" data-expr="t"></span> 映射为一个长度为 <span class="katex-inline" data-expr="V"></span> 的向量，第 <span class="katex-inline" data-expr="t"></span> 位为 1，其余为 0。例如词表大小 5 时，"apple"（token 3）编码为 <span class="katex-inline" data-expr="[0,0,0,1,0]"></span>。</p>
+  <p>最直接的想法是 One-Hot 编码：将 token <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 映射为一个长度为 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的向量，第 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 位为 1，其余为 0。例如词表大小 5 时，"apple"（token 3）编码为 <span class="katex-inline" data-expr="[0,0,0,1,0]" aria-label="[0,0,0,1,0]" role="img"></span>。</p>
   <p>但 One-Hot 有三个根本性问题：</p>
-  <p><strong>1. 维度灾难（Curse of Dimensionality）。</strong>典型词表 <span class="katex-inline" data-expr="V = 50000"></span>，每个 token 就是一个 50000 维的向量。存储一个 batch（32 x 1024）的 One-Hot 需要 <span class="katex-inline" data-expr="32 \times 1024 \times 50000 \approx 1.6\text{B}"></span> 个 float——约 6.4 GB，完全不可接受。这不仅仅是存储问题：在高维空间中，所有点之间的距离趋于相等，"远近"概念消失（这是维度灾难在距离度量上的体现）。</p>
+  <p><strong>1. 维度灾难（Curse of Dimensionality）。</strong>典型词表 <span class="katex-inline" data-expr="V = 50000" aria-label="V = 50000" role="img"></span>，每个 token 就是一个 50000 维的向量。存储一个 batch（32 x 1024）的 One-Hot 需要 <span class="katex-inline" data-expr="32 \times 1024 \times 50000 \approx 1.6\text{B}" aria-label="32 \times 1024 \times 50000 \approx 1.6\text{B}" role="img"></span> 个 float——约 6.4 GB，完全不可接受。这不仅仅是存储问题：在高维空间中，所有点之间的距离趋于相等，"远近"概念消失（这是维度灾难在距离度量上的体现）。</p>
   <p><strong>2. 语义"零亲"（Semantic Flatness）。</strong>任意两个不同的 One-Hot 向量之间余弦相似度为 0。"king"和"queen"与"king"和"apple"在 One-Hot 空间中一样"不相似"——模型无法从表示中提取任何语义关系。</p>
-  <p><strong>3. 参数效率极低。</strong>将 One-Hot 乘以一个 <span class="katex-inline" data-expr="V \times d"></span> 的权重矩阵等价于查表选择第 <span class="katex-inline" data-expr="t"></span> 行。那为什么不直接查表呢？</p>
+  <p><strong>3. 参数效率极低。</strong>将 One-Hot 乘以一个 <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span> 的权重矩阵等价于查表选择第 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 行。那为什么不直接查表呢？</p>
 
   <h4>分布式表示：核心突破</h4>
-  <p>解决方案是<strong>可学习的稠密嵌入</strong>：用一个矩阵 <span class="katex-inline" data-expr="\mathbf{E} \in \mathbb{R}^{V \times d}"></span>（其中 <span class="katex-inline" data-expr="d \ll V"></span>）将 token 映射到低维连续空间：</p>
-  <div class="katex" data-expr="\mathbf{e}_t = \mathbf{E}[t, :] \in \mathbb{R}^{d}"></div>
-  <p>这就是 <strong>Token Embedding</strong>——等价于查表取第 <span class="katex-inline" data-expr="t"></span> 行。关键区别在于：<strong>嵌入向量是可训练的</strong>。通过语言模型训练，语义相近的 token 会获得相近的向量。</p>
+  <p>解决方案是<strong>可学习的稠密嵌入</strong>：用一个矩阵 <span class="katex-inline" data-expr="\mathbf{E} \in \mathbb{R}^{V \times d}" aria-label="\mathbf{E} \in \mathbb{R}^{V \times d}" role="img"></span>（其中 <span class="katex-inline" data-expr="d \ll V" aria-label="d \ll V" role="img"></span>）将 token 映射到低维连续空间：</p>
+  <div class="katex" data-expr="\mathbf{e}_t = \mathbf{E}[t, :] \in \mathbb{R}^{d}" aria-label="\mathbf{e}_t = \mathbf{E}[t, :] \in \mathbb{R}^{d}" role="img"></div>
+  <p>这就是 <strong>Token Embedding</strong>——等价于查表取第 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 行。关键区别在于：<strong>嵌入向量是可训练的</strong>。通过语言模型训练，语义相近的 token 会获得相近的向量。</p>
 
   <h4>分布假说（Distributional Hypothesis）</h4>
   <p>这是分布式表示的理论基础——<strong>"You shall know a word by the company it keeps"</strong>（Firth, 1957）。语义相近的词出现在相似的上下文中，因此它们应该具有相似的向量表示。在嵌入空间中：</p>
   <ul>
     <li>"king" 和 "queen" 出现的位置（上下文）有大量重叠 → 向量距离近</li>
     <li>"king" 和 "apple" 的上下文基本不重叠 → 向量距离远</li>
-    <li><strong>类比推理：</strong> <span class="katex-inline" data-expr="\text{vec("king")} - \text{vec("man")} + \text{vec("woman")} \approx \text{vec("queen")}"></span>——语义关系被编码为向量空间的线性变换</li>
+    <li><strong>类比推理：</strong> <span class="katex-inline" data-expr="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" aria-label="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" role="img"></span>——语义关系被编码为向量空间的线性变换</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>参数量：</strong>嵌入矩阵 <span class="katex-inline" data-expr="V \times d"></span>。GPT-2 124M 中 <span class="katex-inline" data-expr="V=50257, d=768"></span>，嵌入层约 3860 万参数——占模型总参数的 31%！嵌入矩阵通常与 LM Head（输出投影）共享权重（weight tying），进一步复用参数。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>参数量：</strong>嵌入矩阵 <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span>。GPT-2 124M 中 <span class="katex-inline" data-expr="V=50257, d=768" aria-label="V=50257, d=768" role="img"></span>，嵌入层约 3860 万参数——占模型总参数的 31%！嵌入矩阵通常与 LM Head（输出投影）共享权重（weight tying），进一步复用参数。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -96,8 +100,8 @@
         <li>继承 <code>nn.Module</code></li>
         <li>使用 <code>nn.Embedding(vocab_size, d_model)</code> 作为内部查表</li>
         <li><code>forward(x)</code> 输入形状 <code>(batch, seq_len)</code>，输出形状 <code>(batch, seq_len, d_model)</code></li>
-        <li>输出乘以 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}"></span>（GPT-2 风格的缩放初始化）</li>
-        <li>让 <code>forward</code> 返回的输出的 L2 范数大约为 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}"></span></li>
+        <li>输出乘以 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span>（GPT-2 风格的缩放初始化）</li>
+        <li>让 <code>forward</code> 返回的输出的 L2 范数大约为 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span></li>
       </ul>
       <pre># 预期用法
 emb = TokenEmbedding(vocab_size=50000, d_model=768)
@@ -132,7 +136,7 @@ print(f"输入: {x.shape} → 输出: {out.shape}")
 print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
 # 输出形状: (2, 16, 768)
 # 参数: 38,400,000</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么乘以 √d_model？</strong>GPT-2 通过这个缩放使嵌入向量的 L2 范数近似为 <span class="katex-inline" data-expr="\sqrt{d}"></span>，避免后续 LayerNorm 被大数值主导。这不是必需操作，但已成为常见惯例。查看 <code>nn.Embedding</code> 的权重形状：<code>emb.embed.weight.shape</code> 返回 <code>[50000, 768]</code>。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么乘以 √d_model？</strong>GPT-2 通过这个缩放使嵌入向量的 L2 范数近似为 <span class="katex-inline" data-expr="\sqrt{d}" aria-label="\sqrt{d}" role="img"></span>，避免后续 LayerNorm 被大数值主导。这不是必需操作，但已成为常见惯例。查看 <code>nn.Embedding</code> 的权重形状：<code>emb.embed.weight.shape</code> 返回 <code>[50000, 768]</code>。</p>
     </div>
   </div>
 </section>
@@ -142,18 +146,18 @@ print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
 <!-- ================================================================ -->
 <section class="card" id="s2-3">
   <h3>2.3 置换等变性——为什么位置编码不可或缺</h3>
-  <p>嵌入层将每个 token 映射为一个固定的向量。这意味着 "dog bite" 和 "bite dog" 会输出完全相同的向量序列——<strong>模型无法区分"狗咬人"和"人咬狗"</strong>。</p>
+  <p>嵌入层将每个 token 映射为一个固定的向量。如果没有位置编码，"dog bite" 和 "bite dog" 使用的是同一组 token 向量，只是排列顺序不同；模型没有额外信号说明哪个 token 在前、哪个 token 在后。</p>
   <p>这源于 Self-Attention 的<strong>置换等变性（Permutation Equivariance）</strong>。更精确地说，Self-Attention 的输出满足：</p>
   <div class="math-box"><div class="label">置换等变性</div>
-    <div class="katex" data-expr="\text{Attention}(\mathbf{X}P) = \text{Attention}(\mathbf{X})P"></div>
+    <div class="katex" data-expr="\text{Attention}(\mathbf{X}P) = \text{Attention}(\mathbf{X})P" aria-label="\text{Attention}(\mathbf{X}P) = \text{Attention}(\mathbf{X})P" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="P"></span> 是一个置换矩阵。交换输入 token 的顺序，输出只会对应交换——每个位置的<strong>内容表示不变</strong>。注意力层对序列顺序完全是"无感"的。</p>
+  <p>其中 <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span> 是一个置换矩阵。交换输入 token 的顺序，输出也会以同样方式交换——这是<strong>等变</strong>而不是不变。没有位置编码时，注意力层可以根据 token 内容建模相互作用，但无法知道这些 token 的绝对位置或相对顺序。</p>
 
   <h4>为什么 Self-Attention 是置换等变的？</h4>
-  <p>从公式看，注意力分数的计算 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top"></span> 涉及所有 token 对之间的点积。如果置换输入行（token 顺序），Q 和 K 的行也相应置换，但 <span class="katex-inline" data-expr="Q_i^\top K_j"></span> 的值只取决于 token <span class="katex-inline" data-expr="i"></span> 和 <span class="katex-inline" data-expr="j"></span> 的<strong>内容</strong>，不取决于它们的<strong>位置</strong>。因此输出行也被置换——每个 token 的输出不变，只换位置。</p>
+  <p>从公式看，注意力分数的计算 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> 涉及所有 token 对之间的点积。如果置换输入行（token 顺序），Q 和 K 的行也相应置换，但 <span class="katex-inline" data-expr="Q_i^\top K_j" aria-label="Q_i^\top K_j" role="img"></span> 的值只取决于 token <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 和 <span class="katex-inline" data-expr="j" aria-label="j" role="img"></span> 的<strong>内容</strong>，不取决于它们的<strong>位置</strong>。因此输出行也被置换——每个 token 的输出不变，只换位置。</p>
   <p>这意味着没有位置编码时：</p>
   <ul>
-    <li>"我打你"和"你打我"在模型内部表示完全等价</li>
+    <li>"我打你"和"你打我"包含相同 token 集合，若缺少位置信号，模型只能看到内容重排，无法可靠利用主谓宾顺序</li>
     <li>"第 1 个 token"和"第 1000 个 token"会得到相同处理——没有位置衰减</li>
     <li>模型无法利用词序这一最基本的语法信号</li>
   </ul>
@@ -177,18 +181,21 @@ print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
     <div class="katex" data-expr="\begin{aligned}
     \mathbf{p}_{pos, 2i} &= \sin\left(\frac{pos}{10000^{2i/d}}\right) \\
     \mathbf{p}_{pos, 2i+1} &= \cos\left(\frac{pos}{10000^{2i/d}}\right)
-    \end{aligned}"></div>
+    \end{aligned}" aria-label="\begin{aligned}
+    \mathbf{p}_{pos, 2i} &= \sin\left(\frac{pos}{10000^{2i/d}}\right) \\
+    \mathbf{p}_{pos, 2i+1} &= \cos\left(\frac{pos}{10000^{2i/d}}\right)
+    \end{aligned}" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="pos"></span> 是位置索引，<span class="katex-inline" data-expr="i"></span> 是维度索引，<span class="katex-inline" data-expr="d"></span> 是嵌入维度。</p>
+  <p>其中 <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span> 是位置索引，<span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 是维度索引，<span class="katex-inline" data-expr="d" aria-label="d" role="img"></span> 是嵌入维度。</p>
 
   <h4>为什么这样设计？</h4>
-  <p><strong>多尺度频率：</strong>低维度（小 <span class="katex-inline" data-expr="i"></span>）使用高频率——sin/cos 波形变化快，相邻位置的编码差异大，适合编码<strong>局部位置信息</strong>。高维度（大 <span class="katex-inline" data-expr="i"></span>）使用低频率——变化缓慢，适合编码<strong>全局位置信息</strong>。这种设计模仿了傅里叶特征：将位置编码在不同频率的基函数上，模型可以学习选择性地关注高频或低频维度。</p>
+  <p><strong>多尺度频率：</strong>低维度（小 <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>）使用高频率——sin/cos 波形变化快，相邻位置的编码差异大，适合编码<strong>局部位置信息</strong>。高维度（大 <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>）使用低频率——变化缓慢，适合编码<strong>全局位置信息</strong>。这种设计模仿了傅里叶特征：将位置编码在不同频率的基函数上，模型可以学习选择性地关注高频或低频维度。</p>
 
-  <p><strong>相对位置的线性表示：</strong>对于任意偏移 <span class="katex-inline" data-expr="k"></span>，位置 <span class="katex-inline" data-expr="pos + k"></span> 的编码可以表示为位置 <span class="katex-inline" data-expr="pos"></span> 编码的<strong>线性变换</strong>：</p>
+  <p><strong>相对位置的线性表示：</strong>对于任意偏移 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>，位置 <span class="katex-inline" data-expr="pos + k" aria-label="pos + k" role="img"></span> 的编码可以表示为位置 <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span> 编码的<strong>线性变换</strong>：</p>
   <div class="math-box"><div class="label">相对位置的线性性质</div>
-    <div class="katex" data-expr="\mathbf{p}_{pos+k} = \mathbf{T}_k \cdot \mathbf{p}_{pos}"></div>
+    <div class="katex" data-expr="\mathbf{p}_{pos+k} = \mathbf{T}_k \cdot \mathbf{p}_{pos}" aria-label="\mathbf{p}_{pos+k} = \mathbf{T}_k \cdot \mathbf{p}_{pos}" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="\mathbf{T}_k"></span> 是一个旋转矩阵（由 sin/cos 的和角公式推导）。这意味着模型可以通过学习线性变换来捕捉相对位置关系——这是 Sinusoidal 编码最重要但也最常被忽视的性质。</p>
+  <p>其中 <span class="katex-inline" data-expr="\mathbf{T}_k" aria-label="\mathbf{T}_k" role="img"></span> 是一个旋转矩阵（由 sin/cos 的和角公式推导）。这意味着模型可以通过学习线性变换来捕捉相对位置关系——这是 Sinusoidal 编码最重要但也最常被忽视的性质。</p>
 
   <p><strong>无训练参数 + 可外推：</strong>Sinusoidal 是固定函数，不需要学习，且对任意长度（包括训练时未见过的）都有定义。</p>
 </section>
@@ -259,15 +266,15 @@ print(f"训练参数: {sum(p.numel() for p in pe.parameters())}")
 <!-- ================================================================ -->
 <section class="card" id="s2-6">
   <h3>2.6 RoPE 深度理论——旋转中编码相对位置</h3>
-  <p><strong>旋转位置编码（RoPE）</strong>由 Su et al.（2021）提出，是 Llama 2/3、Mistral、DeepSeek 等主流模型的<strong>首选方案</strong>。它的核心创新在于：<strong>不再将位置信息加到嵌入向量上，而是修改 Q 和 K 的表示，使点积自动编码相对位置</strong>。</p>
+  <p><strong>旋转位置编码（RoPE）</strong>由 Su et al.（2021）提出，是 Llama 2/3、Mistral、DeepSeek 等模型中常见的位置编码方案。它的核心创新在于：<strong>不再将位置信息加到嵌入向量上，而是修改 Q 和 K 的表示，使点积自动编码相对位置</strong>。</p>
 
   <h4>问题设定</h4>
-  <p>设位置 <span class="katex-inline" data-expr="m"></span> 的查询向量为 <span class="katex-inline" data-expr="\mathbf{q}_m \in \mathbb{R}^d"></span>，位置 <span class="katex-inline" data-expr="n"></span> 的键向量为 <span class="katex-inline" data-expr="\mathbf{k}_n \in \mathbb{R}^d"></span>。我们希望注意力分数 <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n"></span> 只依赖于 <span class="katex-inline" data-expr="m - n"></span>（相对位置），而不依赖于 <span class="katex-inline" data-expr="m"></span> 和 <span class="katex-inline" data-expr="n"></span> 的绝对值。</p>
+  <p>设位置 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 的查询向量为 <span class="katex-inline" data-expr="\mathbf{q}_m \in \mathbb{R}^d" aria-label="\mathbf{q}_m \in \mathbb{R}^d" role="img"></span>，位置 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 的键向量为 <span class="katex-inline" data-expr="\mathbf{k}_n \in \mathbb{R}^d" aria-label="\mathbf{k}_n \in \mathbb{R}^d" role="img"></span>。我们希望注意力分数 <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n" aria-label="\mathbf{q}_m^\top \mathbf{k}_n" role="img"></span> 只依赖于 <span class="katex-inline" data-expr="m - n" aria-label="m - n" role="img"></span>（相对位置），而不依赖于 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 和 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 的绝对值。</p>
 
   <h4>核心思想：旋转矩阵</h4>
-  <p>对每个位置 <span class="katex-inline" data-expr="m"></span>，用一个<strong>旋转矩阵</strong> <span class="katex-inline" data-expr="R_{\Theta, m}"></span> 作用在 <span class="katex-inline" data-expr="\mathbf{q}_m"></span> 和 <span class="katex-inline" data-expr="\mathbf{k}_n"></span> 上：</p>
-  <div class="katex" data-expr="\mathbf{q}'_m = R_{\Theta,m} \mathbf{q}_m, \quad \mathbf{k}'_n = R_{\Theta,n} \mathbf{k}_n"></div>
-  <p><span class="katex-inline" data-expr="R_{\Theta,m}"></span> 是一个<strong>块对角正交矩阵</strong>，由 <span class="katex-inline" data-expr="d/2"></span> 个 2x2 旋转子矩阵组成：</p>
+  <p>对每个位置 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span>，用一个<strong>旋转矩阵</strong> <span class="katex-inline" data-expr="R_{\Theta, m}" aria-label="R_{\Theta, m}" role="img"></span> 作用在 <span class="katex-inline" data-expr="\mathbf{q}_m" aria-label="\mathbf{q}_m" role="img"></span> 和 <span class="katex-inline" data-expr="\mathbf{k}_n" aria-label="\mathbf{k}_n" role="img"></span> 上：</p>
+  <div class="katex" data-expr="\mathbf{q}'_m = R_{\Theta,m} \mathbf{q}_m, \quad \mathbf{k}'_n = R_{\Theta,n} \mathbf{k}_n" aria-label="\mathbf{q}'_m = R_{\Theta,m} \mathbf{q}_m, \quad \mathbf{k}'_n = R_{\Theta,n} \mathbf{k}_n" role="img"></div>
+  <p><span class="katex-inline" data-expr="R_{\Theta,m}" aria-label="R_{\Theta,m}" role="img"></span> 是一个<strong>块对角正交矩阵</strong>，由 <span class="katex-inline" data-expr="d/2" aria-label="d/2" role="img"></span> 个 2x2 旋转子矩阵组成：</p>
   <div class="math-box"><div class="label">旋转矩阵结构</div>
     <div class="katex" data-expr="R_{\Theta,m} = \begin{pmatrix}
     \cos m\theta_0 &amp; -\sin m\theta_0 &amp; 0 &amp; 0 &amp; \cdots \\
@@ -275,25 +282,35 @@ print(f"训练参数: {sum(p.numel() for p in pe.parameters())}")
     0 &amp; 0 &amp; \cos m\theta_1 &amp; -\sin m\theta_1 &amp; \cdots \\
     0 &amp; 0 &amp; \sin m\theta_1 &amp; \cos m\theta_1 &amp; \cdots \\
     \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \ddots
-    \end{pmatrix} \quad \text{其中 } \theta_i = 10000^{-2i/d}"></div>
+    \end{pmatrix} \quad \text{其中 } \theta_i = 10000^{-2i/d}" aria-label="R_{\Theta,m} = \begin{pmatrix}
+    \cos m\theta_0 &amp; -\sin m\theta_0 &amp; 0 &amp; 0 &amp; \cdots \\
+    \sin m\theta_0 &amp; \cos m\theta_0 &amp; 0 &amp; 0 &amp; \cdots \\
+    0 &amp; 0 &amp; \cos m\theta_1 &amp; -\sin m\theta_1 &amp; \cdots \\
+    0 &amp; 0 &amp; \sin m\theta_1 &amp; \cos m\theta_1 &amp; \cdots \\
+    \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \ddots
+    \end{pmatrix} \quad \text{其中 } \theta_i = 10000^{-2i/d}" role="img"></div>
   </div>
 
   <h4>为什么旋转矩阵能让点积只依赖于相对位置？</h4>
-  <p>关键在于 <span class="katex-inline" data-expr="R_{\Theta,m}"></span> 的性质：</p>
+  <p>关键在于 <span class="katex-inline" data-expr="R_{\Theta,m}" aria-label="R_{\Theta,m}" role="img"></span> 的性质：</p>
   <div class="math-box"><div class="label">相对位置依赖性的推导</div>
     <div class="katex" data-expr="\begin{aligned}
     (\mathbf{q}'_m)^\top \mathbf{k}'_n &= (R_{\Theta,m}\mathbf{q}_m)^\top (R_{\Theta,n}\mathbf{k}_n) \\
     &= \mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n \\
-    &= \mathbf{q}_m^\top R_{\Theta, m-n} \mathbf{k}_n
-    \end{aligned}"></div>
+    &= \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n
+    \end{aligned}" aria-label="\begin{aligned}
+    (\mathbf{q}'_m)^\top \mathbf{k}'_n &= (R_{\Theta,m}\mathbf{q}_m)^\top (R_{\Theta,n}\mathbf{k}_n) \\
+    &= \mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n \\
+    &= \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n
+    \end{aligned}" role="img"></div>
   </div>
-  <p>推导中的关键步骤：<span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}"></span>。这是因为旋转矩阵的群性质——先旋转 <span class="katex-inline" data-expr="-m"></span>（转置 = 逆旋转）再旋转 <span class="katex-inline" data-expr="n"></span> 等价于直接旋转 <span class="katex-inline" data-expr="n-m"></span>。<strong>注意力分数只依赖于 <span class="katex-inline" data-expr="m-n"></span></strong>，绝对位置被完全消去。</p>
+  <p>推导中的关键步骤：<span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span>。这是因为旋转矩阵的群性质——先旋转 <span class="katex-inline" data-expr="-m" aria-label="-m" role="img"></span>（转置 = 逆旋转）再旋转 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 等价于直接旋转 <span class="katex-inline" data-expr="n-m" aria-label="n-m" role="img"></span>。<strong>注意力分数只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></strong>，绝对位置被完全消去。</p>
 
   <h4>RoPE 的优良性质</h4>
   <ul>
-    <li><strong>相对位置：</strong>推导证明点积只依赖于 <span class="katex-inline" data-expr="m-n"></span></li>
-    <li><strong>范数保持：</strong><span class="katex-inline" data-expr="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|"></span>，因为旋转矩阵是正交的（<span class="katex-inline" data-expr="R^\top R = I"></span>）</li>
-    <li><strong>位置衰减：</strong>当 <span class="katex-inline" data-expr="|m-n|"></span> 增大时，旋转角度增大，向量的对齐程度下降，点积上限变小——这是<strong>自然的远程衰减（distant decay）</strong></li>
+    <li><strong>相对位置：</strong>推导证明点积只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></li>
+    <li><strong>范数保持：</strong><span class="katex-inline" data-expr="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" aria-label="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" role="img"></span>，因为旋转矩阵是正交的（<span class="katex-inline" data-expr="R^\top R = I" aria-label="R^\top R = I" role="img"></span>）</li>
+    <li><strong>相对相位：</strong>当 <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> 增大时，不同频率维度上的相位差会改变注意力打分模式。RoPE 给模型提供距离相关的归纳偏置，但不保证任意向量对的点积分数随距离单调下降，也不等于无限长上下文自动外推。</li>
     <li><strong>不影响 V：</strong>RoPE 只修改 Q 和 K，不影响 V。因为位置信息只影响"谁关注谁"，不影响"关注到什么内容"</li>
   </ul>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>与 Sinusoidal 的本质区别：</strong>Sinusoidal 在<strong>嵌入层</strong>加位置信息（破坏置换等变性），RoPE 在<strong>注意力层</strong>的 Q/K 上编码位置（利用置换等变性中的点积）。RoPE 的数学基础是旋转矩阵的群性质，不是简单的"加一个向量"。</div></div>
@@ -312,9 +329,9 @@ print(f"训练参数: {sum(p.numel() for p in pe.parameters())}")
       <p><strong>要求：</strong></p>
       <ul>
         <li>输入 Q, K 形状 <code>(batch, n_heads, seq_len, d_head)</code></li>
-        <li>预计算 <code>cos</code> 和 <code>sin</code> 表，形状 <code>(1, max_len, 1, d_head//2)</code></li>
+        <li>预计算 <code>cos</code> 和 <code>sin</code> 表，形状可广播到 <code>(batch, n_heads, seq_len, d_head//2)</code></li>
         <li>实现 <code>_rotate_half(x)</code>：将 <code>x[..., d_head/2:]</code> 取反后与 <code>x[..., :d_head/2]</code> 交换</li>
-        <li>应用公式：<code>q_out = q * cos + rotate_half(q) * sin</code></li>
+        <li>应用公式：<code>[x1*cos - x2*sin, x1*sin + x2*cos]</code></li>
         <li>返回 <code>(q_out, k_out)</code>，形状不变</li>
       </ul>
       <pre># 预期用法
@@ -342,22 +359,30 @@ class RoPE(nn.Module):
         pos = torch.arange(max_len).float().unsqueeze(1)  # (max_len, 1)
         angles = pos * theta.unsqueeze(0)  # (max_len, d_model/2)
 
-        self.register_buffer("cos", cos := torch.cos(angles).unsqueeze(0).unsqueeze(2))
-        self.register_buffer("sin", sin := torch.sin(angles).unsqueeze(0).unsqueeze(2))
+        self.register_buffer("cos", torch.cos(angles).unsqueeze(0).unsqueeze(0))
+        self.register_buffer("sin", torch.sin(angles).unsqueeze(0).unsqueeze(0))
 
     def _rotate_half(self, x):
         """将 x 的后半部分取反并与前半部分交换位置。"""
         x1, x2 = x.chunk(2, dim=-1)
         return torch.cat((-x2, x1), dim=-1)
 
+    def _apply_rotary(self, x, cos, sin):
+        x1, x2 = x.chunk(2, dim=-1)
+        return torch.cat((x1 * cos - x2 * sin, x1 * sin + x2 * cos), dim=-1)
+
     def forward(self, q, k, pos_ids=None):
         batch, n_heads, seq_len, d_head = q.shape
-        # 取对应长度的 cos/sin
-        cos = self.cos[:, :seq_len, :, :d_head//2]
-        sin = self.sin[:, :seq_len, :, :d_head//2]
+        # 取对应位置的 cos/sin；pos_ids 用于 packed sequence 或增量解码
+        if pos_ids is None:
+            cos = self.cos[:, :, :seq_len, :d_head//2]
+            sin = self.sin[:, :, :seq_len, :d_head//2]
+        else:
+            cos = self.cos[:, :, pos_ids, :d_head//2]
+            sin = self.sin[:, :, pos_ids, :d_head//2]
         # 应用旋转
-        q_out = q * cos + self._rotate_half(q) * sin
-        k_out = k * cos + self._rotate_half(k) * sin
+        q_out = self._apply_rotary(q, cos, sin)
+        k_out = self._apply_rotary(k, cos, sin)
         return q_out, k_out
 
 # 验证范数保持
@@ -366,7 +391,7 @@ q = torch.randn(2, 8, 10, 64)
 q_rot, _ = rope(q, q)
 assert torch.allclose(q.norm(dim=-1), q_rot.norm(dim=-1), atol=1e-5)
 print("范数保持 ✅")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>_rotate_half 的数学等价性：</strong>将 <span class="katex-inline" data-expr="d"></span> 维向量视为 <span class="katex-inline" data-expr="d/2"></span> 个复数 <span class="katex-inline" data-expr="(x_1 + ix_2, x_3 + ix_4, ...)"></span>。乘以 <span class="katex-inline" data-expr="e^{i\theta}"></span> 等价于 <span class="katex-inline" data-expr="x_1' = x_1\cos\theta - x_2\sin\theta, x_2' = x_1\sin\theta + x_2\cos\theta"></span>。代码中的 <code>q * cos + rotate_half(q) * sin</code> 正是这个操作的实数实现。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>_rotate_half 的数学等价性：</strong>将 <span class="katex-inline" data-expr="d" aria-label="d" role="img"></span> 维向量视为 <span class="katex-inline" data-expr="d/2" aria-label="d/2" role="img"></span> 个复数 <span class="katex-inline" data-expr="(x_1 + ix_2, x_3 + ix_4, ...)" aria-label="(x_1 + ix_2, x_3 + ix_4, ...)" role="img"></span>。乘以 <span class="katex-inline" data-expr="e^{i\theta}" aria-label="e^{i\theta}" role="img"></span> 等价于 <span class="katex-inline" data-expr="x_1' = x_1\cos\theta - x_2\sin\theta, x_2' = x_1\sin\theta + x_2\cos\theta" aria-label="x_1' = x_1\cos\theta - x_2\sin\theta, x_2' = x_1\sin\theta + x_2\cos\theta" role="img"></span>。代码中的 <code>_apply_rotary</code> 正是这个操作的实数实现。</p>
     </div>
   </div>
 </section>
@@ -376,23 +401,23 @@ print("范数保持 ✅")</div>
 <!-- ================================================================ -->
 <section class="card" id="s2-8">
   <h3>2.8 深入验证：RoPE 的相对位置性质</h3>
-  <p>在上一节实现了 RoPE 之后，让我们通过数值实验来<strong>验证</strong>它的核心声称：<span class="katex-inline" data-expr="\mathbf{q}'_m^\top \mathbf{k}'_n"></span> 只依赖于 <span class="katex-inline" data-expr="m-n"></span>。</p>
+  <p>在上一节实现了 RoPE 之后，让我们通过数值实验来<strong>验证</strong>它的核心声称：<span class="katex-inline" data-expr="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" aria-label="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" role="img"></span> 只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>。</p>
 
   <h4>理论推导回顾</h4>
   <p>从旋转矩阵的性质出发：</p>
   <div class="math-box"><div class="label">核心等式</div>
-    <div class="katex" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}"></div>
+    <div class="katex" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></div>
   </div>
   <p>因为每个 2x2 子矩阵满足：</p>
-  <div class="katex" data-expr="\begin{pmatrix} \cos m\theta & \sin m\theta \\ -\sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} \cos n\theta & -\sin n\theta \\ \sin n\theta & \cos n\theta \end{pmatrix} = \begin{pmatrix} \cos (n-m)\theta & -\sin (n-m)\theta \\ \sin (n-m)\theta & \cos (n-m)\theta \end{pmatrix}"></div>
-  <p>因此 <span class="katex-inline" data-expr="\mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n = \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n"></span>——值只取决于 <span class="katex-inline" data-expr="n-m"></span> 而不是 <span class="katex-inline" data-expr="m"></span> 或 <span class="katex-inline" data-expr="n"></span> 的绝对值。</p>
+  <div class="katex" data-expr="\begin{pmatrix} \cos m\theta & \sin m\theta \\ -\sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} \cos n\theta & -\sin n\theta \\ \sin n\theta & \cos n\theta \end{pmatrix} = \begin{pmatrix} \cos (n-m)\theta & -\sin (n-m)\theta \\ \sin (n-m)\theta & \cos (n-m)\theta \end{pmatrix}" aria-label="\begin{pmatrix} \cos m\theta & \sin m\theta \\ -\sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} \cos n\theta & -\sin n\theta \\ \sin n\theta & \cos n\theta \end{pmatrix} = \begin{pmatrix} \cos (n-m)\theta & -\sin (n-m)\theta \\ \sin (n-m)\theta & \cos (n-m)\theta \end{pmatrix}" role="img"></div>
+  <p>因此 <span class="katex-inline" data-expr="\mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n = \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n" aria-label="\mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n = \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n" role="img"></span>——值只取决于 <span class="katex-inline" data-expr="n-m" aria-label="n-m" role="img"></span> 而不是 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 或 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 的绝对值。</p>
 
   <h4>实验设计</h4>
-  <p>我们将取固定的 <span class="katex-inline" data-expr="\mathbf{q}"></span> 和 <span class="katex-inline" data-expr="\mathbf{k}"></span>（不含位置信息，纯随机），然后对它们施加不同位置的 RoPE 旋转。如果性质成立，那么：</p>
+  <p>我们将取固定的 <span class="katex-inline" data-expr="\mathbf{q}" aria-label="\mathbf{q}" role="img"></span> 和 <span class="katex-inline" data-expr="\mathbf{k}" aria-label="\mathbf{k}" role="img"></span>（不含位置信息，纯随机），然后对它们施加不同位置的 RoPE 旋转。如果性质成立，那么：</p>
   <ul>
-    <li>当 <span class="katex-inline" data-expr="m-n"></span> 固定时，无论 <span class="katex-inline" data-expr="m"></span> 和 <span class="katex-inline" data-expr="n"></span> 取何值，点积结果应相同</li>
-    <li>例如，(m=5, n=3) 和 (m=10, n=8) 的点积应相同（因为 <span class="katex-inline" data-expr="m-n=2"></span>）</li>
-    <li>当 <span class="katex-inline" data-expr="|m-n|"></span> 增大时，点积的上限应降低（位置衰减）</li>
+    <li>当 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span> 固定时，无论 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 和 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 取何值，点积结果应相同</li>
+    <li>例如，(m=5, n=3) 和 (m=10, n=8) 的点积应相同（因为 <span class="katex-inline" data-expr="m-n=2" aria-label="m-n=2" role="img"></span>）</li>
+    <li>不同 offset 的得分由 <span class="katex-inline" data-expr="q^\top R_{\Theta,n-m} k" aria-label="q^\top R_{\Theta,n-m} k" role="img"></span> 决定；它会随相对相位变化，但不应被要求关于 <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> 单调衰减</li>
   </ul>
 </section>
 
@@ -403,7 +428,7 @@ print("范数保持 ✅")</div>
   <h3>2.9 编程练习 4：验证 RoPE 的相对位置性质</h3>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 4：验证 <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n"></span> 只依赖于 <span class="katex-inline" data-expr="m-n"></span></h4>
+    <h4>🖥️ 练习 4：验证 <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n" aria-label="\mathbf{q}_m^\top \mathbf{k}_n" role="img"></span> 只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></h4>
     <div class="task">
       <p><strong>任务：</strong>编写验证代码，证明 <code>RoPE</code> 旋转后的 <code>q_m</code> 和 <code>k_n</code> 的点积只与 <code>m-n</code> 有关。</p>
       <p><strong>要求：</strong></p>
@@ -412,20 +437,20 @@ print("范数保持 ✅")</div>
         <li>将它们复制到不同的位置 m 和 n，施加 RoPE 旋转</li>
         <li>计算所有 (m, n) 配对的中点积得分，存储为 <code>(seq_len, seq_len)</code> 矩阵</li>
         <li>验证：对角线偏移相同的元素值相等——即 <code>S[m][n]</code> 只取决于 <code>m-n</code></li>
-        <li>验证：对角线上值最大，远离对角线时值衰减</li>
-        <li><strong>不能使用 for 循环比较——用张量操作验证</strong></li>
+        <li>验证：每条固定 offset 的对角线内部数值相同；不要假设主对角线最大或正负 offset 对称</li>
+        <li><strong>核心判断使用张量切片完成；可以额外循环打印 offset 便于观察</strong></li>
       </ul>
       <pre># 预期结果: 打印出 8x8 的注意力分数矩阵
 # 应观察到: 所有主对角线 (m=n) 值相等, 所有次对角线 (m=n+1) 值相等, ...
 # 形成一个 Toeplitz 矩阵（Toeplitz matrix = 每条对角线上的元素都相同）
 # ┌─────────────────────────────────────────────┐
-# │ 1.00  0.98  0.92  0.84  ...                │  ← m-n=0: 最大
-# │ 0.98  1.00  0.98  0.92  ...                │  ← m-n=1: 稍小
-# │ 0.92  0.98  1.00  0.98  ...                │  ← m-n=2: 更小
-# │ 0.84  0.92  0.98  1.00  ...                │
+# │ a     b     c     d     ...                │
+# │ e     a     b     c     ...                │
+# │ f     e     a     b     ...                │
+# │ g     f     e     a     ...                │
 # │ ...                                         │
 # └─────────────────────────────────────────────┘
-# 每一条对角线上的值应完全相等。</pre>
+# 每一条固定 offset 的对角线内部值应相等；不同 offset 的大小不必单调。</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
@@ -457,37 +482,21 @@ def verify_rope_relative_property(d_model=64, seq_len=8):
     for row in scores:
         print("  " + "  ".join(f"{v:.4f}" for v in row))
 
-    # 验证 Toeplitz 性质: 每条对角线上的值应相等
-    print("\n验证对角线条目一致性:")
-    all_equal = True
-    for offset in range(1, seq_len):
-        diag = scores.diagonal(offset=offset)
-        diag_neg = scores.diagonal(offset=-offset)
-        # 检查同一条对角线上的值是否都相等
-        if not torch.allclose(diag, diag[0].expand_as(diag)):
-            print(f"  ✗ 对角 offset={offset}: 值不一致!")
-            all_equal = False
-        else:
-            print(f"  ✓ 对角 offset={offset}: 值={diag[0].item():.4f}")
-        # 检查正负对角是否对称
-        if not torch.allclose(diag, diag_neg):
-            print(f"  ✗ 对角 offset={offset} 正负不对称!")
-            all_equal = False
-
-    if all_equal:
+    # 验证 Toeplitz 性质: 向右下平移一格后，重叠区域应完全相等。
+    toeplitz_ok = torch.allclose(scores[1:, 1:], scores[:-1, :-1], atol=1e-5)
+    if toeplitz_ok:
         print("\n✅ 相对位置性质成立: Q_m^T K_n 只依赖于 (m-n)!")
         print("分数矩阵是一个 Toeplitz 矩阵。")
+    else:
+        print("\n❌ Toeplitz 验证失败: 同一 offset 的对角线内部数值不一致。")
 
-    # 验证位置衰减: |m-n| 越大, 分数越小
-    print("\n衰减趋势:")
-    for offset in range(seq_len):
-        val = scores.diagonal(offset=offset)[0].item()
-        print(f"  |m-n| = {offset}: 分数 = {val:.4f}")
+    # 不检查距离单调衰减：对固定 q/k，offset 得分由相对旋转相位决定。
+    print("\n不同 offset 的得分可以非单调；这里验证的是 Toeplitz 性质。")
 
     return scores
 
 scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>实验结论：</strong>旋转后的 Q 和 K 点积构成一个<strong>Toeplitz 矩阵</strong>——每条对角线上的值都相等。这意味着注意力分数只取决于 token 之间的<strong>相对距离</strong>。当 <span class="katex-inline" data-expr="|m-n|"></span> 增大时分数逐渐衰减，这正是 RoPE 的"位置衰减"效应——远离的 token 天然更难对齐。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>实验结论：</strong>旋转后的 Q 和 K 点积构成一个<strong>Toeplitz 矩阵</strong>——每条固定 offset 的对角线内部值都相等。这意味着注意力分数只取决于 token 之间的<strong>相对位移</strong>。不同距离会对应不同相位组合，但对任意固定 q/k，分数不必随 <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> 单调下降；长上下文表现仍取决于训练分布、频率设计和缩放策略。</p>
     </div>
   </div>
 </section>
@@ -527,14 +536,14 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
   <h4>Zero-Shot vs Few-Shot Prompting</h4>
   <p><strong>Zero-Shot：</strong>仅给出指令，不给示例。"将以下句子翻译成英文：今天天气很好。"——模型根据指令和自身知识完成。</p>
   <p><strong>Few-Shot：</strong>在指令前给出 2-5 个示例。"输入→输出"对帮助模型理解任务格式和期望风格。GPT-3 论文的核心发现就是 few-shot 能力——模型不需要微调就能通过示例适应新任务。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么 Few-Shot 有效？</strong>从注意力机制的角度看，few-shot 示例在 KV Cache 中形成了"任务模板"——后续 token 的注意力会自然地参考这些示例的模式。这等价于一种<strong>上下文内的隐式微调</strong>。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么 Few-Shot 有效？</strong>从注意力机制的角度看，few-shot 示例会作为上下文中的条件信息进入 KV Cache，后续 token 可以参考这些示例的格式、标签空间和推理模式。这是一种<strong>上下文学习</strong>现象，不会更新模型参数；不要把它等同于真正的微调。</div></div>
 
   <h4>Chain-of-Thought (CoT) Prompting</h4>
-  <p>在 prompt 中加入"让我们一步步思考"（Let's think step by step），引导模型生成<strong>中间推理步骤</strong>而非直接给出答案。这是最简单却最有效的 prompt 技巧之一。</p>
+  <p>在 prompt 中加入"让我们一步步思考"（Let's think step by step），引导模型生成<strong>中间推理步骤</strong>而非直接给出答案。这是常见且低成本的 prompt 技巧之一，在数学、逻辑和多步任务中经常有帮助；实际效果仍取决于模型、任务和评测方式。</p>
   <p>CoT 的数学直觉：标准的 next-token prediction 会直接跳到答案 token——但复杂问题需要多步推理。CoT 将推理过程<strong>显式化</strong>为 token 序列，使得模型在生成中间步骤时能看到自己的推理历史，逐步修正和深化。</p>
 
   <h4>System Prompt 与角色设定</h4>
-  <p>ChatGPT 和 Claude API 将 system prompt 作为独立的消息类型，<strong>优先级高于用户消息</strong>。它设定了模型的"角色"和行为边界。从注意力实现的角度：system prompt 的 token 占据了序列的最开头位置，因为因果注意力中所有后续 token 都可以"看到"前面的 token，system prompt 的影响<strong>贯穿整个对话</strong>。</p>
+  <p>许多 Chat API 会把 system/developer 指令作为独立消息或特殊模板片段，并在产品策略上赋予它高于普通用户消息的约束作用。实现上，这些指令通常被序列化到上下文较靠前的位置或专门的 chat template 中；因果注意力允许后续 token 读取前文，因此它们会持续影响生成。但具体优先级、模板和冲突处理由服务商协议与模型训练共同决定，不能只用注意力可见性来解释。</p>
 
   <h4>提示工程的核心原则</h4>
   <div class="info-box tip"><span class="icon">💡</span><div>
@@ -563,7 +572,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="Self-Attention 是置换等变的——交换输入 token 的顺序，输出也对应交换（每个位置的表示不变）。没有位置编码时，"我打你"和"你打我"会得到相同的表示序列，只是排列不同。">
+  <div class="exercise" data-answer="2" data-explain="Self-Attention 是置换等变的——交换输入 token 的顺序，输出也对应交换（每个位置的表示不变）。没有位置编码时，“我打你”和“你打我”会得到相同的表示序列，只是排列不同。">
     <h4>练习 2：没有位置编码时，为什么 Transformer 无法区分"我打你"和"你打我"？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q2" value="0"> A. 因为嵌入层输出与 token 顺序无关</label>
@@ -589,7 +598,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="因为 R_{Θ,m} 是正交矩阵，R^T R = I。旋转不改变向量的 L2 范数，只改变方向。这保证了 RoPE 只编码位置信息而不改变向量本身的语义强度。">
+  <div class="exercise" data-answer="2" data-explain="因为 R_{Θ,m} 是正交矩阵，R^T R = I。旋转不改变向量的 L2 范数，只改变方向。它保留向量长度，但语义解释仍取决于后续注意力、训练数据和模型参数。">
     <h4>练习 4：RoPE 旋转后，为什么向量 q 的 L2 范数不变？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 因为 q 是单位向量</label>
@@ -603,17 +612,26 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
   </div>
 
   <div class="exercise" data-answer="0" data-explain="从推导看：q'_m^T k'_n = (R_m q)^T (R_n k) = q^T R_m^T R_n k = q^T R_{n-m} k。其中 R_m^T R_n = R_{n-m} 利用了旋转矩阵的群性质（先逆旋转 m，再正旋转 n，等于旋转 n-m）。结果只与 n-m 有关。">
-    <h4>练习 5：从数学上证明 RoPE 的点积只依赖于相对位置 <span class="katex-inline" data-expr="m-n"></span>，关键步骤是什么？</h4>
+    <h4>练习 5：从数学上证明 RoPE 的点积只依赖于相对位置 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>，关键步骤是什么？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q5" value="0"> A. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}"></span></label>
-      <label><input type="radio" name="q5" value="1"> B. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}"></span></label>
-      <label><input type="radio" name="q5" value="2"> C. <span class="katex-inline" data-expr="R_{\Theta,m} R_{\Theta,n}^\top = I"></span></label>
-      <label><input type="radio" name="q5" value="3"> D. <span class="katex-inline" data-expr="\cos(m-n) = \cos m \cos n + \sin m \sin n"></span></label>
+      <label><input type="radio" name="q5" value="0"> A. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span></label>
+      <label><input type="radio" name="q5" value="1"> B. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" role="img"></span></label>
+      <label><input type="radio" name="q5" value="2"> C. <span class="katex-inline" data-expr="R_{\Theta,m} R_{\Theta,n}^\top = I" aria-label="R_{\Theta,m} R_{\Theta,n}^\top = I" role="img"></span></label>
+      <label><input type="radio" name="q5" value="3"> D. <span class="katex-inline" data-expr="\cos(m-n) = \cos m \cos n + \sin m \sin n" aria-label="\cos(m-n) = \cos m \cos n + \sin m \sin n" role="img"></span></label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

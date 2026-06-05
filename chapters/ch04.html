@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>多头注意力只是把一个大向量拆成多个小头并行做第 3 章的注意力。GQA 和 MLA 是推理时为了少存 KV Cache 的工程优化，第一次学习时先理解“为什么要省 KV”，实现细节可以放到第二遍。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 3 章 Q/K/V、reshape、transpose。</li>
+    <li><strong>学习目标：</strong>解释多头注意力为什么保留参数量但提高表示能力，并定量比较 MHA、MQA、GQA、MLA 的 KV Cache 和质量取舍。</li>
+    <li><strong>课前阅读：</strong>阅读 Transformer 多头注意力段落、Shazeer (2019) MQA 和 Ainslie et al. (2023) GQA 摘要。</li>
+    <li><strong>课后阅读：</strong>阅读 DeepSeek-V2 MLA 技术段落，写出 latent cache、解压投影和 RoPE 解耦的关系。</li>
     <li><strong>本章产出：</strong>MultiHeadAttention、GQA 和简化版 MLA。</li>
     <li><strong>完成标准：</strong>你能画出 Q 头很多、K/V 头较少时缓存如何变小。</li>
+    <li><strong>评估证据：</strong>提交 MHA/GQA/MLA 实现、参数量和 KV Cache 表格，以及一次不同 head 配置的 ablation 说明；可用 <a href="../assignments/ch04_multihead/" target="_blank">Ch04 多头注意力作业测试</a> 验收核心实现。</li>
   </ul>
 </section>
 
@@ -55,7 +59,7 @@
 <!-- ================================================================ -->
 <section class="card" id="s4-1">
   <h3>4.1 从单头到多头——为什么一个头不够？</h3>
-  <p>第3章实现了单头自注意力：一个 <span class="katex-inline" data-expr="d_k"></span> 维的 Q/K/V 空间负责所有匹配模式。但语言中的关系是<strong>多元的</strong>——一个 token 需要从多个"视角"同时匹配其他 token。</p>
+  <p>第3章实现了单头自注意力：一个 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 维的 Q/K/V 空间负责所有匹配模式。但语言中的关系是<strong>多元的</strong>——一个 token 需要从多个"视角"同时匹配其他 token。</p>
 
   <h4>具体场景：为什么单头不够？</h4>
   <p>考虑句子 <em>"The cat sat on the mat because it was comfortable."</em></p>
@@ -65,23 +69,23 @@
     <li><strong>语义问题：</strong>"it" 应该指代"最合理"的东西——猫坐在垫子上，所以可能是"the cat"或"the mat"——这需要另一种匹配规则</li>
     <li><strong>位置问题：</strong>"it" 前面的名词是"mat"，再前面是"cat"——模型需要区分位置 5 和位置 1 的 token</li>
   </ul>
-  <p>单头注意力只能用一个 <span class="katex-inline" data-expr="d_k"></span> 维空间来编码所有这些复杂的匹配规则。<strong>这是不够的</strong>——就像让一个法官同时审理民事、刑事和行政案件，而他只有一种判断标准。</p>
+  <p>单头注意力只能用一个 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 维空间来编码所有这些复杂的匹配规则。<strong>这是不够的</strong>——就像让一个法官同时审理民事、刑事和行政案件，而他只有一种判断标准。</p>
 
   <h4>多头注意力的解决方案：并行子空间</h4>
-  <p>多头注意力（MHA）的核心思想是：将输入 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 维空间分成 <span class="katex-inline" data-expr="n_h"></span> 个 <span class="katex-inline" data-expr="d_k"></span> 维子空间，每个头在各自的子空间中<strong>独立</strong>计算注意力，最后将所有头的结果拼接并通过输出投影 <span class="katex-inline" data-expr="W_O"></span> 融合：</p>
+  <p>多头注意力（MHA）的核心思想是：将输入 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span> 维空间分成 <span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span> 个 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 维子空间，每个头在各自的子空间中<strong>独立</strong>计算注意力，最后将所有头的结果拼接并通过输出投影 <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span> 融合：</p>
   <div class="math-box"><div class="label">多头注意力公式</div>
-    <div class="katex" data-expr="\text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, \dots, \text{head}_{n_h}) \mathbf{W}_O"></div>
-    <div class="katex" data-expr="\text{head}_i = \text{Attention}(\mathbf{X}\mathbf{W}_{Q_i}, \mathbf{X}\mathbf{W}_{K_i}, \mathbf{X}\mathbf{W}_{V_i})"></div>
+    <div class="katex" data-expr="\text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, \dots, \text{head}_{n_h}) \mathbf{W}_O" aria-label="\text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, \dots, \text{head}_{n_h}) \mathbf{W}_O" role="img"></div>
+    <div class="katex" data-expr="\text{head}_i = \text{Attention}(\mathbf{X}\mathbf{W}_{Q_i}, \mathbf{X}\mathbf{W}_{K_i}, \mathbf{X}\mathbf{W}_{V_i})" aria-label="\text{head}_i = \text{Attention}(\mathbf{X}\mathbf{W}_{Q_i}, \mathbf{X}\mathbf{W}_{K_i}, \mathbf{X}\mathbf{W}_{V_i})" role="img"></div>
   </div>
 
   <h4>关键洞察：参数等价性</h4>
-  <p>多头注意力的总参数量与<strong>单头注意力完全相等</strong>。因为 <span class="katex-inline" data-expr="n_h \times d_k = d_{\text{model}}"></span>：</p>
+  <p>多头注意力的总参数量与<strong>单头注意力完全相等</strong>。因为 <span class="katex-inline" data-expr="n_h \times d_k = d_{\text{model}}" aria-label="n_h \times d_k = d_{\text{model}}" role="img"></span>：</p>
   <div class="math-box"><div class="label">参数等价性</div>
-    <div class="katex" data-expr="n_h \times (d_{\text{model}} \times d_k) \times 3 = 3 \cdot d_{\text{model}}^2 \; \; (\text{因为 } d_k = d_{\text{model}} / n_h)"></div>
+    <div class="katex" data-expr="n_h \times (d_{\text{model}} \times d_k) \times 3 = 3 \cdot d_{\text{model}}^2 \; \; (\text{因为 } d_k = d_{\text{model}} / n_h)" aria-label="n_h \times (d_{\text{model}} \times d_k) \times 3 = 3 \cdot d_{\text{model}}^2 \; \; (\text{因为 } d_k = d_{\text{model}} / n_h)" role="img"></div>
   </div>
-  <p>换句话说，多头注意力不是在"变大"，而是将已有的参数量<strong>重新组织</strong>成了多个更小的子空间。每个子空间学习不同的关注模式，最后的 <span class="katex-inline" data-expr="W_O"></span> 负责将这些分散的信息整合在一起。</p>
+  <p>换句话说，多头注意力不是在"变大"，而是将已有的参数量<strong>重新组织</strong>成了多个更小的子空间。每个子空间学习不同的关注模式，最后的 <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span> 负责将这些分散的信息整合在一起。</p>
   <p>这是"<strong>Divide and Conquer</strong>"在深度学习中的经典体现——将一个大问题分解为多个更小、更专业的子问题并行解决。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么参数相同但效果好？</strong>因为每个头的 <span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_h"></span> 比 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 小得多——在一个更低维的空间中搜索注意力模式更容易收敛。就像在 64 维空间中找最近邻比在 768 维空间中更容易（维度灾难的反面）。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么参数相同但效果好？</strong>因为每个头的 <span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_h" aria-label="d_k = d_{\text{model}} / n_h" role="img"></span> 比 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span> 小得多——在一个更低维的空间中搜索注意力模式更容易收敛。就像在 64 维空间中找最近邻比在 768 维空间中更容易（维度灾难的反面）。</div></div>
 </section>
 <section class="card">
 <div class="svg-diagram" style="max-width:800px">
@@ -106,7 +110,7 @@
         <li>使用<strong>单个</strong> <code>nn.Linear(d_model, 3 * d_model)</code> 实现 QKV 合并投影，然后通过 <code>reshape</code> 和 <code>unbind</code> 分离各头的 Q、K、V</li>
         <li>将头维度通过 <code>transpose</code> 提到第 1 维（batch 之后），形状 <code>(b, h, s, d_k)</code></li>
         <li>实现缩放点积注意力（含可选的 causal mask 支持）</li>
-        <li>用 <code>W_o</code> 输出投影将多头拼接后的结果映射回 <span class="katex-inline" data-expr="d_{\text{model}}"></span></li>
+        <li>用 <code>W_o</code> 输出投影将多头拼接后的结果映射回 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span></li>
         <li>返回 <code>(output, attn_weights)</code>，其中 <code>attn_weights</code> 形状为 <code>(b, n_heads, seq_len, seq_len)</code></li>
       </ul>
       <pre># 预期用法
@@ -180,13 +184,13 @@ class MultiHeadAttention(nn.Module):
   <h3>4.3 深入理解：为什么多头能学到不同的表示子空间？</h3>
 
   <h4>初始化驱动的差异化</h4>
-  <p>实践中，多头之所以能学到不同模式，关键在于<strong>随机初始化</strong>。每个头开始的 Q/K/V 投影矩阵 <span class="katex-inline" data-expr="W_{Q_i}, W_{K_i}, W_{V_i}"></span> 是不同的随机值。在训练过程中，不同的初始化使得各头沿着不同的梯度方向优化——就像从不同的起点出发爬不同的山。</p>
+  <p>实践中，多头之所以能学到不同模式，关键在于<strong>随机初始化</strong>。每个头开始的 Q/K/V 投影矩阵 <span class="katex-inline" data-expr="W_{Q_i}, W_{K_i}, W_{V_i}" aria-label="W_{Q_i}, W_{K_i}, W_{V_i}" role="img"></span> 是不同的随机值。在训练过程中，不同的初始化使得各头沿着不同的梯度方向优化——就像从不同的起点出发爬不同的山。</p>
 
   <h4>数学视角：各头的梯度差异</h4>
-  <p>假设两个头的初始投影矩阵分别为 <span class="katex-inline" data-expr="W^{(1)}"></span> 和 <span class="katex-inline" data-expr="W^{(2)}"></span>，且 <span class="katex-inline" data-expr="W^{(1)} \neq W^{(2)}"></span>。它们的输出 <span class="katex-inline" data-expr="h_1 = \text{Attn}(X W^{(1)})"></span> 和 <span class="katex-inline" data-expr="h_2 = \text{Attn}(X W^{(2)})"></span> 也会不同。通过损失函数的梯度，<span class="katex-inline" data-expr="\partial L / \partial W^{(1)} \neq \partial L / \partial W^{(2)}"></span>——参数更新方向不同，导致它们逐渐分化。</p>
+  <p>假设两个头的初始投影矩阵分别为 <span class="katex-inline" data-expr="W^{(1)}" aria-label="W^{(1)}" role="img"></span> 和 <span class="katex-inline" data-expr="W^{(2)}" aria-label="W^{(2)}" role="img"></span>，且 <span class="katex-inline" data-expr="W^{(1)} \neq W^{(2)}" aria-label="W^{(1)} \neq W^{(2)}" role="img"></span>。它们的输出 <span class="katex-inline" data-expr="h_1 = \text{Attn}(X W^{(1)})" aria-label="h_1 = \text{Attn}(X W^{(1)})" role="img"></span> 和 <span class="katex-inline" data-expr="h_2 = \text{Attn}(X W^{(2)})" aria-label="h_2 = \text{Attn}(X W^{(2)})" role="img"></span> 也会不同。通过损失函数的梯度，<span class="katex-inline" data-expr="\partial L / \partial W^{(1)} \neq \partial L / \partial W^{(2)}" aria-label="\partial L / \partial W^{(1)} \neq \partial L / \partial W^{(2)}" role="img"></span>——参数更新方向不同，导致它们逐渐分化。</p>
 
   <h4>如果各头学得完全一样会怎样？</h4>
-  <p>这在理论上是可能的，但实际中不会发生，因为：</p>
+  <p>这在理论上是可能的；实际训练中通常不太可能长期保持完全相同，因为：</p>
   <ul>
     <li>随机初始化打破对称性</li>
     <li>不同头的训练数据流（梯度）天然不同——因为每个头看到的注意力分布不同</li>
@@ -209,13 +213,13 @@ class MultiHeadAttention(nn.Module):
   <div class="coding-exercise">
     <h4>🖥️ 练习 2：参数等价性验证</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现一个单头注意力模块 <code>SingleHeadAttention</code>（QKV 都投影到 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 维），然后对比它与 <code>MultiHeadAttention</code> 的参数量。</p>
+      <p><strong>任务：</strong>实现一个单头注意力模块 <code>SingleHeadAttention</code>（QKV 都投影到 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span> 维），然后对比它与 <code>MultiHeadAttention</code> 的参数量。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>实现 <code>SingleHeadAttention</code>：使用 <code>nn.Linear(d_model, 3 * d_model)</code> 合并 QKV 投影（与 MHA 相同），用 <code>chunk(3, dim=-1)</code> 分离 Q、K、V</li>
         <li>对比 MHA（n_heads=12, d_model=768）和单头的总参数量</li>
         <li>验证二者的 <code>W_qkv.weight.numel()</code> 相等</li>
-        <li>证明参数量相同但计算方式不同——单头在 <span class="katex-inline" data-expr="d_{\text{model}}"></span> 维空间做注意力，MHA 在 <span class="katex-inline" data-expr="d_k = 64"></span> 维子空间做注意力</li>
+        <li>证明参数量相同但计算方式不同——单头在 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span> 维空间做注意力，MHA 在 <span class="katex-inline" data-expr="d_k = 64" aria-label="d_k = 64" role="img"></span> 维子空间做注意力</li>
       </ul>
       <pre># 预期输出
 d_model = 768
@@ -274,28 +278,28 @@ print(f"QKV 投影参数相同: {mha.W_qkv.weight.numel()} == {sha.W_qkv.weight.
   <h3>4.5 MHA vs MQA vs GQA——KV Cache 的演进</h3>
 
   <h4>推理时的大问题：KV Cache</h4>
-  <p>在自回归生成中，每步只生成一个新 token <span class="katex-inline" data-expr="t"></span>，但需要计算它和<strong>所有历史 token</strong> 的注意力。如果每步都重新计算所有历史 token 的 K 和 V，计算量是 <span class="katex-inline" data-expr="O(L^2)"></span>。所以我们将历史 token 的 K、V 向量<strong>缓存</strong>下来——这就是 KV Cache。</p>
+  <p>在自回归生成中，每步只生成一个新 token <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>，但需要计算它和<strong>所有历史 token</strong> 的注意力。如果每步都重新计算所有历史 token 的 K 和 V，计算量是 <span class="katex-inline" data-expr="O(L^2)" aria-label="O(L^2)" role="img"></span>。所以我们将历史 token 的 K、V 向量<strong>缓存</strong>下来——这就是 KV Cache。</p>
   <p>标准 MHA 中，KV Cache 的大小为：</p>
   <div class="math-box"><div class="label">MHA KV Cache 大小（每序列）</div>
-    <div class="katex" data-expr="\text{Cache}_{\text{MHA}} = 2 \times L \times n_h \times d_k \times \text{sizeof(float16)}"></div>
+    <div class="katex" data-expr="\text{Cache}_{\text{MHA}} = 2 \times L \times n_h \times d_k \times \text{sizeof(float16)}" aria-label="\text{Cache}_{\text{MHA}} = 2 \times L \times n_h \times d_k \times \text{sizeof(float16)}" role="img"></div>
   </div>
-  <p>对于 70B 模型（<span class="katex-inline" data-expr="n_h = 64, d_k = 128, L = 4096"></span>）：<span class="katex-inline" data-expr="2 \times 4096 \times 64 \times 128 \times 2 = 128 \text{ MB/序列}"></span>。1024 个并发用户就需要 128 GB——这已经超过了一台 A100 的显存（80 GB）。</p>
+  <p>对于 70B 模型（<span class="katex-inline" data-expr="n_h = 64, d_k = 128, L = 4096" aria-label="n_h = 64, d_k = 128, L = 4096" role="img"></span>）：<span class="katex-inline" data-expr="2 \times 4096 \times 64 \times 128 \times 2 = 128 \text{ MB/序列}" aria-label="2 \times 4096 \times 64 \times 128 \times 2 = 128 \text{ MB/序列}" role="img"></span>。1024 个并发用户就需要 128 GB——这已经超过了一台 A100 的显存（80 GB）。</p>
 
   <h4>三种方案的对比</h4>
   <div class="table-wrap">
     <table>
       <tr><th>方案</th><th>Q 头数</th><th>K/V 头数</th><th>KV Cache 节省</th><th>每 token 缓存 (d=4096, n_h=64, d_k=128)</th><th>代表模型</th></tr>
-      <tr><td>MHA（标准）</td><td><span class="katex-inline" data-expr="n_h"></span></td><td><span class="katex-inline" data-expr="n_h"></span></td><td>1x（基线）</td><td>16,384 floats</td><td>GPT-2, BERT</td></tr>
-      <tr><td>MQA (Multi-Query)</td><td><span class="katex-inline" data-expr="n_h"></span></td><td>1</td><td><span class="katex-inline" data-expr="n_h \times"></span></td><td>256 floats</td><td>PaLM, ChatGLM</td></tr>
-      <tr><td>GQA (Grouped-Query)</td><td><span class="katex-inline" data-expr="n_h"></span></td><td><span class="katex-inline" data-expr="n_g \lt n_h"></span></td><td><span class="katex-inline" data-expr="n_h / n_g \times"></span></td><td><span class="katex-inline" data-expr="2 \times n_g \times d_k"></span></td><td>Llama 2/3, Mistral</td></tr>
+      <tr><td>MHA（标准）</td><td><span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span></td><td><span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span></td><td>1x（基线）</td><td>16,384 floats</td><td>GPT-2, BERT</td></tr>
+      <tr><td>MQA (Multi-Query)</td><td><span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span></td><td>1</td><td><span class="katex-inline" data-expr="n_h \times" aria-label="n_h \times" role="img"></span></td><td>256 floats</td><td>PaLM, ChatGLM</td></tr>
+      <tr><td>GQA (Grouped-Query)</td><td><span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span></td><td><span class="katex-inline" data-expr="n_g \lt n_h" aria-label="n_g \lt n_h" role="img"></span></td><td><span class="katex-inline" data-expr="n_h / n_g \times" aria-label="n_h / n_g \times" role="img"></span></td><td><span class="katex-inline" data-expr="2 \times n_g \times d_k" aria-label="2 \times n_g \times d_k" role="img"></span></td><td>Llama 2/3, Mistral</td></tr>
     </table>
   </div>
 
   <h4>MQA：最激进的压缩</h4>
-  <p>MQA（Shazeer, 2019）让所有 Q 头共享<strong>同一组</strong> K 和 V。KV Cache 缩小为 MHA 的 <span class="katex-inline" data-expr="1/n_h"></span>。代价是 KV 的多样性完全丧失——所有注意力头只能从同一个 K、V 空间检索信息。</p>
+  <p>MQA（Shazeer, 2019）让所有 Q 头共享<strong>同一组</strong> K 和 V。KV Cache 缩小为 MHA 的 <span class="katex-inline" data-expr="1/n_h" aria-label="1/n_h" role="img"></span>。代价是 KV 的多样性完全丧失——所有注意力头只能从同一个 K、V 空间检索信息。</p>
 
   <h4>GQA：最优折中</h4>
-  <p>GQA（Ainslie et al., 2023）将 Q 头分为 <span class="katex-inline" data-expr="n_g"></span> 组，每组共享一个 K/V 头。Llama 2 70B 使用 8 个 KV 头（<span class="katex-inline" data-expr="n_h / n_g = 8"></span>)，KV Cache 缩小 8 倍，但保留了一定的 K/V 多样性。</p>
+  <p>GQA（Ainslie et al., 2023）将 Q 头分为 <span class="katex-inline" data-expr="n_g" aria-label="n_g" role="img"></span> 组，每组共享一个 K/V 头。Llama 2 70B 使用 8 个 KV 头（<span class="katex-inline" data-expr="n_h / n_g = 8" aria-label="n_h / n_g = 8" role="img"></span>)，KV Cache 缩小 8 倍，但保留了一定的 K/V 多样性。</p>
   <p>实验表明，GQA 的质量在 n_g >= 4 时接近 MHA，而推理效率接近 MQA。这是"两全其美"的工程设计——<strong>训练后升级</strong>（从 MHA checkpoint 通过加权平均合并 K/V 头来获得 GQA）也是一大亮点。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>历史趣闻：</strong>MQA 早在 2019 年由 Shazeer 在 Fast Transformer Decoding 中提出，但直到 2023 年 Llama 2 大规模采用后，MQA/GQA 才被广泛关注。好工程有时需要时间才能"出圈"。</div></div>
 </section>
@@ -309,12 +313,12 @@ print(f"QKV 投影参数相同: {mha.W_qkv.weight.numel()} == {sha.W_qkv.weight.
   <div class="coding-exercise">
     <h4>🖥️ 练习 3：GroupedQueryAttention 模块</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 GQA。与 MHA 的核心区别是 K 和 V 的头数 <span class="katex-inline" data-expr="n_{\text{kv_heads}}"></span> 少于 Q 的头数 <span class="katex-inline" data-expr="n_{\text{heads}}"></span>。</p>
+      <p><strong>任务：</strong>实现 GQA。与 MHA 的核心区别是 K 和 V 的头数 <span class="katex-inline" data-expr="n_{\text{kv\_heads}}" aria-label="n_{\text{kv\_heads}}" role="img"></span> 少于 Q 的头数 <span class="katex-inline" data-expr="n_{\text{heads}}" aria-label="n_{\text{heads}}" role="img"></span>。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>Q 投影：<code>nn.Linear(d_model, n_heads * d_k)</code></li>
         <li>K、V 投影：<code>nn.Linear(d_model, n_kv_heads * d_k)</code>（输出维度更小！）</li>
-        <li>使用 <code>repeat_interleave(dim=1, factor=n_rep)</code> 将 K/V 的头数扩展到与 Q 匹配，其中 <code>n_rep = n_heads // n_kv_heads</code></li>
+        <li>使用 <code>repeat_interleave(n_rep, dim=1)</code> 将 K/V 的头数扩展到与 Q 匹配，其中 <code>n_rep = n_heads // n_kv_heads</code></li>
         <li>其余部分与 MHA 相同</li>
         <li>验证：GQA 的 <code>W_k</code> 和 <code>W_v</code> 参数量小于 MHA，且 KV Cache 更小</li>
       </ul>
@@ -376,7 +380,7 @@ class GroupedQueryAttention(nn.Module):
         out = out.reshape(batch, seq_len, self.d_model)
         out = self.W_o(out)
         return out, attn_weights</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <code>repeat_interleave</code> 是一个无参数操作——不同"副本"使用相同的 K/V 数据，但梯度反向传播时会累加。因此推理时 KV Cache 只需要存储 <span class="katex-inline" data-expr="n_{\text{kv_heads}} \times d_k"></span> 而不是 <span class="katex-inline" data-expr="n_{\text{heads}} \times d_k"></span>。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <code>repeat_interleave</code> 是一个无参数操作——不同"副本"使用相同的 K/V 数据，但梯度反向传播时会累加。因此推理时 KV Cache 只需要存储 <span class="katex-inline" data-expr="n_{\text{kv\_heads}} \times d_k" aria-label="n_{\text{kv\_heads}} \times d_k" role="img"></span> 而不是 <span class="katex-inline" data-expr="n_{\text{heads}} \times d_k" aria-label="n_{\text{heads}} \times d_k" role="img"></span>。</p>
     </div>
   </div>
 </section>
@@ -388,44 +392,44 @@ class GroupedQueryAttention(nn.Module):
   <h3>4.7 DeepSeek MLA——将 KV 压缩到潜在空间</h3>
 
   <h4>GQA 的局限</h4>
-  <p>GQA 将 KV 头数从 <span class="katex-inline" data-expr="n_h"></span> 减少到 <span class="katex-inline" data-expr="n_g"></span>，但每个 KV 头仍然存储 <span class="katex-inline" data-expr="d_k"></span> 维向量。能不能将单个 KV 向量本身也压缩？这正是 DeepSeek MLA 的核心创新。</p>
+  <p>GQA 将 KV 头数从 <span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span> 减少到 <span class="katex-inline" data-expr="n_g" aria-label="n_g" role="img"></span>，但每个 KV 头仍然存储 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 维向量。能不能将单个 KV 向量本身也压缩？这正是 DeepSeek MLA 的核心创新。</p>
 
   <h4>低秩分解的核心思想</h4>
   <p>MLA（Multi-head Latent Attention）将 KV 存储看作一个<strong>低秩近似</strong>问题：</p>
   <div class="math-box"><div class="label">MLA 的低秩压缩</div>
-    <div class="katex" data-expr="\mathbf{c}_t^{KV} = W_{DKV} \cdot \mathbf{h}_t \quad (\text{压缩到 } d_c \text{ 维潜在空间})"></div>
-    <div class="katex" data-expr="\mathbf{k}_t = W_{UK} \cdot \text{RMSNorm}(\mathbf{c}_t^{KV}) \quad (\text{解压回各头的 } K)"></div>
-    <div class="katex" data-expr="\mathbf{v}_t = W_{UV} \cdot \text{RMSNorm}(\mathbf{c}_t^{KV}) \quad (\text{解压回各头的 } V)"></div>
+    <div class="katex" data-expr="\mathbf{c}_t^{KV} = W_{DKV} \cdot \mathbf{h}_t \quad (\text{压缩到 } d_c \text{ 维潜在空间})" aria-label="\mathbf{c}_t^{KV} = W_{DKV} \cdot \mathbf{h}_t \quad (\text{压缩到 } d_c \text{ 维潜在空间})" role="img"></div>
+    <div class="katex" data-expr="\mathbf{k}_t = W_{UK} \cdot \text{RMSNorm}(\mathbf{c}_t^{KV}) \quad (\text{解压回各头的 } K)" aria-label="\mathbf{k}_t = W_{UK} \cdot \text{RMSNorm}(\mathbf{c}_t^{KV}) \quad (\text{解压回各头的 } K)" role="img"></div>
+    <div class="katex" data-expr="\mathbf{v}_t = W_{UV} \cdot \text{RMSNorm}(\mathbf{c}_t^{KV}) \quad (\text{解压回各头的 } V)" aria-label="\mathbf{v}_t = W_{UV} \cdot \text{RMSNorm}(\mathbf{c}_t^{KV}) \quad (\text{解压回各头的 } V)" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="W_{DKV} \in \mathbb{R}^{d_c \times d_{\text{model}}}"></span> 是压缩矩阵，<span class="katex-inline" data-expr="W_{UK}, W_{UV} \in \mathbb{R}^{(n_h \times d_k) \times d_c}"></span> 是解压矩阵。关键：<span class="katex-inline" data-expr="d_c \ll n_h \times d_k"></span>。</p>
+  <p>其中 <span class="katex-inline" data-expr="W_{DKV} \in \mathbb{R}^{d_c \times d_{\text{model}}}" aria-label="W_{DKV} \in \mathbb{R}^{d_c \times d_{\text{model}}}" role="img"></span> 是压缩矩阵，<span class="katex-inline" data-expr="W_{UK}, W_{UV} \in \mathbb{R}^{(n_h \times d_k) \times d_c}" aria-label="W_{UK}, W_{UV} \in \mathbb{R}^{(n_h \times d_k) \times d_c}" role="img"></span> 是解压矩阵。关键：<span class="katex-inline" data-expr="d_c \ll n_h \times d_k" aria-label="d_c \ll n_h \times d_k" role="img"></span>。</p>
 
-  <h4>矩阵吸收——让压缩"免费"</h4>
-  <p>MLA 的真正巧妙之处在推理时：解压矩阵 <span class="katex-inline" data-expr="W_{UK}"></span> 可以被<strong>吸收</strong>到 Q 投影 <span class="katex-inline" data-expr="W_Q"></span> 中，因为：</p>
+  <h4>矩阵吸收——减少显式解压开销</h4>
+  <p>MLA 的真正巧妙之处在推理时：解压矩阵 <span class="katex-inline" data-expr="W_{UK}" aria-label="W_{UK}" role="img"></span> 可以被<strong>吸收</strong>到 Q 投影 <span class="katex-inline" data-expr="W_Q" aria-label="W_Q" role="img"></span> 中，因为：</p>
   <div class="math-box"><div class="label">矩阵吸收</div>
-    <div class="katex" data-expr="\mathbf{q}_t^\top \mathbf{k}_s = \mathbf{q}_t^\top (W_{UK} \cdot \mathbf{c}_s^K) = (W_{UK}^\top \mathbf{q}_t)^\top \mathbf{c}_s^K"></div>
+    <div class="katex" data-expr="\mathbf{q}_t^\top \mathbf{k}_s = \mathbf{q}_t^\top (W_{UK} \cdot \mathbf{c}_s^K) = (W_{UK}^\top \mathbf{q}_t)^\top \mathbf{c}_s^K" aria-label="\mathbf{q}_t^\top \mathbf{k}_s = \mathbf{q}_t^\top (W_{UK} \cdot \mathbf{c}_s^K) = (W_{UK}^\top \mathbf{q}_t)^\top \mathbf{c}_s^K" role="img"></div>
   </div>
   <p>这意味着推理时：</p>
   <ul>
-    <li>在每层计算 Q 时，先在 Q 上应用 <span class="katex-inline" data-expr="W_{UK}^\top"></span> 变换（<strong>免费</strong>，因为这在层内可以融合到 Q 投影中）</li>
-    <li>不用解压 K 就能直接和潜在向量 <span class="katex-inline" data-expr="\mathbf{c}_s^K"></span> 做点积</li>
-    <li><strong>KV Cache 只需要存储潜在向量 <span class="katex-inline" data-expr="\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}"></span></strong></li>
+    <li>在每层计算 Q 时，先在 Q 上应用 <span class="katex-inline" data-expr="W_{UK}^\top" aria-label="W_{UK}^\top" role="img"></span> 变换；工程实现中可与 Q 投影融合，从而减少显式解压带来的额外开销，但仍要付出投影、RoPE 分支和注意力计算成本</li>
+    <li>不用解压 K 就能直接和潜在向量 <span class="katex-inline" data-expr="\mathbf{c}_s^K" aria-label="\mathbf{c}_s^K" role="img"></span> 做点积</li>
+    <li><strong>KV Cache 只需要存储潜在向量 <span class="katex-inline" data-expr="\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}" aria-label="\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}" role="img"></span></strong></li>
   </ul>
 
   <h4>在 DeepSeek-V2/V3 中的配置</h4>
   <div class="table-wrap">
     <table>
       <tr><th>参数</th><th>值</th><th>说明</th></tr>
-      <tr><td><span class="katex-inline" data-expr="d_{\text{model}}"></span></td><td>7168</td><td>隐藏层维度</td></tr>
-      <tr><td><span class="katex-inline" data-expr="n_h"></span></td><td>64</td><td>Q 头数</td></tr>
-      <tr><td><span class="katex-inline" data-expr="d_k"></span></td><td>128</td><td>每头维度</td></tr>
-      <tr><td><span class="katex-inline" data-expr="d_c"></span></td><td>512</td><td>潜在向量维度（KV Cache 实际大小）</td></tr>
-      <tr><td><span class="katex-inline" data-expr="d_r"></span></td><td>64</td><td>RoPE 单独投影维度</td></tr>
+      <tr><td><span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span></td><td>7168</td><td>隐藏层维度</td></tr>
+      <tr><td><span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span></td><td>64</td><td>Q 头数</td></tr>
+      <tr><td><span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span></td><td>128</td><td>每头维度</td></tr>
+      <tr><td><span class="katex-inline" data-expr="d_c" aria-label="d_c" role="img"></span></td><td>512</td><td>潜在向量维度（KV Cache 实际大小）</td></tr>
+      <tr><td><span class="katex-inline" data-expr="d_r" aria-label="d_r" role="img"></span></td><td>64</td><td>RoPE 单独投影维度</td></tr>
     </table>
   </div>
-  <p>对比 MHA：MLA <strong>只缓存一个共享潜在向量</strong> <span class="katex-inline" data-expr="\mathbf{c}^{KV} \in \mathbb{R}^{512}"></span>（K、V 在用时由它分别解压重建），再加解耦 RoPE 键 <span class="katex-inline" data-expr="\mathbf{k}^R \in \mathbb{R}^{64}"></span>，共约 <span class="katex-inline" data-expr="576"></span> 维/token；对比 MHA 的 <span class="katex-inline" data-expr="2 \times 64 \times 128 = 16,384"></span>——<strong>约 28 倍压缩</strong>（DeepSeek 报告约 93% 缩减）。注意：缓存的是 <em>单个</em> 潜向量，不是 K、V 各一份。</p>
+  <p>对比 MHA：MLA <strong>只缓存一个共享潜在向量</strong> <span class="katex-inline" data-expr="\mathbf{c}^{KV} \in \mathbb{R}^{512}" aria-label="\mathbf{c}^{KV} \in \mathbb{R}^{512}" role="img"></span>（K、V 在用时由它分别解压重建），再加解耦 RoPE 键 <span class="katex-inline" data-expr="\mathbf{k}^R \in \mathbb{R}^{64}" aria-label="\mathbf{k}^R \in \mathbb{R}^{64}" role="img"></span>，共约 <span class="katex-inline" data-expr="576" aria-label="576" role="img"></span> 维/token；对比 MHA 的 <span class="katex-inline" data-expr="2 \times 64 \times 128 = 16,384" aria-label="2 \times 64 \times 128 = 16,384" role="img"></span>——<strong>约 28 倍压缩</strong>（DeepSeek 报告约 93% 缩减）。注意：缓存的是 <em>单个</em> 潜向量，不是 K、V 各一份。</p>
 
   <h4>解耦 RoPE 的必要性</h4>
-  <p>MLA 面临一个关键问题：RoPE 的旋转操作与解压矩阵不可交换（旋转是非线性操作）。如果将 RoPE 应用在解压后的 K 上，矩阵吸收就不再成立。</p>
+  <p>MLA 面临一个关键问题：RoPE 旋转本身是<strong>线性正交变换</strong>，但它依赖 token 位置；这个位置相关旋转与固定的解压矩阵一般不能交换，也不能被统一吸收到同一个 Q 投影中。如果将 RoPE 应用在解压后的 K 上，内容部分的矩阵吸收就不再直接成立。</p>
   <p>DeepSeek 的解决方案是<strong>解耦 RoPE</strong>：将 K 分为两部分——内容部分（通过低秩压缩/解压）和 RoPE 部分（单独投影，不经过压缩）。推理时只有内容部分参与矩阵吸收，RoPE 部分单独计算点积贡献。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>MLA 的意义：</strong>标准 MHA 中 KV Cache 占总显存的 30-40%（长上下文时更高）。MLA 将 KV Cache 减少约 93%，使得 DeepSeek-V2/V3 的推理成本仅为同等规模 Llama 3 的约 1/7。这是 DeepSeek 系列"经济高效"的核心技术支柱之一。</div></div>
 </section>
@@ -513,7 +517,7 @@ class MLA(nn.Module):
         out = out.reshape(batch, seq_len, self.d_model)
         out = self.W_o(out)
         return out, attn_weights, latent  # latent 用于模拟 KV Cache</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 真实的 MLA 实现中，解压矩阵 <span class="katex-inline" data-expr="W_{UK}"></span> 在推理时会被吸收到 Q 投影中，所以每一步并不需要实际做"解压"操作。这里为了教学清晰，我们显式地完成了压缩->解压的完整流程。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 真实的 MLA 实现中，解压矩阵 <span class="katex-inline" data-expr="W_{UK}" aria-label="W_{UK}" role="img"></span> 在推理时会被吸收到 Q 投影中，所以每一步并不需要实际做"解压"操作。这里为了教学清晰，我们显式地完成了压缩->解压的完整流程。</p>
     </div>
   </div>
 </section>
@@ -601,7 +605,7 @@ compute_kv_cache_size(
   <h3>4.10 本章总结</h3>
   <p>你从单头注意力出发，沿着注意力机制的演进路线实现了三代多头注意力变体：</p>
   <ul>
-    <li>✅ <strong>Multi-Head Attention (MHA)</strong> — 并行 <span class="katex-inline" data-expr="n_h"></span> 个子空间，参数量与单头等价但表达能力更强</li>
+    <li>✅ <strong>Multi-Head Attention (MHA)</strong> — 并行 <span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span> 个子空间，参数量与单头等价但表达能力更强</li>
     <li>✅ <strong>参数等价性验证</strong> — 从代码上证明 MHA 与单头参数量完全相同</li>
     <li>✅ <strong>Grouped-Query Attention (GQA)</strong> — 减少 KV 头数，在 Llama 2/3 中广泛使用</li>
     <li>✅ <strong>Multi-head Latent Attention (MLA)</strong> — 低秩压缩 KV 到潜在空间，仅缓存共享潜向量，约 28 倍 KV Cache 压缩</li>
@@ -661,7 +665,7 @@ compute_kv_cache_size(
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="RoPE 旋转与解压矩阵 W_UK 不可交换——旋转是非线性操作，不能先吸收到 Q 再旋转。因此 DeepSeek 采用解耦设计：内容部分（可压缩可吸收）和 RoPE 部分（单独投影，不可压缩）。">
+  <div class="exercise" data-answer="2" data-explain="RoPE 旋转是位置相关的线性正交变换；它与固定解压矩阵 W_UK 一般不能交换，也不能被统一吸收到同一个 Q 投影中。因此 DeepSeek 采用解耦设计：内容部分（可压缩可吸收）和 RoPE 部分（单独投影，不走低秩压缩路径）。">
     <h4>练习 4：为什么 MLA 需要"解耦 RoPE"设计？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 因为 RoPE 本身不兼容 KV Cache</label>
@@ -686,6 +690,15 @@ compute_kv_cache_size(
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

@@ -37,9 +37,13 @@
   <h3>本章怎么学：先完成一条前向传播链路</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>目标不是一次理解 GPT-2 的全部历史细节，而是把前几章组件接成 <code>token ids -> logits</code>。DeepSeekMoE 是容量扩展案例，第一次学习可以先完成 GPTModel 主线，再回来看路由器。</div></div>
   <ul>
-    <li><strong>前置知识：</strong>Embedding、TransformerBlock、线性层输出 logits。</li>
+    <li><strong>前置知识：</strong>Embedding、causal self-attention、GPT-2 Block、线性层输出 logits。</li>
+    <li><strong>学习目标：</strong>把 tokenizer、embedding、block、LM head 串成完整 GPT 前向传播，并能审计参数量、初始化、weight tying 和 MoE 路由。</li>
+    <li><strong>课前阅读：</strong>阅读 GPT-2 论文模型结构部分和 nanoGPT 的 config/model 代码，标注每个超参数如何影响 shape。</li>
+    <li><strong>课后阅读：</strong>阅读 Switch Transformer/DeepSeekMoE 的稀疏激活动机，比较 dense FFN 与 MoE 的容量、通信和负载均衡问题。</li>
     <li><strong>本章产出：</strong>一个能接收 token 序列并输出下一 token logits 的 GPTModel。</li>
     <li><strong>完成标准：</strong>你能解释 <code>logits.shape == [batch, seq, vocab_size]</code> 为什么是语言模型的最终输出。</li>
+    <li><strong>评估证据：</strong>提交 GPTModel forward 测试、参数量逐项表、weight tying 验证和一次小 batch logits sanity check；配套作业见 <a href="../assignments/ch06_gpt/">assignments/ch06_gpt/</a>。</li>
   </ul>
 </section>
 
@@ -73,16 +77,16 @@
   │                     │                                     │
   │                     ▼   (×12)                             │
   │           ┌────────────────────┐                          │
-  │           │ TransformerBlock 1 │  d_model=768, n_heads=12 │
+  │           │     GPT2Block 1    │  d_model=768, n_heads=12 │
   │           ├────────────────────┤                          │
   │           │        ...         │                          │
   │           ├────────────────────┤                          │
-  │           │ TransformerBlock12 │                          │
+  │           │     GPT2Block12    │                          │
   │           └─────────┬──────────┘                          │
   │                     │                                     │
   │                     ▼                                     │
   │           ┌──────────────────┐                            │
-  │           │    RMSNorm       │  (最终输出归一化)           │
+  │           │    LayerNorm     │  (最终输出归一化)           │
   │           └──────────────────┘                            │
   │                     │                                     │
   │                     ▼                                     │
@@ -189,7 +193,7 @@ print(f"GPT-2 Large:  {gpt2_large}")</div>
 <!-- ================================================================ -->
 <section class="card" id="s6-3">
   <h3>6.3 编程练习 2：组装完整的 GPTModel</h3>
-  <p>现在使用 GPTConfig 和之前实现的组件来组装完整的 GPTModel。</p>
+  <p>现在使用 GPTConfig 和 GPT-2 风格组件来组装完整的 GPTModel。注意：若目标是精确复现 GPT-2 small 的 124M 参数量，Block 必须使用 LayerNorm + GELU MLP + 带 bias 的线性层；第 5 章的 RMSNorm/SwiGLU Block 是现代 Llama/DeepSeek 风格，不能直接用于 GPT-2 参数精算。</p>
 
   <div class="coding-exercise">
     <h4>🖥️ 练习 2：GPTModel 组装</h4>
@@ -199,8 +203,8 @@ print(f"GPT-2 Large:  {gpt2_large}")</div>
       <ul>
         <li><code>token_embedding: nn.Embedding(vocab_size, d_model)</code></li>
         <li><code>pos_embedding: nn.Embedding(max_seq_len, d_model)</code></li>
-        <li><code>blocks: nn.ModuleList</code> 包含 <code>n_layers</code> 个 <code>TransformerBlock</code></li>
-        <li><code>norm: RMSNorm(d_model)</code>（最终输出归一化）</li>
+        <li><code>blocks: nn.ModuleList</code> 包含 <code>n_layers</code> 个 <code>GPT2Block</code>（LayerNorm + causal self-attention + GELU MLP）</li>
+        <li><code>norm: nn.LayerNorm(d_model)</code>（最终输出归一化）</li>
         <li><code>lm_head: nn.Linear(d_model, vocab_size, bias=False)</code></li>
         <li>可选的 Weight Tying：如果 <code>tie_weights=True</code>，设置 <code>lm_head.weight = token_embedding.weight</code></li>
         <li><code>_init_weights</code>：Linear 层用 N(0, 0.02) 初始化，Embedding 用 N(0, 0.02)，bias 初始化为 0</li>
@@ -235,37 +239,28 @@ class GPTModel(nn.Module):
 
         self.dropout = nn.Dropout(config.dropout)
 
-        # Transformer Block 堆叠
-        self.blocks = nn.ModuleList([
-            TransformerBlock(
-                d_model=config.d_model,
-                n_heads=config.n_heads,
-                d_ff=config.d_ff or config.d_model * 4,
-                dropout=config.dropout,
-            )
-            for _ in range(config.n_layers)
-        ])
+        # GPT-2 Block 堆叠：LayerNorm + causal self-attention + GELU MLP
+        self.blocks = nn.ModuleList([GPT2Block(config) for _ in range(config.n_layers)])
 
         # 最终归一化
-        self.norm = RMSNorm(config.d_model)
+        self.norm = nn.LayerNorm(config.d_model, bias=config.bias)
 
         # LM Head
         self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
+
+        self.apply(self._init_weights)
 
         # Weight Tying
         if config.tie_weights:
             self.lm_head.weight = self.token_embedding.weight
 
-        self._init_weights()
-
-    def _init_weights(self):
-        for module in self.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight, mean=0.0, std=0.02)
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
-            elif isinstance(module, nn.Embedding):
-                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, input_ids, mask=None):
         batch_size, seq_len = input_ids.shape
@@ -315,7 +310,7 @@ print("前向 + 反向传播通过 ✓")</div>
   <p><strong>Weight Tying（权重共享）</strong>让嵌入层（Token Embedding）和输出层（LM Head）共享同一个权重矩阵。直觉：嵌入层"读入"token 的含义，LM Head"输出"token 的分布——本质上是同一个映射的"正向"和"逆向"。</p>
 
   <div class="math-box"><div class="label">Weight Tying 共享方式</div>
-    <div class="katex" data-expr="W_{\text{lm\_head}} = W_{\text{token\_embedding}} \in \mathbb{R}^{\text{vocab\_size} \times d_{\text{model}}}"></div>
+    <div class="katex" data-expr="W_{\text{lm\_head}} = W_{\text{token\_embedding}} \in \mathbb{R}^{\text{vocab\_size} \times d_{\text{model}}}" aria-label="W_{\text{lm\_head}} = W_{\text{token\_embedding}} \in \mathbb{R}^{\text{vocab\_size} \times d_{\text{model}}}" role="img"></div>
   </div>
 
   <h4>参数量影响</h4>
@@ -351,13 +346,13 @@ print("前向 + 反向传播通过 ✓")</div>
   <div class="coding-exercise">
     <h4>🖥️ 练习 3：参数计数器</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现一个参数分析函数，逐层打印 GPT-2 124M 的参数量并验证总数为 124,393,728。</p>
+      <p><strong>任务：</strong>实现一个参数分析函数，逐层打印 GPT-2 124M 的参数量并验证总数为 124,439,808。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>遍历模型的所有 <code>named_parameters()</code></li>
         <li>按组件分组打印：Token Embedding、Position Embedding、各层 Attention、各层 FFN、Final Norm</li>
         <li>每行显示：组件名称、参数量、占比百分比</li>
-        <li>最后验证总数是否等于 124,393,728</li>
+        <li>最后验证总数是否等于 124,439,808</li>
         <li>验证：Embedding 层占总参数的 31%（38.6M / 124.4M）</li>
         <li>验证：12 层 Block 的 FFN 是参数最多的部分</li>
       </ul>
@@ -366,13 +361,13 @@ print("前向 + 反向传播通过 ✓")</div>
 --------------------------------------------------------
 token_embedding.weight          38,597,376    31.03%
 pos_embedding.weight               786,432     0.63%
-blocks.0.attention.W_qkv        2,359,296     1.90%
-blocks.0.ffn.fc1                2,359,296     1.90%
+blocks.0.attn.c_attn            1,771,776     1.42%
+blocks.0.mlp.c_fc               2,362,368     1.90%
 ... (每层重复)
-norm.gamma                             768     0.00%
+norm.weight                            768     0.00%
 --------------------------------------------------------
-总计                            124,393,728    100%
-验证: 124,393,728 == 124.4M ✓</pre>
+总计                            124,439,808    100%
+验证: 124,439,808 == 124.4M ✓</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
@@ -402,7 +397,7 @@ def count_parameters(model):
     print(f"{'Embedding 总计':<35} {e_total:>12,}  ({e_total/total*100:.1f}%)")
     print(f"{'Block 总计':<35} {b_total:>12,}  ({b_total/total*100:.1f}%)")
 
-    assert total == 124393728, f"预期 124,393,728，实际 {total:,}"
+    assert total == 124439808, f"预期 124,439,808，实际 {total:,}"
     print(f"\n验证: {total:,} == 124.4M ✓")
     return total
 
@@ -431,9 +426,9 @@ total_params = count_parameters(model)</div>
   <p>一个常见的训练失败原因是初始化标准差过大。GPT-2 使用 0.02，但如果误用 0.1，深层网络的 logits 可能会出现 NaN。这是因为残差流的方差在 12 层中逐层累加：</p>
 
   <div class="math-box"><div class="label">残差流的方差累加</div>
-    <div class="katex" data-expr="\text{Var}(x^{(L)}) \approx \text{Var}(x^{(0)}) + L \cdot \text{Var}(f^{(l)}(x^{(l-1)})) + \text{cross-terms}"></div>
+    <div class="katex" data-expr="\text{Var}(x^{(L)}) \approx \text{Var}(x^{(0)}) + L \cdot \text{Var}(f^{(l)}(x^{(l-1)})) + \text{cross-terms}" aria-label="\text{Var}(x^{(L)}) \approx \text{Var}(x^{(0)}) + L \cdot \text{Var}(f^{(l)}(x^{(l-1)})) + \text{cross-terms}" role="img"></div>
   </div>
-  <p>当 <span class="katex-inline" data-expr="\text{Var}(f^{(l)})"></span> 过大时，<span class="katex-inline" data-expr="L=12"></span> 层的累加会超出 float16 的表达范围。这也是为什么 <code>_init_weights</code> 中的 std=0.02 不是随意选择的——它来自 GPT-2 论文中对残差方差的分析。</p>
+  <p>当 <span class="katex-inline" data-expr="\text{Var}(f^{(l)})" aria-label="\text{Var}(f^{(l)})" role="img"></span> 过大时，<span class="katex-inline" data-expr="L=12" aria-label="L=12" role="img"></span> 层的累加会超出 float16 的表达范围。这也是为什么 <code>_init_weights</code> 中的 std=0.02 不是随意选择的——它来自 GPT-2 论文中对残差方差的分析。</p>
 
   <div class="info-box tip"><span class="icon">💡</span><div><strong>实用建议：</strong>写一个 <code>test_forward_pass()</code> 函数作为 CI 的一部分。每次修改模型架构后运行它，可以在几分钟内而不是几小时后发现问题。</div></div>
 </section>
@@ -451,20 +446,20 @@ total_params = count_parameters(model)</div>
       <p><strong>任务：</strong>从 HuggingFace 加载 GPT-2 small 权重到你的 <code>GPTModel</code> 中，验证输出一致。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>使用 <code>transformers.GPT2Model.from_pretrained('gpt2')</code> 加载官方权重</li>
-        <li>建立命名映射：将 HF 的命名（如 <code>h.0.attn.c_attn.weight</code>）转换到你的命名（如 <code>blocks.0.attention.W_qkv.weight</code>）</li>
-        <li>GPT-2 的 <code>c_attn</code> 是 QKV 合并的（输出 3*d_model）——需要直接映射</li>
-        <li>GPT-2 使用 LayerNorm（有 gamma 和 beta）——如果你用 RMSNorm，需要调整</li>
-        <li>对相同随机输入，比较两模型输出的 <code>last_hidden_state</code>，最大差异需 &lt; 1e-4</li>
+        <li>使用 <code>transformers.GPT2LMHeadModel.from_pretrained('gpt2')</code> 加载官方权重</li>
+        <li>建立命名映射：将 HF 的命名（如 <code>transformer.h.0.attn.c_attn.weight</code>）转换到你的命名（如 <code>blocks.0.attn.c_attn.weight</code>）</li>
+        <li>GPT-2 的 <code>c_attn</code> 是 QKV 合并的（输出 3*d_model）；HF <code>Conv1D</code> 权重加载到 <code>nn.Linear</code> 时需要转置</li>
+        <li>GPT-2 使用 LayerNorm（有 weight 和 bias），因此你的主线实现也应使用 LayerNorm</li>
+        <li>对相同随机输入，比较两模型输出的 logits，最大差异需 &lt; 1e-4</li>
       </ul>
       <pre># 预期用法
-from transformers import GPT2Model as HFGPT2Model
+from transformers import GPT2LMHeadModel
 
-hf_model = HFGPT2Model.from_pretrained('gpt2')
+hf_model = GPT2LMHeadModel.from_pretrained('gpt2')
 our_model = GPTModel(GPTConfig())
+hf_model.eval()
+our_model.eval()
 
-# 注意: HF GPT-2 使用 LayerNorm (有 bias)
-# 我们的 GPTModel 默认用 RMSNorm，需要调整配置
 config = GPTConfig()
 our_model = GPTModel(config)
 
@@ -474,7 +469,7 @@ load_hf_weights(our_model, hf_model)
 # 验证输出
 input_ids = torch.randint(0, config.vocab_size, (1, 64))
 with torch.no_grad():
-    hf_out = hf_model(input_ids).last_hidden_state
+    hf_out = hf_model(input_ids).logits
     our_out = our_model(input_ids)
 
 max_diff = (hf_out - our_out).abs().max().item()
@@ -484,7 +479,7 @@ print("与 HuggingFace 输出一致 ✓")</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
-from transformers import GPT2Model as HFGPT2Model
+from transformers import GPT2LMHeadModel
 
 def load_hf_weights_to_model(hf_model, our_model):
     """将 HuggingFace GPT-2 权重加载到我们的实现中"""
@@ -493,56 +488,60 @@ def load_hf_weights_to_model(hf_model, our_model):
 
     # 命名映射
     mapping = {
-        'wte.weight': 'token_embedding.weight',
-        'wpe.weight': 'pos_embedding.weight',
-        'ln_f.weight': 'norm.gamma',
-        'ln_f.bias': 'norm.beta',
+        'transformer.wte.weight': 'token_embedding.weight',
+        'transformer.wpe.weight': 'pos_embedding.weight',
+        'transformer.ln_f.weight': 'norm.weight',
+        'transformer.ln_f.bias': 'norm.bias',
     }
 
     new_sd = {}
     for hf_name, param in hf_sd.items():
+        if hf_name == 'lm_head.weight':
+            continue  # tied with token_embedding.weight
+
         our_name = mapping.get(hf_name)
         if our_name:
             new_sd[our_name] = param
             continue
 
-        # h.X.attn.c_attn.weight → blocks.X.attention.W_qkv.weight
+        # transformer.h.X.attn.c_attn.weight → blocks.X.attn.c_attn.weight
         parts = hf_name.split('.')
-        if parts[0] == 'h' and len(parts) >= 4:
-            layer = parts[1]
-            sub = parts[2]
-            param_name = '.'.join(parts[3:])
+        if len(parts) >= 5 and parts[0] == 'transformer' and parts[1] == 'h':
+            layer = parts[2]
+            sub = parts[3]
+            param_name = '.'.join(parts[4:])
+            our_name = None
 
             if sub == 'attn':
                 if 'c_attn' in param_name:
-                    our_name = f'blocks.{layer}.attention.W_qkv.weight'
+                    our_name = f'blocks.{layer}.attn.c_attn.{parts[-1]}'
                 elif 'c_proj' in param_name:
-                    our_name = f'blocks.{layer}.attention.W_o.weight'
+                    our_name = f'blocks.{layer}.attn.c_proj.{parts[-1]}'
             elif sub == 'mlp':
                 if 'c_fc' in param_name:
-                    our_name = f'blocks.{layer}.ffn.fc1.weight'
-                    if 'bias' in param_name:
-                        our_name = f'blocks.{layer}.ffn.fc1.bias'
+                    our_name = f'blocks.{layer}.mlp.c_fc.{parts[-1]}'
                 elif 'c_proj' in param_name:
-                    our_name = f'blocks.{layer}.ffn.fc2.weight'
-                    if 'bias' in param_name:
-                        our_name = f'blocks.{layer}.ffn.fc2.bias'
+                    our_name = f'blocks.{layer}.mlp.c_proj.{parts[-1]}'
             elif sub == 'ln_1':
-                our_name = f'blocks.{layer}.norm1.{\
-                    "gamma" if "weight" in param_name else "beta"}'
+                our_name = f'blocks.{layer}.ln_1.{parts[-1]}'
             elif sub == 'ln_2':
-                our_name = f'blocks.{layer}.norm2.{\
-                    "gamma" if "weight" in param_name else "beta"}'
+                our_name = f'blocks.{layer}.ln_2.{parts[-1]}'
 
             if our_name is not None and our_name in our_sd:
+                # HF GPT-2 Conv1D stores weights as [in_features, out_features],
+                # while nn.Linear expects [out_features, in_features].
+                if param_name.endswith('weight') and ('c_attn' in param_name or 'c_proj' in param_name or 'c_fc' in param_name):
+                    param = param.t()
                 new_sd[our_name] = param
 
     our_model.load_state_dict(new_sd, strict=False)
 
     # 验证输出
     input_ids = torch.randint(0, our_model.config.vocab_size, (1, 64))
+    hf_model.eval()
+    our_model.eval()
     with torch.no_grad():
-        hf_out = hf_model(input_ids).last_hidden_state
+        hf_out = hf_model(input_ids).logits
         our_out = our_model(input_ids)
 
     max_diff = (hf_out - our_out).abs().max().item()
@@ -550,7 +549,7 @@ def load_hf_weights_to_model(hf_model, our_model):
     assert max_diff < 1e-4, f"差异过大: {max_diff}"
     print("与 HuggingFace 输出一致 ✓")
     return new_sd</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>重要提示：</strong>HuggingFace 的 GPT-2 使用完整的 LayerNorm（含 bias），而我们的教学中使用 RMSNorm（无 beta）。要直接加载 HF 权重，需要临时用我们的 LayerNorm 实现替换 RMSNorm，或者将 HF 的 LayerNorm 权重适配到 RMSNorm。完整的适配代码见仓库的 <code>utils/load_hf.py</code>。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>重要提示：</strong>HuggingFace GPT-2 的注意力和 MLP 投影使用 <code>Conv1D</code> 包装，权重矩阵存储方向与 <code>nn.Linear</code> 相反；遗漏转置会导致 shape 匹配失败或输出不一致。</p>
     </div>
   </div>
 </section>
@@ -564,14 +563,14 @@ def load_hf_weights_to_model(hf_model, our_model):
 
   <h4>DeepSeekMoE 的核心设计</h4>
   <div class="math-box"><div class="label">MoE 前向计算</div>
-    <div class="katex" data-expr="\text{MoE}(\mathbf{x}) = \underbrace{\text{SharedExpert}(\mathbf{x})}_{\text{通用知识}} + \sum_{i=1}^{N} \underbrace{G_i(\mathbf{x})}_{\text{路由权重}} \cdot \underbrace{E_i(\mathbf{x})}_{\text{专家输出}}"></div>
+    <div class="katex" data-expr="\text{MoE}(\mathbf{x}) = \underbrace{\text{SharedExpert}(\mathbf{x})}_{\text{通用知识}} + \sum_{i=1}^{N} \underbrace{G_i(\mathbf{x})}_{\text{路由权重}} \cdot \underbrace{E_i(\mathbf{x})}_{\text{专家输出}}" aria-label="\text{MoE}(\mathbf{x}) = \underbrace{\text{SharedExpert}(\mathbf{x})}_{\text{通用知识}} + \sum_{i=1}^{N} \underbrace{G_i(\mathbf{x})}_{\text{路由权重}} \cdot \underbrace{E_i(\mathbf{x})}_{\text{专家输出}}" role="img"></div>
   </div>
 
   <p>DeepSeekMoE 在 DeepSeek-V2/V3 中的具体配置：</p>
   <ul>
     <li><strong>N = 256 个路由专家：</strong>每个 token 激活 top-K = 8 个（稀疏率 ~3%）</li>
     <li><strong>1 个共享专家：</strong>所有 token 必定激活，捕获通用知识</li>
-    <li><strong>细粒度专家：</strong>每个专家的中间维度 <span class="katex-inline" data-expr="d_{\text{ff}} = 1536"></span>，小于传统 FFN 的 4x 扩展</li>
+    <li><strong>细粒度专家：</strong>每个专家的中间维度 <span class="katex-inline" data-expr="d_{\text{ff}} = 1536" aria-label="d_{\text{ff}} = 1536" role="img"></span>，小于传统 FFN 的 4x 扩展</li>
     <li><strong>结果：</strong>总参数 671B，但每次 forward 只激活 37B——这就是"671B 只激活 37B"的由来</li>
   </ul>
 
@@ -739,7 +738,7 @@ for step in range(10):
         stats = balancer.get_load_stats(token_counts)
         print(f"Step {step}: max={stats['max_load']:.6f}, "
               f"min={stats['min_load']:.6f}, std={stats['std_load']:.6f}")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>动态偏置 vs 辅助损失：</strong>辅助损失通过梯度反向传播微调路由器参数来平衡负载，计算量小但引入了额外的超参数 α。动态偏置完全不经过反向传播——它是前向过程中对路由 logits 的直接调整。DeepSeek-V3 报告显示，动态偏置达到的均衡效果与辅助损失相当，但训练更稳定且无需调参。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>动态偏置 vs 辅助损失：</strong>辅助损失通过梯度反向传播微调路由器参数来平衡负载，计算量小但引入了额外的超参数 α。动态偏置不经过反向传播——它是前向过程中对路由 logits 的直接调整。DeepSeek-V3 报告显示，在其训练设定下动态偏置达到的均衡效果与辅助损失相当，并减少了辅助损失权重调参；不同模型和数据分布仍需要实测。</p>
     </div>
   </div>
 </section>
@@ -835,6 +834,15 @@ for step in range(10):
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

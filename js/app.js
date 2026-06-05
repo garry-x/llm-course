@@ -349,13 +349,21 @@
     // KaTeX
     if(window.katex){
       var macros = { '\\parallel': '\\mathrel{/\\!\\!/}' };
+      function prepareMathNode(el, expr){
+        if(!expr) return;
+        if(!el.getAttribute('aria-label')) el.setAttribute('aria-label', expr);
+        if(!el.getAttribute('role')) el.setAttribute('role', 'img');
+      }
       document.querySelectorAll('.katex-inline').forEach(function(el){
-        try{ katex.render(el.getAttribute('data-expr'), el, {throwOnError:true, strict:false, macros:macros, trust:true}) }
-        catch(e){ console.warn('KaTeX inline:', el.getAttribute('data-expr'), e.message); el.textContent=el.getAttribute('data-expr'); el.style.color='#cc4444'; }
+        var expr = el.getAttribute('data-expr');
+        prepareMathNode(el, expr);
+        try{ katex.render(expr, el, {throwOnError:true, strict:false, macros:macros, trust:true}) }
+        catch(e){ console.warn('KaTeX inline:', expr, e.message); el.textContent=expr; el.style.color='#cc4444'; }
       });
       document.querySelectorAll('.katex:not(.katex-inline)').forEach(function(el){
         var expr = el.getAttribute('data-expr');
         if(!expr) return;
+        prepareMathNode(el, expr);
         try{ katex.render(expr, el, {displayMode:true, throwOnError:true, strict:false, macros:macros, trust:true}) }
         catch(e){ console.warn('KaTeX display:', expr, e.message); el.textContent=expr; el.style.color='#cc4444'; }
       });

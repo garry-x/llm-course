@@ -1,0 +1,124 @@
+"""Autograder-style tests for Chapter 10 inference-engineering exercises."""
+
+import importlib
+import os
+import unittest
+
+try:
+    import numpy as np
+    import torch
+except ModuleNotFoundError:
+    np = None
+    torch = None
+
+
+MODULE_NAME = os.environ.get("STUDENT_MODULE", "reference_solution")
+submission = importlib.import_module(MODULE_NAME) if torch is not None and np is not None else None
+
+
+@unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
+class TestKVCache(unittest.TestCase):
+    def test_incremental_attention_matches_full_causal_attention(self):
+        torch.manual_seed(0)
+        attn = submission.AttentionWithCache(d_model=8, n_heads=2, dropout=0.0)
+        x = torch.randn(2, 5, 8)
+        full_out, _ = attn(x, cache=None)
+
+        cache = None
+        pieces = []
+        for t in range(x.size(1)):
+            out, cache = attn(x[:, t : t + 1, :], cache=cache)
+            pieces.append(out)
+            self.assertEqual(tuple(cache["k"].shape), (2, 2, t + 1, 4))
+            self.assertEqual(tuple(cache["v"].shape), (2, 2, t + 1, 4))
+        inc_out = torch.cat(pieces, dim=1)
+        self.assertTrue(torch.allclose(inc_out, full_out, atol=1e-5))
+
+    def test_causal_mask_allows_all_past_tokens_for_single_decode_query(self):
+        attn = submission.AttentionWithCache(d_model=8, n_heads=2, dropout=0.0)
+        mask = attn._causal_mask(l_kv=4, l_q=1, device=torch.device("cpu"))
+        self.assertEqual(mask.tolist(), [[True, True, True, True]])
+
+
+@unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
+class TestMemoryQuantization(unittest.TestCase):
+    def test_kv_cache_memory_includes_batch_size(self):
+        result = submission.kv_cache_memory_analysis(
+            n_layers=2,
+            n_kv_heads=3,
+            d_head=4,
+            seq_len=5,
+            batch_size=7,
+            dtype_bytes=2,
+            model_params_gb=1.0,
+        )
+        expected_bytes = 7 * 2 * 5 * 3 * 4 * 2 * 2
+        self.assertEqual(result["bytes"], expected_bytes)
+        self.assertAlmostEqual(result["total_cache_gb"], expected_bytes / (1024**3))
+        self.assertAlmostEqual(result["cache_to_params_ratio"], result["total_cache_gb"])
+
+    def test_int8_per_channel_quantization_roundtrip(self):
+        weight = torch.tensor([[0.0, 1.0, -1.0], [2.0, -4.0, 0.5], [0.0, 0.0, 0.0]])
+        q, scales = submission.quantize_per_channel(weight)
+        self.assertEqual(q.dtype, torch.int8)
+        self.assertEqual(tuple(scales.shape), (3,))
+        deq = submission.dequantize(q, scales)
+        self.assertFalse(torch.isnan(deq).any())
+        self.assertLess(submission.nrmse(weight, deq), 0.01)
+        self.assertTrue(torch.all(q[2] == 0))
+
+
+class BagOfWordsEmbedder:
+    def __init__(self):
+        self.vocab = {"apple": 0, "banana": 1, "car": 2, "engine": 3, "fruit": 4}
+
+    def encode(self, text):
+        vec = np.zeros(len(self.vocab), dtype=np.float64)
+        for token in text.lower().split():
+            if token in self.vocab:
+                vec[self.vocab[token]] += 1.0
+        return vec
+
+
+class EchoLLM:
+    def generate(self, prompt):
+        return prompt
+
+
+@unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
+class TestRAGBenchmarkLSH(unittest.TestCase):
+    def test_rag_retrieves_by_cosine_similarity_and_builds_prompt(self):
+        rag = submission.SimpleRAG(BagOfWordsEmbedder(), EchoLLM(), chunk_size=4, overlap=1)
+        rag.add_document("apple banana fruit car engine car")
+        results = rag.retrieve("apple fruit", top_k=2)
+        self.assertEqual(len(results), 2)
+        self.assertGreaterEqual(results[0][1], results[1][1])
+        self.assertIn("apple banana fruit", results[0][0])
+        answer = rag.query("apple fruit")
+        self.assertIn("文档内容", answer)
+        self.assertIn("apple", answer)
+
+    def test_rag_rejects_invalid_overlap(self):
+        with self.assertRaises(ValueError):
+            submission.SimpleRAG(BagOfWordsEmbedder(), EchoLLM(), chunk_size=4, overlap=4)
+
+    def test_benchmark_summary_reports_core_slo_metrics(self):
+        result = submission.summarize_benchmark([100.0, 20.0, 30.0, 40.0], generated_tokens=3, memory_gb=1.5)
+        self.assertEqual(result["ttft_ms"], 100.0)
+        self.assertAlmostEqual(result["ms_per_token"], 30.0)
+        self.assertAlmostEqual(result["tokens_per_second"], 3 / 0.19)
+        self.assertEqual(result["memory_gb"], 1.5)
+        self.assertGreaterEqual(result["p95_ms"], result["ms_per_token"])
+
+    def test_lsh_returns_best_same_bucket_candidate(self):
+        memory = submission.LSHMemory(dim=2, n_bits=1, seed=0)
+        memory.planes = torch.tensor([[1.0, 0.0]])
+        memory.add(torch.tensor([1.0, 0.0]), "near")
+        memory.add(torch.tensor([0.2, 1.0]), "far")
+        memory.add(torch.tensor([-1.0, 0.0]), "other_bucket")
+        self.assertEqual(memory.query(torch.tensor([0.9, 0.1])), "near")
+        self.assertEqual(memory.query(torch.tensor([-0.9, 0.1])), "other_bucket")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

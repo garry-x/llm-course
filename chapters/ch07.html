@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>训练的主线只有四步：取一段 token、让模型预测下一个 token、用交叉熵计算错误、反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练是大规模优化专题，第一遍可作为“知道为什么需要它们”。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 6 章 GPTModel、交叉熵、optimizer 的基本概念。</li>
+    <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释 perplexity、AdamW、warmup、gradient clipping 与混合精度的作用。</li>
+    <li><strong>课前阅读：</strong>阅读 cross-entropy/MLE 复习材料、AdamW 论文摘要和 Chinchilla scaling law 摘要。</li>
+    <li><strong>课后阅读：</strong>阅读 DeepSpeed/ZeRO、FSDP、DeepSeek-V3 FP8 训练段落，区分单机教学实现与大规模训练系统。</li>
     <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity 变化的训练循环。</li>
     <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
+    <li><strong>评估证据：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
 </section>
 
@@ -58,42 +62,45 @@
   <p>大语言模型的核心训练目标是 <strong>Next-token Prediction</strong>。但这不仅仅是一个"任务"——它的数学本质是<strong>最大似然估计</strong>（Maximum Likelihood Estimation, MLE）。理解这一点，你才能真正理解为什么这个损失函数是"正确"的。</p>
 
   <h4>自回归分解：链式法则</h4>
-  <p>给定一个 token 序列 <span class="katex-inline" data-expr="(x_1, x_2, \ldots, x_T)"></span>，其联合概率可以通过概率的<strong>链式法则</strong>分解为：</p>
+  <p>给定一个 token 序列 <span class="katex-inline" data-expr="(x_1, x_2, \ldots, x_T)" aria-label="(x_1, x_2, \ldots, x_T)" role="img"></span>，其联合概率可以通过概率的<strong>链式法则</strong>分解为：</p>
   <div class="math-box"><div class="label">公式 7.1 自回归分解</div>
-    <div class="katex" data-expr="p(x_1, x_2, \ldots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, x_2, \ldots, x_{t-1})"></div>
+    <div class="katex" data-expr="p(x_1, x_2, \ldots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, x_2, \ldots, x_{t-1})" aria-label="p(x_1, x_2, \ldots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, x_2, \ldots, x_{t-1})" role="img"></div>
   </div>
   <p>这就是"自回归"（autoregressive）的严格数学定义——模型的输出依赖于自身的先前输出。这个分解是<strong>精确的</strong>，没有任何近似（在概率意义上）。</p>
 
   <h4>从联合概率到 MLE 目标</h4>
-  <p>假设我们的训练数据 <span class="katex-inline" data-expr="\mathcal{D} = \{\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(N)}\}"></span> 包含 N 个独立序列。在 MLE 框架下，我们想要找到参数 <span class="katex-inline" data-expr="\theta"></span> 使得观测数据的似然最大化：</p>
+  <p>假设我们的训练数据 <span class="katex-inline" data-expr="\mathcal{D} = \{\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(N)}\}" aria-label="\mathcal{D} = \{\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(N)}\}" role="img"></span> 包含 N 个独立序列。在 MLE 框架下，我们想要找到参数 <span class="katex-inline" data-expr="\theta" aria-label="\theta" role="img"></span> 使得观测数据的似然最大化：</p>
   <div class="math-box"><div class="label">公式 7.2 最大似然估计</div>
-    <div class="katex" data-expr="\theta_{\text{MLE}} = \arg\max_\theta \prod_{i=1}^{N} p(\mathbf{x}^{(i)}; \theta)"></div>
+    <div class="katex" data-expr="\theta_{\text{MLE}} = \arg\max_\theta \prod_{i=1}^{N} p(\mathbf{x}^{(i)}; \theta)" aria-label="\theta_{\text{MLE}} = \arg\max_\theta \prod_{i=1}^{N} p(\mathbf{x}^{(i)}; \theta)" role="img"></div>
   </div>
   <p>取对数将乘积转化为求和（便于优化）：</p>
   <div class="math-box"><div class="label">公式 7.3 对数似然</div>
-    <div class="katex" data-expr="\mathcal{L}(\theta) = \sum_{i=1}^{N} \log p(\mathbf{x}^{(i)}; \theta) = \sum_{i=1}^{N} \sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})"></div>
+    <div class="katex" data-expr="\mathcal{L}(\theta) = \sum_{i=1}^{N} \log p(\mathbf{x}^{(i)}; \theta) = \sum_{i=1}^{N} \sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})" aria-label="\mathcal{L}(\theta) = \sum_{i=1}^{N} \log p(\mathbf{x}^{(i)}; \theta) = \sum_{i=1}^{N} \sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})" role="img"></div>
   </div>
   <p>等价于最小化<strong>负对数似然</strong>（Negative Log-Likelihood, NLL）：</p>
   <div class="math-box"><div class="label">公式 7.4 NLL 损失（等价于交叉熵）</div>
-    <div class="katex" data-expr="\mathcal{L}_{\text{NLL}} = -\frac{1}{NT}\sum_{i=1}^{N}\sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})"></div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{NLL}} = -\frac{1}{NT}\sum_{i=1}^{N}\sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})" aria-label="\mathcal{L}_{\text{NLL}} = -\frac{1}{NT}\sum_{i=1}^{N}\sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})" role="img"></div>
   </div>
 
   <h4>离散分布的参数化：Softmax</h4>
-  <p>每个条件概率 <span class="katex-inline" data-expr="p_\theta(x_t \mid x_{&lt;t})"></span> 是一个词表上的 categorical 分布。模型最后一层输出 <strong>logits</strong> <span class="katex-inline" data-expr="\mathbf{z} \in \mathbb{R}^{V}"></span>（V 是词表大小），通过 softmax 转换为概率：</p>
+  <p>每个条件概率 <span class="katex-inline" data-expr="p_\theta(x_t \mid x_{&lt;t})" aria-label="p_\theta(x_t \mid x_{&lt;t})" role="img"></span> 是一个词表上的 categorical 分布。模型最后一层输出 <strong>logits</strong> <span class="katex-inline" data-expr="\mathbf{z} \in \mathbb{R}^{V}" aria-label="\mathbf{z} \in \mathbb{R}^{V}" role="img"></span>（V 是词表大小），通过 softmax 转换为概率：</p>
   <div class="math-box"><div class="label">公式 7.5 Softmax 参数化</div>
-    <div class="katex" data-expr="p_\theta(x_t = v \mid x_{&lt;t}) = \frac{\exp(z_v)}{\sum_{j=1}^{V} \exp(z_j)}"></div>
+    <div class="katex" data-expr="p_\theta(x_t = v \mid x_{&lt;t}) = \frac{\exp(z_v)}{\sum_{j=1}^{V} \exp(z_j)}" aria-label="p_\theta(x_t = v \mid x_{&lt;t}) = \frac{\exp(z_v)}{\sum_{j=1}^{V} \exp(z_j)}" role="img"></div>
   </div>
-  <p>那么 <span class="katex-inline" data-expr="\log p_\theta(x_t \mid x_{&lt;t}) = z_{x_t} - \log\sum_{j=1}^{V} \exp(z_j)"></span>。这就是 <code>log_softmax</code>。</p>
+  <p>那么 <span class="katex-inline" data-expr="\log p_\theta(x_t \mid x_{&lt;t}) = z_{x_t} - \log\sum_{j=1}^{V} \exp(z_j)" aria-label="\log p_\theta(x_t \mid x_{&lt;t}) = z_{x_t} - \log\sum_{j=1}^{V} \exp(z_j)" role="img"></span>。这就是 <code>log_softmax</code>。</p>
 
   <h4>等价视角：最小化 KL 散度</h4>
-  <p>MLE 等价于最小化训练数据经验分布 <span class="katex-inline" data-expr="p_{\text{data}}"></span> 和模型分布 <span class="katex-inline" data-expr="p_\theta"></span> 之间的 KL 散度：</p>
+  <p>MLE 等价于最小化训练数据经验分布 <span class="katex-inline" data-expr="p_{\text{data}}" aria-label="p_{\text{data}}" role="img"></span> 和模型分布 <span class="katex-inline" data-expr="p_\theta" aria-label="p_\theta" role="img"></span> 之间的 KL 散度：</p>
   <div class="math-box"><div class="label">公式 7.6 KL 散度等价性</div>
     <div class="katex" data-expr="\begin{aligned}
     \text{KL}(p_{\text{data}} \parallel p_\theta) &amp;= \sum_x p_{\text{data}}(x) \log\frac{p_{\text{data}}(x)}{p_\theta(x)} \\
     &amp;= -\underbrace{\sum_x p_{\text{data}}(x) \log p_\theta(x)}_{\text{交叉熵}} + \underbrace{H(p_{\text{data}})}_{\text{常数}}
-    \end{aligned}"></div>
+    \end{aligned}" aria-label="\begin{aligned}
+    \text{KL}(p_{\text{data}} \parallel p_\theta) &amp;= \sum_x p_{\text{data}}(x) \log\frac{p_{\text{data}}(x)}{p_\theta(x)} \\
+    &amp;= -\underbrace{\sum_x p_{\text{data}}(x) \log p_\theta(x)}_{\text{交叉熵}} + \underbrace{H(p_{\text{data}})}_{\text{常数}}
+    \end{aligned}" role="img"></div>
   </div>
-  <p>由于 <span class="katex-inline" data-expr="H(p_{\text{data}})"></span> 是常数（与 <span class="katex-inline" data-expr="\theta"></span> 无关），最小化 KL 散度等价于最小化交叉熵，等价于 MLE。<strong>三个视角是同一个目标</strong>。</p>
+  <p>由于 <span class="katex-inline" data-expr="H(p_{\text{data}})" aria-label="H(p_{\text{data}})" role="img"></span> 是常数（与 <span class="katex-inline" data-expr="\theta" aria-label="\theta" role="img"></span> 无关），最小化 KL 散度等价于最小化交叉熵，等价于 MLE。<strong>三个视角是同一个目标</strong>。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心启示：</strong>语言建模的"预测下一个 token"不是人为设计的任务，而是 MLE 框架下对离散序列分布建模的<strong>自然结果</strong>。如果你改变任务（如去噪自编码、填空），你实际上改变了概率分解方式，也就是改变了模型学习的内容。</div></div>
 </section>
 
@@ -104,27 +111,27 @@
   <h3>7.2 困惑度 (Perplexity)</h3>
   <p><strong>困惑度 (Perplexity, PPL)</strong> 是语言模型最常用的评估指标，定义为 NLL 的指数化：</p>
   <div class="math-box"><div class="label">公式 7.7 困惑度</div>
-    <div class="katex" data-expr="\text{PPL}(\mathbf{x}) = \exp\left(-\frac{1}{T}\sum_{t=1}^{T} \log p_\theta(x_t \mid x_{&lt;t})\right) = \exp(\mathcal{L}_{\text{NLL}})"></div>
+    <div class="katex" data-expr="\text{PPL}(\mathbf{x}) = \exp\left(-\frac{1}{T}\sum_{t=1}^{T} \log p_\theta(x_t \mid x_{&lt;t})\right) = \exp(\mathcal{L}_{\text{NLL}})" aria-label="\text{PPL}(\mathbf{x}) = \exp\left(-\frac{1}{T}\sum_{t=1}^{T} \log p_\theta(x_t \mid x_{&lt;t})\right) = \exp(\mathcal{L}_{\text{NLL}})" role="img"></div>
   </div>
-  <p>PPL 的直观含义：<strong>模型在每个位置平均有多少个"候选 token 感到不确定"</strong>。</p>
+  <p>PPL 的直观含义可以近似理解为：在该数据集和分词方式下，模型每个位置的平均不确定性有多大。这个解释只是一种便于记忆的口径，不能把 PPL 当作候选 token 个数或事实正确率。</p>
   <ul>
-    <li><strong>PPL = 1</strong> — 完美模型，总是 100% 确定下一个 token</li>
-    <li><strong>PPL = 50</strong> — 模型在每一步平均在 ~50 个 token 之间犹豫</li>
-    <li><strong>PPL = V</strong> — 随机猜测（V 为词表大小）</li>
+    <li><strong>PPL = 1</strong> — 在评测样本上把真实 token 的概率推到 1；现实语言数据通常存在固有不确定性，因此这只是极限情形</li>
+    <li><strong>PPL = 50</strong> — 平均 NLL 为 <span class="katex-inline" data-expr="\log 50" aria-label="\log 50" role="img"></span>，可粗略理解为不确定性较高</li>
+    <li><strong>PPL = V</strong> — 若模型在大小为 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的词表上均匀分布，则困惑度为 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span></li>
   </ul>
-  <p>一个深刻的性质：如果模型分布是 <span class="katex-inline" data-expr="p_\theta"></span>，真实分布是 <span class="katex-inline" data-expr="p_{\text{data}}"></span>，那么 <span class="katex-inline" data-expr="\text{PPL} = e^{\text{CE}} = e^{H(p_{\text{data}}, p_\theta)}"></span>。当 <span class="katex-inline" data-expr="p_\theta = p_{\text{data}}"></span> 时，<span class="katex-inline" data-expr="\text{PPL} = e^{H(p_{\text{data}})}"></span>——即完美模型困惑度就是数据的<strong>内在熵</strong>。所以 PPL 的下界是数据的固有不确定性。</p>
+  <p>一个深刻的性质：如果模型分布是 <span class="katex-inline" data-expr="p_\theta" aria-label="p_\theta" role="img"></span>，真实分布是 <span class="katex-inline" data-expr="p_{\text{data}}" aria-label="p_{\text{data}}" role="img"></span>，那么 <span class="katex-inline" data-expr="\text{PPL} = e^{\text{CE}} = e^{H(p_{\text{data}}, p_\theta)}" aria-label="\text{PPL} = e^{\text{CE}} = e^{H(p_{\text{data}}, p_\theta)}" role="img"></span>。当 <span class="katex-inline" data-expr="p_\theta = p_{\text{data}}" aria-label="p_\theta = p_{\text{data}}" role="img"></span> 时，<span class="katex-inline" data-expr="\text{PPL} = e^{H(p_{\text{data}})}" aria-label="\text{PPL} = e^{H(p_{\text{data}})}" role="img"></span>——即完美模型困惑度就是数据的<strong>内在熵</strong>。所以 PPL 的下界是数据的固有不确定性。</p>
 
-  <h4>实际数值参考</h4>
+  <h4>解释 PPL 时必须固定评测条件</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>模型</th><th>参数量</th><th>PPL (WikiText-2)</th><th>含义</th></tr>
-      <tr><td>随机猜测</td><td>—</td><td>~50257</td><td>均匀分布</td></tr>
-      <tr><td>GPT-2 small</td><td>124M</td><td>~25</td><td>通常 2-3 个合理候选</td></tr>
-      <tr><td>GPT-2 XL</td><td>1.5B</td><td>~16</td><td>更确定</td></tr>
-      <tr><td>Llama 3 70B</td><td>70B</td><td>~5</td><td>几乎只有一个合理候选</td></tr>
+      <tr><th>影响因素</th><th>为什么会影响 PPL</th><th>报告时怎么写</th></tr>
+      <tr><td>Tokenizer / vocab</td><td>token 粒度不同会改变序列长度和平均 NLL</td><td>写明 tokenizer 和 vocab size</td></tr>
+      <tr><td>数据集和切分</td><td>同一模型在新闻、代码、对话、书籍上的难度不同</td><td>写明 dataset、split 和过滤规则</td></tr>
+      <tr><td>上下文长度</td><td>长上下文可能降低局部困惑度，也可能引入截断差异</td><td>写明 context window 和 stride</td></tr>
+      <tr><td>评测实现</td><td>是否包含 BOS/EOS、padding、滑窗和 loss mask 会改变数值</td><td>给出命令、seed 和 loss mask 规则</td></tr>
     </table>
   </div>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>注意：</strong>PPL 只衡量模型对语言统计规律的拟合程度，不直接对应生成文本的质量。一个 PPL 很低的模型可能在事实上胡说八道——它只是"很流畅地胡说八道"。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>注意：</strong>PPL 只衡量模型对给定 token 序列的概率拟合，不直接对应生成文本的事实性、指令遵循或安全性。报告 PPL 时必须同时报告评测条件；不同 tokenizer 或数据切分下的数值不能直接横向比较。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -134,7 +141,7 @@
   <h3>7.3 编程练习 1：实现 DataLoader</h3>
   <p>训练的第一步是将文本数据转换为模型可以消费的格式。核心流程：</p>
   <p><strong>文本 → Tokenizer → Token IDs → 分片为固定长度块 → 批量 → 模型</strong></p>
-  <p>关键设计：每个样本的<strong>输入和目标</strong>是<strong>右移一位</strong>的关系——输入是 <span class="katex-inline" data-expr="t_1, t_2, \ldots, t_{n-1}"></span>，目标是 <span class="katex-inline" data-expr="t_2, t_3, \ldots, t_n"></span>。这是因为模型在位置 t 的任务是预测位置 t+1 的 token。</p>
+  <p>关键设计：每个样本的<strong>输入和目标</strong>是<strong>右移一位</strong>的关系——输入是 <span class="katex-inline" data-expr="t_1, t_2, \ldots, t_{n-1}" aria-label="t_1, t_2, \ldots, t_{n-1}" role="img"></span>，目标是 <span class="katex-inline" data-expr="t_2, t_3, \ldots, t_n" aria-label="t_2, t_3, \ldots, t_n" role="img"></span>。这是因为模型在位置 t 的任务是预测位置 t+1 的 token。</p>
 
   <div class="coding-exercise">
     <h4>练习 1：构建 DataLoader</h4>
@@ -173,13 +180,14 @@ class TextDataset(Dataset):
         self.block_size = block_size
 
     def __len__(self):
-        return len(self.tokens) // self.block_size
+        # 需要额外 1 个 token 作为 next-token target
+        return (len(self.tokens) - 1) // self.block_size
 
     def __getitem__(self, idx):
         start = idx * self.block_size
         end = start + self.block_size
         x = torch.tensor(self.tokens[start:end], dtype=torch.long)
-        y = torch.tensor(self.tokens[start+1:end+1], dtype=torch.long)
+        y = torch.tensor(self.tokens[start + 1:end + 1], dtype=torch.long)
         return x, y
 
 def create_dataloader(data_path, tokenizer, batch_size=8,
@@ -187,7 +195,7 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
     dataset = TextDataset(data_path, tokenizer, block_size)
     return DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle,
-        num_workers=2, pin_memory=True, drop_last=True,
+        num_workers=2, pin_memory=torch.cuda.is_available(), drop_last=True,
     )</div>
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么在 <code>__init__</code> 而非 <code>__getitem__</code> 中 tokenize？</strong>每次调用 <code>__getitem__</code> 都做 tokenize 会慢几百倍。一次性 tokenize 整个语料然后通过整数索引切片——这是标准做法，也是 PyTorch 官方教程推荐的方式。</p>
     </div>
@@ -202,12 +210,12 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   <p>语言建模使用的损失函数是<strong>交叉熵</strong>。前面我们已经从 MLE 和 KL 散度两个角度推导了它的正确性，现在深入它的数值计算细节。</p>
 
   <h4>数值不稳定性的根源</h4>
-  <p>直接用"softmax 后取 log"是数值不稳定的。当 logits 值很大时（LLM 最后一层的 logits 值可达 30+），<span class="katex-inline" data-expr="e^{30} \approx 1.07 \times 10^{13}"></span> 已经接近 FP16 上限（<span class="katex-inline" data-expr="6.5 \times 10^4"></span>）的 10 亿倍——FP16 会直接溢出到 inf。</p>
-  <p>标准解决方案是 <strong>Log-Sum-Exp Trick</strong>：提取最大值 <span class="katex-inline" data-expr="z_{\max} = \max_j z_j"></span>：</p>
+  <p>直接用"softmax 后取 log"是数值不稳定的。当 logits 值很大时（LLM 最后一层的 logits 值可达 30+），<span class="katex-inline" data-expr="e^{30} \approx 1.07 \times 10^{13}" aria-label="e^{30} \approx 1.07 \times 10^{13}" role="img"></span> 已经接近 FP16 上限（<span class="katex-inline" data-expr="6.5 \times 10^4" aria-label="6.5 \times 10^4" role="img"></span>）的 10 亿倍——FP16 会直接溢出到 inf。</p>
+  <p>标准解决方案是 <strong>Log-Sum-Exp Trick</strong>：提取最大值 <span class="katex-inline" data-expr="z_{\max} = \max_j z_j" aria-label="z_{\max} = \max_j z_j" role="img"></span>：</p>
   <div class="math-box"><div class="label">公式 7.8 数值稳定的 LogSoftmax</div>
-    <div class="katex" data-expr="\log\text{Softmax}(z_i) = z_i - z_{\max} - \log\sum_j e^{z_j - z_{\max}}"></div>
+    <div class="katex" data-expr="\log\text{Softmax}(z_i) = z_i - z_{\max} - \log\sum_j e^{z_j - z_{\max}}" aria-label="\log\text{Softmax}(z_i) = z_i - z_{\max} - \log\sum_j e^{z_j - z_{\max}}" role="img"></div>
   </div>
-  <p>因为 <span class="katex-inline" data-expr="z_j - z_{\max} \leq 0"></span>，所以 <span class="katex-inline" data-expr="e^{z_j - z_{\max}} \leq 1"></span>，在任意精度下都不可能溢出。PyTorch 的 <code>F.cross_entropy</code> 和 <code>F.log_softmax</code> 都内置了这个技巧。</p>
+  <p>因为 <span class="katex-inline" data-expr="z_j - z_{\max} \leq 0" aria-label="z_j - z_{\max} \leq 0" role="img"></span>，所以 <span class="katex-inline" data-expr="e^{z_j - z_{\max}} \leq 1" aria-label="e^{z_j - z_{\max}} \leq 1" role="img"></span>，在任意精度下都不可能溢出。PyTorch 的 <code>F.cross_entropy</code> 和 <code>F.log_softmax</code> 都内置了这个技巧。</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>另一个常见错误：</strong>在计算交叉熵时，必须将 <code>(batch, seq_len, vocab_size)</code> 展平为 <code>(batch*seq_len, vocab_size)</code>。如果不对 logits 做 <code>.view(-1, vocab_size)</code>，<code>F.softmax</code> 会在错误的维度上做归一化——它会在整个 batch+seq 联合空间上做 softmax，而不是在每个 token 位置上单独做。</div></div>
 </section>
 
@@ -275,20 +283,20 @@ def cross_entropy_manual(logits, targets):
 <!-- ================================================================ -->
 <section class="card" id="s7-6">
   <h3>7.6 学习率调度的理论理解</h3>
-  <p>现代 LLM 训练几乎总是使用 <strong>Warmup + Cosine Decay</strong> 调度。这不是随意的选择——它有深刻的优化理论支撑。</p>
+  <p>许多现代 LLM 训练使用 <strong>Warmup + Cosine Decay</strong> 或相近的平滑衰减调度。这不是随意的选择：warmup 可以缓解训练初期的优化不稳定，平滑 decay 则减少学习率突变带来的扰动。</p>
 
   <h4>为什么需要 Warmup？</h4>
-  <p>Adam 在第一步时，<span class="katex-inline" data-expr="m_1 = (1-\beta_1)g_1"></span>，<span class="katex-inline" data-expr="v_1 = (1-\beta_2)g_1^2"></span>。不带 warmup 时，初始更新步长约等价于：</p>
+  <p>Adam 在第一步时，<span class="katex-inline" data-expr="m_1 = (1-\beta_1)g_1" aria-label="m_1 = (1-\beta_1)g_1" role="img"></span>，<span class="katex-inline" data-expr="v_1 = (1-\beta_2)g_1^2" aria-label="v_1 = (1-\beta_2)g_1^2" role="img"></span>。不带 warmup 时，初始更新步长约等价于：</p>
   <div class="math-box"><div class="label">公式 7.9 Adam 初始步长（无 warmup）</div>
-    <div class="katex" data-expr="\Delta\theta_1 \approx -\eta \cdot \text{sign}(g_1) \cdot \frac{\sqrt{1-\beta_2}}{1-\beta_1} \approx -2\eta \cdot \text{sign}(g_1)"></div>
+    <div class="katex" data-expr="\Delta\theta_1 \approx -\eta \cdot \text{sign}(g_1) \cdot \frac{\sqrt{1-\beta_2}}{1-\beta_1} \approx -2\eta \cdot \text{sign}(g_1)" aria-label="\Delta\theta_1 \approx -\eta \cdot \text{sign}(g_1) \cdot \frac{\sqrt{1-\beta_2}}{1-\beta_1} \approx -2\eta \cdot \text{sign}(g_1)" role="img"></div>
   </div>
-  <p>这意味着初始有效步长约 <span class="katex-inline" data-expr="2\eta"></span>（对于 <span class="katex-inline" data-expr="\beta_1=0.9, \beta_2=0.95"></span>）。模型在训练初期使用过大的步长，可能直接 diverges。Warmup 让学习率从 0 线性增长到 <span class="katex-inline" data-expr="\eta"></span>，给动量一个"预热"时间。</p>
+  <p>这意味着初始有效步长约 <span class="katex-inline" data-expr="2\eta" aria-label="2\eta" role="img"></span>（对于 <span class="katex-inline" data-expr="\beta_1=0.9, \beta_2=0.95" aria-label="\beta_1=0.9, \beta_2=0.95" role="img"></span>）。模型在训练初期使用过大的步长，可能直接 diverges。Warmup 让学习率从 0 线性增长到 <span class="katex-inline" data-expr="\eta" aria-label="\eta" role="img"></span>，给动量一个"预热"时间。</p>
 
   <h4>为什么用 Cosine Decay 而非 Step Decay？</h4>
   <p>Step Decay（如每 30 epoch 衰减 10 倍）造成的学习率"跳变"会在损失函数中引起对应的震荡——学习率突然变小，模型从"探索"突然进入"利用"，损失函数都会产生一个跳变。Cosine Decay 的学习率连续平滑变化，损失函数也平滑下降。</p>
 
   <h4>典型的调度曲线形状</h4>
-  <p>Cosine Decay 在早期保持较高的学习率（快速探索参数空间），在中期快速下降（找到好的局部区域），在后期缓慢趋近于 0（精细收敛）。这种"快-快-慢"的模式被证明对大规模训练最有效。</p>
+  <p>Cosine Decay 在早期保持较高的学习率（快速探索参数空间），在中期快速下降（找到好的局部区域），在后期缓慢趋近于 0（精细收敛）。这种"快-快-慢"的模式在大规模训练中很常见；具体效果仍依赖 batch size、模型规模、优化器、训练 token 预算和是否需要持续预训练。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -299,7 +307,7 @@ def cross_entropy_manual(logits, targets):
   <p>AdamW 是目前 LLM 训练中最广泛使用的优化器。它的核心创新是<strong>解耦的权重衰减</strong>（Decoupled Weight Decay）</p>
 
   <h4>为什么需要解耦？</h4>
-  <p>在标准 Adam 中，<span class="katex-inline" data-expr="L_2"></span> 正则化在损失函数中加入 <span class="katex-inline" data-expr="\lambda \|\theta\|^2"></span>，其梯度为 <span class="katex-inline" data-expr="2\lambda\theta"></span>。但 Adam 的自适应学习率会<strong>不正确地缩放</strong>这个正则化项——梯度大的参数正则化被缩小，梯度小的参数正则化被放大。AdamW 将权重衰减放在 Adam 更新<strong>之后</strong>，独立于梯度计算和动量：</p>
+  <p>在标准 Adam 中，<span class="katex-inline" data-expr="L_2" aria-label="L_2" role="img"></span> 正则化在损失函数中加入 <span class="katex-inline" data-expr="\lambda \|\theta\|^2" aria-label="\lambda \|\theta\|^2" role="img"></span>，其梯度为 <span class="katex-inline" data-expr="2\lambda\theta" aria-label="2\lambda\theta" role="img"></span>。但 Adam 的自适应学习率会<strong>不正确地缩放</strong>这个正则化项——梯度大的参数正则化被缩小，梯度小的参数正则化被放大。AdamW 将权重衰减放在 Adam 更新<strong>之后</strong>，独立于梯度计算和动量：</p>
 
   <div class="math-box"><div class="label">公式 7.10 AdamW 更新规则</div>
     <div class="katex" data-expr="\begin{aligned}
@@ -308,9 +316,15 @@ def cross_entropy_manual(logits, targets):
       \hat{m}_t &amp;= m_t / (1 - \beta_1^t) \\
       \hat{v}_t &amp;= v_t / (1 - \beta_2^t) \\
       \theta_t &amp;= \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} - \eta \lambda \theta_{t-1}
-      \end{aligned}"></div>
+      \end{aligned}" aria-label="\begin{aligned}
+      m_t &amp;= \beta_1 m_{t-1} + (1 - \beta_1) g_t \\
+      v_t &amp;= \beta_2 v_{t-1} + (1 - \beta_2) g_t^2 \\
+      \hat{m}_t &amp;= m_t / (1 - \beta_1^t) \\
+      \hat{v}_t &amp;= v_t / (1 - \beta_2^t) \\
+      \theta_t &amp;= \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} - \eta \lambda \theta_{t-1}
+      \end{aligned}" role="img"></div>
   </div>
-  <p>最后一行中的 <span class="katex-inline" data-expr="-\eta \lambda \theta_{t-1}"></span> 就是<strong>解耦的权重衰减</strong>——它不参与动量计算，直接作用在参数上。</p>
+  <p>最后一行中的 <span class="katex-inline" data-expr="-\eta \lambda \theta_{t-1}" aria-label="-\eta \lambda \theta_{t-1}" role="img"></span> 就是<strong>解耦的权重衰减</strong>——它不参与动量计算，直接作用在参数上。</p>
 
   <div class="coding-exercise">
     <h4>练习 3：实现 AdamW 优化器</h4>
@@ -360,7 +374,7 @@ class AdamW:
             # 4. 解耦权重衰减
             if self.weight_decay > 0:
                 p.data -= self.lr * self.weight_decay * p.data</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么偏置修正是必要的？</strong>Adam 初始化 <span class="katex-inline" data-expr="m_0 = 0, v_0 = 0"></span>，所以初期几步的动量估计严重偏向 0。偏置修正通过除以 <span class="katex-inline" data-expr="1-\beta^t"></span> 来补偿这种偏差。随着 t 增大，<span class="katex-inline" data-expr="1-\beta^t \to 1"></span>，修正自动消失。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么偏置修正是必要的？</strong>Adam 初始化 <span class="katex-inline" data-expr="m_0 = 0, v_0 = 0" aria-label="m_0 = 0, v_0 = 0" role="img"></span>，所以初期几步的动量估计严重偏向 0。偏置修正通过除以 <span class="katex-inline" data-expr="1-\beta^t" aria-label="1-\beta^t" role="img"></span> 来补偿这种偏差。随着 t 增大，<span class="katex-inline" data-expr="1-\beta^t \to 1" aria-label="1-\beta^t \to 1" role="img"></span>，修正自动消失。</p>
     </div>
   </div>
 </section>
@@ -426,12 +440,12 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
   <h4>为什么正交化有助于优化？</h4>
   <p>当权重矩阵的特征值分布不均匀时（某些方向的变化幅度远大于其他方向），梯度下降的效率很低——模型在"陡峭"方向上震荡，在"平缓"方向上进展缓慢。Muon 通过 <strong>Newton-Schulz 迭代</strong> 将梯度矩阵投影到最近的正交矩阵：</p>
   <div class="math-box"><div class="label">公式 7.11 Newton-Schulz 迭代</div>
-    <div class="katex" data-expr="X_{k+1} = X_k \cdot \frac{3I - X_k^\top X_k}{2}"></div>
+    <div class="katex" data-expr="X_{k+1} = X_k \cdot \frac{3I - X_k^\top X_k}{2}" aria-label="X_{k+1} = X_k \cdot \frac{3I - X_k^\top X_k}{2}" role="img"></div>
   </div>
-  <p>这个迭代快速收敛到 <span class="katex-inline" data-expr="G"></span> 的极分解 <span class="katex-inline" data-expr="G = U \Sigma V^\top \to UV^\top"></span>——即去掉了奇异值 <span class="katex-inline" data-expr="\Sigma"></span>，只保留正交方向。5 次迭代通常就足够收敛。直观理解：它保留了梯度的<strong>方向信息</strong>但丢弃了<strong>幅度信息</strong>——因为幅度已经被学习率控制。</p>
+  <p>这个迭代快速收敛到 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 的极分解 <span class="katex-inline" data-expr="G = U \Sigma V^\top \to UV^\top" aria-label="G = U \Sigma V^\top \to UV^\top" role="img"></span>——即去掉了奇异值 <span class="katex-inline" data-expr="\Sigma" aria-label="\Sigma" role="img"></span>，只保留正交方向。5 次迭代通常就足够收敛。直观理解：它保留了梯度的<strong>方向信息</strong>但丢弃了<strong>幅度信息</strong>——因为幅度已经被学习率控制。</p>
 
   <h4>Muon vs. AdamW 的内存对比</h4>
-  <p>AdamW 需要维护 <span class="katex-inline" data-expr="m_t"></span> 和 <span class="katex-inline" data-expr="v_t"></span> 两个状态——每个参数额外 2 个张量。Muon 只维护<strong>一个动量缓冲</strong>（它正交化的是动量、而非原始梯度），因此优化器显存约<strong>减半</strong>。训练 70B 模型时（每个状态按 2 bytes 计）：AdamW 约 <span class="katex-inline" data-expr="70\text{B}\times 2\times 2 = 280"></span> GB，Muon 约 140 GB——节省约 140GB。</p>
+  <p>AdamW 需要维护 <span class="katex-inline" data-expr="m_t" aria-label="m_t" role="img"></span> 和 <span class="katex-inline" data-expr="v_t" aria-label="v_t" role="img"></span> 两个状态——每个参数额外 2 个张量。Muon 只维护<strong>一个动量缓冲</strong>（它正交化的是动量、而非原始梯度），因此优化器显存约<strong>减半</strong>。训练 70B 模型时（每个状态按 2 bytes 计）：AdamW 约 <span class="katex-inline" data-expr="70\text{B}\times 2\times 2 = 280" aria-label="70\text{B}\times 2\times 2 = 280" role="img"></span> GB，Muon 约 140 GB——节省约 140GB。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>适用条件：</strong>Muon 对明确具有矩阵结构的参数（<code>nn.Linear</code> 权重、<code>nn.Embedding</code> 权重）效果最好。bias 和 LayerNorm 的 gamma/beta 是 1D 的，不适合 Muon，应退化为标准 SGD 或 AdamW。DeepSeek-V4 将所有 ≥2D 且两个维度都 ≥16 的参数使用 Muon。</div></div>
 </section>
 
@@ -439,8 +453,8 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
 <!-- 7.10 FP8/FP4 Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s7-10">
-  <h3>7.10 FP8/FP4 混合精度训练——DeepSeek-V3 的首创</h3>
-  <p>DeepSeek-V3 是第一个成功实现<strong>大规模 FP8 训练</strong>的 LLM。FP8 相比 BF16 节省 50% 显存，计算速度提升 2 倍，且几乎不影响模型质量。</p>
+  <h3>7.10 FP8/FP4 混合精度训练——DeepSeek-V3 的大规模案例</h3>
+  <p>DeepSeek-V3 技术报告把 FP8 mixed precision 作为其大规模训练效率的重要组成部分。FP8 相比 BF16 能降低激活/通信/部分矩阵计算的数据宽度，并在合适硬件上提升吞吐；实际收益取决于硬件、kernel、缩放策略和误差控制，不能简单写成固定 2 倍或完全无质量损失。</p>
 
   <h4>FP8 的两种格式</h4>
   <ul>
@@ -449,15 +463,15 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
   </ul>
 
   <h4>Block-wise 缩放</h4>
-  <p>FP8 不是简单地"截断"FP32 值。它对每个小的块（block，通常 128 个元素）计算一个<strong>缩放因子</strong> <span class="katex-inline" data-expr="s"></span>：</p>
+  <p>FP8 不是简单地"截断"FP32 值。它对每个小的块（block，通常 128 个元素）计算一个<strong>缩放因子</strong> <span class="katex-inline" data-expr="s" aria-label="s" role="img"></span>：</p>
   <div class="math-box"><div class="label">公式 7.12 FP8 量化</div>
-    <div class="katex" data-expr="\text{Quant}(x) = \text{round}(\text{clamp}(x / s, -\text{max}, \text{max})), \quad \text{Dequant}(x_q) = x_q \times s"></div>
+    <div class="katex" data-expr="\text{Quant}(x) = \text{round}(\text{clamp}(x / s, -\text{max}, \text{max})), \quad \text{Dequant}(x_q) = x_q \times s" aria-label="\text{Quant}(x) = \text{round}(\text{clamp}(x / s, -\text{max}, \text{max})), \quad \text{Dequant}(x_q) = x_q \times s" role="img"></div>
   </div>
-  <p>缩放因子 <span class="katex-inline" data-expr="s = \max(|x|) / \text{max}"></span> 确保了块内的最大值被映射到 FP8 的最大可表示值。不同块的缩放因子不同——数值大的区域精度低，数值小的区域精度高。这类似于<strong>非均匀量化</strong>：通过缩放将信息集中在高分辨率区域。</p>
+  <p>缩放因子 <span class="katex-inline" data-expr="s = \max(|x|) / \text{max}" aria-label="s = \max(|x|) / \text{max}" role="img"></span> 确保了块内的最大值被映射到 FP8 的最大可表示值。不同块的缩放因子不同——数值大的区域精度低，数值小的区域精度高。这类似于<strong>非均匀量化</strong>：通过缩放将信息集中在高分辨率区域。</p>
 
   <h4>DeepSeek-V4 FP4 QAT</h4>
-  <p>DeepSeek-V4 进一步引入 FP4 量化感知训练（QAT）。FP4 只有 16 个可表示的值，几乎是将权重压缩到了"可数"的程度。QAT 在训练过程中模拟量化误差（使用 Straight-Through Estimator），让模型学会适应低精度表示。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>实际收益：</strong>一个 671B 的 DeepSeek-V4 在 FP4 下仅需约 170GB 存储，可以在单台 8×H100 节点上加载。对照 BF16 需要 ~1.2TB。QAT 的代价是需要额外的训练阶段来适应量化精度。</div></div>
+  <p>DeepSeek-V4 模型卡进一步把 FP4 量化感知训练（QAT）列为低精度能力之一。FP4 只有 16 个可表示的值，QAT 在训练过程中模拟量化误差（常见实现会用 Straight-Through Estimator 一类近似），让模型适应低精度表示。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>实际收益如何估算：</strong>仅按权重位宽粗算，FP4 权重存储约为 BF16 的 1/4；但真实部署还要计入 scale/metadata、KV cache、激活、通信 buffer、并行切分和框架开销。因此课程报告应写成“按配置估算 + 实测显存”，不要把单个模型卡数字外推到所有模型。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -490,13 +504,20 @@ model = train(model, loader, optimizer, scheduler, config)
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
 import time, math
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 
 def train(model, dataloader, optimizer, scheduler, config,
           loss_history=None):
     model.train()
     device = next(model.parameters()).device
-    scaler = GradScaler(enabled=(config.dtype == 'float16'))
+    dtype_map = {
+        'float16': torch.float16,
+        'bfloat16': torch.bfloat16,
+        'float32': torch.float32,
+    }
+    amp_dtype = dtype_map.get(config.dtype, config.dtype)
+    use_amp = config.use_amp and device.type == 'cuda'
+    scaler = GradScaler(device.type, enabled=(use_amp and amp_dtype == torch.float16))
 
     for epoch in range(config.num_epochs):
         epoch_loss = 0.0
@@ -507,10 +528,10 @@ def train(model, dataloader, optimizer, scheduler, config,
             optimizer.zero_grad()
 
             # 混合精度前向
-            with autocast(dtype=config.dtype, enabled=config.use_amp):
+            with autocast(device_type=device.type, dtype=amp_dtype, enabled=use_amp):
                 logits = model(x)
                 loss = F.cross_entropy(
-                    logits.view(-1, logits.size(-1)), y.view(-1)
+                    logits.reshape(-1, logits.size(-1)), y.reshape(-1)
                 )
 
             # 反向传播（通过 scaler 防止下溢出）
@@ -698,7 +719,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     GPU2: [F1→][B3←→][B2←][B1←][F2→][F3→]
     → = 前向, ← = 反向, ←→ = 通信重叠
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>实际效果：</strong>DeepSeek-V3 在 2048 块 H800 GPU 上实现 54.2% 的模型 FLOPs 利用率 (MFU)。作为对比，Llama 3 405B 在 16384 块 GPU 上的 MFU 约为 38%。高效的并行策略直接转化为更低的训练成本和更短的训练时间。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>实际效果：</strong>DeepSeek-V3 技术报告给出 2048 块 H800 GPU、54.2% MFU 的训练系统案例；Llama 3 405B 报告中的训练集群与 MFU 数字来自另一套模型、硬件和调度设置。它们适合作为“并行调度会影响有效算力”的案例，不应直接比较成通用优劣结论；成本和训练时长还取决于数据、硬件价格、通信拓扑、checkpoint 策略和失败重跑。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -756,7 +777,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     <li><strong>ZeRO-2：</strong>分片梯度 + 优化器状态——节省 8×</li>
     <li><strong>ZeRO-3：</strong>分片参数 + 梯度 + 优化器状态——节省 N×（N=GPU 数）</li>
   </ul>
-  <p>ZeRO-3 使 405B 模型可在 128 个 A100 上训练——每个 GPU 仅需 ~3.2B 参数切片。</p>
+  <p>ZeRO-3 的核心收益是把参数、梯度和优化器状态分摊到多张 GPU 上，使单卡显存压力随并行规模下降。粗略地说，405B 参数若平均分到 128 张 GPU，每卡参数切片约为 3.2B；但真实训练仍要容纳激活、通信 buffer、临时张量、checkpoint、并行切分和优化器状态，不能仅凭这个除法断言“可训练”。</p>
 
   <h4>FSDP (PyTorch 原生)</h4>
   <p>FSDP 是 PyTorch 的 ZeRO-3 等价方案。核心 API：</p>
@@ -766,7 +787,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   <p>前向传播前收集分片参数 (all-gather)，计算完成后<strong>立即释放</strong>，将显存峰值降低到 1/N。</p>
 
   <h4>DeepSeek DualPipe</h4>
-  <p>传统流水线并行有<strong>气泡（bubble）</strong>——GPU 在等待上游时闲置。DeepSeek V3 的 DualPipe 通过<strong>双向流水线调度</strong>将前向/反向计算与 MoE 通信完全重叠，实现近乎零气泡。</p>
+  <p>传统流水线并行有<strong>气泡（bubble）</strong>——GPU 在等待上游时闲置。DeepSeek-V3 技术报告中的 DualPipe 通过<strong>双向流水线调度</strong>重叠前向、反向和 MoE 通信，目标是显著降低 bubble；具体重叠程度取决于模型切分、通信拓扑、micro-batch 和实现细节。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>选型：</strong>单 GPU 够 → DP。装不下 → ZeRO-3/FSDP。超大规模 → TP+PP+ZeRO-3。一行 FSDP 封装即可入门。</div></div>
 </section>
 
@@ -800,7 +821,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="Perplexity 是交叉熵损失的指数化。它是模型在每个位置"平均犹豫的候选 token 数"的度量。PPL=1 表示完美，PPL=V (词表大小) 表示随机猜测。">
+  <div class="exercise" data-answer="2" data-explain="Perplexity 是交叉熵损失的指数化。它是模型在每个位置“平均犹豫的候选 token 数”的度量。PPL=1 表示完美，PPL=V (词表大小) 表示随机猜测。">
     <h4>练习 3：Perplexity 的数学定义及其物理含义是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q73" value="0"> A. 模型输出概率的倒数，衡量置信度</label>
@@ -838,6 +859,15 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

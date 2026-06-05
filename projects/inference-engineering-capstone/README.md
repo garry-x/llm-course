@@ -2,7 +2,7 @@
 
 这个项目把课程最后几章落成一个可验收的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线检查清单。
 
-默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。
+默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目的 CPU baseline、GPU/API 额度、成本记录和降级路径按 [Compute Resource and Cost Guide](../../docs/compute-resource-guide.md) 执行。
 
 ## 你要交付什么
 
@@ -123,3 +123,13 @@ python capacity_plan.py \
 - 工具调用能校验 schema、返回 `tool_calls`，并记录工具执行结果。
 - 指标能按模型、租户、状态码、错误类型聚合。
 - 限流、超时、降级和错误响应格式明确。
+
+## 项目报告 Rubric
+
+报告评分使用 [Capstone 项目报告 Rubric](../../docs/project-report-rubric.md)。推理工程报告必须额外包含：
+
+- 固定评测集 pass rate 与失败案例。
+- P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
+- 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
+- RAG、JSON structured output、tool calling 的回归用例。
+- 超时、限流、降级、格式错误和安全拒答策略。

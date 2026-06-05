@@ -68,7 +68,7 @@ class TinyLM(nn.Module):
             norm_first=True,
             activation="gelu",
         )
-        self.blocks = nn.TransformerEncoder(encoder_layer, num_layers=layers)
+        self.blocks = nn.TransformerEncoder(encoder_layer, num_layers=layers, enable_nested_tensor=False)
         self.ln_f = nn.LayerNorm(d_model)
         self.lm_head = nn.Linear(d_model, vocab_size)
 
@@ -167,12 +167,12 @@ def train(args: argparse.Namespace) -> None:
 
     model.train()
     amp_enabled = args.amp and device.type == "cuda"
-    scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
+    scaler = torch.amp.GradScaler(device.type, enabled=amp_enabled)
     start_time = time.perf_counter()
     for step in range(global_step + 1, args.steps + 1):
         iter_start = time.perf_counter()
         x, y = dataset.get_batch("train", args.batch_size, args.seq_len, device)
-        with torch.cuda.amp.autocast(enabled=amp_enabled):
+        with torch.amp.autocast(device.type, enabled=amp_enabled):
             _, loss = model(x, y)
         scaler.scale(loss).backward()
         scaler.unscale_(optimizer)

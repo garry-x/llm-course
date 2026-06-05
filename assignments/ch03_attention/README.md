@@ -1,0 +1,39 @@
+# Ch03 Scaled Dot-Product Attention 作业测试
+
+本目录把第 3 章的 5 个编程练习整理成可自动验收的作业入口，覆盖 QKV 投影、Scaled Dot-Product Attention、Causal Mask、因果注意力和注意力热力图函数。
+
+## 文件说明
+
+| 文件 | 用途 |
+|------|------|
+| `starter.py` | 学生起始代码，包含需要实现的 TODO |
+| `reference_solution.py` | 教师参考实现，用于验证测试本身 |
+| `tests.py` | `unittest` 测试，覆盖 shape、缩放、mask、因果约束和可视化返回值 |
+
+## 学生运行方式
+
+```bash
+cp assignments/ch03_attention/starter.py assignments/ch03_attention/student_solution.py
+# 编辑 student_solution.py 完成 TODO
+STUDENT_MODULE=student_solution .venv/bin/python assignments/ch03_attention/tests.py
+```
+
+也可以直接让测试加载 `starter.py`：
+
+```bash
+STUDENT_MODULE=starter .venv/bin/python assignments/ch03_attention/tests.py
+```
+
+也可以直接验证课程内置参考实现：
+
+```bash
+.venv/bin/python assignments/ch03_attention/tests.py
+```
+
+## 评分 Rubric
+
+| 项目 | 分值 | 标准 |
+|------|:--:|------|
+| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、mask 加在 softmax 前的原因、causal mask 的形状广播和复杂度 |
+| Programming parts | 55 | 实现 QKV projection、scaled dot-product attention、causal mask 和 attention visualization |
+| Analysis / style | 10 | 解释 mask 数值稳定性、attention heatmap 的局限和常见 shape bug |

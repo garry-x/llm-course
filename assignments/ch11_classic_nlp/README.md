@@ -1,0 +1,44 @@
+# Supplemental Assignment: Classic NLP and Evaluation
+
+本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 dependency parsing、BERT/MLM mask、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
+
+## Files
+
+- `starter.py`: 学生起始代码。
+- `reference_solution.py`: 参考实现。
+- `tests.py`: 可运行测试。
+
+## Run
+
+```bash
+.venv/bin/python assignments/ch11_classic_nlp/tests.py
+```
+
+默认测试 `reference_solution.py`。测试学生代码时：
+
+```bash
+STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
+```
+
+## Requirements
+
+- `attachment_scores` 计算 UAS/LAS，必须检查 heads 与 labels 长度一致。
+- `sentence_bleu` 使用 clipped n-gram precision 和 brevity penalty。
+- `rouge_l_f1` 使用最长公共子序列计算 precision、recall 和 F1。
+- `exact_match_and_f1` 对 QA 字符串做标准化，再计算 exact match 和 token F1。
+- `build_mlm_example` 根据 mask positions 生成 BERT-style masked input 和 labels。
+
+## Written Drill Expectations
+
+- 按 `classic-nlp-handout.md` 的 `I saw her` worked example，写出 stack / buffer / arcs transition table。
+- 给定一组 beam candidates，比较 sum log prob、length-normalized score 和 length penalty 后的排序。
+- 给定 BERT tokens 和 mask positions，写出 masked input、labels 和 loss positions。
+- 构造一个 BLEU、ROUGE、EM/F1 或 LLM-as-judge 看似高分但人工质量差的 metric failure case。
+
+## 评分 Rubric
+
+| 项目 | 分值 | 标准 |
+|------|:--:|------|
+| Written questions | 40 | 解释 dependency parsing、beam search length bias、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask 和 LLM 评测之间的关系 |
+| Programming parts | 50 | 实现 UAS/LAS、BLEU、ROUGE-L、QA EM/F1 和 MLM mask example |
+| Analysis / style | 10 | 构造至少 2 个指标高但人工质量差的例子，并说明指标局限 |

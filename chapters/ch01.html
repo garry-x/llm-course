@@ -38,8 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>本章只要求你理解三个问题：token 是什么、BPE 为什么反复合并高频 pair、编码/解码为什么可逆。信息论、Zipf 定律和 PMI 可以先当作解释直觉，不需要第一次就完全掌握。</div></div>
   <ul>
     <li><strong>前置知识：</strong>Python 列表、字典、字符串/bytes、简单循环。</li>
+    <li><strong>学习目标：</strong>解释 tokenization 的信息论权衡，推导 BPE 训练/编码/解码流程，并能分析词表大小对序列长度、嵌入参数量和多语言成本的影响。</li>
+    <li><strong>课前阅读：</strong>先读 Sennrich et al. (2016) 的 BPE 原论文摘要与 GPT-2 tokenizer / tiktoken 文档，记录 byte-level BPE 与词级分词的差异。</li>
+    <li><strong>课后阅读：</strong>对比 WordPiece、Unigram LM、SentencePiece 与 tiktoken，写出各自的优化目标、可逆性和 OOV 处理方式。</li>
     <li><strong>本章产出：</strong>一个能训练、编码、解码的最小 BPE Tokenizer。</li>
     <li><strong>完成标准：</strong>你能说清楚一段文本如何变成 token ID，以及 token ID 如何还原成文本。</li>
+    <li><strong>评估证据：</strong>提交 tokenizer 代码、3 组中英混合测试、复杂度分析，以及一段不同词表大小下 token 数变化的实验记录；可用 <a href="../assignments/ch01_bpe/" target="_blank">Ch01 BPE 作业测试</a> 验收核心实现。</li>
   </ul>
 </section>
 
@@ -85,14 +89,14 @@ python -c "import torch; print(torch.__version__)"</div>
   <p>LLM 不直接处理字符或字符串，而是处理 <strong>token</strong>——文本的最小不可再分单元。每个 token 对应一个整数 ID，模型看到的是整数序列，不是文字。</p>
 
   <h4>从信息论看分词</h4>
-  <p>假设一段文本的信息量是 <span class="katex-inline" data-expr="H"></span> 比特。如果我们用 n 个 token 表示它，每个 token 平均携带 <span class="katex-inline" data-expr="H/n"></span> 比特的信息。分词器的目标是：在给定词表大小 <span class="katex-inline" data-expr="V"></span> 的前提下，最小化每段文本所需的 token 数量。这正是<strong>率失真理论（Rate-Distortion Theory）</strong>中的经典权衡：</p>
+  <p>假设一段文本的信息量是 <span class="katex-inline" data-expr="H" aria-label="H" role="img"></span> 比特。如果我们用 n 个 token 表示它，每个 token 平均携带 <span class="katex-inline" data-expr="H/n" aria-label="H/n" role="img"></span> 比特的信息。分词器的目标是：在给定词表大小 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的前提下，最小化每段文本所需的 token 数量。这正是<strong>率失真理论（Rate-Distortion Theory）</strong>中的经典权衡：</p>
   <ul>
-    <li><strong>词表越大</strong>（V 大），每个 token 信息密度高，序列短，但嵌入矩阵 <span class="katex-inline" data-expr="\mathbb{R}^{V \times d}"></span> 参数量大</li>
+    <li><strong>词表越大</strong>（V 大），每个 token 信息密度高，序列短，但嵌入矩阵 <span class="katex-inline" data-expr="\mathbb{R}^{V \times d}" aria-label="\mathbb{R}^{V \times d}" role="img"></span> 参数量大</li>
     <li><strong>词表越小</strong>（V 小），参数量少，但序列长，计算量和推理延迟增加</li>
   </ul>
 
   <h4>为什么不能直接用词？——Zipf 定律</h4>
-  <p>自然语言遵循 Zipf 定律：第 <span class="katex-inline" data-expr="k"></span> 高频词的频率与 <span class="katex-inline" data-expr="1/k"></span> 成正比。这意味着约一半的词只出现一次——如果用"词"级别的词表，稀有词会导致严重的稀疏性问题。同时，词级词表无法处理未登录词（OOV）。</p>
+  <p>自然语言遵循 Zipf 定律：第 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span> 高频词的频率与 <span class="katex-inline" data-expr="1/k" aria-label="1/k" role="img"></span> 成正比。这意味着约一半的词只出现一次——如果用"词"级别的词表，稀有词会导致严重的稀疏性问题。同时，词级词表无法处理未登录词（OOV）。</p>
   <p>子词分词（Subword Tokenization）的洞见：<strong>在"字符"和"词"之间找到一个中间粒度</strong>。常见词（如 "the"、"and"）保留为完整 token，罕见词被分解为更小的子词（如 "tokenization" → "token" + "ization"），任何未登录词都可以回退到字符甚至字节级别。</p>
 
   <h4>BPE 的字节级设计</h4>
@@ -120,13 +124,21 @@ python -c "import torch; print(torch.__version__)"</div>
     &\qquad \mathcal{V} \leftarrow \mathcal{V} \cup \{c_{i}\} \quad \text{// 新符号 } c_i = a + b \\
     &\qquad \text{将 } \mathcal{T} \text{ 中所有 } (a,b) \text{ 替换为 } c_i \\
     &\text{Return: } \mathcal{V}, \text{合并规则 } \{(a,b) \to c_i\}
-    \end{aligned}"></div>
+    \end{aligned}" aria-label="\begin{aligned}
+    &\text{Input: 文本 } \mathcal{T} \text{, 目标词表大小 } V \\
+    &\text{初始化: } \mathcal{V} \leftarrow \{\text{所有字节 } 0..255\} \\
+    &\text{for } i = 1 \text{ to } (V - 256): \\
+    &\qquad (a,b)^* \leftarrow \arg\max_{(a,b)} \text{count}(a,b \mid \mathcal{T})  \\
+    &\qquad \mathcal{V} \leftarrow \mathcal{V} \cup \{c_{i}\} \quad \text{// 新符号 } c_i = a + b \\
+    &\qquad \text{将 } \mathcal{T} \text{ 中所有 } (a,b) \text{ 替换为 } c_i \\
+    &\text{Return: } \mathcal{V}, \text{合并规则 } \{(a,b) \to c_i\}
+    \end{aligned}" role="img"></div>
   </div>
-  <p>每次合并操作将序列长度缩短 <span class="katex-inline" data-expr="\text{freq}"></span>（该对的出现次数）。经过 <span class="katex-inline" data-expr="V - 256"></span> 次合并后，序列总长度大幅减少，同时词表从 256 增长到 <span class="katex-inline" data-expr="V"></span>。</p>
+  <p>每次合并操作将序列长度缩短 <span class="katex-inline" data-expr="\text{freq}" aria-label="\text{freq}" role="img"></span>（该对的出现次数）。经过 <span class="katex-inline" data-expr="V - 256" aria-label="V - 256" role="img"></span> 次合并后，序列总长度大幅减少，同时词表从 256 增长到 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span>。</p>
 
   <h4>为什么合并最高频对是合理的？</h4>
-  <p>从<strong>最大似然估计（MLE）</strong>的角度看：假设我们有一个 token 序列，想用一个新的合并符号替换某个相邻对。替换后序列长度缩短，而模型对序列的似然不变（因为替换是确定性的）。合并最高频对等价于<strong>在每一步最大化序列长度压缩比</strong>。虽然全局最优需要动态规划（计算所有可能的合并序列），但贪心策略在实践中效果极好。</p>
-  <p>从<strong>信息论</strong>的角度：合并最高频对相当于在每一步选择<strong>互信息最高的相邻符号对</strong>——这对符号在序列中共现的强度远超随机水平，表明它们构成一个有意义的单元。</p>
+  <p>从<strong>压缩</strong>的角度看：假设我们有一个 token 序列，想用一个新的合并符号替换某个相邻对。替换后序列长度缩短，而替换规则是确定性的。合并最高频对等价于<strong>在每一步最大化序列长度压缩比</strong>。这是一种贪心启发式，不保证找到全局最优合并序列；实践效果还取决于语料、预分词和词表预算。</p>
+  <p>从<strong>信息论</strong>的角度：频繁共现的相邻符号对通常值得被词汇化，但 raw 频率并不等同于互信息。高频 pair 可能只是由高频单字节组合而成，因此 BPE 的选择标准更准确地说是<strong>局部压缩收益</strong>，不是 PMI 或语义关联的最优估计。</p>
 
   <h4>一个具体例子</h4>
   <div class="code-block" data-lang="text">
@@ -204,11 +216,11 @@ def _get_stats(ids):
 <!-- 1.6 理论：为什么选择最高频 pair -->
 <!-- ================================================================ -->
 <section class="card" id="s1-6">
-  <h3>1.6 深入理解：频率选择的信息论解释</h3>
-  <p>上一节实现了 <code>_get_stats</code>，接下来需要回答一个核心问题：<strong>为什么合并最高频 pair 是最优的？</strong></p>
+  <h3>1.6 深入理解：频率选择的压缩启发式</h3>
+  <p>上一节实现了 <code>_get_stats</code>，接下来需要回答一个核心问题：<strong>为什么 BPE 常合并最高频 pair？</strong></p>
 
   <h4>压缩视角</h4>
-  <p>每次合并将序列中所有 <span class="katex-inline" data-expr="(a,b)"></span> 替换为一个新符号 <span class="katex-inline" data-expr="c"></span>。替换后，序列长度减少 <span class="katex-inline" data-expr="f"></span>（<span class="katex-inline" data-expr="f"></span> 是该 pair 的频率），词表增加 1。选择最高频的 pair 意味着<strong>在每一步最大化边际压缩率</strong> <span class="katex-inline" data-expr="\Delta L / \Delta V"></span>。虽然贪心策略不能保证全局最优（最优词表需要查看所有合并路径），但实践表明贪心 BPE 非常接近最优。</p>
+  <p>每次合并将序列中所有 <span class="katex-inline" data-expr="(a,b)" aria-label="(a,b)" role="img"></span> 替换为一个新符号 <span class="katex-inline" data-expr="c" aria-label="c" role="img"></span>。替换后，序列长度减少 <span class="katex-inline" data-expr="f" aria-label="f" role="img"></span>（<span class="katex-inline" data-expr="f" aria-label="f" role="img"></span> 是该 pair 的频率），词表增加 1。选择最高频的 pair 意味着<strong>在每一步最大化边际压缩率</strong> <span class="katex-inline" data-expr="\Delta L / \Delta V" aria-label="\Delta L / \Delta V" role="img"></span>。这是一个简单有效的贪心启发式；它不能保证全局最优，实际效果取决于语料、目标词表大小、预分词和 tie-breaking 规则。</p>
 
   <h4>与 Huffman 编码的对比</h4>
   <p>Huffman 编码从底层向上构建最优前缀码——它合并频率最低的两个节点。BPE 却合并频率最高的 pair。区别在于：</p>
@@ -219,12 +231,12 @@ def _get_stats(ids):
   <p>两者都通过反复合并来构建层次结构，但合并准则服务于不同的最终目标。</p>
 
   <h4>频率与互信息</h4>
-  <p>两个 token <span class="katex-inline" data-expr="a, b"></span> 的<strong>点互信息（PMI）</strong>定义为：</p>
+  <p>两个 token <span class="katex-inline" data-expr="a, b" aria-label="a, b" role="img"></span> 的<strong>点互信息（PMI）</strong>定义为：</p>
   <div class="math-box"><div class="label">点互信息</div>
-    <div class="katex" data-expr="\text{PMI}(a,b) = \log \frac{p(a,b)}{p(a)p(b)}"></div>
+    <div class="katex" data-expr="\text{PMI}(a,b) = \log \frac{p(a,b)}{p(a)p(b)}" aria-label="\text{PMI}(a,b) = \log \frac{p(a,b)}{p(a)p(b)}" role="img"></div>
   </div>
   <p>高频率不一定意味着高 PMI——例如 "t" + "h" 在英语中很常见，但这是因为 "t" 和 "h" 各自就很常见。真正的"有意义"组合是频率远超各分量独立概率乘积的 pair。在标准 BPE 实现中直接使用 raw 频率而非 PMI，这对高频但弱相关的 pair（如 " " + "t"）可能会产生次优合并。这是 BPE 已知的局限性之一。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>改进思路：</strong>部分现代分词器（如 WordPiece）用似然增益代替 raw 频率，在每一步选择使训练数据似然提升最大的合并——这等价于考虑了 PMI 的因素。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>改进思路：</strong>部分分词器训练准则会把候选片段的边际收益或似然变化纳入选择，而不是只看 raw 频率。WordPiece 常用与片段概率相关的打分来降低高频但弱相关组合的偏置；它和 PMI 有相近直觉，但不能简单写成“等价于 PMI”。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -243,7 +255,7 @@ def _get_stats(ids):
         <li>输入 <code>ids</code> 是 <code>list[int]</code>，<code>pair</code> 是 <code>tuple[int, int]</code>，<code>new_id</code> 是 <code>int</code></li>
         <li>返回一个新的 <code>list[int]</code>，不修改原列表</li>
         <li>替换不重叠：合并 (1,2) 在 [1,2,1,2] 中产生 [new_id, new_id]，而不是 [new_id, 1, 2]</li>
-        <li>遍历一次完成，复杂度 <span class="katex-inline" data-expr="O(n)"></span></li>
+        <li>遍历一次完成，复杂度 <span class="katex-inline" data-expr="O(n)" aria-label="O(n)" role="img"></span></li>
         <li>不能使用 <code>str.replace</code> 或正则表达式</li>
       </ul>
       <pre># 预期用法
@@ -280,7 +292,7 @@ def _merge(ids, pair, new_id):
   <ol>
     <li>统计当前序列的所有相邻 pair 频率</li>
     <li>找到最高频的 pair</li>
-    <li>记录合并规则 <span class="katex-inline" data-expr="(a,b) \to \text{new_id}"></span></li>
+    <li>记录合并规则 <span class="katex-inline" data-expr="(a,b) \to \text{new\_id}" aria-label="(a,b) \to \text{new\_id}" role="img"></span></li>
     <li>在序列中应用合并</li>
     <li>将新 token 的字节表示存入词表</li>
   </ol>
@@ -293,11 +305,11 @@ def _merge(ids, pair, new_id):
   <div class="info-box key"><span class="icon">🔑</span><div><strong>重要性质：</strong>vocab 是<strong>无损的</strong>——任何 token 都可以还原为原始的字节序列。这是 BPE 解码无需任何模型或概率的数学基础。</div></div>
 
   <h4>复杂度分析</h4>
-  <p>如果语料有 <span class="katex-inline" data-expr="N"></span> 个 token，需要 <span class="katex-inline" data-expr="M = V - 256"></span> 次合并：</p>
+  <p>如果语料有 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> 个 token，需要 <span class="katex-inline" data-expr="M = V - 256" aria-label="M = V - 256" role="img"></span> 次合并：</p>
   <ul>
-    <li>每次合并需要扫描整个序列（<span class="katex-inline" data-expr="O(N)"></span>）来统计频率和替换</li>
-    <li>总复杂度 <span class="katex-inline" data-expr="O(M \times N)"></span></li>
-    <li>实际中 <span class="katex-inline" data-expr="M \approx 50000"></span>，<span class="katex-inline" data-expr="N"></span> 可达数亿——所以原始 BPE 训练可能很慢</li>
+    <li>每次合并需要扫描整个序列（<span class="katex-inline" data-expr="O(N)" aria-label="O(N)" role="img"></span>）来统计频率和替换</li>
+    <li>总复杂度 <span class="katex-inline" data-expr="O(M \times N)" aria-label="O(M \times N)" role="img"></span></li>
+    <li>实际中 <span class="katex-inline" data-expr="M \approx 50000" aria-label="M \approx 50000" role="img"></span>，<span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> 可达数亿——所以原始 BPE 训练可能很慢</li>
   </ul>
   <p>优化方案：用优先队列（heap）维护 pair 频率，每次合并后只更新受影响的局部区域。GPT-4 的 tiktoken 库使用了高度优化的并行版本。</p>
 </section>
@@ -388,7 +400,7 @@ def train(text, vocab_size):
 
   <h4>解码：简单而完美可逆</h4>
   <p>解码是<strong>查表拼接</strong>：对 token ID 序列中的每个 ID，从 vocab 中取出对应的字节串，拼接后用 UTF-8 解码：</p>
-  <div class="katex" data-expr="\text{decode}([t_1, t_2, ..., t_n]) = \text{utf8\_decode}\big(\text{vocab}[t_1] \circ \text{vocab}[t_2] \circ ... \circ \text{vocab}[t_n]\big)"></div>
+  <div class="katex" data-expr="\text{decode}([t_1, t_2, ..., t_n]) = \text{utf8\_decode}\big(\text{vocab}[t_1] \circ \text{vocab}[t_2] \circ ... \circ \text{vocab}[t_n]\big)" aria-label="\text{decode}([t_1, t_2, ..., t_n]) = \text{utf8\_decode}\big(\text{vocab}[t_1] \circ \text{vocab}[t_2] \circ ... \circ \text{vocab}[t_n]\big)" role="img"></div>
   <p>由于 vocab 中的每个 token 都是字节序列的确定拼接，解码不需要任何搜索或模型——它总是生成唯一结果。这是 BPE 相比其他分词方案的关键优势。</p>
 
   <h4>编码：贪心最长匹配</h4>
@@ -480,7 +492,7 @@ def encode(text, merges):
         ids = _merge(ids, pair, new_id)
 
     return ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>编码的贪心性质：</strong>每轮只应用一个合并——当前可用的 priority 最高的那个。因为 merges 记录了训练时合并的顺序（new_id 越小表示越早合并），早合并 = 更基础的 token 组合 = 编码时优先应用。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>编码的贪心性质：</strong>每轮只应用一个合并——当前可用的 merge rank 最高（训练时最早加入）的那个。merge rank 来自训练阶段保存的合并顺序；编码是按这个固定优先级反复合并相邻 pair，而不是重新统计当前输入中的频率，也不等同于一般意义上的最长匹配。</p>
     </div>
   </div>
 </section>
@@ -514,7 +526,7 @@ def encode(text, merges):
     <li>✅ <strong>encode / decode</strong> —— 使用训练好的 merges 和 vocab 进行推理</li>
     <li>✅ 理解了 BPE 的<strong>数据压缩本质</strong>和频率选择的<strong>信息论基础</strong></li>
   </ul>
-  <p>全部代码约 <strong>50 行</strong>，但这是一个可用的 BPE 分词器核心。GPT-4 的 tiktoken 本质上就是这套逻辑的高度优化版（支持并行合并、特殊 token、正则表达式预分词）。</p>
+  <p>全部代码约 <strong>50 行</strong>，但这是一个可用的 BPE 分词器核心。生产分词器（如 tiktoken）会在同一思想上加入正则预分词、特殊 token、工程优化和兼容性处理；课程实现只保留最小可解释内核。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
     <a href="https://arxiv.org/abs/1508.07909" target="_blank">Sennrich et al. (2016) — Neural Machine Translation of Rare Words with Subword Units</a> ·
     <a href="https://github.com/openai/tiktoken" target="_blank">OpenAI tiktoken 源码</a> ·
@@ -528,7 +540,7 @@ def encode(text, merges):
 <section class="card">
   <h3>📝 概念练习巩固</h3>
 
-  <div class="exercise" data-answer="1" data-explain="贪心策略在每一步选择当前频率最高的 pair，因为这样每步的序列长度压缩比最大。虽然不能保证全局最优，但实践证明贪心 BPE 非常有效。">
+  <div class="exercise" data-answer="1" data-explain="贪心策略在每一步选择当前频率最高的 pair，因为这样每步的序列长度压缩比最大。它不能保证全局最优，但在常见分词器训练中是简单有效的启发式。">
     <h4>练习 1：BPE 每次迭代如何选择要合并的 pair？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q1" value="0"> A. 随机选择一对相邻符号</label>
@@ -567,7 +579,7 @@ def encode(text, merges):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="因为编码是贪心最长匹配，同一个文本的编码结果可能是确定的，但不同的应用顺序可能导致不同的 token 序列。而且训练语料中 'low' 和 'lower' 的频率分布会影响词的边界合并，导致 'low' 在不同上下文中可能被不同地切分。">
+  <div class="exercise" data-answer="1" data-explain="标准 BPE 编码对同一个输入和同一套 merges 是确定的。不同分词器会因为训练语料、预分词规则、词表大小、merge rank 和 tie-breaking 不同而产生不同切分。">
     <h4>练习 4：为什么同一个词（如 "tokenization"）在不同 BPE 分词器中可能被切分不同？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 因为 BPE 使用随机种子</label>
@@ -580,7 +592,7 @@ def encode(text, merges):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="编码时，找出当前序列中所有在 merges 里存在的 pair，选择 new_id 最小的（即最早被合并的）。因为早合并 = 更基础的组合 = 编码时优先应用。这等价于贪心最长匹配策略。">
+  <div class="exercise" data-answer="2" data-explain="编码时，找出当前序列中所有在 merges 里存在的 pair，选择 merge rank 最高的一对（在本章实现中就是 new_id 最小、训练时最早加入的 pair）。这是一种按固定合并优先级反复应用的贪心过程，不需要重新统计输入频率。">
     <h4>练习 5：BPE 编码时如何确定当前应该合并哪一对？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q5" value="0"> A. 合并频率最高的一对</label>
@@ -592,6 +604,15 @@ def encode(text, merges):
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
+</section>
+<section class="card source-guidance">
+  <h3>本章来源与准确性复核</h3>
+  <p>本章核心结论、权威来源、课程验证证据和常见误讲边界见 <a href="../docs/chapter-source-map.md" target="_blank">Chapter Source and Accuracy Map</a>；逐周必读与复盘问题见 <a href="../docs/reading-list.md" target="_blank">逐周阅读清单与复盘 Handout</a>。</p>
+  <ul>
+    <li>引用论文、模型卡、官方文档或博客时，先按 <a href="../docs/external-source-inventory.md" target="_blank">External Source Inventory</a> 判断来源层级。</li>
+    <li>涉及模型规格、benchmark、价格、延迟或前沿声明时，按 <a href="../docs/external-source-verification.md" target="_blank">External Source Verification Guide</a> 记录访问日期、版本和评测设置。</li>
+    <li>发现正文 claim 过强、来源不足或与作业证据不一致时，用 <a href="../docs/claim-audit-worksheet.md" target="_blank">Claim Audit Worksheet</a> 记录处理动作。</li>
+  </ul>
 </section>
 </article>
 

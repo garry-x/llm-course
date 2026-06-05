@@ -1,0 +1,198 @@
+"""Reference solution for Chapter 6 GPT model assembly assignment."""
+
+import math
+from dataclasses import dataclass
+from typing import Optional
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+@dataclass
+class GPTConfig:
+    vocab_size: int = 50257
+    max_seq_len: int = 1024
+    d_model: int = 768
+    n_heads: int = 12
+    n_layers: int = 12
+    d_ff: Optional[int] = None
+    dropout: float = 0.1
+    bias: bool = True
+    tie_weights: bool = True
+
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, config: GPTConfig):
+        super().__init__()
+        assert config.d_model % config.n_heads == 0
+        self.n_heads = config.n_heads
+        self.d_head = config.d_model // config.n_heads
+        self.c_attn = nn.Linear(config.d_model, 3 * config.d_model, bias=config.bias)
+        self.c_proj = nn.Linear(config.d_model, config.d_model, bias=config.bias)
+        self.attn_dropout = nn.Dropout(config.dropout)
+        self.resid_dropout = nn.Dropout(config.dropout)
+
+    def forward(self, x, mask=None):
+        batch_size, seq_len, d_model = x.shape
+        qkv = self.c_attn(x)
+        q, k, v = qkv.split(d_model, dim=-1)
+        q = q.view(batch_size, seq_len, self.n_heads, self.d_head).transpose(1, 2)
+        k = k.view(batch_size, seq_len, self.n_heads, self.d_head).transpose(1, 2)
+        v = v.view(batch_size, seq_len, self.n_heads, self.d_head).transpose(1, 2)
+
+        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_head)
+        causal_mask = torch.ones(seq_len, seq_len, dtype=torch.bool, device=x.device).tril()
+        scores = scores.masked_fill(~causal_mask.view(1, 1, seq_len, seq_len), torch.finfo(scores.dtype).min)
+        if mask is not None:
+            if mask.dtype != torch.bool:
+                mask = mask != 0
+            while mask.dim() < scores.dim():
+                mask = mask.unsqueeze(0)
+            scores = scores.masked_fill(~mask, torch.finfo(scores.dtype).min)
+
+        weights = F.softmax(scores, dim=-1)
+        weights = self.attn_dropout(weights)
+        out = torch.matmul(weights, v)
+        out = out.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
+        out = self.resid_dropout(self.c_proj(out))
+        return out, weights
+
+
+class GPT2MLP(nn.Module):
+    def __init__(self, config: GPTConfig):
+        super().__init__()
+        d_ff = config.d_ff or 4 * config.d_model
+        self.c_fc = nn.Linear(config.d_model, d_ff, bias=config.bias)
+        self.c_proj = nn.Linear(d_ff, config.d_model, bias=config.bias)
+        self.dropout = nn.Dropout(config.dropout)
+
+    def forward(self, x):
+        return self.dropout(self.c_proj(F.gelu(self.c_fc(x), approximate="tanh")))
+
+
+class GPT2Block(nn.Module):
+    def __init__(self, config: GPTConfig):
+        super().__init__()
+        self.ln_1 = nn.LayerNorm(config.d_model, bias=config.bias)
+        self.attn = CausalSelfAttention(config)
+        self.ln_2 = nn.LayerNorm(config.d_model, bias=config.bias)
+        self.mlp = GPT2MLP(config)
+
+    def forward(self, x, mask=None):
+        attn_out, _ = self.attn(self.ln_1(x), mask=mask)
+        x = x + attn_out
+        x = x + self.mlp(self.ln_2(x))
+        return x
+
+
+class GPTModel(nn.Module):
+    def __init__(self, config: GPTConfig):
+        super().__init__()
+        self.config = config
+        self.token_embedding = nn.Embedding(config.vocab_size, config.d_model)
+        self.pos_embedding = nn.Embedding(config.max_seq_len, config.d_model)
+        self.dropout = nn.Dropout(config.dropout)
+        self.blocks = nn.ModuleList([GPT2Block(config) for _ in range(config.n_layers)])
+        self.norm = nn.LayerNorm(config.d_model, bias=config.bias)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
+
+        self.apply(self._init_weights)
+        if config.tie_weights:
+            self.lm_head.weight = self.token_embedding.weight
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
+    def forward(self, input_ids, mask=None):
+        batch_size, seq_len = input_ids.shape
+        if seq_len > self.config.max_seq_len:
+            raise ValueError(f"sequence length {seq_len} exceeds max_seq_len={self.config.max_seq_len}")
+
+        pos_ids = torch.arange(seq_len, device=input_ids.device).unsqueeze(0)
+        x = self.token_embedding(input_ids) + self.pos_embedding(pos_ids)
+        x = self.dropout(x)
+        for block in self.blocks:
+            x = block(x, mask=mask)
+        x = self.norm(x)
+        return self.lm_head(x)
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters())
+
+
+def parameter_breakdown(model):
+    groups = {
+        "token_embedding": 0,
+        "position_embedding": 0,
+        "blocks": 0,
+        "final_norm": 0,
+        "lm_head": 0,
+    }
+    for name, param in model.named_parameters():
+        if name.startswith("token_embedding"):
+            groups["token_embedding"] += param.numel()
+        elif name.startswith("pos_embedding"):
+            groups["position_embedding"] += param.numel()
+        elif name.startswith("blocks"):
+            groups["blocks"] += param.numel()
+        elif name.startswith("norm"):
+            groups["final_norm"] += param.numel()
+        elif name.startswith("lm_head"):
+            groups["lm_head"] += param.numel()
+    groups["total"] = sum(groups.values())
+    return groups
+
+
+class MoERouter(nn.Module):
+    def __init__(self, d_model, n_experts=256, top_k=8):
+        super().__init__()
+        assert 1 <= top_k <= n_experts
+        self.n_experts = n_experts
+        self.top_k = top_k
+        self.gate = nn.Linear(d_model, n_experts, bias=False)
+
+    def forward(self, x, bias=None):
+        logits = self.gate(x)
+        if bias is not None:
+            logits = logits + bias.to(logits.device).view(1, 1, -1)
+        weights = F.softmax(logits, dim=-1)
+        top_weights, top_indices = torch.topk(weights, self.top_k, dim=-1)
+        top_weights = top_weights / top_weights.sum(dim=-1, keepdim=True)
+        return top_weights, top_indices
+
+
+class AuxLossFreeBalancer:
+    def __init__(self, n_experts, bias_update_rate=0.01, bias_clip=0.1):
+        self.n_experts = n_experts
+        self.bias_update_rate = bias_update_rate
+        self.bias_clip = bias_clip
+        self.bias = torch.zeros(n_experts)
+
+    def update(self, token_counts):
+        total = token_counts.sum().float()
+        if total == 0:
+            return
+        load_ratio = token_counts.float() / total
+        target_load = 1.0 / self.n_experts
+        self.bias += self.bias_update_rate * (target_load - load_ratio)
+        self.bias.clamp_(-self.bias_clip, self.bias_clip)
+
+    def apply_bias(self, gate_logits):
+        return gate_logits + self.bias.to(gate_logits.device)
+
+    def get_load_stats(self, token_counts):
+        total = token_counts.sum().float()
+        load_ratio = token_counts.float() / total if total > 0 else token_counts.float()
+        return {
+            "max_load": load_ratio.max().item(),
+            "min_load": load_ratio.min().item(),
+            "std_load": load_ratio.std().item(),
+            "ideal_load": 1.0 / self.n_experts,
+        }

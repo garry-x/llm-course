@@ -167,6 +167,7 @@ Quick check：
 
 - 标准 MHA 投影参数量与同宽度单头相同。
 - GQA head mapping：`query_head // (n_heads / n_kv_heads)`。
+- GQA repeat：K/V 从 `[B, H_kv, T, D]` 按组重复到 `[B, H_q, T, D]`，但 KV cache 仍只保存 `H_kv` 份。
 - KV cache 元素数 `2 * n_kv_heads * head_dim`；总显存还要乘以 `batch * layers * seq_len * dtype_bytes`。
 
 课堂 demo：
@@ -174,6 +175,7 @@ Quick check：
 - 用小模型打印 Q/K/V reshape 后的 shape。
 - 计算 MHA、GQA 与 MLA 在 32/8 heads、batch、layers 和 fp16 下的 cache budget。
 - 写出 8 个 Q heads、2 个 KV heads 的映射列表。
+- 对一个 `[B,2,T,D]` 的 K 张量执行 `repeat_kv_heads(..., n_rep=4)` 并检查每组副本。
 
 Quick check：
 

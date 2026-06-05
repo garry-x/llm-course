@@ -15,6 +15,16 @@ def _apply_mask(scores, mask):
     return scores.masked_fill(mask == 0, float("-inf"))
 
 
+def repeat_kv_heads(kv, n_rep):
+    if kv.dim() != 4:
+        raise ValueError("kv must have shape [B, H_kv, T, D]")
+    if n_rep <= 0:
+        raise ValueError("n_rep must be positive")
+    if n_rep == 1:
+        return kv
+    return kv.repeat_interleave(n_rep, dim=1)
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, n_heads, dropout=0.1):
         super().__init__()
@@ -81,9 +91,8 @@ class GroupedQueryAttention(nn.Module):
         q = q.transpose(1, 2)
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
-        if self.n_rep > 1:
-            k = k.repeat_interleave(self.n_rep, dim=1)
-            v = v.repeat_interleave(self.n_rep, dim=1)
+        k = repeat_kv_heads(k, self.n_rep)
+        v = repeat_kv_heads(v, self.n_rep)
         scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k**0.5)
         scores = _apply_mask(scores, mask)
         attn = F.softmax(scores, dim=-1)

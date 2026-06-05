@@ -47,6 +47,30 @@ class TestSingleHeadEquivalence(unittest.TestCase):
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch04 multi-head tests")
 class TestGroupedQueryAttention(unittest.TestCase):
+    def test_repeat_kv_heads_expands_grouped_kv_heads(self):
+        kv = torch.tensor(
+            [
+                [
+                    [[1.0, 10.0], [2.0, 20.0]],
+                    [[3.0, 30.0], [4.0, 40.0]],
+                ]
+            ]
+        )
+        repeated = submission.repeat_kv_heads(kv, n_rep=3)
+        self.assertEqual(tuple(repeated.shape), (1, 6, 2, 2))
+        self.assertTrue(torch.equal(repeated[:, 0], kv[:, 0]))
+        self.assertTrue(torch.equal(repeated[:, 1], kv[:, 0]))
+        self.assertTrue(torch.equal(repeated[:, 2], kv[:, 0]))
+        self.assertTrue(torch.equal(repeated[:, 3], kv[:, 1]))
+        self.assertTrue(torch.equal(repeated[:, 4], kv[:, 1]))
+        self.assertTrue(torch.equal(repeated[:, 5], kv[:, 1]))
+
+    def test_repeat_kv_heads_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.repeat_kv_heads(torch.randn(2, 3, 4), n_rep=2)
+        with self.assertRaises(ValueError):
+            submission.repeat_kv_heads(torch.randn(1, 2, 3, 4), n_rep=0)
+
     def test_gqa_shapes_and_kv_parameter_savings(self):
         torch.manual_seed(1)
         gqa = submission.GroupedQueryAttention(

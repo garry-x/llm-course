@@ -338,7 +338,7 @@ print(f"QKV 投影参数相同: {mha.W_qkv.weight.numel()} == {sha.W_qkv.weight.
 
   <h4>GQA：最优折中</h4>
   <p>GQA（Ainslie et al., 2023）将 Q 头分为 <span class="katex-inline" data-expr="n_g" aria-label="n_g" role="img"></span> 组，每组共享一个 K/V 头。Llama 2 70B 使用 8 个 KV 头（<span class="katex-inline" data-expr="n_h / n_g = 8" aria-label="n_h / n_g = 8" role="img"></span>)，KV Cache 缩小 8 倍，但保留了一定的 K/V 多样性。</p>
-  <p>Ch04 作业中的 <code>gqa_head_mapping(n_heads, n_kv_heads)</code> 把这个分组关系写成显式列表。若 <code>n_heads=8</code>、<code>n_kv_heads=2</code>，则每 4 个 Q head 共享一个 KV head，映射为 <code>[0,0,0,0,1,1,1,1]</code>；若 <code>n_kv_heads=1</code>，就是 MQA；若 <code>n_kv_heads=n_heads</code>，退化回标准 MHA。</p>
+  <p>Ch04 作业中的 <code>gqa_head_mapping(n_heads, n_kv_heads)</code> 把这个分组关系写成显式列表。若 <code>n_heads=8</code>、<code>n_kv_heads=2</code>，则每 4 个 Q head 共享一个 KV head，映射为 <code>[0,0,0,0,1,1,1,1]</code>；若 <code>n_kv_heads=1</code>，就是 MQA；若 <code>n_kv_heads=n_heads</code>，退化回标准 MHA。实现时 <code>repeat_kv_heads</code> 只是在注意力计算前把 <code>[B,H_{kv},T,D]</code> 视图扩展到 <code>[B,H_q,T,D]</code> 的语义，KV Cache 仍只需要保存 <code>H_{kv}</code> 份 K/V。</p>
   <p>实验表明，GQA 的质量在 n_g >= 4 时接近 MHA，而推理效率接近 MQA。这是"两全其美"的工程设计——<strong>训练后升级</strong>（从 MHA checkpoint 通过加权平均合并 K/V 头来获得 GQA）也是一大亮点。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>历史趣闻：</strong>MQA 早在 2019 年由 Shazeer 在 Fast Transformer Decoding 中提出，但直到 2023 年 Llama 2 大规模采用后，MQA/GQA 才被广泛关注。好工程有时需要时间才能"出圈"。</div></div>
 </section>
@@ -357,7 +357,7 @@ print(f"QKV 投影参数相同: {mha.W_qkv.weight.numel()} == {sha.W_qkv.weight.
       <ul>
         <li>Q 投影：<code>nn.Linear(d_model, n_heads * d_k)</code></li>
         <li>K、V 投影：<code>nn.Linear(d_model, n_kv_heads * d_k)</code>（输出维度更小！）</li>
-        <li>使用 <code>repeat_interleave(n_rep, dim=1)</code> 将 K/V 的头数扩展到与 Q 匹配，其中 <code>n_rep = n_heads // n_kv_heads</code></li>
+        <li>实现 <code>repeat_kv_heads(kv, n_rep)</code>，将 K/V 的头数扩展到与 Q 匹配，其中 <code>n_rep = n_heads // n_kv_heads</code></li>
         <li>其余部分与 MHA 相同</li>
         <li>验证：GQA 的 <code>W_k</code> 和 <code>W_v</code> 参数量小于 MHA，且 KV Cache 更小</li>
       </ul>
@@ -375,6 +375,12 @@ gqa_qkv = 4096*4096 + 2*4096*(8*128)          # GQA: 16,777,216 + 8,388,608
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
+def repeat_kv_heads(kv, n_rep):
+    """kv: [B, H_kv, T, D] -> [B, H_kv * n_rep, T, D]"""
+    if n_rep == 1:
+        return kv
+    return kv.repeat_interleave(n_rep, dim=1)
+
 class GroupedQueryAttention(nn.Module):
     """分组查询注意力 — KV 头数 < Q 头数"""
     def __init__(self, d_model, n_heads, n_kv_heads, dropout=0.1):
@@ -404,9 +410,8 @@ class GroupedQueryAttention(nn.Module):
         k = k.transpose(1, 2)                    # (b, n_kv_heads, s, d_k)
         v = v.transpose(1, 2)
 
-        if self.n_rep > 1:
-            k = k.repeat_interleave(self.n_rep, dim=1)  # (b, n_heads, s, d_k)
-            v = v.repeat_interleave(self.n_rep, dim=1)
+        k = repeat_kv_heads(k, self.n_rep)  # (b, n_heads, s, d_k)
+        v = repeat_kv_heads(v, self.n_rep)
 
         scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k ** 0.5)
         if mask is not None:

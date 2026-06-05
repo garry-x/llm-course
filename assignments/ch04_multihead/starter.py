@@ -4,6 +4,11 @@ import torch
 import torch.nn as nn
 
 
+def repeat_kv_heads(kv, n_rep):
+    """Repeat [B, H_kv, T, D] K/V heads to [B, H_kv*n_rep, T, D] for GQA."""
+    raise NotImplementedError
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, n_heads, dropout=0.1):
         super().__init__()

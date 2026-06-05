@@ -34,6 +34,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch04_multihead/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 计算 MHA 参数量，比较 MHA/MQA/GQA/MLA 的 KV cache，解释 RoPE 与 latent cache 的边界 |
+| Written questions | 35 | 计算 MHA 参数量，比较 MHA/MQA/GQA/MLA 的 KV cache，解释 head redundancy、RoPE 与 latent cache 的边界 |
 | Programming parts | 55 | 实现 MHA、单头对照、GQA、简化 MLA 和 KV cache 分析 |
-| Analysis / style | 10 | 说明 head grouping、latent cache、mask broadcast 和实现复杂度取舍 |
+| Analysis / style | 10 | 说明 head grouping、head redundancy、latent cache、mask broadcast 和实现复杂度取舍 |

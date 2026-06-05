@@ -37,6 +37,7 @@
 1. 证明标准 MHA 与一个同宽度单头 attention 在 Q/K/V/O 投影参数量上相同，但表达方式不同。
 2. 给定 `n_heads=32`、`n_kv_heads=8`、`head_dim=128`，计算 MHA 与 GQA 每 token KV Cache 的元素数和压缩比。
 3. 用低秩近似解释 MLA 为什么能减少缓存；同时说明“缓存低维 latent”不等价于“完全免费解压”。
+4. 解释 head redundancy 为什么会出现；比较 head pruning、GQA 和 MLA 分别压缩了什么，以及它们可能损失哪些表示能力。
 
 ## Ch05 Transformer Block / Norm / FFN
 

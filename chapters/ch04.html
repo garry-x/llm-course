@@ -204,6 +204,44 @@ class MultiHeadAttention(nn.Module):
 </section>
 
 <!-- ================================================================ -->
+<!-- 4.3A 多头不是简单集成 -->
+<!-- ================================================================ -->
+<section class="card" id="s4-3a">
+  <h3>4.3A 多头不是简单 Ensemble：表示分解、冗余与压缩空间</h3>
+  <p>“多个头学习不同模式”是正确直觉，但还不够严谨。MHA 不是把若干个完整模型投票平均，而是在固定 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span> 宽度内，把 attention 的匹配与聚合拆成多个较窄的子空间，然后用输出投影 <span class="katex-inline" data-expr="W^O" aria-label="W^O" role="img"></span> 重新组合。</p>
+
+  <div class="math-box"><div class="label">MHA 的分解形式</div>
+    <div class="katex" data-expr="\mathrm{MHA}(X)=\mathrm{Concat}(H_1,\ldots,H_h)W^O,\quad H_i=\mathrm{Attn}(XW_i^Q,XW_i^K,XW_i^V)" aria-label="\mathrm{MHA}(X)=\mathrm{Concat}(H_1,\ldots,H_h)W^O,\quad H_i=\mathrm{Attn}(XW_i^Q,XW_i^K,XW_i^V)" role="img"></div>
+  </div>
+
+  <h4>表达能力来自“不同的相似度函数”</h4>
+  <p>每个 head 都有自己的 <span class="katex-inline" data-expr="W_i^Q,W_i^K" aria-label="W_i^Q,W_i^K" role="img"></span>，因此它计算的是不同投影空间里的相似度。一个 head 可以把括号、缩进或分隔符变得相似，另一个 head 可以把主语和谓语变得相似，还有一个 head 可以专门服务于当前位置附近的局部模式。重要的是：这些 head 的输出不是最终答案，而是下一层继续处理的中间表示。</p>
+
+  <h4>Head redundancy 为什么会出现</h4>
+  <p>训练完成后，并不是每个 head 都同等重要。原因有三类：</p>
+  <ul>
+    <li><strong>任务需求少于设计容量。</strong>如果当前层只需要几类主要路由模式，多余 head 可能学到相近功能。</li>
+    <li><strong>输出投影可以重加权。</strong><span class="katex-inline" data-expr="W^O" aria-label="W^O" role="img"></span> 能弱化某些 head 的贡献；一个 head 的 attention 看起来活跃，不代表它对 logits 有强影响。</li>
+    <li><strong>相邻层可以补偿。</strong>删除或压缩部分 head 后，后续层有时仍能恢复足够的信息，因此性能下降不一定立刻出现。</li>
+  </ul>
+
+  <h4>这怎样解释 GQA 和 MLA</h4>
+  <p>GQA 的基本假设是：不是每个 query head 都必须拥有独立的 K/V 表示。多个 query head 可以共享一组 K/V，仍然通过各自的 Q 投影提出不同查询。MLA 更进一步，把 K/V 信息压缩到低维 latent，再在使用时重构所需表示。二者都在利用同一个事实：<strong>模型设计里的 nominal head 数不等于推理时必须保留的独立 K/V 信息量</strong>。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>现象</th><th>理论解释</th><th>工程后果</th></tr>
+      <tr><td>多个 head 学到相似模式</td><td>任务路由需求低于设计 head 数，或输出投影弱化部分 head</td><td>可以尝试 head pruning、GQA 或低秩压缩</td></tr>
+      <tr><td>GQA 质量接近 MHA</td><td>Q 多样性仍在，K/V 多样性被分组共享</td><td>KV Cache 显著下降，适合高并发推理</td></tr>
+      <tr><td>MQA 可能质量下降</td><td>所有 Q 共享一组 K/V，检索空间过窄</td><td>显存最省，但长文本和复杂任务可能更敏感</td></tr>
+      <tr><td>MLA 需要解压和额外投影</td><td>低维 latent 保存主要信息，不保存完整 K/V 张量</td><td>缓存更小，但实现复杂度和算子融合要求更高</td></tr>
+    </table>
+  </div>
+
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>不要把 head 数当成能力的直接指标。</strong>更多 head 提供更细的子空间分解，但也可能增加冗余；更少 KV head 提升推理效率，但可能损失检索多样性。严谨比较必须同时看 loss、下游任务、长上下文行为、吞吐和 KV Cache。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 编程练习 2: 参数等价性验证 -->
 <!-- ================================================================ -->
 <section class="card" id="s4-4">
@@ -606,6 +644,7 @@ compute_kv_cache_size(
   <p>你从单头注意力出发，沿着注意力机制的演进路线实现了三代多头注意力变体：</p>
   <ul>
     <li>✅ <strong>Multi-Head Attention (MHA)</strong> — 并行 <span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span> 个子空间，参数量与单头等价但表达能力更强</li>
+    <li>✅ <strong>Head redundancy 与压缩依据</strong> — 理解为什么 nominal head 数不等于必须缓存的独立 K/V 信息量</li>
     <li>✅ <strong>参数等价性验证</strong> — 从代码上证明 MHA 与单头参数量完全相同</li>
     <li>✅ <strong>Grouped-Query Attention (GQA)</strong> — 减少 KV 头数，在 Llama 2/3 中广泛使用</li>
     <li>✅ <strong>Multi-head Latent Attention (MLA)</strong> — 低秩压缩 KV 到潜在空间，仅缓存共享潜向量，约 28 倍 KV Cache 压缩</li>

@@ -173,7 +173,7 @@
 | 2026-06-05 | CS224N current benchmark snapshot | 手工快照缺少可执行 manifest | `https://web.stanford.edu/class/cs224n/` + `scripts/verify_cs224n_snapshot.py` | C-background | 保留并新增半自动复核脚本；38/38 marker matched | Course Staff |
 | 2026-06-05 | Frontier source evidence cards | 前沿模型 claim 只有等级表，缺少逐条 source card | `frontier-source-evidence-cards.md` | A-volatile / unsupported | 新增 DSA、V4 参数/context、CSA+HCA、reasoning modes 和 D 级 monitor-only 证据卡 | Course Staff |
 | 2026-06-05 | Frontier source verifier | 前沿 evidence card 缺少可重复官方页 marker 检查 | `scripts/verify_frontier_sources.py --json-out frontier-sources-2026-06-05.json` | A-volatile / B-implementation | 新增半自动 verifier；4/4 source checks pass，monitor-only absent markers 未出现 | Course Staff |
-| 2026-06-05 | Course readiness evidence | readiness 证据分散在文档和命令输出中 | `scripts/generate_course_evidence_manifest.py --check` | C-background | 新增机器可读 evidence manifest，覆盖 required files、marker checks、verification gates、release safety 和 human sign-off boundaries | Course Staff |
+| 2026-06-05 | Course readiness evidence | readiness 证据分散在文档和命令输出中 | `scripts/generate_course_evidence_manifest.py --check` | C-background | 机器可读 evidence manifest 通过：111 required evidence files、63 marker checks、0 missing files/markers；全部 `COURSE_DOCS` `docs/*.md` 已进入 manifest，并覆盖 syllabus、lecture plan、reading list、written/instructor/grading packet、source inventory 和 classic NLP deep-dive evidence | Course Staff |
 | 2026-06-05 | Course operations evidence | 运行日志以空模板为主 | `course-operations-log.md` dry-run baseline records | C-background | 改写为带日期、证据口径、owner 和 live-offering follow-up 的运行记录 | Course Staff |
 
 更新规则：

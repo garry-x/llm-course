@@ -25,10 +25,20 @@
 | `.venv/bin/python -m py_compile verify_course.py scripts/verify_cs224n_snapshot.py scripts/verify_frontier_sources.py scripts/generate_course_evidence_manifest.py` | PASS | Python 编译无错误 |
 | `.venv/bin/python scripts/verify_cs224n_snapshot.py` | PASS | `status: pass`, `expected_marker_count: 38`, `matched_marker_count: 38` |
 | `.venv/bin/python scripts/verify_frontier_sources.py --json-out frontier-sources-2026-06-05.json` | PASS | `mode: frontier_source_evidence_verification`, `status: pass`, `passed_check_count: 4` |
-| `.venv/bin/python scripts/generate_course_evidence_manifest.py --check` | PASS | `mode: course_evidence_manifest`, `verification_status: pass`, no missing required files or markers |
+| `.venv/bin/python scripts/generate_course_evidence_manifest.py --check` | PASS | `mode: course_evidence_manifest`, `verification_status: pass`, `required_evidence_files: 111`, `required_marker_checks: 63`, no missing required files or markers |
 | `.venv/bin/python verify_course.py` | PASS | `COURSE VERIFY: PASS` |
 | `.venv/bin/python run_assignment_tests.py` | PASS via verifier | `ASSIGNMENT TESTS: PASS (11 suite(s))` |
 | `.venv/bin/python verify_course.py --capstone --training` | PASS | inference `ACCEPTANCE: PASS`; training `ACCEPTANCE: PASS`; SLO `PASS`; `COURSE VERIFY: PASS` |
+
+## Evidence Manifest Scope
+
+| Evidence area | Manifest evidence |
+|---------------|-------------------|
+| Course document coverage | `required_evidence_files: 111`; all `COURSE_DOCS` `docs/*.md` entries are present in the manifest; `missing_required_files: 0` |
+| Marker coverage | `required_marker_checks: 63`; `missing_required_markers: 0` |
+| Core teaching packet | `docs/syllabus.md` 12/12 markers; `docs/lecture-plan.md` 9/9; `docs/reading-list.md` 10/10; `docs/written-problem-set.md` 12/12 |
+| Instructor and grading packet | `docs/instructor-solution-guide.md` 10/10 markers; `docs/grading-calibration.md` 11/11; `docs/assignment-submission-guide.md` 11/11 |
+| Source and breadth evidence | `docs/external-source-inventory.md` 16/16 markers; `docs/classic-nlp-deep-dive-module.md` 16/16 |
 
 ## Full Capstone Acceptance Evidence
 

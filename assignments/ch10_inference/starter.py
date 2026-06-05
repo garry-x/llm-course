@@ -37,6 +37,11 @@ def contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature=1.0):
     raise NotImplementedError
 
 
+def pairwise_reranker_loss(chosen_scores, rejected_scores, margin=0.0):
+    """Train a cross-encoder reranker to score chosen documents above rejected ones."""
+    raise NotImplementedError
+
+
 def recall_at_k(retrieved_ids, relevant_ids, k):
     raise NotImplementedError
 

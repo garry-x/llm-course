@@ -2,7 +2,7 @@
 
 这个项目把第 7 章和第 9 章的训练知识落成一个可运行的训练工程作品：一个 PyTorch 字符级语言模型训练闭环，覆盖数据分析、训练、开发集监控、checkpoint、resume、metrics、训练规划和一键运行。
 
-默认模型很小，可以在 CPU 上跑通；有 GPU 时会自动使用 CUDA。目标不是追求模型质量，而是先掌握训练工程交付物的结构。训练项目的 CPU baseline、GPU/API 额度、成本记录和降级路径按 [Compute Resource and Cost Guide](../../docs/compute-resource-guide.md) 执行。
+默认模型很小，可以在 CPU 上跑通；有 GPU 时会自动使用 CUDA。目标不是追求模型质量，而是先掌握训练工程交付物的结构：可复现训练配置、loss 曲线、checkpoint/resume、显存与吞吐估算，以及针对失败模式的 ablation。
 
 ## 你要交付什么
 

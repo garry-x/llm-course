@@ -100,6 +100,23 @@ def contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature=1.0):
     return {"loss": loss, "logits": logits, "accuracy": accuracy}
 
 
+def pairwise_reranker_loss(chosen_scores, rejected_scores, margin=0.0):
+    if margin < 0:
+        raise ValueError("margin must be non-negative")
+    if chosen_scores.shape != rejected_scores.shape:
+        raise ValueError("chosen and rejected scores must have the same shape")
+    if chosen_scores.numel() == 0:
+        raise ValueError("score tensors must not be empty")
+
+    chosen = chosen_scores.float()
+    rejected = rejected_scores.float()
+    score_margins = chosen - rejected
+    logits = score_margins - float(margin)
+    loss = F.softplus(-logits).mean()
+    accuracy = (score_margins > 0).float().mean().item()
+    return {"loss": loss, "margins": score_margins, "accuracy": accuracy}
+
+
 def recall_at_k(retrieved_ids, relevant_ids, k):
     if k <= 0:
         raise ValueError("k must be positive")

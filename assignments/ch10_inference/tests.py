@@ -105,6 +105,28 @@ class TestContrastiveRetrievalTraining(unittest.TestCase):
 
 
 @unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
+class TestRerankerTraining(unittest.TestCase):
+    def test_pairwise_reranker_loss_uses_chosen_rejected_preferences(self):
+        chosen = torch.tensor([3.0, 1.0, 2.5])
+        rejected = torch.tensor([1.0, 1.5, 0.5])
+        result = submission.pairwise_reranker_loss(chosen, rejected, margin=0.2)
+
+        margins = chosen - rejected
+        expected_loss = torch.nn.functional.softplus(-(margins - 0.2)).mean()
+        self.assertTrue(torch.allclose(result["loss"], expected_loss))
+        self.assertTrue(torch.allclose(result["margins"], margins))
+        self.assertAlmostEqual(result["accuracy"], 2 / 3)
+
+    def test_pairwise_reranker_loss_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.pairwise_reranker_loss(torch.tensor([]), torch.tensor([]))
+        with self.assertRaises(ValueError):
+            submission.pairwise_reranker_loss(torch.ones(2), torch.ones(3))
+        with self.assertRaises(ValueError):
+            submission.pairwise_reranker_loss(torch.ones(2), torch.ones(2), margin=-0.1)
+
+
+@unittest.skipIf(torch is None or np is None, "PyTorch and NumPy are required for Ch10 inference tests")
 class TestRetrievalMetrics(unittest.TestCase):
     def test_recall_and_reciprocal_rank_at_k(self):
         retrieved = ["doc9", "doc2", "doc5", "doc1"]

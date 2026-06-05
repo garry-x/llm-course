@@ -17,7 +17,6 @@ CHAPTERS = [f"ch{index:02d}.html" for index in range(1, 12)]
 SAFE_DOCS = [
     "classic-nlp-deep-dive-module.md",
     "classic-nlp-handout.md",
-    "compute-resource-guide.md",
     "inference-engineer-curriculum.md",
     "lecture-plan.md",
     "math-prerequisites.md",

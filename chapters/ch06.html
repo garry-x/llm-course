@@ -343,6 +343,39 @@ assert torch.allclose(logits_a[:, :2], logits_b[:, :2], atol=1e-5)</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 6.3B Worked Example -->
+<!-- ================================================================ -->
+<section class="card" id="s6-3b">
+  <h3>6.3B Worked Example：手算一个 batch 的 label shift 与 loss 分母</h3>
+  <p>假设一个 batch 中有两条已经 padding 到长度 5 的样本，<code>PAD</code> 对应的标签用 <code>-100</code> 表示，交给 <code>F.cross_entropy(..., ignore_index=-100)</code> 跳过：</p>
+  <div class="code-block" data-lang="text">
+sample 1 input_ids: [BOS,  I,  like,  NLP,  EOS]
+sample 2 input_ids: [BOS,  GPT,  EOS,   PAD,  PAD]</div>
+
+  <p>模型 forward 仍然会为每个输入位置都输出一个 vocab 分类分布，形状是 <code>[2, 5, |V|]</code>。训练 next-token loss 时，只取前 4 个位置的 logits，并让它们预测右移一位后的 token：</p>
+  <div class="code-block" data-lang="text">
+logits used:   positions 0      1      2      3
+sample 1 pred: BOS -> I,  I -> like, like -> NLP, NLP -> EOS
+sample 2 pred: BOS -> GPT, GPT -> EOS, EOS -> PAD, PAD -> PAD
+
+labels before ignore:
+sample 1 labels: [I,   like, NLP, EOS]
+sample 2 labels: [GPT, EOS,  PAD, PAD]
+
+labels after padding mask:
+sample 1 labels: [I,   like, NLP, EOS]
+sample 2 labels: [GPT, EOS,  -100, -100]</div>
+
+  <p>因此这个 batch 的平均 loss 只除以 6 个有效预测位置，而不是 <code>2 * 4 = 8</code> 个位置，也不是原始序列的 <code>2 * 5 = 10</code> 个位置。最后一个输入位置的 logits 没有对应的“下一个 token”标签，padding 位置也不代表真实语言建模目标。</p>
+
+  <div class="math-box"><div class="label">带 ignore_index 的 batch mean</div>
+    <div class="katex" data-expr="\mathcal{L}=\frac{1}{|\Omega|}\sum_{(b,t)\in\Omega}-\log p_\theta(x_{b,t+1}\mid x_{b,\le t}),\quad \Omega=\{(b,t):x_{b,t+1}\ne \text{PAD}\}" aria-label="\mathcal{L}=\frac{1}{|\Omega|}\sum_{(b,t)\in\Omega}-\log p_\theta(x_{b,t+1}\mid x_{b,\le t}),\quad \Omega=\{(b,t):x_{b,t+1}\ne \text{PAD}\}" role="img"></div>
+  </div>
+
+  <p>这也是为什么实现时应先构造 <code>shift_logits = logits[:, :-1, :]</code> 和 <code>shift_labels = input_ids[:, 1:]</code>，再把 <code>shift_labels</code> 中的 padding 改成 <code>ignore_index</code>。如果把 <code>logits[:, 1:, :]</code> 拿去预测 <code>input_ids[:, 1:]</code>，模型就在用位置 <code>t</code> 的隐藏状态预测同一个位置的 token，训练目标会退化成“复述输入 token”，不再是自回归语言建模。</p>
+</section>
+
+<!-- ================================================================ -->
 <!-- 6.4 Weight Tying -->
 <!-- ================================================================ -->
 <section class="card" id="s6-4">

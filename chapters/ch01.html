@@ -158,6 +158,18 @@ UTF-8 字节序列: l, o, w, _, l, o, w, e, r, _, l, o, w, e, s, t
 
 词表演进: 8 → 9 → 10 → 11 个符号</div>
   <p>注意："e"+"r" 在第 3 轮才被合并是因为前两轮中 "l"+"o" 和 "lo"+"w" 的频率更高。合并的顺序完全由频率决定——这是 BPE 唯一的"学习信号"。</p>
+
+  <h4>Worked Example：每轮合并后必须重新统计 pair</h4>
+  <p>实现 BPE 时最常见的错误，是第 1 轮统计完 pair 之后反复使用旧计数。BPE 的计数对象不是原始字符串，而是<strong>当前 token 序列</strong>；一次合并会改变相邻关系，下一轮必须重新跑 <code>_get_stats</code>。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>阶段</th><th>当前序列</th><th>主要 pair 计数</th><th>下一步选择</th></tr>
+      <tr><td>初始</td><td><code>l o w _ l o w e r _ l o w e s t</code></td><td><code>(l,o)=3</code>, <code>(o,w)=3</code>, <code>(w,e)=2</code>, <code>(e,r)=1</code>, <code>(e,s)=1</code></td><td>按 tie-breaking 选 <code>(l,o)</code></td></tr>
+      <tr><td>合并 <code>(l,o)->lo</code> 后</td><td><code>lo w _ lo w e r _ lo w e s t</code></td><td><code>(lo,w)=3</code>, <code>(w,e)=2</code>, <code>(e,r)=1</code>, <code>(e,s)=1</code></td><td>选 <code>(lo,w)</code></td></tr>
+      <tr><td>合并 <code>(lo,w)->low</code> 后</td><td><code>low _ low e r _ low e s t</code></td><td><code>(low,_)=1</code>, <code>(_,low)=2</code>, <code>(low,e)=2</code>, <code>(e,r)=1</code>, <code>(e,s)=1</code></td><td>从新的并列最高频中选一个</td></tr>
+    </table>
+  </div>
+  <p>旧计数里的 <code>(o,w)=3</code> 在第 1 轮后已经不存在，因为 <code>o</code> 被合并进 <code>lo</code>。如果继续按旧计数合并 <code>(o,w)</code>，代码会找不到这个 pair，或者产生与当前 tokenization 不一致的词表。Ch01 作业的 <code>_get_stats</code>、<code>_merge</code> 和 <code>train</code> 测试正是在检查这个循环不变量：<strong>统计当前序列，合并当前 pair，再重新统计</strong>。</p>
 </section>
 
 <!-- ================================================================ -->

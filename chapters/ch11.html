@@ -82,6 +82,20 @@
     <tr><td>RIGHT_ARC(label)</td><td>stack 至少两个元素</td><td>栈顶依附于次栈顶，然后移除栈顶</td></tr>
     <tr><td>ROOT(label)</td><td>只剩一个根候选</td><td>把根候选连到 ROOT</td></tr>
   </table>
+  <h4>Worked Example：Arc-standard 解析 <code>I saw her</code></h4>
+  <p>目标依存树是 <code>saw -> I (nsubj)</code>、<code>saw -> her (obj)</code>，最后 <code>ROOT -> saw (root)</code>。用 arc-standard transition system 可以按下表构造：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>step</th><th>stack</th><th>buffer</th><th>action</th><th>new arc</th></tr>
+      <tr><td>0</td><td><code>[]</code></td><td><code>[I, saw, her]</code></td><td><code>SHIFT</code></td><td>-</td></tr>
+      <tr><td>1</td><td><code>[I]</code></td><td><code>[saw, her]</code></td><td><code>SHIFT</code></td><td>-</td></tr>
+      <tr><td>2</td><td><code>[I, saw]</code></td><td><code>[her]</code></td><td><code>LEFT_ARC(nsubj)</code></td><td><code>saw -> I</code></td></tr>
+      <tr><td>3</td><td><code>[saw]</code></td><td><code>[her]</code></td><td><code>SHIFT</code></td><td>-</td></tr>
+      <tr><td>4</td><td><code>[saw, her]</code></td><td><code>[]</code></td><td><code>RIGHT_ARC(obj)</code></td><td><code>saw -> her</code></td></tr>
+      <tr><td>5</td><td><code>[saw]</code></td><td><code>[]</code></td><td><code>ROOT(root)</code></td><td><code>ROOT -> saw</code></td></tr>
+    </table>
+  </div>
+  <p>这个例子说明 parsing 不是给每个 token 独立分类：动作是否合法取决于当前 stack/buffer 状态，错误 action 会破坏最终树结构。Ch11 作业中的 <code>run_arc_standard_transitions</code> 正是让学生执行这张 transition table，并返回每个 token 的 head、label、arcs 和 trace。</p>
   <p>评测通常使用 UAS 和 LAS：</p>
   <div class="math-box"><div class="label">公式 11.3 Attachment scores</div>
     <div class="katex" data-expr="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" aria-label="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" role="img"></div>

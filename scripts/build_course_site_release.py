@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from render_docs_html import render_docs
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS = [f"ch{index:02d}.html" for index in range(1, 12)]
@@ -49,6 +51,17 @@ INCLUDED_ROOTS = [
     "projects/",
 ]
 EXCLUDED_DOCS: list[str] = []
+
+
+def rewrite_markdown_links(text: str) -> str:
+    for doc in SAFE_DOCS:
+        html_doc = doc.replace(".md", ".html")
+        escaped_doc = re.escape(doc)
+        text = re.sub(rf'(?P<prefix>href="(?:\.\./)?docs/){escaped_doc}(?P<anchor>#[^"]*)?"', rf'\g<prefix>{html_doc}\g<anchor>"', text)
+        text = re.sub(rf'(?P<prefix>href="){escaped_doc}(?P<anchor>#[^"]*)?"', rf'\g<prefix>{html_doc}\g<anchor>"', text)
+        text = re.sub(rf"(?P<prefix>\]\((?:\.\./)?docs/){escaped_doc}(?P<anchor>#[^)]+)?\)", rf"\g<prefix>{html_doc}\g<anchor>)", text)
+        text = re.sub(rf"(?P<prefix>\]\(){escaped_doc}(?P<anchor>#[^)]+)?\)", rf"\g<prefix>{html_doc}\g<anchor>)", text)
+    return text
 
 
 def strip_inline_solutions(html: str) -> tuple[str, int]:
@@ -127,10 +140,10 @@ def build_release(out_dir: Path) -> dict[str, object]:
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
 
-    index = rewrite_internal_material_links((ROOT / "index.html").read_text(encoding="utf-8"))
+    index = rewrite_markdown_links(rewrite_internal_material_links((ROOT / "index.html").read_text(encoding="utf-8")))
     (out_dir / "index.html").write_text(index, encoding="utf-8")
     for page in ROOT_PAGES:
-        text = rewrite_internal_material_links((ROOT / page).read_text(encoding="utf-8"))
+        text = rewrite_markdown_links(rewrite_internal_material_links((ROOT / page).read_text(encoding="utf-8")))
         (out_dir / page).write_text(text, encoding="utf-8")
     copy_tree(ROOT / "css", out_dir / "css")
     copy_tree(ROOT / "js", out_dir / "js")
@@ -140,7 +153,7 @@ def build_release(out_dir: Path) -> dict[str, object]:
     for chapter in CHAPTERS:
         source = (ROOT / "chapters" / chapter).read_text(encoding="utf-8")
         stripped, removed = strip_inline_solutions(source)
-        stripped = rewrite_internal_material_links(stripped)
+        stripped = rewrite_markdown_links(rewrite_internal_material_links(stripped))
         target = out_dir / "chapters" / chapter
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(stripped, encoding="utf-8")
@@ -151,6 +164,7 @@ def build_release(out_dir: Path) -> dict[str, object]:
     for doc in SAFE_DOCS:
         text = (ROOT / "docs" / doc).read_text(encoding="utf-8")
         (docs_dir / doc).write_text(rewrite_internal_material_links(text), encoding="utf-8")
+    rendered_docs = render_docs(docs_dir, docs_dir)
 
     projects_dir = out_dir / "projects"
     projects_dir.mkdir()
@@ -182,6 +196,7 @@ def build_release(out_dir: Path) -> dict[str, object]:
         "included_roots": INCLUDED_ROOTS,
         "root_pages": ROOT_PAGES,
         "safe_docs": SAFE_DOCS,
+        "rendered_doc_pages": [str(Path(path).relative_to(out_dir)) for path in rendered_docs],
         "excluded_docs": EXCLUDED_DOCS,
         "project_dirs": [f"projects/{project}/" for project in PROJECT_DIRS],
         "assignment_release": assignment_manifest,

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
+<link rel="apple-touch-icon" href="../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>数学与 PyTorch 先修复习 — LLM 深度学习</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="math-prerequisites.html">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>课程材料</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span>课程首页</a>
+    <a href="syllabus.html"><span class="ch-num">S</span>Syllabus</a>
+    <a href="lecture-plan.html"><span class="ch-num">L</span>Lecture Plan</a>
+    <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
+    <a href="written-problem-set.html"><span class="ch-num">W</span>书面题库</a>
+    <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+<main class="main doc-main">
+  <article class="chapter doc-article">
+    <div class="reading-time"><a href="../index.html">课程首页</a> / math-prerequisites.html</div>
+    <h2>数学与 PyTorch 先修复习</h2>
+    <nav class="toc"><h4>目录</h4><ol><li class="doc-toc-level-1"><a href="#数学与-pytorch-先修复习">数学与 PyTorch 先修复习</a></li>
+<li class="doc-toc-level-2"><a href="#全课程符号与-shape-约定">全课程符号与 Shape 约定</a></li>
+<li class="doc-toc-level-2"><a href="#核心张量流">核心张量流</a></li>
+<li class="doc-toc-level-2"><a href="#mask-语义">Mask 语义</a></li>
+<li class="doc-toc-level-2"><a href="#常用目标函数与评测对象">常用目标函数与评测对象</a></li>
+<li class="doc-toc-level-2"><a href="#线性代数最小集合">线性代数最小集合</a></li>
+<li class="doc-toc-level-3"><a href="#检查点">检查点</a></li>
+<li class="doc-toc-level-2"><a href="#概率与语言模型">概率与语言模型</a></li>
+<li class="doc-toc-level-2"><a href="#统计与-ml-foundations-入口">统计与 ML Foundations 入口</a></li>
+<li class="doc-toc-level-2"><a href="#反向传播核心规则">反向传播核心规则</a></li>
+<li class="doc-toc-level-2"><a href="#cross-entropy-推导检查">Cross Entropy 推导检查</a></li>
+<li class="doc-toc-level-2"><a href="#layernorm-推导检查">LayerNorm 推导检查</a></li>
+<li class="doc-toc-level-2"><a href="#dpo-grpo-推导检查">DPO/GRPO 推导检查</a></li>
+<li class="doc-toc-level-2"><a href="#pytorch-实现纪律">PyTorch 实现纪律</a></li></ol></nav>
+    <section class="card doc-content">
+<h2 id="数学与-pytorch-先修复习">数学与 PyTorch 先修复习</h2>
+<p>本附录补齐高校课程中常见的线性代数、概率、反向传播和张量求导前置知识。它不是独立数学课，而是服务于本课程的实现、推导和代码分析。微积分、统计和机器学习基础到本课程项目产出的桥接见 <a href="ml-foundations-prerequisite-bridge.html">ML Foundations Prerequisite Bridge</a>。</p>
+<h3 id="全课程符号与-shape-约定">全课程符号与 Shape 约定</h3>
+<p>为了避免每章重复解释符号，本课程默认使用以下约定。若某一章采用不同符号，会在该章局部说明。</p>
+<div class="table-wrap"><table><thead><tr><th>符号</th><th>含义</th><th>常见 shape 或单位</th></tr></thead><tbody><tr><td><code>B</code></td><td>batch size</td><td>标量</td></tr><tr><td><code>T</code></td><td>query 序列长度或当前输入长度</td><td>标量</td></tr><tr><td><code>S</code></td><td>key/value 序列长度，可能与 <code>T</code> 不同</td><td>标量</td></tr><tr><td><code>V</code></td><td>vocabulary size</td><td>标量</td></tr><tr><td><code>d_model</code></td><td>residual stream hidden size</td><td>标量</td></tr><tr><td><code>H</code></td><td>query attention heads</td><td>标量</td></tr><tr><td><code>H_kv</code></td><td>KV heads，GQA/MQA 中可小于 <code>H</code></td><td>标量</td></tr><tr><td><code>D</code> / <code>d_head</code></td><td>每个 head 的维度</td><td><code>d_model / H</code></td></tr><tr><td><code>N</code></td><td>参数量或训练样本数，按上下文区分</td><td>count</td></tr><tr><td><code>M</code></td><td>MoE expert 数或矩阵行数，按上下文区分</td><td>count</td></tr><tr><td><code>input_ids</code></td><td>token id 序列</td><td><code>[B, T]</code></td></tr><tr><td><code>embedding_weight</code></td><td>token embedding table</td><td><code>[V, d_model]</code></td></tr><tr><td><code>hidden_states</code></td><td>residual stream</td><td><code>[B, T, d_model]</code></td></tr><tr><td><code>logits</code></td><td>词表未归一化分数</td><td><code>[B, T, V]</code></td></tr><tr><td><code>labels</code></td><td>目标 token ids，可能含 <code>ignore_index=-100</code></td><td><code>[B, T]</code></td></tr><tr><td><code>Q</code></td><td>query states</td><td><code>[B, H, T, D]</code></td></tr><tr><td><code>K, V_attn</code></td><td>key/value states</td><td><code>[B, H_kv, S, D]</code> 或重复后 <code>[B, H, S, D]</code></td></tr><tr><td><code>attention_scores</code></td><td>scaled dot-product logits</td><td><code>[B, H, T, S]</code></td></tr><tr><td><code>attention_mask</code></td><td><code>True</code> 表示可见，<code>False</code> 表示屏蔽</td><td>可广播到 <code>[B, H, T, S]</code></td></tr></tbody></table></div>
+<p>两个容易混淆的字母：</p>
+<ul>
+<li><code>V</code> 在 embedding/LM head 中通常表示 vocab size；在 attention 中 <code>V_attn</code> 表示 value tensor。代码里应避免把它们写成同一个变量名。</li>
+<li><code>D</code> 在 attention 公式中常表示 <code>d_head</code>，在训练 scaling law 中也可能表示训练 token budget。书面推导必须先定义。</li>
+</ul>
+<h3 id="核心张量流">核心张量流</h3>
+<p>decoder-only LLM 的最小前向路径是：</p>
+<pre class="code-block" data-lang="text"><code>input_ids [B,T]
+  -&gt; token embeddings [B,T,d_model]
+  -&gt; Transformer blocks [B,T,d_model]
+  -&gt; lm_head logits [B,T,V]
+  -&gt; shifted CE loss against labels [B,T]</code></pre>
+<p>next-token loss 的对齐关系是：</p>
+<pre class="code-block" data-lang="text"><code>logits[:, t, :] predicts input_ids[:, t+1]
+shift_logits = logits[:, :-1, :]
+shift_labels = labels[:, 1:]</code></pre>
+<p>因此，如果一个 batch 的序列长度是 <code>T</code>，最多只有 <code>T-1</code> 个 next-token 监督位置。SFT、padding 和 prompt mask 会进一步通过 <code>ignore_index=-100</code> 移除无效位置，mean reduction 的分母应是有效 token 数，而不是 <code>B*T</code>。</p>
+<h3 id="mask-语义">Mask 语义</h3>
+<p>本课程默认 mask 在 softmax 或 loss 前应用：</p>
+<div class="table-wrap"><table><thead><tr><th>场景</th><th>mask 作用</th><th>常见错误</th></tr></thead><tbody><tr><td>Causal attention</td><td>屏蔽未来 key</td><td>softmax 后再乘 mask，导致概率和不为 1</td></tr><tr><td>Padding attention</td><td>屏蔽 padding key</td><td>只屏蔽 padded query，仍让真实 token attend 到 padding key</td></tr><tr><td>SFT / causal LM labels</td><td><code>-100</code> 位置不参与 loss</td><td>gather 前直接用 <code>-100</code> 做索引</td></tr><tr><td>MLM labels</td><td>只在 masked positions 上计算 CE</td><td>把未 mask token 也放进平均分母</td></tr><tr><td>Constrained decoding</td><td>非法 token logits 置为 <code>-inf</code></td><td>采样后再过滤，破坏概率语义</td></tr></tbody></table></div>
+<h3 id="常用目标函数与评测对象">常用目标函数与评测对象</h3>
+<div class="table-wrap"><table><thead><tr><th>名称</th><th>公式或计算对象</th><th>回答的问题</th><th>不回答的问题</th></tr></thead><tbody><tr><td>Causal LM CE</td><td>`-mean log p(x_t</td><td>x_&lt;t)`</td><td>模型是否拟合 next-token 分布</td></tr><tr><td>Perplexity</td><td><code>exp(CE)</code></td><td>平均 token 预测难度</td><td>开放式任务质量</td></tr><tr><td>SFT loss</td><td>只对 assistant response 的 shifted labels 做 CE</td><td>模型是否学习回答格式和示例行为</td><td>偏好质量或安全边界</td></tr><tr><td>DPO loss</td><td>policy/reference chosen-rejected log-ratio</td><td>policy 是否相对 reference 提升 chosen</td><td>偏好数据是否无偏</td></tr><tr><td>PPO/GRPO surrogate</td><td>policy ratio、advantage、clip/KL</td><td>策略更新是否朝 reward 方向且受约束</td><td>reward 是否代表真实质量</td></tr><tr><td>Recall@k / MRR / nDCG</td><td>检索排序与相关标签</td><td>RAG 是否找到相关证据</td><td>生成是否忠实使用证据</td></tr><tr><td>BLEU / ROUGE</td><td>n-gram 或 LCS 重合</td><td>输出与参考文本的词面重合</td><td>事实一致性或语义等价</td></tr><tr><td>EM / token F1</td><td>标准化答案或 token overlap</td><td>抽取式 QA 的短答案匹配</td><td>多答案开放式质量</td></tr><tr><td>Span F1</td><td><code>(type,start,end)</code> 精确实体匹配</td><td>NER/entity extraction 边界和类型</td><td>token-level 部分正确性</td></tr><tr><td>TTFT / TPOT / tokens/s</td><td>服务延迟与吞吐</td><td>用户等待、生成速度和容量成本</td><td>语义质量</td></tr></tbody></table></div>
+<h3 id="线性代数最小集合">线性代数最小集合</h3>
+<p>学生需要熟练掌握：</p>
+<ul>
+<li>向量、矩阵、张量的 shape 约定。</li>
+<li>矩阵乘法 <code>A @ B</code> 的维度条件。</li>
+<li>转置、广播、逐元素乘法和 reduction。</li>
+<li>点积、范数、余弦相似度。</li>
+<li>softmax 前减去最大值的数值稳定性。</li>
+</ul>
+<h4 id="检查点">检查点</h4>
+<p>给定 <code>Q, K, V</code> 的 shape 分别为 <code>[B, H, T, D]</code>、<code>[B, H, S, D]</code>、<code>[B, H, S, D]</code>：</p>
+<ul>
+<li><code>Q @ K.transpose(-2, -1)</code> 的 shape 是 <code>[B, H, T, S]</code>。</li>
+<li>attention probabilities 与 <code>V</code> 相乘后输出 <code>[B, H, T, D]</code>。</li>
+<li>causal mask 的 shape 可以是 <code>[T, S]</code>、<code>[B, T, S]</code> 或 <code>[B, H, T, S]</code>，但语义必须是屏蔽未来位置。</li>
+</ul>
+<h3 id="概率与语言模型">概率与语言模型</h3>
+<p>自回归语言模型把序列概率分解为：</p>
+<pre class="code-block" data-lang="text"><code>P(x_1, ..., x_T) = product_t P(x_t | x_&lt;t)</code></pre>
+<p>训练时通常最大化 token 条件概率，等价于最小化 cross entropy：</p>
+<pre class="code-block" data-lang="text"><code>loss = -mean_t log P(target_t | context_t)</code></pre>
+<p>perplexity 是 <code>exp(loss)</code>，表示平均每一步仍有多少等价候选。</p>
+<h3 id="统计与-ml-foundations-入口">统计与 ML Foundations 入口</h3>
+<p>本课程项目报告需要的统计和机器学习基础包括：</p>
+<ul>
+<li>train / validation / test split。</li>
+<li>baseline、ablation 和 held-out evaluation。</li>
+<li>sample mean、variance、seed sensitivity 和 benchmark uncertainty。</li>
+<li>overfitting、data leakage 和 benchmark contamination。</li>
+<li>objective、metric 和 generalization boundary 的区别。</li>
+</ul>
+<p>这些内容按 <a href="ml-foundations-prerequisite-bridge.html">ML Foundations Prerequisite Bridge</a> 补救，并在训练/推理 capstone proposal、milestone 和 final report 中作为评分依据。</p>
+<h3 id="反向传播核心规则">反向传播核心规则</h3>
+<p>需要掌握以下链式法则：</p>
+<pre class="code-block" data-lang="text"><code>z = f(y), y = g(x)
+dz/dx = dz/dy * dy/dx</code></pre>
+<p>对张量实现而言，重点不是手写 Jacobian，而是理解每个参数如何从 loss 收到梯度：</p>
+<ul>
+<li><code>Linear</code>: <code>y = x W^T + b</code>，梯度流向 <code>x</code>、<code>W</code>、<code>b</code>。</li>
+<li><code>Embedding</code>: 只有被索引到的 token 行收到梯度。</li>
+<li><code>LayerNorm</code>: 梯度必须考虑均值和方差对所有特征维度的耦合。</li>
+<li><code>Attention</code>: <code>Q/K/V</code> 都通过 scores、softmax 和 weighted sum 收到梯度。</li>
+<li><code>Cross entropy</code>: 有效 token 的 logits 梯度是 <code>softmax(z)-one_hot(y)</code>；被 <code>ignore_index</code> 屏蔽的位置不进入平均，也不向 logits 传梯度。</li>
+</ul>
+<h3 id="cross-entropy-推导检查">Cross Entropy 推导检查</h3>
+<p>对单个样本 logits <code>z</code> 和目标类别 <code>y</code>：</p>
+<pre class="code-block" data-lang="text"><code>p_i = exp(z_i) / sum_j exp(z_j)
+loss = -log p_y
+d loss / d z_i = p_i - 1[i = y]</code></pre>
+<p>实现时应使用 log-sum-exp trick：</p>
+<pre class="code-block" data-lang="text"><code>logsumexp(z) = m + log(sum_i exp(z_i - m)), m = max_i z_i</code></pre>
+<h3 id="layernorm-推导检查">LayerNorm 推导检查</h3>
+<p>对最后一维归一化：</p>
+<pre class="code-block" data-lang="text"><code>mu = mean(x)
+var = mean((x - mu)^2)
+x_hat = (x - mu) / sqrt(var + eps)
+y = gamma * x_hat + beta</code></pre>
+<p>反向传播中 <code>dx</code> 不能只写成 <code>dy * gamma / sqrt(var + eps)</code>，因为 <code>mu</code> 和 <code>var</code> 都依赖 <code>x</code>。正确实现应通过 gradcheck 或与 PyTorch 参考实现对齐。</p>
+<h3 id="dpo-grpo-推导检查">DPO/GRPO 推导检查</h3>
+<p>DPO 的核心比较是 chosen 与 rejected 在 policy/reference 下的 log probability ratio：</p>
+<pre class="code-block" data-lang="text"><code>logit = beta * [(logp_pi(chosen)-logp_ref(chosen)) - (logp_pi(rejected)-logp_ref(rejected))]
+loss = -log sigmoid(logit)</code></pre>
+<p>GRPO 的关键不是单个样本 reward，而是同 prompt 多个响应组成的组内标准化 advantage：</p>
+<pre class="code-block" data-lang="text"><code>A_i = (r_i - mean_group(r)) / (std_group(r) + eps)</code></pre>
+<h3 id="pytorch-实现纪律">PyTorch 实现纪律</h3>
+<ul>
+<li>每个核心函数都先写 shape 注释或测试。</li>
+<li>涉及概率的函数要测试极端 logits、mask、空边界和 dtype。</li>
+<li>涉及梯度的函数要用 <code>torch.autograd.gradcheck</code> 或与 PyTorch 官方模块对比。</li>
+<li>用 <code>.reshape</code> 处理可能不连续的张量，避免无意中依赖 <code>.view</code>。</li>
+<li>不在训练循环中静默吞掉 NaN；应记录 step、loss、grad_norm 和输入 batch。</li>
+</ul>
+    </section>
+  </article>
+</main>
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

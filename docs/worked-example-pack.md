@@ -3,31 +3,11 @@
 
 本包把章节正文、讨论课、书面题和编程作业中的核心概念落成可复算例子。它的作用是帮助学生把公式、shape、代码和常见错误连接起来；配套题目见 [书面推导与概念题题库](written-problem-set.md)。
 
-使用规则：
-
-- 每个 worked example 必须能被学生用纸笔或少量 PyTorch 张量复算。
-- 每个例子必须说明输入、shape、关键公式、预期中间量、常见错误和关联作业。
-- 前沿模型、benchmark、API、价格或硬件性能不能从 worked example 外推为通用事实；需要回到论文、官方文档或模型卡阅读实验条件。
-- 例子可以进入 student site release；不得包含隐藏测试输入、reference_solution.py、评分私有样例或真实学生提交。
-
-## Example Schema
-
-| field | requirement |
-| --- | --- |
-| example_id | Stable `WE-CHxx-NAME` identifier. |
-| chapter | Chapter, module, or classic NLP topic. |
-| learning target | One observable student action, such as compute, derive, debug, compare, or justify. |
-| inputs and shapes | Concrete tensors, token sequences, dimensions, masks, or metric tables. |
-| worked trace | Intermediate values sufficient to reproduce the result. |
-| common failure | A plausible wrong answer and the diagnostic signal. |
-| learning link | Assignment, written problem, recitation worksheet, quiz, or capstone task. |
-| scope note | Stable theory, implementation detail, course inference, or volatile external fact. |
-
 ## Core Worked Examples
 
 | example_id | chapter | learning target | inputs and shapes | worked trace | common failure | learning link | scope note |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| WE-CH01-BPE | Ch01 Tokenization / BPE | Compute two BPE merge steps and explain why merges are corpus-dependent. | Corpus tokens `low`, `lower`, `newer`; byte/character pairs counted over word-end markers. | Count adjacent pairs, pick highest frequency, merge once, recount before the next merge; show that `l o` and `e r` can change rank after the first merge. | Reusing the original pair counts after a merge; diagnostic is a merge order that no longer matches current tokenization. | `assignments/ch01_bpe/`, `written-problem-set.md` Ch01, `recitation-worksheet-pack.md` W1 | stable algorithmic procedure |
+| WE-CH01-BPE | Ch01 Tokenization / BPE | Compute two BPE merge steps and explain why merges are corpus-dependent. | Corpus tokens `low`, `lower`, `newer`; byte/character pairs counted over word-end markers. | Count adjacent pairs, pick highest frequency, merge once, recount before the next merge; show that `l o` and `e r` can change rank after the first merge. | Reusing the original pair counts after a merge; diagnostic is a merge order that no longer matches current tokenization. | `assignments/ch01_bpe/`, `written-problem-set.md` Ch01, `lecture-plan.md` Week 1 | stable algorithmic procedure |
 | WE-CH01-REPORT | Ch01 Tokenization / Evaluation | Compute tokenizer token counts, round-trip success, and embedding parameter budget. | Texts `hello hello`, `世界`, `emoji 😊`; vocab size `280`, `d_model=16`. | Encode each text, average token lengths, take P95 by sorted nearest rank, verify decode(encode(x)) equals x, and compute `280*16` embedding params. | Claiming a tokenizer is good because it round-trips only; diagnostic is no token-cost or embedding-budget comparison. | `assignments/ch01_bpe/`, written Ch01 tokenizer experiment | stable tokenizer metric |
 | WE-CH01-GROUPS | Ch01 Tokenization / Evaluation | Compare token cost across language/domain groups. | Groups `english`, `cjk`, `code`; each has two short texts. | Run the same tokenizer report per group, compare `tokens_per_character`, identify max/min groups, and compute disparity as `max_rate/min_rate`. | Reporting one global average that hides the expensive group; diagnostic is no per-language or per-domain token cost. | `assignments/ch01_bpe/`, written Ch01 tokenizer experiment | grouped token-cost metric |
 | WE-CH02-LOOKUP | Ch02 Embedding / Lookup | Show that embedding lookup equals one-hot matrix multiplication. | Token ids `[[0,2],[1,0]]`; embedding matrix `E` shape `[3,2]`. | `one_hot(token_ids)` has shape `[2,2,3]`; multiplying by `E` gives `[2,2,2]` and matches `E[token_ids]`. | Treating embedding lookup as a nonlinear layer with extra parameters; diagnostic is wrong output shape or a second learned matrix. | `assignments/ch02_embeddings/`, written Ch02 lookup problem | stable embedding foundation |
@@ -35,12 +15,14 @@
 | WE-CH02-SPMI | Ch02 Embedding / Word Vectors | Compute PMI and shifted PMI from a co-occurrence table. | Counts `X_ij=4`, row total `X_i*=10`, column total `X_*j=8`, total `X_**=100`, negative samples `K=5`. | `PMI=log(4*100/(10*8))=log(5)`; shifted PMI is `log(5)-log(5)=0`; zero-count pairs have undefined PMI rather than value 0. | Explaining SGNS purely as a classifier without the implicit matrix-factorization view; diagnostic is no connection between dot products and co-occurrence statistics. | `assignments/ch02_embeddings/`, written Ch02 SGNS/PMI problem | stable distributional-statistics derivation |
 | WE-CH02-GLOVE | Ch02 Embedding / Word Vectors | Compute one GloVe weighted residual from a nonzero co-occurrence. | Count `X_ij=4`, `x_max=100`, `alpha=0.75`, vectors and biases. | Residual is `w_i^T w_j + b_i + b_j - log X_ij`; weight is `min((X_ij/x_max)^alpha,1)`; loss contribution is weight times residual squared. | Taking `log(0)` for missing pairs or treating all counts equally; diagnostic is no nonzero-count mask or no weighting function. | `assignments/ch02_embeddings/`, written Ch02 GloVe problem | stable global co-occurrence objective |
 | WE-CH02-ANALOGY | Ch02 Embedding / Word Vectors | Compute cosine similarity and solve a 3CosAdd analogy. | Vectors for `man=[0,1]`, `king=[1,1]`, `woman=[0,2]`, `queen=[1,2]`, `apple=[-1,-1]`. | Query is `king - man + woman = [1,2]`; after cosine normalization and excluding input words, `queen` ranks first. | Returning one of the query words or using raw dot product without normalization; diagnostic is wrong top result on scale-changed vectors. | `assignments/ch02_embeddings/`, written Ch02 analogy problem | empirical static-vector diagnostic |
+| WE-CH02-SINUSOID | Ch02 Embedding / Position Encoding | Compute a small sinusoidal position table. | `d_model=4`, positions `0,1,2`; dimensions are `[sin(pos), cos(pos), sin(pos/100), cos(pos/100)]`. | Position 0 is `[0,1,0,1]`; position 1 is approximately `[0.841,0.540,0.010,1.000]`; high-frequency dimensions change faster than low-frequency dimensions. | Treating sinusoidal encoding as learned parameters or forgetting that even dimensions are sine and odd dimensions are cosine. | `assignments/ch02_embeddings/`, Ch02 sinusoidal encoding written problem | stable fixed-position function |
 | WE-CH02-ROPE | Ch02 Embedding / Position Encoding / RoPE | Show that RoPE preserves vector norm while changing relative dot products by position difference. | Two 2D query/key vectors `q=[1,0]`, `k=[0,1]`; positions `m=0`, `n=1`; angle `theta`. | Rotate with `R_m` and `R_n`; show `norm(R_m q)=norm(q)`, `norm(R_n k)=norm(k)`, and `(R_m q)^T(R_n k)` depends on `n-m`. | Treating RoPE as adding a position vector; diagnostic is norm drift or loss of relative-position dependence. | `assignments/ch02_embeddings/`, Ch02 written problem | stable theory with notation boundary |
 | WE-CH03-EQUIV | Ch03 Scaled Dot-Product Attention | Verify self-attention permutation equivariance without positions or masks. | Sequence matrix `X` and permutation `P=[2,0,1]`. | Compute `Attention(X)` and `Attention(PX)`; the latter should equal rows of `Attention(X)` permuted by `P`. | Expecting attention to know order without positional signal; diagnostic is assuming content-only self-attention distinguishes swapped sequences. | `assignments/ch03_attention/`, Ch03/Ch02 position written problem | stable structural property |
 | WE-CH03-ATTN | Ch03 Scaled Dot-Product Attention | Compute masked attention weights for a three-token causal sequence. | `Q,K,V` shape `(T=3,d=2)`; mask blocks future columns above the diagonal. | Compute `QK^T/sqrt(2)`, replace masked logits with large negative value, apply row-wise softmax, multiply by `V`. | Applying softmax before masking; diagnostic is nonzero attention mass on future tokens. | `assignments/ch03_attention/`, DER-04, W2 shape drill | stable theory and implementation detail |
 | WE-CH03-PADMASK | Ch03 Attention Masks | Combine causal and padding masks for a batch. | Padding mask `[[1,1,0,0],[1,1,1,0]]`; causal mask shape `[4,4]`. | Broadcast causal to `[1,4,4]`, valid keys to `[2,1,4]`, take logical AND; padded key columns and future columns are all blocked. | Masking only padded query rows or applying padding mask after softmax; diagnostic is attention mass on padded key positions. | `assignments/ch03_attention/`, written Ch03 mask problem | batch mask semantics |
 | WE-CH03-BWD | Ch03 Attention Backward | Compute softmax Jacobian and the gradient from attention output back to logits. | One query with `p` shape `(T,)`, `V` shape `(T,D)`, upstream gradient `g` shape `(D,)`. | First compute `dL/dp_i=g^T v_i`, then `dL/dz_j=p_j(dL/dp_j-sum_i p_i dL/dp_i)`. | Treating softmax as elementwise independent; diagnostic is gradient rows not summing to zero or mismatch with autograd. | `assignments/ch03_attention/`, written Ch03 softmax problem | stable backward math |
 | WE-CH03-ENTROPY | Ch03 Attention / Complexity | Compute attention entropy and dense score memory. | Weights `[1,0,0]`, `[1/3,1/3,1/3]`; `B=2,H=4,T=8,fp16`. | Entropies are `0` and `log(3)`; score memory is `2*4*8*8*2` bytes. | Treating a sharp heatmap as causal explanation or forgetting the `T^2` score tensor. | `assignments/ch03_attention/`, Ch03 entropy/complexity written problem | diagnostic metric and memory estimate |
+| WE-CH04-MHA | Ch04 MHA / GQA / MLA | Show that multi-head attention reorganizes, rather than increases, QKV parameters. | `d_model=8`, `n_heads=2`, so `d_k=4`; compare one 8-dimensional head with two 4-dimensional heads. | Single-head QKV parameters are `3*8*8=192`; two-head MHA parameters are `2*3*8*4=192`; attention score shape changes from `[T,T]` to `[2,T,T]`. | Claiming MHA works because it simply adds more QKV parameters; diagnostic is parameter count not matching the single-head baseline. | `assignments/ch04_multihead/`, Ch04 MHA parameter-equivalence written problem | stable architecture accounting |
 | WE-CH04-GQA | Ch04 MHA / GQA / MLA | Compare KV-cache memory for MHA and GQA with the same query heads. | `n_q=8`, `n_kv=2`, `d_head=64`, `T=1024`, fp16 KV cache. | MHA stores `2*T*n_q*d_head*2` bytes; GQA stores `2*T*n_kv*d_head*2` bytes; ratio is `n_kv/n_q=0.25`. | Counting query heads for KV cache in GQA; diagnostic is no memory reduction despite fewer KV heads. | `assignments/ch04_multihead/`, Ch04 KV-cache analysis | implementation detail tied to architecture |
 | WE-CH04-BUDGET | Ch04 MHA / GQA / MLA | Compute full KV-cache budget across batch and layers. | `layers=24`, `batch=4`, `T=2048`, `n_heads=32`, `n_kv=8`, `d_head=128`, `d_latent=512`, fp16. | Per token: MHA `8192`, GQA `2048`, MLA `512` elements; total bytes multiply by `layers*batch*T*2`; compression vs MHA is `4x` for GQA and `16x` for MLA. | Reporting only per-token ratios without batch/layer units; diagnostic is memory estimate too small by `batch*layers`. | `assignments/ch04_multihead/`, Ch04 written cache budget | architecture memory accounting |
 | WE-CH04-MAP | Ch04 MHA / GQA / MLA | Write the Q-head to KV-head mapping for GQA. | `n_heads=8`, `n_kv_heads=2`. | `n_rep=4`; query heads 0-3 map to KV head 0 and heads 4-7 map to KV head 1: `[0,0,0,0,1,1,1,1]`. | Assuming GQA reduces the number of Q heads; diagnostic is output attention still has 8 query heads. | `assignments/ch04_multihead/`, Ch04 GQA written problem | grouping implementation detail |
@@ -103,20 +85,3 @@
 | WE-R2-SYSTEMS | WE-CH04-GQA, WE-CH10-KVCACHE | Students compute memory ratios and explain latency consequences. | one memory/latency calculation with units |
 | WE-R3-OBJECTIVES | WE-CH07-ADAMW, WE-CH09-DPO | Students compare optimizer and preference-objective failure modes. | one signed update explanation |
 | WE-R4-EVAL | WE-CH08-TOPP, WE-CH11-METRICS | Students explain why generation and evaluation choices change observed quality. | one metric or sampling boundary note |
-
-## Assessment Coverage
-
-| channel | required use |
-| --- | --- |
-| programming assignments | Each example links to at least one public assignment suite or capstone task. |
-| written assessment | Ch01-Ch10 and Ch11 examples map to written derivation or concept questions. |
-| recitation | Recitation rows require students to produce a visible trace, not just a final answer. |
-| quiz/checkpoint | Instructors may convert any common failure into a quick check or distractor item. |
-| paper recap | Examples with external facts should point students back to the relevant paper, official documentation, or model card. |
-
-## Maintenance Workflow
-
-1. When a chapter formula, starter API, assignment test, or scope note changes, update the corresponding `WE-*` row in this pack.
-2. If a worked trace becomes too long for a table, move the expanded trace into lecture notes and keep the `WE-*` row as the index record.
-3. If an example depends on a volatile external model or benchmark number, cite the paper or official documentation in the relevant reading notes.
-4. Run `.venv/bin/python run_assignment_tests.py` after editing this pack or any linked chapter/assignment.

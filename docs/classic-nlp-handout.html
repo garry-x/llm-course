@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
+<link rel="apple-touch-icon" href="../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>经典 NLP 专题 Handout — LLM 深度学习</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="classic-nlp-handout.html">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>课程材料</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span>课程首页</a>
+    <a href="syllabus.html"><span class="ch-num">S</span>Syllabus</a>
+    <a href="lecture-plan.html"><span class="ch-num">L</span>Lecture Plan</a>
+    <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
+    <a href="written-problem-set.html"><span class="ch-num">W</span>书面题库</a>
+    <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+<main class="main doc-main">
+  <article class="chapter doc-article">
+    <div class="reading-time"><a href="../index.html">课程首页</a> / classic-nlp-handout.html</div>
+    <h2>经典 NLP 专题 Handout</h2>
+    <nav class="toc"><h4>目录</h4><ol><li class="doc-toc-level-1"><a href="#经典-nlp-专题-handout">经典 NLP 专题 Handout</a></li>
+<li class="doc-toc-level-2"><a href="#1-dependency-parsing">1. Dependency Parsing</a></li>
+<li class="doc-toc-level-3"><a href="#arc-standard-transition-system">Arc-Standard Transition System</a></li>
+<li class="doc-toc-level-3"><a href="#worked-example-i-saw-her">Worked Example: `I saw her`</a></li>
+<li class="doc-toc-level-3"><a href="#指标">指标</a></li>
+<li class="doc-toc-level-2"><a href="#2-rnn-lstm-从循环语言模型到注意力">2. RNN / LSTM：从循环语言模型到注意力</a></li>
+<li class="doc-toc-level-3"><a href="#bptt-与梯度消失">BPTT 与梯度消失</a></li>
+<li class="doc-toc-level-3"><a href="#lstm-门控直觉">LSTM 门控直觉</a></li>
+<li class="doc-toc-level-3"><a href="#与-transformer-的系统差异">与 Transformer 的系统差异</a></li>
+<li class="doc-toc-level-2"><a href="#3-seq2seq-neural-machine-translation">3. Seq2Seq / Neural Machine Translation</a></li>
+<li class="doc-toc-level-3"><a href="#条件概率分解">条件概率分解</a></li>
+<li class="doc-toc-level-3"><a href="#cross-attention-信息流">Cross-Attention 信息流</a></li>
+<li class="doc-toc-level-3"><a href="#核心问题">核心问题</a></li>
+<li class="doc-toc-level-3"><a href="#bleu">BLEU</a></li>
+<li class="doc-toc-level-3"><a href="#worked-example-beam-search-length-bias">Worked Example: Beam Search Length Bias</a></li>
+<li class="doc-toc-level-2"><a href="#4-encoder-only-bert">4. Encoder-only / BERT</a></li>
+<li class="doc-toc-level-3"><a href="#与-causal-lm-的区别">与 Causal LM 的区别</a></li>
+<li class="doc-toc-level-3"><a href="#worked-example-bert-style-mlm-tensor">Worked Example: BERT-style MLM Tensor</a></li>
+<li class="doc-toc-level-3"><a href="#worked-example-extractive-qa-span">Worked Example: Extractive QA Span</a></li>
+<li class="doc-toc-level-2"><a href="#4-evaluation">4. Evaluation</a></li>
+<li class="doc-toc-level-3"><a href="#常见指标的可计算定义">常见指标的可计算定义</a></li>
+<li class="doc-toc-level-3"><a href="#metric-failure-cases">Metric Failure Cases</a></li>
+<li class="doc-toc-level-2"><a href="#5-ethics-safety">5. Ethics / Safety</a></li>
+<li class="doc-toc-level-2"><a href="#课堂活动建议">课堂活动建议</a></li>
+<li class="doc-toc-level-2"><a href="#mini-recitation-activities">Mini-Recitation Activities</a></li></ol></nav>
+    <section class="card doc-content">
+<h2 id="经典-nlp-专题-handout">经典 NLP 专题 Handout</h2>
+<p>本 handout 用于补齐 CS224N 风格课程中常见但本课程主线没有展开成独立章节的内容。授课时建议安排 1-2 次讨论课，或把它作为期末项目的背景阅读。</p>
+<h3 id="1-dependency-parsing">1. Dependency Parsing</h3>
+<p>Dependency parsing 的目标是为句子中的词建立有向依存边。例如 <code>I saw her</code> 中，<code>saw</code> 是谓词中心，<code>I</code> 依赖于 <code>saw</code> 作为主语，<code>her</code> 依赖于 <code>saw</code> 作为宾语。</p>
+<h4 id="arc-standard-transition-system">Arc-Standard Transition System</h4>
+<p>状态包含：</p>
+<ul>
+<li>Stack：已经部分处理的词。</li>
+<li>Buffer：尚未处理的词。</li>
+<li>Arcs：已建立的依存边。</li>
+</ul>
+<p>操作：</p>
+<ul>
+<li><code>SHIFT</code>：把 buffer 第一个词移到 stack。</li>
+<li><code>LEFT-ARC(label)</code>：把 stack 顶部词作为 head，连接到次顶部 dependent，并弹出 dependent。</li>
+<li><code>RIGHT-ARC(label)</code>：把次顶部词作为 head，连接到顶部 dependent，并弹出 dependent。</li>
+</ul>
+<h4 id="worked-example-i-saw-her">Worked Example: <code>I saw her</code></h4>
+<p>设 token 编号为 <code>0=I, 1=saw, 2=her</code>，gold arcs 为 <code>saw -&gt; I (nsubj)</code>、<code>saw -&gt; her (obj)</code>，<code>saw</code> 是 root。一个合法 arc-standard transition 序列如下：</p>
+<div class="table-wrap"><table><thead><tr><th>Step</th><th>Stack</th><th>Buffer</th><th>Action</th><th>New arc</th></tr></thead><tbody><tr><td>0</td><td><code>[]</code></td><td><code>[I, saw, her]</code></td><td><code>SHIFT</code></td><td>-</td></tr><tr><td>1</td><td><code>[I]</code></td><td><code>[saw, her]</code></td><td><code>SHIFT</code></td><td>-</td></tr><tr><td>2</td><td><code>[I, saw]</code></td><td><code>[her]</code></td><td><code>LEFT-ARC(nsubj)</code></td><td><code>saw -&gt; I</code></td></tr><tr><td>3</td><td><code>[saw]</code></td><td><code>[her]</code></td><td><code>SHIFT</code></td><td>-</td></tr><tr><td>4</td><td><code>[saw, her]</code></td><td><code>[]</code></td><td><code>RIGHT-ARC(obj)</code></td><td><code>saw -&gt; her</code></td></tr><tr><td>5</td><td><code>[saw]</code></td><td><code>[]</code></td><td><code>ROOT</code> 或结束</td><td><code>ROOT -&gt; saw</code></td></tr></tbody></table></div>
+<p>课堂检查：</p>
+<ul>
+<li><code>LEFT-ARC</code> 和 <code>RIGHT-ARC</code> 的 head/dependent 方向不能靠“左/右”字面猜，要看系统定义。</li>
+<li>Ch11 的 <code>run_arc_standard_transitions</code> 会执行这张表中的 action，并返回 heads、labels、arcs 和 stack/buffer trace；学生需要用代码检查每一步 action 是否满足系统约束。</li>
+<li>若预测 heads 为 <code>[1, -1, 1]</code>，labels 为 <code>[&quot;nsubj&quot;, &quot;root&quot;, &quot;obj&quot;]</code>，UAS/LAS 都是 1.0。</li>
+<li>若 <code>her</code> 的 head 预测为 <code>I</code>，但 label 仍是 <code>obj</code>，UAS 和 LAS 都会下降；LAS 只有在 head 与 label 同时正确时才计入。</li>
+</ul>
+<h4 id="指标">指标</h4>
+<ul>
+<li>UAS：Unlabeled Attachment Score，只看 head 是否正确。</li>
+<li>LAS：Labeled Attachment Score，同时要求 head 和 dependency label 正确。</li>
+</ul>
+<p>课程用途：训练学生把结构预测问题拆成状态、动作、损失和评测，而不只看生成式 LLM。</p>
+<h3 id="2-rnn-lstm-从循环语言模型到注意力">2. RNN / LSTM：从循环语言模型到注意力</h3>
+<p>在 Transformer 之前，神经语言模型和序列标注常用 RNN、GRU 或 LSTM。RNN 的核心思想是用一个 hidden state 汇总已经读过的前缀：</p>
+<pre class="code-block" data-lang="text"><code>h_t = tanh(W_x x_t + W_h h_{t-1} + b)
+p(x_{t+1} | x_{\le t}) = softmax(W_o h_t)</code></pre>
+<p>这个公式和 decoder-only LM 一样在建模“给定前缀预测下一个 token”，但信息路径完全不同。RNN 中，位置 1 的信息要影响位置 100，需要穿过 99 次状态更新；Transformer 中，位置 100 可以通过 self-attention 直接读取位置 1 的表示。</p>
+<h4 id="bptt-与梯度消失">BPTT 与梯度消失</h4>
+<p>Backpropagation Through Time (BPTT) 把同一个 RNN cell 在时间上展开。对标量 RNN：</p>
+<pre class="code-block" data-lang="text"><code>h_t = tanh(w_x x_t + w_h h_{t-1})
+dh_t / dh_{t-1} = w_h * (1 - h_t^2)</code></pre>
+<p>因此从较晚 loss 传回早期状态时，会出现连乘：</p>
+<pre class="code-block" data-lang="text"><code>dL / dh_1 = dL / dh_T * product_{t=2..T} w_h * (1 - h_t^2)</code></pre>
+<p>如果这些因子的绝对值长期小于 1，梯度会快速变小；如果长期大于 1，梯度会爆炸。LSTM 通过 input/forget/output gates 和 cell state 缓解这个问题，但仍然保留顺序计算路径。</p>
+<h4 id="lstm-门控直觉">LSTM 门控直觉</h4>
+<p>简化写法：</p>
+<pre class="code-block" data-lang="text"><code>f_t = sigmoid(W_f [h_{t-1}; x_t])
+i_t = sigmoid(W_i [h_{t-1}; x_t])
+o_t = sigmoid(W_o [h_{t-1}; x_t])
+\tilde{c}_t = tanh(W_c [h_{t-1}; x_t])
+c_t = f_t * c_{t-1} + i_t * \tilde{c}_t
+h_t = o_t * tanh(c_t)</code></pre>
+<p><code>f_t</code> 控制保留旧记忆，<code>i_t</code> 控制写入新信息，<code>o_t</code> 控制暴露多少状态给输出。LSTM 的关键不是“更复杂所以更强”，而是 cell state 提供了更稳定的梯度通路。</p>
+<h4 id="与-transformer-的系统差异">与 Transformer 的系统差异</h4>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>RNN / LSTM</th><th>Transformer self-attention</th></tr></thead><tbody><tr><td>训练并行性</td><td>时间步顺序依赖，难完全并行</td><td>同一层内所有位置可并行计算</td></tr><tr><td>长程路径</td><td>路径长度随距离线性增长</td><td>单层可直接连接任意位置</td></tr><tr><td>状态瓶颈</td><td>前缀压缩进固定维 hidden state</td><td>每个 token 保留自己的表示</td></tr><tr><td>推理 cache</td><td>hidden state 或 cell state</td><td>每层 K/V cache</td></tr><tr><td>典型强项</td><td>小模型、流式序列、低资源场景</td><td>大规模预训练、长上下文、并行训练</td></tr></tbody></table></div>
+<p>课程用途：RNN 不是过时名词，而是理解 teacher forcing、BPTT、长程依赖和注意力动机的基础。现代 LLM 不再以 RNN 为主干，但许多训练概念仍来自这条历史路径。</p>
+<h3 id="3-seq2seq-neural-machine-translation">3. Seq2Seq / Neural Machine Translation</h3>
+<p>Seq2Seq 模型把输入序列编码成上下文表示，再由 decoder 自回归生成目标序列。Attention 让 decoder 每一步根据当前状态对源端 token 加权，而不是只依赖一个固定向量。</p>
+<h4 id="条件概率分解">条件概率分解</h4>
+<p>给定源句 <code>x = (x_1, ..., x_m)</code> 和目标句 <code>y = (y_1, ..., y_n)</code>，encoder-decoder 模型学习的是条件分布：</p>
+<pre class="code-block" data-lang="text"><code>p(y | x) = product_t p(y_t | y_&lt;t, x)</code></pre>
+<p>训练时常用 teacher forcing，即 decoder 在第 <code>t</code> 步看到 gold prefix <code>y_&lt;t^gold</code>：</p>
+<pre class="code-block" data-lang="text"><code>loss = - sum_t log p(y_t^gold | y_&lt;t^gold, x)</code></pre>
+<p>推理时模型只能看到自己已经生成的 prefix <code>y_&lt;t^model</code>。训练条件和推理条件不完全一致，这就是 exposure bias 的来源之一。</p>
+<h4 id="cross-attention-信息流">Cross-Attention 信息流</h4>
+<p>设 encoder 输出源端表示 <code>H = [h_1, ..., h_m]</code>，decoder 第 <code>t</code> 步隐状态为 <code>s_t</code>。一个简化的 additive attention 写作：</p>
+<pre class="code-block" data-lang="text"><code>score_{t,i} = v^T tanh(W_s s_t + W_h h_i)
+alpha_{t,i} = softmax_i(score_{t,i})
+c_t = sum_i alpha_{t,i} h_i
+p(y_t | y_&lt;t, x) = softmax(W_o [s_t; c_t])</code></pre>
+<p>这里 <code>alpha_{t,i}</code> 是 decoder 第 <code>t</code> 步对源端第 <code>i</code> 个 token 的注意力权重。它可以帮助诊断漏译、重译或错译，但不能直接当成严格的因果解释。</p>
+<p>Ch11 的 <code>additive_attention_context</code> 把这组公式做成纯 Python 练习：学生需要先算每个源位置的 score，再做 softmax 归一化，最后用 <code>alpha</code> 对 encoder states 加权求和得到 <code>c_t</code>。这个练习的重点不是训练一个翻译系统，而是把 encoder-decoder attention 的信息流从图示落实到可复算的数值。</p>
+<h4 id="核心问题">核心问题</h4>
+<ul>
+<li>Exposure bias：训练时 decoder 看到 gold prefix，推理时看到自己生成的 prefix。</li>
+<li>Beam search：保留多个候选序列，但容易偏向短句，因此常加 length penalty。</li>
+<li>Alignment：attention 权重可以粗略解释源词与目标词的对应关系，但不是严格因果解释。</li>
+</ul>
+<h4 id="bleu">BLEU</h4>
+<p>BLEU 基于 n-gram precision 和 brevity penalty，适合机器翻译系统级比较，但对单句质量、语义等价改写和开放式生成不稳定。</p>
+<h4 id="worked-example-beam-search-length-bias">Worked Example: Beam Search Length Bias</h4>
+<p>假设 decoder 在某一步给出两个候选：</p>
+<div class="table-wrap"><table><thead><tr><th>Candidate</th><th>token log probs</th><th>sum log prob</th><th>length</th><th>normalized score <code>sum / length</code></th></tr></thead><tbody><tr><td><code>a</code></td><td><code>[-0.20]</code></td><td><code>-0.20</code></td><td>1</td><td><code>-0.20</code></td></tr><tr><td><code>a b c</code></td><td><code>[-0.20, -0.30, -0.30]</code></td><td><code>-0.80</code></td><td>3</td><td><code>-0.27</code></td></tr></tbody></table></div>
+<p>若只比较 log prob sum，短候选 <code>a</code> 更容易胜出，因为每多生成一个 token 都会乘上小于 1 的概率。长度归一化或 length penalty 不保证长句一定更好，但能减少“过短翻译”偏差。开放式生成中，beam search 还可能导致低多样性；sampling 则更适合探索多样输出，但需要温度、top-k/top-p 和安全过滤。</p>
+<p>课堂检查：</p>
+<ul>
+<li>beam search 是搜索策略，不是训练目标。</li>
+<li>attention alignment 可作为翻译诊断，但不能自动证明模型因果解释。</li>
+<li>BLEU 的 brevity penalty 只能缓解过短输出，不解决语义等价改写、事实性或指代错误。</li>
+</ul>
+<p>课程用途：帮助学生理解 decoder-only LLM 之前的 encoder-decoder 传统，以及为什么现代 instruction model 仍会用 beam/search/rerank 思路。</p>
+<h3 id="4-encoder-only-bert">4. Encoder-only / BERT</h3>
+<p>BERT 使用双向 Transformer encoder，通过 Masked Language Modeling (MLM) 和 Next Sentence Prediction 预训练。与 causal LM 不同，MLM 可以同时看左右上下文，只预测被 mask 的位置。</p>
+<h4 id="与-causal-lm-的区别">与 Causal LM 的区别</h4>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>BERT / Encoder-only</th><th>GPT / Decoder-only</th></tr></thead><tbody><tr><td>注意力</td><td>双向可见</td><td>causal mask</td></tr><tr><td>预训练</td><td>MLM</td><td>next-token prediction</td></tr><tr><td>输出</td><td>token/CLS 表示</td><td>下一个 token logits</td></tr><tr><td>典型任务</td><td>分类、抽取、序列标注</td><td>生成、对话、代码</td></tr></tbody></table></div>
+<p>课程用途：补齐表示学习和判别式 NLP 的经典路线，让学生理解并非所有 NLP 任务都天然需要自回归生成。</p>
+<h4 id="worked-example-bert-style-mlm-tensor">Worked Example: BERT-style MLM Tensor</h4>
+<p>输入 tokens：</p>
+<pre class="code-block" data-lang="text"><code>[CLS] the cat sat [SEP]</code></pre>
+<p>若 mask positions 为 <code>[2, 3]</code>，则：</p>
+<div class="table-wrap"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>masked input</td><td><code>[CLS] the [MASK] [MASK] [SEP]</code></td></tr><tr><td>labels</td><td><code>None, None, cat, sat, None</code></td></tr><tr><td>attention</td><td>双向 self-attention，可看左右上下文</td></tr><tr><td>loss positions</td><td>只在 mask positions 计算 loss</td></tr></tbody></table></div>
+<p>与 causal LM 对比：</p>
+<ul>
+<li>causal LM 训练 <code>the -&gt; cat -&gt; sat</code> 的 next-token prediction，只能看左侧上下文。</li>
+<li>MLM 可以同时利用 <code>the</code> 和 <code>[SEP]</code> 附近上下文预测 <code>cat/sat</code>，但不直接训练自回归生成。</li>
+<li>BERT fine-tuning 常用 <code>[CLS]</code> 表示做分类，也可做 token classification 或 span extraction；它不是默认的 decoder-only 生成模型。</li>
+</ul>
+<h4 id="worked-example-extractive-qa-span">Worked Example: Extractive QA Span</h4>
+<p>抽取式 QA 给每个 token 两个分数：<code>start_logit_i</code> 和 <code>end_logit_i</code>。模型选择满足 <code>start &lt;= end</code> 且长度不超过上限的 span，使 <code>start_logit_start + end_logit_end</code> 最大。SQuAD 2.0 风格的 no-answer 通常用 <code>[CLS]</code> 的 start/end 分数表示。</p>
+<p>Ch11 的 <code>select_extractive_qa_span</code> 让学生实现这一步：枚举合法 span、比较分数，并在 <code>[CLS]</code> 分数更高时返回空答案。它强调 encoder-only 模型可以做判别式抽取，而不是生成一段新文本。</p>
+<h3 id="4-evaluation">4. Evaluation</h3>
+<p>高校 NLP 课程必须让学生区分“优化目标”和“评测指标”。</p>
+<div class="table-wrap"><table><thead><tr><th>指标</th><th>适用任务</th><th>局限</th></tr></thead><tbody><tr><td>Perplexity</td><td>语言模型拟合</td><td>不直接等于事实正确或有用</td></tr><tr><td>Accuracy / F1</td><td>分类、抽取</td><td>标签定义和类别不平衡会影响解释</td></tr><tr><td>Exact Match</td><td>QA、代码、数学</td><td>对等价表达过于严格</td></tr><tr><td>BLEU</td><td>机器翻译</td><td>对语义改写和单句评价不稳定</td></tr><tr><td>ROUGE</td><td>摘要</td><td>偏向词面重合</td></tr><tr><td>Human Eval</td><td>开放式任务</td><td>成本高，一致性难保证</td></tr><tr><td>LLM-as-judge</td><td>大规模偏好评测</td><td>可能有位置偏置、模型偏置和污染风险</td></tr></tbody></table></div>
+<p>项目报告不能只给一个平均分。至少应包含分任务结果、失败案例、错误类型和指标局限。</p>
+<h4 id="常见指标的可计算定义">常见指标的可计算定义</h4>
+<p><strong>BLEU</strong> 使用 clipped n-gram precision 和 brevity penalty：</p>
+<pre class="code-block" data-lang="text"><code>BLEU = BP * exp(sum_n w_n log p_n)
+BP = 1                  if candidate_len &gt; reference_len
+BP = exp(1 - reference_len / candidate_len) otherwise</code></pre>
+<p>其中 <code>p_n</code> 是候选译文中 n-gram 命中参考译文的裁剪精度。BLEU 适合系统级机器翻译比较，但不适合单句语义判断。</p>
+<p><strong>ROUGE-L</strong> 基于最长公共子序列 <code>LCS(candidate, reference)</code>：</p>
+<pre class="code-block" data-lang="text"><code>precision = LCS / candidate_len
+recall = LCS / reference_len
+F1 = 2 * precision * recall / (precision + recall)</code></pre>
+<p>它常用于摘要任务，因为摘要可能不要求逐词完全相同；但高 ROUGE 仍可能只是复制了相似文本，不代表事实正确。</p>
+<p><strong>Exact Match / token F1</strong> 常用于抽取式 QA。Exact Match 要求标准化后字符串完全一致；token F1 先计算预测答案与 gold answer 的 token overlap，再取 precision/recall 的调和平均。它们对开放式回答、同义改写和多答案问题都不稳定。</p>
+<h4 id="metric-failure-cases">Metric Failure Cases</h4>
+<div class="table-wrap"><table><thead><tr><th>Case</th><th>Metric looks good</th><th>Human issue</th><th>Lesson</th></tr></thead><tbody><tr><td>Translation synonym</td><td>BLEU 低，因为 n-gram 不重合</td><td>语义可能正确</td><td>BLEU 不能单句决定质量</td></tr><tr><td>Extractive QA punctuation</td><td>EM 低，因为格式不同</td><td>答案实体相同</td><td>EM 过严，需配合 normalized F1</td></tr><tr><td>RAG copy overlap</td><td>ROUGE 高，因为复制检索片段</td><td>片段可能不回答问题</td><td>词面重合不等于事实正确</td></tr><tr><td>Long answer latency</td><td>quality score 高</td><td>P95 latency 超 SLO</td><td>质量指标必须配合系统指标</td></tr><tr><td>LLM judge preference</td><td>judge 偏好更长回答</td><td>可能冗余或幻觉</td><td>需要 blind pairwise、position swap 和人工抽查</td></tr></tbody></table></div>
+<p>课堂检查：</p>
+<ul>
+<li>指标是任务假设的压缩，不是“真实质量”的同义词。</li>
+<li>报告平均值时必须说明样本数、split、置信区间或 single_seed_limit。</li>
+<li>对开放式 LLM 任务，自动指标、人工错误分析和资源指标应同时出现。</li>
+</ul>
+<h3 id="5-ethics-safety">5. Ethics / Safety</h3>
+<p>LLM 课程的工程项目必须覆盖以下风险：</p>
+<ul>
+<li>数据隐私：训练或 RAG 语料是否包含敏感信息。</li>
+<li>偏见与代表性：数据是否系统性忽略某些语言、地区或群体。</li>
+<li>幻觉：模型生成无法由检索产出支持的内容。</li>
+<li>评测污染：benchmark 或答案是否出现在训练/调参数据中。</li>
+<li>安全拒答：模型是否在高风险请求中给出不当操作建议。</li>
+<li>版权与引用：生成内容或训练数据是否需要来源说明。</li>
+</ul>
+<p>建议项目报告固定加入 “Safety and Limitations” 小节，至少列出 3 个风险、触发样例和缓解策略。</p>
+<h3 id="课堂活动建议">课堂活动建议</h3>
+<ol>
+<li>用 10 分钟手算一个 dependency parsing transition 序列。</li>
+<li>用 15 分钟比较同一句翻译的 BLEU 与人工偏好差异。</li>
+<li>用 15 分钟把一个文本分类任务分别设计成 BERT fine-tuning 和 GPT prompting。</li>
+<li>用 20 分钟分析一个 RAG 失败案例，标出 retrieval、generation 和 evaluation 的责任边界。</li>
+</ol>
+<h3 id="mini-recitation-activities">Mini-Recitation Activities</h3>
+<div class="table-wrap"><table><thead><tr><th>Topic</th><th>Board artifact</th><th>Student action</th></tr></thead><tbody><tr><td>Dependency parsing</td><td>stack / buffer / arcs transition table</td><td>写出合法 action 序列并计算 UAS/LAS</td></tr><tr><td>Seq2Seq / NMT</td><td>beam table with sum and normalized score</td><td>解释 length bias 和 length penalty</td></tr><tr><td>BERT / MLM</td><td>masked input + labels table</td><td>区分 MLM loss positions 与 causal LM labels</td></tr><tr><td>Evaluation</td><td>metric failure-case table</td><td>判断哪个指标支持结论、哪个指标失效</td></tr><tr><td>Ethics / Safety</td><td>risk / trigger / mitigation table</td><td>把 failure case 连接到数据、模型、系统或评测原因</td></tr></tbody></table></div>
+    </section>
+  </article>
+</main>
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

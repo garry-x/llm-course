@@ -64,12 +64,12 @@
 
 配套学习材料：
 
-- [课程 Syllabus](docs/syllabus.md)：课程目标、周安排、作业节奏和项目安排。
-- [10 周 / 20 讲 Lecture Plan](docs/lecture-plan.md)：每讲目标、推导、课堂 demo 和 quick check。
-- [逐周阅读材料与复盘 Handout](docs/reading-list.md)：论文阅读、关键问题和复盘要求。
-- [书面推导与概念题题库](docs/written-problem-set.md)：公式推导、复杂度分析和概念辨析。
-- [Worked Example Pack](docs/worked-example-pack.md)：BPE、RoPE、attention、GQA、Norm、AdamW、DPO、KV cache 等可复算小例子。
-- [经典 NLP 专题 Handout](docs/classic-nlp-handout.md)：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT、BLEU/ROUGE/F1/EM 与现代 LLM 的关系。
+- [课程 Syllabus](docs/syllabus.html)：课程目标、周安排、作业节奏和项目安排。
+- [10 周 / 20 讲 Lecture Plan](docs/lecture-plan.html)：每讲目标、推导、课堂 demo 和 quick check。
+- [逐周阅读材料与复盘 Handout](docs/reading-list.html)：论文阅读、关键问题和复盘要求。
+- [书面推导与概念题题库](docs/written-problem-set.html)：公式推导、复杂度分析和概念辨析。
+- [Worked Example Pack](docs/worked-example-pack.html)：BPE、RoPE、attention、GQA、Norm、AdamW、DPO、KV cache 等可复算小例子。
+- [经典 NLP 专题 Handout](docs/classic-nlp-handout.html)：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT、BLEU/ROUGE/F1/EM 与现代 LLM 的关系。
 
 章节作业入口：[assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/) · [assignments/ch11_classic_nlp/](assignments/ch11_classic_nlp/)。
 
@@ -88,7 +88,7 @@
 
 **课程最终项目：**[LLM Inference Engineering Capstone](projects/inference-engineering-capstone/) 会带你部署一个 OpenAI-compatible Chat API：支持流式输出、结构化 JSON、工具调用、RAG、基础指标、压测报告、P50/P95/P99 延迟和 tokens/s 成本估算。先用 mock engine 跑通服务骨架，再替换为 vLLM / SGLang / TensorRT-LLM / llama.cpp。
 
-**学习路线：**如果你想按岗位能力学习，先看 [LLM 推理工程师课程路线](inference-engineer-curriculum.html)（详细 Markdown 版在 [docs/inference-engineer-curriculum.md](docs/inference-engineer-curriculum.md)）。它把章节、练习、Capstone、压测、评测和上线复盘串成一条实践路径。
+**学习路线：**如果你想按岗位能力学习，先看 [LLM 推理工程师课程路线](inference-engineer-curriculum.html)（详细版在 [docs/inference-engineer-curriculum.html](docs/inference-engineer-curriculum.html)）。它把章节、练习、Capstone、压测、评测和上线复盘串成一条实践路径。
 
 ## 面向 LLM 训练工程师的能力路线
 
@@ -105,7 +105,7 @@
 
 **训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、训练、开发集监控、checkpoint、resume、metrics 和训练规划。默认模型很小，CPU 可跑通；有 GPU 时可直接迁移到 CUDA 环境。
 
-**学习路线：**按 [LLM 训练工程师课程路线](training-engineer-curriculum.html)（详细 Markdown 版在 [docs/training-engineer-curriculum.md](docs/training-engineer-curriculum.md)）完成训练报告、指标日志、checkpoint 恢复说明和成本规划。
+**学习路线：**按 [LLM 训练工程师课程路线](training-engineer-curriculum.html)（详细版在 [docs/training-engineer-curriculum.html](docs/training-engineer-curriculum.html)）完成训练报告、指标日志、checkpoint 恢复说明和成本规划。
 
 ## 快速开始
 

@@ -387,6 +387,31 @@ th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
 th{font-weight:700;color:var(--text);background:var(--bg);white-space:nowrap}
 td{color:var(--text-secondary)}
 
+/* ---- Rendered Markdown Docs ---- */
+.doc-main{max-width:1120px}
+.doc-article h2{margin-bottom:18px}
+.doc-content{overflow:hidden}
+.doc-content h2,.doc-content h3,.doc-content h4,.doc-content h5{
+  font-family:var(--font-heading);color:var(--text);line-height:1.35
+}
+.doc-content h2{font-size:1.45rem;margin:8px 0 12px;color:var(--accent)}
+.doc-content h3{font-size:1.18rem;margin:22px 0 10px;color:var(--accent)}
+.doc-content h4,.doc-content h5{font-size:1rem;margin:18px 0 8px}
+.doc-content p{margin:8px 0 12px;color:var(--text-secondary)}
+.doc-content ul,.doc-content ol{margin:8px 0 16px 24px;color:var(--text-secondary)}
+.doc-content li{margin-bottom:6px}
+.doc-content code{
+  font-family:var(--font-mono);font-size:.86em;
+  background:var(--accent-light);color:var(--accent);
+  padding:1px 5px;border-radius:4px
+}
+.doc-content .code-block code{background:transparent;color:inherit;padding:0;border-radius:0}
+.doc-content .table-wrap{margin:14px 0 22px}
+.doc-content table{min-width:760px}
+.doc-content th,.doc-content td{vertical-align:top}
+.doc-content td{line-height:1.65}
+.doc-toc-level-3{margin-left:18px}
+
 /* ---- Diagram (ASCII art) ---- */
 .diagram{
   background:var(--bg);border:1px dashed var(--border-strong);border-radius:var(--radius-sm);
@@ -670,6 +695,8 @@ td{color:var(--text-secondary)}
   border:1px solid var(--border);border-radius:var(--radius-sm);
   color:var(--text-secondary);font-size:.8rem;background:var(--bg)
 }
+.role-grid span a{color:inherit;text-decoration:none;display:block;width:100%}
+.role-grid span:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .role-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
 .role-project-link{
   display:inline-flex;align-items:center;min-height:40px;

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
+<link rel="apple-touch-icon" href="../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>逐周阅读材料与复盘 Handout — LLM 深度学习</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="reading-list.html">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>课程材料</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span>课程首页</a>
+    <a href="syllabus.html"><span class="ch-num">S</span>Syllabus</a>
+    <a href="lecture-plan.html"><span class="ch-num">L</span>Lecture Plan</a>
+    <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
+    <a href="written-problem-set.html"><span class="ch-num">W</span>书面题库</a>
+    <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+<main class="main doc-main">
+  <article class="chapter doc-article">
+    <div class="reading-time"><a href="../index.html">课程首页</a> / reading-list.html</div>
+    <h2>逐周阅读材料与复盘 Handout</h2>
+    <nav class="toc"><h4>目录</h4><ol><li class="doc-toc-level-1"><a href="#逐周阅读材料与复盘-handout">逐周阅读材料与复盘 Handout</a></li>
+<li class="doc-toc-level-2"><a href="#阅读方法-从论文到课程能力">阅读方法：从论文到课程能力</a></li>
+<li class="doc-toc-level-2"><a href="#week-0-先修与-ml-foundations-bridge">Week 0: 先修与 ML Foundations Bridge</a></li>
+<li class="doc-toc-level-2"><a href="#阅读重点">阅读重点</a></li>
+<li class="doc-toc-level-2"><a href="#week-1-tokenization-与-word-vectors">Week 1: Tokenization 与 Word Vectors</a></li>
+<li class="doc-toc-level-2"><a href="#week-2-attention-与-tensor-derivatives">Week 2: Attention 与 Tensor Derivatives</a></li>
+<li class="doc-toc-level-2"><a href="#week-3-multi-head-attention-gqa-mla-与-block">Week 3: Multi-Head Attention、GQA、MLA 与 Block</a></li>
+<li class="doc-toc-level-2"><a href="#week-4-gpt-组装-预训练目标与-moe">Week 4: GPT 组装、预训练目标与 MoE</a></li>
+<li class="doc-toc-level-2"><a href="#week-5-training-loop-scaling-与-distributed-training">Week 5: Training Loop、Scaling 与 Distributed Training</a></li>
+<li class="doc-toc-level-2"><a href="#week-6-generation-search-与-speculative-decoding">Week 6: Generation、Search 与 Speculative Decoding</a></li>
+<li class="doc-toc-level-2"><a href="#week-7-sft-lora-dpo-与-grpo">Week 7: SFT、LoRA、DPO 与 GRPO</a></li>
+<li class="doc-toc-level-2"><a href="#week-8-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 8: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</a></li>
+<li class="doc-toc-level-2"><a href="#week-9-inference-engineering-rag-quantization-与-serving">Week 9: Inference Engineering、RAG、Quantization 与 Serving</a></li>
+<li class="doc-toc-level-2"><a href="#week-10-前沿方法-benchmark-边界与课程综合">Week 10: 前沿方法、Benchmark 边界与课程综合</a></li></ol></nav>
+    <section class="card doc-content">
+<h2 id="逐周阅读材料与复盘-handout">逐周阅读材料与复盘 Handout</h2>
+<p>本 handout 把 10 周课程的阅读材料组织成一条从基础 NLP 到现代 LLM 系统的学习路径。阅读分为三类：</p>
+<ul>
+<li>必读：课堂讨论和作业默认依赖。</li>
+<li>选读：用于项目、报告或加深理解。</li>
+<li>课程连接：用于把阅读中的目标函数、架构细节或实验设计落到本课程代码。</li>
+</ul>
+<p>每次阅读后重点回答三个问题：这篇材料解决什么技术问题，核心方法如何写成公式或算法步骤，和本课程哪一章的代码、书面题或系统设计直接相关。</p>
+<h3 id="阅读方法-从论文到课程能力">阅读方法：从论文到课程能力</h3>
+<p>本课程不要求学生记住论文列表，而要求把论文中的技术选择转成可推导、可实现、可评测的能力。阅读每篇材料时，应至少完成四步：</p>
+<ol>
+<li>问题设定：写出输入、输出、训练数据、模型假设和目标任务。</li>
+<li>数学对象：定位一个目标函数、概率分解、矩阵运算、mask 规则、复杂度公式或评测指标，并解释每个变量。</li>
+<li>代码落点：指出它对应本课程中的哪个函数、张量 shape、测试用例或 capstone 系统组件。</li>
+<li>结论边界：说明实验结论依赖的数据、规模、指标、硬件、prompt、解码策略或人工标注假设。</li>
+</ol>
+<p>阅读深度按三层递进：</p>
+<div class="table-wrap"><table><thead><tr><th>层级</th><th>学生应能做到</th><th>例子</th></tr></thead><tbody><tr><td>概念层</td><td>用自己的话复述问题、方法、结果和限制</td><td>BPE 为什么缓解 OOV；DPO 为什么需要 reference model</td></tr><tr><td>数学层</td><td>展开关键公式并完成一个小数值例子</td><td>SGNS loss、attention scaling、next-token CE、DPO log-ratio</td></tr><tr><td>系统层</td><td>把论文方法连接到资源、延迟、质量或安全取舍</td><td>GQA 的 KV cache、PagedAttention 的显存分页、RAG 的检索/生成双指标</td></tr></tbody></table></div>
+<h3 id="week-0-先修与-ml-foundations-bridge">Week 0: 先修与 ML Foundations Bridge</h3>
+<p>对应材料：Prerequisite Diagnostic、<a href="math-prerequisites.html">数学与 PyTorch 先修复习</a>、<a href="ml-foundations-prerequisite-bridge.html">ML Foundations Prerequisite Bridge</a>。</p>
+<p>本周阅读目标：确认学生能把基础 ML 语言转成 LLM 课程中反复使用的对象，包括 loss、gradient、generalization、held-out evaluation、tensor shape 和 PyTorch module。</p>
+<p>必读：</p>
+<ul>
+<li>本课程 <a href="ml-foundations-prerequisite-bridge.html">ML Foundations Prerequisite Bridge</a>：重点看 calculus、probability/statistics、ML objectives、generalization 和 evaluation。</li>
+<li>Goodfellow, Bengio, Courville. <a href="https://www.deeplearningbook.org/">Deep Learning</a>, optimization 和 ML basics 相关章节。</li>
+<li>Stanford CS224N 公开页 Prerequisites 和 Reference Texts：重点看 Python、PyTorch、calculus、linear algebra、probability/statistics 和 ML foundations 的预期边界。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>训练目标、验证指标和最终项目结论之间是什么关系？</li>
+<li>一个 benchmark 或 hidden test 结果在什么条件下不能推广？</li>
+<li>为什么 cross entropy 可以作为概率模型的负对数似然？它和 accuracy/F1 的关系是什么？</li>
+<li>PyTorch 中 shape 正确但语义错误的实现通常会在哪些地方出现？</li>
+</ul>
+<h3 id="阅读重点">阅读重点</h3>
+<ul>
+<li>核心结论：用自己的话说明论文或文档解决的问题、方法和结论。</li>
+<li>技术细节：至少解释一个公式、结构图、算法步骤或实验设置。</li>
+<li>代码连接：明确指出对应章节代码、作业函数或 capstone 模块。</li>
+<li>边界条件：写出一个失败模式、反例或适用范围。</li>
+<li>延伸问题：提出一个可在课堂讨论或作业中继续追问的问题。</li>
+</ul>
+<h3 id="week-1-tokenization-与-word-vectors">Week 1: Tokenization 与 Word Vectors</h3>
+<p>对应章节：Ch01-Ch02。</p>
+<p>本周阅读目标：理解从离散文本到连续向量的两条路线：子词 tokenization 解决符号覆盖和压缩问题，word vectors 用分布式语义把共现关系投影到向量空间。</p>
+<p>必读：</p>
+<ul>
+<li>Sennrich, Haddow, Birch. <a href="https://arxiv.org/abs/1508.07909">Neural Machine Translation of Rare Words with Subword Units</a>. 重点看 BPE 如何缓解 OOV。</li>
+<li>Mikolov et al. <a href="https://arxiv.org/abs/1301.3781">Efficient Estimation of Word Representations in Vector Space</a>. 重点看 skip-gram 目标。</li>
+<li>Pennington, Socher, Manning. <a href="https://nlp.stanford.edu/pubs/glove.pdf">GloVe: Global Vectors for Word Representation</a>. 重点看共现矩阵与加权最小二乘目标。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>Stanford CS224N 2026 schedule 中的 Word Vectors 主题和 suggested readings。</li>
+<li>Jurafsky and Martin, Speech and Language Processing, word embeddings 相关章节。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>BPE merge 规则为什么是贪心的？它在哪些语料上会产生不符合语义直觉的 token？</li>
+<li>skip-gram 的窗口共现样本如何变成 positive/negative 二分类目标？</li>
+<li>word2vec 的类比现象是训练目标直接保证的吗？还是空间结构中的经验现象？</li>
+<li>SGNS、PMI 和 GloVe 都在利用共现统计，它们的归一化和权重处理有什么不同？</li>
+<li>token 粒度如何影响 context length、embedding 参数量、训练 token budget 和推理成本？</li>
+</ul>
+<h3 id="week-2-attention-与-tensor-derivatives">Week 2: Attention 与 Tensor Derivatives</h3>
+<p>对应章节：Ch03 与数学先修复习。</p>
+<p>本周阅读目标：把 Transformer 的 attention 写成完整张量计算，并能解释 scaling、mask、softmax、weighted sum 和反向传播中的每个维度。</p>
+<p>必读：</p>
+<ul>
+<li>Vaswani et al. <a href="https://arxiv.org/abs/1706.03762">Attention Is All You Need</a>. 重点看 scaled dot-product attention、mask 和 multi-head 结构。</li>
+<li>Stanford CS224N Assignment 2 主题：neural network foundations、tensor derivatives、dependency parsing。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>Goodfellow, Bengio, Courville. <a href="https://www.deeplearningbook.org/">Deep Learning</a>, optimization 和 backpropagation 相关章节。</li>
+<li>The Matrix Cookbook 中 softmax/cross entropy 与矩阵求导条目。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>为什么 attention score 要除以 <code>sqrt(d_k)</code>？</li>
+<li>causal mask 的加法实现为什么通常使用一个很大的负数，而不是直接乘 0？</li>
+<li>padding mask 和 causal mask 分别约束 query 还是 key？合成后 shape 应该如何广播？</li>
+<li>attention 权重能否直接作为模型解释？它最多支持哪类诊断结论？</li>
+</ul>
+<h3 id="week-3-multi-head-attention-gqa-mla-与-block">Week 3: Multi-Head Attention、GQA、MLA 与 Block</h3>
+<p>对应章节：Ch04-Ch05。</p>
+<p>本周阅读目标：从标准 multi-head attention 扩展到 GQA、MLA、norm、FFN 和完整 block，理解现代 LLM 架构如何围绕显存、吞吐、训练稳定性和表达能力做取舍。</p>
+<p>必读：</p>
+<ul>
+<li>Vaswani et al. <a href="https://arxiv.org/abs/1706.03762">Attention Is All You Need</a>. 复读 multi-head attention 与 positional encoding。</li>
+<li>Ainslie et al. <a href="https://arxiv.org/abs/2305.13245">GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints</a>. 重点看 KV head 数与推理效率。</li>
+<li>DeepSeek-AI. <a href="https://arxiv.org/abs/2405.04434">DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model</a>. 重点看 MLA 的 KV cache 压缩动机。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>Zhang and Sennrich. <a href="https://arxiv.org/abs/1910.07467">Root Mean Square Layer Normalization</a>.</li>
+<li>Shazeer. <a href="https://arxiv.org/abs/2002.05202">GLU Variants Improve Transformer</a>.</li>
+<li>Geva et al. <a href="https://arxiv.org/abs/2012.14913">Transformer Feed-Forward Layers Are Key-Value Memories</a>. 重点看 FFN neuron 的键值存储解释。</li>
+<li>Meng et al. <a href="https://arxiv.org/abs/2202.05262">Locating and Editing Factual Associations in GPT</a>. 重点看 causal tracing、activation patching 和模型编辑边界。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>GQA 节省 KV cache 的同时损失了什么表达能力？</li>
+<li>MLA 的 latent cache 与 RoPE 解耦为什么会改变工程实现？</li>
+<li>Probing、activation patching 和 ablation 分别能支持什么结论，不能支持什么结论？</li>
+<li>Pre-Norm、RMSNorm、SwiGLU 和 residual path 分别解决训练中的哪类数值或优化问题？</li>
+<li>只看参数量为什么不足以预测训练显存和推理显存？</li>
+</ul>
+<h3 id="week-4-gpt-组装-预训练目标与-moe">Week 4: GPT 组装、预训练目标与 MoE</h3>
+<p>对应章节：Ch06。</p>
+<p>本周阅读目标：把 decoder-only LM 的概率分解、PyTorch forward、label shift、LM head 和 MoE 稀疏激活组织成一个完整模型。</p>
+<p>必读：</p>
+<ul>
+<li>Radford et al. <a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf">Language Models are Unsupervised Multitask Learners</a>. 重点看 GPT-2 的 decoder-only 预训练范式。</li>
+<li>Fedus, Zoph, Shazeer. <a href="https://arxiv.org/abs/2101.03961">Switch Transformers</a>. 重点看 top-1 routing、capacity 和 load balancing。</li>
+<li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>. 重点看 DeepSeekMoE 与 auxiliary-loss-free load balancing。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>Brown et al. <a href="https://arxiv.org/abs/2005.14165">Language Models are Few-Shot Learners</a>.</li>
+<li>Hugging Face Transformers GPT-2 model documentation。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>decoder-only LM 的训练标签为什么是右移一位？</li>
+<li>MoE 的 capacity factor 太低或太高分别会造成什么问题？</li>
+<li>tied embedding、final norm、position encoding 和 causal mask 分别在 GPT forward 中处于什么位置？</li>
+<li>MoE 的“总参数量”和“每 token 激活参数量”为什么必须分开报告？</li>
+</ul>
+<h3 id="week-5-training-loop-scaling-与-distributed-training">Week 5: Training Loop、Scaling 与 Distributed Training</h3>
+<p>对应章节：Ch07。</p>
+<p>本周阅读目标：从单步 loss 进入训练系统，理解 optimizer、scheduler、mixed precision、checkpoint、scaling law 和 distributed memory sharding 如何共同决定可训练规模。</p>
+<p>必读：</p>
+<ul>
+<li>Loshchilov and Hutter. <a href="https://arxiv.org/abs/1711.05101">Decoupled Weight Decay Regularization</a>. 重点看 AdamW 与 L2 正则的差别。</li>
+<li>Hoffmann et al. <a href="https://arxiv.org/abs/2203.15556">Training Compute-Optimal Large Language Models</a>. 重点看 Chinchilla scaling law 的数据/参数权衡。</li>
+<li>Rajbhandari et al. <a href="https://arxiv.org/abs/1910.02054">ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</a>. 重点看 optimizer/gradient/parameter state sharding。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>PyTorch documentation: <code>torch.amp</code>, <code>DistributedDataParallel</code>, FSDP。</li>
+<li>DeepSeek-V3 Technical Report 中 FP8 mixed precision 与 DualPipe。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>AdamW 的 weight decay 为什么不能简单等同于 Adam 里的 L2 penalty？</li>
+<li>在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？</li>
+<li>训练日志里 loss 下降但开发集变差时，应该先查哪些产出？</li>
+<li>参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？</li>
+<li>Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？</li>
+</ul>
+<h3 id="week-6-generation-search-与-speculative-decoding">Week 6: Generation、Search 与 Speculative Decoding</h3>
+<p>对应章节：Ch08。</p>
+<p>本周阅读目标：把同一个 next-token 分布转成不同解码行为，理解 greedy、sampling、beam、self-consistency、constrained decoding 和 speculative decoding 的质量/成本关系。</p>
+<p>必读：</p>
+<ul>
+<li>Holtzman et al. <a href="https://arxiv.org/abs/1904.09751">The Curious Case of Neural Text Degeneration</a>. 重点看 nucleus sampling。</li>
+<li>Leviathan, Kalman, Matias. <a href="https://arxiv.org/abs/2211.17192">Fast Inference from Transformers via Speculative Decoding</a>. 重点看 draft/target 接受机制。</li>
+<li>Stern et al. <a href="https://arxiv.org/abs/1811.03115">Blockwise Parallel Decoding for Deep Autoregressive Models</a>. 重点看一次预测多个 token 的动机。</li>
+<li>Wei et al. <a href="https://arxiv.org/abs/2201.11903">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</a>. 重点看中间推理 token 如何改变任务成功率。</li>
+<li>Wang et al. <a href="https://arxiv.org/abs/2203.11171">Self-Consistency Improves Chain of Thought Reasoning in Language Models</a>. 重点看多路径采样与投票。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>Hugging Face Transformers generation strategies documentation。</li>
+<li>DeepSeek-V3 Technical Report 中 multi-token prediction。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>top-k、top-p、temperature 分别控制分布的哪个性质？</li>
+<li>speculative decoding 在什么情况下不能带来明显加速？</li>
+<li>self-consistency 或 best-of-N 的准确率提升应如何同时报告 token 成本和延迟？</li>
+<li>constrained decoding 是改变模型参数、logits、token mask 还是后处理？不同实现的失败模式是什么？</li>
+<li>test-time compute 提高准确率时，应该同时报告哪些系统指标？</li>
+</ul>
+<h3 id="week-7-sft-lora-dpo-与-grpo">Week 7: SFT、LoRA、DPO 与 GRPO</h3>
+<p>对应章节：Ch09。</p>
+<p>本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO 和 RL-style alignment 的训练信号，理解偏好数据如何进入目标函数。</p>
+<p>必读：</p>
+<ul>
+<li>Hu et al. <a href="https://arxiv.org/abs/2106.09685">LoRA: Low-Rank Adaptation of Large Language Models</a>. 重点看低秩增量和可训练参数比例。</li>
+<li>Rafailov et al. <a href="https://arxiv.org/abs/2305.18290">Direct Preference Optimization</a>. 重点看从 KL-constrained RL 到分类式 loss 的推导。</li>
+<li>DeepSeek-AI. <a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a>. 重点看 GRPO、推理行为和方法边界。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>Ouyang et al. <a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a>.</li>
+<li>Anthropic Constitutional AI paper。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>DPO 为什么需要 reference model？<code>beta</code> 调大或调小会怎样？</li>
+<li>偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？</li>
+<li>GRPO 的组内 advantage 白化依赖什么采样假设？</li>
+<li>LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？</li>
+<li>对齐后模型质量上升但能力回退时，应如何区分数据分布、KL 约束和评测指标的问题？</li>
+</ul>
+<h3 id="week-8-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 8: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</h3>
+<p>对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。</p>
+<p>本周阅读目标：把现代 LLM 放回 NLP 课程脉络中，理解 RNN/LSTM、dependency parsing、seq2seq、BERT 和传统指标为什么仍然是理解结构预测、表示学习和评测局限的基础。</p>
+<p>必读：</p>
+<ul>
+<li>Elman. <a href="https://crl.ucsd.edu/~elman/Papers/fsit.pdf">Finding Structure in Time</a>. 重点看 recurrent hidden state 如何表示前缀。</li>
+<li>Hochreiter and Schmidhuber. <a href="https://www.bioinf.jku.at/publications/older/2604.pdf">Long Short-Term Memory</a>. 重点看 gate 与 cell state 如何缓解长程梯度问题。</li>
+<li>Chen and Manning. <a href="https://aclanthology.org/D14-1082/">A Fast and Accurate Dependency Parser using Neural Networks</a>. 重点看 transition-based parsing。</li>
+<li>Sutskever, Vinyals, Le. <a href="https://arxiv.org/abs/1409.3215">Sequence to Sequence Learning with Neural Networks</a>. 重点看 encoder-decoder 和 teacher forcing。</li>
+<li>Devlin et al. <a href="https://arxiv.org/abs/1810.04805">BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding</a>. 重点看 MLM/NSP 与 encoder-only 表示。</li>
+<li>Bommasani et al. <a href="https://arxiv.org/abs/2108.07258">On the Opportunities and Risks of Foundation Models</a>. 重点看风险分类。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>Papineni et al. <a href="https://aclanthology.org/P02-1040/">BLEU: a Method for Automatic Evaluation of Machine Translation</a>.</li>
+<li>Lin. <a href="https://aclanthology.org/W04-1013/">ROUGE: A Package for Automatic Evaluation of Summaries</a>.</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>RNN 的 BPTT 梯度连乘为什么会导致长程依赖困难？LSTM 改变了哪条路径？</li>
+<li>dependency parsing 与 decoder-only LLM 在结构归纳偏置上有什么差异？</li>
+<li>encoder-decoder cross-attention 和 decoder-only causal self-attention 的 K/V 来源有什么不同？</li>
+<li>BERT MLM labels 中为什么未 mask token 要使用 ignore index？</li>
+<li>BLEU/ROUGE/F1/EM 为什么不能单独作为 LLM 质量指标？</li>
+<li>什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？</li>
+<li>transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？</li>
+</ul>
+<h3 id="week-9-inference-engineering-rag-quantization-与-serving">Week 9: Inference Engineering、RAG、Quantization 与 Serving</h3>
+<p>对应章节：Ch10 与推理工程 capstone。</p>
+<p>本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG 和多模态输入如何共同影响延迟、吞吐、成本和质量。</p>
+<p>必读：</p>
+<ul>
+<li>Kwon et al. <a href="https://arxiv.org/abs/2309.06180">Efficient Memory Management for Large Language Model Serving with PagedAttention</a>. 重点看 KV cache 分页。</li>
+<li>Dao et al. <a href="https://arxiv.org/abs/2205.14135">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</a>. 重点看 IO-aware attention。</li>
+<li>Lewis et al. <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. 重点看 retriever/generator 组合。</li>
+<li>Dettmers et al. <a href="https://arxiv.org/abs/2305.14314">QLoRA: Efficient Finetuning of Quantized LLMs</a>. 重点看 4-bit quantization 与 LoRA 结合。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>vLLM documentation on PagedAttention and continuous batching。</li>
+<li>SGLang, TensorRT-LLM, llama.cpp 官方文档中 serving、quantization 或 batching 部分。</li>
+<li>Liu et al. <a href="https://arxiv.org/abs/2304.08485">Visual Instruction Tuning</a>. 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。</li>
+<li>OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？</li>
+<li>RAG 评测为什么必须同时看检索质量和生成质量？</li>
+<li>多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？</li>
+<li>一个 benchmark summary 应怎样限制结论的适用范围？</li>
+<li>prefill 和 decode 阶段的计算/访存瓶颈为什么不同？</li>
+<li>quantization 的误差会优先影响哪些任务、层或 token 分布？</li>
+</ul>
+<h3 id="week-10-前沿方法-benchmark-边界与课程综合">Week 10: 前沿方法、Benchmark 边界与课程综合</h3>
+<p>对应材料：两个 capstone 方向、Ch10 前沿推理部分和前沿主题阅读。</p>
+<p>本周阅读目标：综合前面九周的表示、架构、训练、生成、对齐、评测和服务知识，分析一个前沿方法到底改变了哪一层技术栈，以及它的 claim 需要哪些实验才能支撑。</p>
+<p>必读：</p>
+<ul>
+<li>Stanford CS224N coursework/final project 页面：重点看 project 如何把问题设定、方法、实验和结论组织成课程级研究产出。</li>
+<li>目标方向的官方论文、课程讲义或模型卡：interpretability、multimodality、social impact、agents 或 reasoning。</li>
+<li>本课程 worked-example-pack：重点复盘每个模块的可计算定义和常见误解。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>目标模型、框架或数据集的官方 model card / technical report / API documentation。</li>
+<li>近一年同主题论文的 related work 和 evaluation section。</li>
+<li>interpretability、多模态、agent、reasoning 或安全治理方向的官方论文、课程讲义或模型卡。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>目标方向的 benchmark 衡量什么能力？没有衡量什么能力？</li>
+<li>论文或模型卡中的哪个 claim 依赖特定数据集、推理设置或评测器？</li>
+<li>如果把该方法接入本课程的训练或推理系统，最先受影响的是显存、延迟、质量、安全性还是成本？</li>
+<li>一个新方法如果只在单一 benchmark、单一模型规模或单一 prompt 模板上有效，结论应如何表述？</li>
+<li>如何把 interpretability、multimodality、agents、reasoning 或 safety 的论文 claim 映射到本课程已有的公式、代码和系统指标？</li>
+</ul>
+    </section>
+  </article>
+</main>
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
+<link rel="apple-touch-icon" href="../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Python and PyTorch Review Session — LLM 深度学习</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="python-pytorch-review-session.html">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>LLM 深度学习</h1>
+    <p>课程材料</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span>课程首页</a>
+    <a href="syllabus.html"><span class="ch-num">S</span>Syllabus</a>
+    <a href="lecture-plan.html"><span class="ch-num">L</span>Lecture Plan</a>
+    <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
+    <a href="written-problem-set.html"><span class="ch-num">W</span>书面题库</a>
+    <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    </button>
+  </div>
+</aside>
+<main class="main doc-main">
+  <article class="chapter doc-article">
+    <div class="reading-time"><a href="../index.html">课程首页</a> / python-pytorch-review-session.html</div>
+    <h2>Python and PyTorch Review Session</h2>
+    <nav class="toc"><h4>目录</h4><ol><li class="doc-toc-level-1"><a href="#python-and-pytorch-review-session">Python and PyTorch Review Session</a></li>
+<li class="doc-toc-level-2"><a href="#session-目标">Session 目标</a></li>
+<li class="doc-toc-level-2"><a href="#课前准备">课前准备</a></li>
+<li class="doc-toc-level-2"><a href="#python-review-session-议程">Python Review Session 议程</a></li>
+<li class="doc-toc-level-3"><a href="#python-drill">Python Drill</a></li>
+<li class="doc-toc-level-2"><a href="#pytorch-tutorial-session-议程">PyTorch Tutorial Session 议程</a></li>
+<li class="doc-toc-level-3"><a href="#pytorch-drill">PyTorch Drill</a></li>
+<li class="doc-toc-level-2"><a href="#常见失败与处理">常见失败与处理</a></li>
+<li class="doc-toc-level-2"><a href="#学生提交模板">学生提交模板</a></li></ol></nav>
+    <section class="card doc-content">
+<h2 id="python-and-pytorch-review-session">Python and PyTorch Review Session</h2>
+<p>本 handout 用于 Week 1 Python Review Session 和 Week 2 PyTorch Tutorial Session。它和 <a href="math-prerequisites.html">数学与 PyTorch 先修复习</a>、<a href="lecture-plan.html">10 周 / 20 讲 Lecture Plan</a> 配套，帮助学生在进入 Transformer 代码前补齐 Python、张量 shape、autograd 和测试定位能力。</p>
+<p>参照 CS224N Winter 2026 公开 schedule：Week 1 安排 Python Review Session，Week 2 安排 PyTorch Tutorial Session。本课程把两次 review 合并为可移植 handout：学生先确认环境和 Python helper，再进入 PyTorch tensor、<code>nn.Module</code>、loss、autograd 和作业提交日志。</p>
+<h3 id="session-目标">Session 目标</h3>
+<p>| Session | 时长 | 面向对象 | 通过产出 |</p>
+<p>|---------|:--:|----------|----------|</p>
+<p>| Python Review Session | 80-90 分钟 | Python 基础 Borderline、跨语言转入、未完成 Ch01 helper 的学生 | 能实现 pair counting、non-overlapping merge、文件读取和异常边界 |</p>
+<p>| PyTorch Tutorial Session | 80-90 分钟 | PyTorch 基础 Borderline、shape 推导不稳、未完成 Ch02 starter 的学生 | 能解释 <code>[B,T,D]</code> 到 logits，计算 next-token CE，并定位一个失败测试 |</p>
+<h3 id="课前准备">课前准备</h3>
+<p>从仓库根目录运行：</p>
+<pre class="code-block" data-lang="bash"><code>.venv/bin/python -c &quot;import sys, torch; print(sys.version.split()[0], torch.__version__, torch.cuda.is_available())&quot;
+.venv/bin/python run_assignment_tests.py
+STUDENT_MODULE=starter .venv/bin/python assignments/ch01_bpe/tests.py
+STUDENT_MODULE=starter .venv/bin/python assignments/ch02_embeddings/tests.py</code></pre>
+<p>如果 <code>.venv/bin/python run_assignment_tests.py</code> 失败，先按 Environment and Reproducibility Guide 记录 <code>Python executable</code>、<code>PyTorch version</code>、<code>CUDA available</code> 和第一个失败项。</p>
+<h3 id="python-review-session-议程">Python Review Session 议程</h3>
+<div class="table-wrap"><table><thead><tr><th>时间</th><th>主题</th><th>活动</th><th>产出</th></tr></thead><tbody><tr><td>0-10 分钟</td><td>环境 smoke test</td><td>运行 <code>.venv/bin/python -c &quot;import sys, torch; ...&quot;</code></td><td>记录解释器、PyTorch 版本和工作目录</td></tr><tr><td>10-25 分钟</td><td>函数与测试</td><td>阅读 <code>assignments/ch01_bpe/tests.py</code> 的 helper tests</td><td>写出 <code>_get_stats</code> 的输入、输出和空边界</td></tr><tr><td>25-45 分钟</td><td>字典与 pair counting</td><td>手写 <code>count_pairs(tokens)</code></td><td>能处理空列表、单元素和重复 pair</td></tr><tr><td>45-65 分钟</td><td>non-overlapping merge</td><td>对 <code>[1,1,1]</code> 和 pair <code>(1,1)</code> 手算再实现</td><td>说明为什么不能重叠 merge</td></tr><tr><td>65-80 分钟</td><td>文件、异常和日志</td><td>读非空行，保留第一个失败 traceback</td><td>提交最小 run log</td></tr><tr><td>80-90 分钟</td><td>Exit ticket</td><td>写一个仍不确定的问题</td><td>进入 office hours triage</td></tr></tbody></table></div>
+<h4 id="python-drill">Python Drill</h4>
+<p>学生应能在不看参考解的情况下解释：</p>
+<ul>
+<li>为什么 <code>_get_stats([])</code> 和 <code>_get_stats([1])</code> 都返回空字典。</li>
+<li>为什么 <code>list.append(x)</code> 会原地修改，而 <code>list + [x]</code> 会创建新列表。</li>
+<li>为什么默认参数不写 <code>items=[]</code>。</li>
+<li>什么时候应该抛出 <code>ValueError</code> 或 <code>KeyError</code>，而不是静默返回空结果。</li>
+<li>为什么测试失败时要保留第一个 traceback，而不是只截最后一行。</li>
+</ul>
+<h3 id="pytorch-tutorial-session-议程">PyTorch Tutorial Session 议程</h3>
+<div class="table-wrap"><table><thead><tr><th>时间</th><th>主题</th><th>活动</th><th>产出</th></tr></thead><tbody><tr><td>0-10 分钟</td><td>Tensor shape contract</td><td>写出 <code>[B,T] -&gt; [B,T,D] -&gt; [B,T,V]</code></td><td>shape trace</td></tr><tr><td>10-25 分钟</td><td>Embedding lookup</td><td>比较 <code>nn.Embedding</code> 和 <code>one_hot @ E</code></td><td>说明 lookup 等价关系</td></tr><tr><td>25-40 分钟</td><td>Linear projection</td><td>给定 <code>x @ W</code> 推导 logits shape</td><td>参数量和输出 shape</td></tr><tr><td>40-55 分钟</td><td>next-token CE</td><td>flatten logits/labels 或使用等价实现</td><td>loss 输入输出说明</td></tr><tr><td>55-70 分钟</td><td>autograd</td><td>执行 forward、loss、backward，检查 <code>.grad</code></td><td>梯度流向说明</td></tr><tr><td>70-85 分钟</td><td>debug drill</td><td>定位 dtype、device、contiguous、mask 或 shape 错误</td><td>第一个失败测试和修复假设</td></tr><tr><td>85-90 分钟</td><td>Exit ticket</td><td>写出一个 PyTorch bug pattern</td><td>FAQ 或 office hours 记录</td></tr></tbody></table></div>
+<h4 id="pytorch-drill">PyTorch Drill</h4>
+<p>必会检查项：</p>
+<ul>
+<li>Shape trace: [B,T,D] 到 logits 的路径必须能用文字和张量维度同时说明。</li>
+<li><code>input_ids</code> dtype 应为 integer token ids；embedding 输出是 floating tensor。</li>
+<li>logits <code>[B,T,V]</code> 和 labels <code>[B,T]</code> 计算 CE 时，batch/time 维度必须对齐。</li>
+<li><code>.reshape</code> 比 <code>.view</code> 更适合可能不连续的张量。</li>
+<li><code>model.train()</code> / <code>model.eval()</code> 会影响 dropout 或部分 normalization 行为。</li>
+<li><code>loss.backward()</code> 后应检查关键参数 <code>.grad is not None</code>，但不要把梯度值是否全相同当作正确性产出。</li>
+</ul>
+<h3 id="常见失败与处理">常见失败与处理</h3>
+<div class="table-wrap"><table><thead><tr><th>失败模式</th><th>典型症状</th><th>处理</th></tr></thead><tbody><tr><td>工作目录错误</td><td><code>FileNotFoundError</code> 或找不到 assignments</td><td>回到仓库根目录运行命令</td></tr><tr><td>模块选择错误</td><td>测试导入了错误文件</td><td>使用 <code>STUDENT_MODULE=starter</code> 或提交包要求的模块名</td></tr><tr><td>dtype 错误</td><td>embedding 报 token ids 类型错误</td><td>token ids 使用 integer tensor，logits/loss 使用 floating tensor</td></tr><tr><td>shape 错误</td><td>CE flatten 后 batch/time 错位</td><td>写出 <code>[B,T,V] -&gt; [B*T,V]</code> 和 <code>[B,T] -&gt; [B*T]</code></td></tr><tr><td>device 错误</td><td>CPU/GPU tensor 混用</td><td>本课程公开测试默认 CPU；GPU 只作为扩展</td></tr><tr><td>静默吞异常</td><td>测试失败但没有 traceback</td><td>保留第一个失败 traceback 和命令</td></tr></tbody></table></div>
+<h3 id="学生提交模板">学生提交模板</h3>
+<pre class="code-block" data-lang="text"><code>Session:
+Command:
+Working directory:
+Python executable:
+Python version:
+PyTorch version:
+CUDA available:
+First failing test:
+Shape trace:
+Fix hypothesis:
+Question for office hours:</code></pre>
+    </section>
+  </article>
+</main>
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

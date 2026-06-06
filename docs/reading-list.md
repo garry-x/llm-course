@@ -1,16 +1,35 @@
 # 逐周阅读材料与复盘 Handout
 
-本 handout 把 10 周课程的阅读材料集中为可布置、可评分、可引用的课程路径。阅读分为三类：
+本 handout 把 10 周课程的阅读材料组织成一条从基础 NLP 到现代 LLM 系统的学习路径。阅读分为三类：
 
 - 必读：课堂讨论和作业默认依赖。
 - 选读：用于项目、报告或加深理解。
 - 课程连接：用于把阅读中的目标函数、架构细节或实验设计落到本课程代码。
 
-每次阅读后重点回答三个问题：这篇材料解决什么技术问题，核心方法如何写成公式或算法步骤，和本课程哪一章的作业或项目直接相关。
+每次阅读后重点回答三个问题：这篇材料解决什么技术问题，核心方法如何写成公式或算法步骤，和本课程哪一章的代码、书面题或系统设计直接相关。
+
+## 阅读方法：从论文到课程能力
+
+本课程不要求学生记住论文列表，而要求把论文中的技术选择转成可推导、可实现、可评测的能力。阅读每篇材料时，应至少完成四步：
+
+1. 问题设定：写出输入、输出、训练数据、模型假设和目标任务。
+2. 数学对象：定位一个目标函数、概率分解、矩阵运算、mask 规则、复杂度公式或评测指标，并解释每个变量。
+3. 代码落点：指出它对应本课程中的哪个函数、张量 shape、测试用例或 capstone 系统组件。
+4. 结论边界：说明实验结论依赖的数据、规模、指标、硬件、prompt、解码策略或人工标注假设。
+
+阅读深度按三层递进：
+
+| 层级 | 学生应能做到 | 例子 |
+|------|--------------|------|
+| 概念层 | 用自己的话复述问题、方法、结果和限制 | BPE 为什么缓解 OOV；DPO 为什么需要 reference model |
+| 数学层 | 展开关键公式并完成一个小数值例子 | SGNS loss、attention scaling、next-token CE、DPO log-ratio |
+| 系统层 | 把论文方法连接到资源、延迟、质量或安全取舍 | GQA 的 KV cache、PagedAttention 的显存分页、RAG 的检索/生成双指标 |
 
 ## Week 0: 先修与 ML Foundations Bridge
 
 对应材料：Prerequisite Diagnostic、[数学与 PyTorch 先修复习](math-prerequisites.md)、[ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)。
+
+本周阅读目标：确认学生能把基础 ML 语言转成 LLM 课程中反复使用的对象，包括 loss、gradient、generalization、held-out evaluation、tensor shape 和 PyTorch module。
 
 必读：
 
@@ -22,6 +41,8 @@
 
 - 训练目标、验证指标和最终项目结论之间是什么关系？
 - 一个 benchmark 或 hidden test 结果在什么条件下不能推广？
+- 为什么 cross entropy 可以作为概率模型的负对数似然？它和 accuracy/F1 的关系是什么？
+- PyTorch 中 shape 正确但语义错误的实现通常会在哪些地方出现？
 
 ## 阅读重点
 
@@ -34,6 +55,8 @@
 ## Week 1: Tokenization 与 Word Vectors
 
 对应章节：Ch01-Ch02。
+
+本周阅读目标：理解从离散文本到连续向量的两条路线：子词 tokenization 解决符号覆盖和压缩问题，word vectors 用分布式语义把共现关系投影到向量空间。
 
 必读：
 
@@ -51,10 +74,14 @@
 - BPE merge 规则为什么是贪心的？它在哪些语料上会产生不符合语义直觉的 token？
 - skip-gram 的窗口共现样本如何变成 positive/negative 二分类目标？
 - word2vec 的类比现象是训练目标直接保证的吗？还是空间结构中的经验现象？
+- SGNS、PMI 和 GloVe 都在利用共现统计，它们的归一化和权重处理有什么不同？
+- token 粒度如何影响 context length、embedding 参数量、训练 token budget 和推理成本？
 
 ## Week 2: Attention 与 Tensor Derivatives
 
 对应章节：Ch03 与数学先修复习。
+
+本周阅读目标：把 Transformer 的 attention 写成完整张量计算，并能解释 scaling、mask、softmax、weighted sum 和反向传播中的每个维度。
 
 必读：
 
@@ -70,10 +97,14 @@
 
 - 为什么 attention score 要除以 `sqrt(d_k)`？
 - causal mask 的加法实现为什么通常使用一个很大的负数，而不是直接乘 0？
+- padding mask 和 causal mask 分别约束 query 还是 key？合成后 shape 应该如何广播？
+- attention 权重能否直接作为模型解释？它最多支持哪类诊断结论？
 
 ## Week 3: Multi-Head Attention、GQA、MLA 与 Block
 
 对应章节：Ch04-Ch05。
+
+本周阅读目标：从标准 multi-head attention 扩展到 GQA、MLA、norm、FFN 和完整 block，理解现代 LLM 架构如何围绕显存、吞吐、训练稳定性和表达能力做取舍。
 
 必读：
 
@@ -93,10 +124,14 @@
 - GQA 节省 KV cache 的同时损失了什么表达能力？
 - MLA 的 latent cache 与 RoPE 解耦为什么会改变工程实现？
 - Probing、activation patching 和 ablation 分别能支持什么结论，不能支持什么结论？
+- Pre-Norm、RMSNorm、SwiGLU 和 residual path 分别解决训练中的哪类数值或优化问题？
+- 只看参数量为什么不足以预测训练显存和推理显存？
 
 ## Week 4: GPT 组装、预训练目标与 MoE
 
 对应章节：Ch06。
+
+本周阅读目标：把 decoder-only LM 的概率分解、PyTorch forward、label shift、LM head 和 MoE 稀疏激活组织成一个完整模型。
 
 必读：
 
@@ -113,10 +148,14 @@
 
 - decoder-only LM 的训练标签为什么是右移一位？
 - MoE 的 capacity factor 太低或太高分别会造成什么问题？
+- tied embedding、final norm、position encoding 和 causal mask 分别在 GPT forward 中处于什么位置？
+- MoE 的“总参数量”和“每 token 激活参数量”为什么必须分开报告？
 
 ## Week 5: Training Loop、Scaling 与 Distributed Training
 
 对应章节：Ch07。
+
+本周阅读目标：从单步 loss 进入训练系统，理解 optimizer、scheduler、mixed precision、checkpoint、scaling law 和 distributed memory sharding 如何共同决定可训练规模。
 
 必读：
 
@@ -134,10 +173,14 @@
 - AdamW 的 weight decay 为什么不能简单等同于 Adam 里的 L2 penalty？
 - 在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？
 - 训练日志里 loss 下降但开发集变差时，应该先查哪些产出？
+- 参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？
+- Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？
 
 ## Week 6: Generation、Search 与 Speculative Decoding
 
 对应章节：Ch08。
+
+本周阅读目标：把同一个 next-token 分布转成不同解码行为，理解 greedy、sampling、beam、self-consistency、constrained decoding 和 speculative decoding 的质量/成本关系。
 
 必读：
 
@@ -157,10 +200,14 @@
 - top-k、top-p、temperature 分别控制分布的哪个性质？
 - speculative decoding 在什么情况下不能带来明显加速？
 - self-consistency 或 best-of-N 的准确率提升应如何同时报告 token 成本和延迟？
+- constrained decoding 是改变模型参数、logits、token mask 还是后处理？不同实现的失败模式是什么？
+- test-time compute 提高准确率时，应该同时报告哪些系统指标？
 
 ## Week 7: SFT、LoRA、DPO 与 GRPO
 
 对应章节：Ch09。
+
+本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO 和 RL-style alignment 的训练信号，理解偏好数据如何进入目标函数。
 
 必读：
 
@@ -178,10 +225,14 @@
 - DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
 - 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
 - GRPO 的组内 advantage 白化依赖什么采样假设？
+- LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？
+- 对齐后模型质量上升但能力回退时，应如何区分数据分布、KL 约束和评测指标的问题？
 
 ## Week 8: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics
 
 对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。
+
+本周阅读目标：把现代 LLM 放回 NLP 课程脉络中，理解 RNN/LSTM、dependency parsing、seq2seq、BERT 和传统指标为什么仍然是理解结构预测、表示学习和评测局限的基础。
 
 必读：
 
@@ -204,10 +255,14 @@
 - encoder-decoder cross-attention 和 decoder-only causal self-attention 的 K/V 来源有什么不同？
 - BERT MLM labels 中为什么未 mask token 要使用 ignore index？
 - BLEU/ROUGE/F1/EM 为什么不能单独作为 LLM 质量指标？
+- 什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？
+- transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？
 
 ## Week 9: Inference Engineering、RAG、Quantization 与 Serving
 
 对应章节：Ch10 与推理工程 capstone。
+
+本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG 和多模态输入如何共同影响延迟、吞吐、成本和质量。
 
 必读：
 
@@ -229,10 +284,14 @@
 - RAG 评测为什么必须同时看检索质量和生成质量？
 - 多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？
 - 一个 metric card 应怎样限制 benchmark 结论的适用范围？
+- prefill 和 decode 阶段的计算/访存瓶颈为什么不同？
+- quantization 的误差会优先影响哪些任务、层或 token 分布？
 
 ## Week 10: 前沿方法、Benchmark 边界与课程综合
 
 对应材料：两个 capstone 方向、Ch10 前沿推理部分和前沿主题阅读。
+
+本周阅读目标：综合前面九周的表示、架构、训练、生成、对齐、评测和服务知识，分析一个前沿方法到底改变了哪一层技术栈，以及它的 claim 需要哪些实验才能支撑。
 
 必读：
 
@@ -251,3 +310,5 @@
 - 目标方向的 benchmark 衡量什么能力？没有衡量什么能力？
 - 论文或模型卡中的哪个 claim 依赖特定数据集、推理设置或评测器？
 - 如果把该方法接入本课程的训练或推理系统，最先受影响的是显存、延迟、质量、安全性还是成本？
+- 一个新方法如果只在单一 benchmark、单一模型规模或单一 prompt 模板上有效，结论应如何表述？
+- 如何把 interpretability、multimodality、agents、reasoning 或 safety 的论文 claim 映射到本课程已有的公式、代码和系统指标？

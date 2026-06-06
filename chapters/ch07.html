@@ -329,6 +329,30 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   </div>
   <p>其中 <span class="katex-inline" data-expr="S_b" aria-label="S_b" role="img"></span> 是第 <span class="katex-inline" data-expr="b" aria-label="b" role="img"></span> 个置信度桶，<span class="katex-inline" data-expr="\text{acc}(S_b)" aria-label="\text{acc}(S_b)" role="img"></span> 是桶内预测正确率，<span class="katex-inline" data-expr="\text{conf}(S_b)" aria-label="\text{conf}(S_b)" role="img"></span> 是桶内平均最大 softmax 概率。Ch07 作业中的 <code>expected_calibration_error(logits, targets, n_bins)</code> 要求学生从 logits 计算 confidence、prediction、correctness 和分桶 ECE，并沿用 <code>ignore_index</code> 避免 padding 或 prompt 位置污染评估。</p>
 
+  <div class="worked-example">
+    <h4>Worked Example：手算 ECE</h4>
+    <p>设二分类模型在 4 个位置上的 logits 与目标如下，使用 2 个置信度桶：<span class="katex-inline" data-expr="[0,0.5)" aria-label="[0,0.5)" role="img"></span> 和 <span class="katex-inline" data-expr="[0.5,1]" aria-label="[0.5,1]" role="img"></span>。</p>
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th>位置</th>
+          <th>logits</th>
+          <th>target</th>
+          <th>prediction</th>
+          <th>confidence</th>
+          <th>correct</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><code>[3.0, 0.0]</code></td><td>0</td><td>0</td><td>0.953</td><td>1</td></tr>
+        <tr><td>2</td><td><code>[0.0, 3.0]</code></td><td>1</td><td>1</td><td>0.953</td><td>1</td></tr>
+        <tr><td>3</td><td><code>[3.0, 0.0]</code></td><td>1</td><td>0</td><td>0.953</td><td>0</td></tr>
+        <tr><td>4</td><td><code>[0.2, 0.0]</code></td><td>0</td><td>0</td><td>0.550</td><td>1</td></tr>
+      </tbody>
+    </table>
+    <p>二分类的最大 softmax 概率不会低于 0.5，因此第一个桶为空，第二个桶包含全部 4 个样本。该桶内 <span class="katex-inline" data-expr="\text{acc}=3/4=0.75" aria-label="\text{acc}=3/4=0.75" role="img"></span>，平均置信度 <span class="katex-inline" data-expr="\text{conf}=(0.953+0.953+0.953+0.550)/4\approx 0.853" aria-label="\text{conf}=(0.953+0.953+0.953+0.550)/4\approx 0.853" role="img"></span>，所以 <span class="katex-inline" data-expr="\text{ECE}=1.0\times |0.75-0.853|\approx 0.103" aria-label="\text{ECE}=1.0\times |0.75-0.853|\approx 0.103" role="img"></span>。这说明模型整体准确率不低，但它给出的概率偏自信；如果用 confidence 控制拒答或人工复核阈值，就需要额外校准。</p>
+  </div>
+
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Cross entropy 不只是一个标量分数。它给 logits 的更新方向非常明确：提高正确 token，压低模型自己认为可能但实际错误的 token，并通过链式法则把这个信号传回整个 Transformer。</div></div>
 </section>
 

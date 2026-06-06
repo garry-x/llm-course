@@ -481,6 +481,7 @@ Quick check：
 
 - RM 训练最大化 `sigmoid(r_chosen - r_rejected)`，对应 `-logsigmoid` 损失。
 - DPO 比较 policy 相对 reference 的 chosen/rejected log probability 改变量。
+- DPO 隐式 reward：`beta * (log pi_policy - log pi_ref)`，chosen/rejected margin 决定 preference probability。
 - PPO clipped objective 用 `ratio = exp(new_logp - old_logp)`，优化 `min(ratio*A, clip(ratio, 1-eps, 1+eps)*A)`，限制单步 policy 更新幅度。
 - 近似 KL `exp(log_ref-log_policy) - (log_ref-log_policy) - 1` 只在有效 sampled tokens 上求平均。
 - GRPO 在同 prompt group 内标准化 reward。
@@ -488,7 +489,7 @@ Quick check：
 课堂 demo：
 
 - 手算 chosen/rejected reward 的 pairwise loss 和 preference accuracy。
-- 手造 chosen/rejected logits，观察 DPO loss 方向。
+- 手造 chosen/rejected log-probs，计算 DPO loss、隐式 reward、margin 和 preference probability。
 - 给定 old/new log-probs 和 advantages，手算 PPO clipped surrogate、clip fraction 和 approx KL。
 - 手算带 padding mask 的 token-level 近似 KL。
 - 对 chosen/rejected response length 计算 length bias 统计。
@@ -498,6 +499,7 @@ Quick check：
 
 - RM accuracy 高是否足以说明偏好数据质量好？
 - DPO 为什么需要 reference model？
+- DPO 的隐式 reward 是否等于一个独立训练好的 reward model？
 - PPO clipping 是否等价于 KL 惩罚？
 - KL 惩罚为什么不能把 padding token 算进均值？
 - GRPO 是否解决 reward hacking？

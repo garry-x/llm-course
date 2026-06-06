@@ -138,6 +138,27 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
     return loss, acc
 
 
+def dpo_implicit_rewards(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_rejected_logps, beta=0.1):
+    tensors = [policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_rejected_logps]
+    if any(tensor.shape != policy_chosen_logps.shape for tensor in tensors):
+        raise ValueError("all log-prob tensors must have the same shape")
+    if beta <= 0:
+        raise ValueError("beta must be positive")
+
+    chosen_rewards = beta * (policy_chosen_logps - ref_chosen_logps)
+    rejected_rewards = beta * (policy_rejected_logps - ref_rejected_logps)
+    reward_margin = chosen_rewards - rejected_rewards
+    preference_prob = torch.sigmoid(reward_margin)
+    return {
+        "chosen_rewards": chosen_rewards,
+        "rejected_rewards": rejected_rewards,
+        "reward_margin": reward_margin,
+        "preference_prob": preference_prob,
+        "preference_accuracy": (reward_margin > 0).float().mean().item(),
+        "mean_margin": reward_margin.mean().item(),
+    }
+
+
 def approx_kl_from_logps(policy_logps, ref_logps, mask=None, reduction="mean"):
     if policy_logps.shape != ref_logps.shape:
         raise ValueError("policy_logps and ref_logps must have the same shape")

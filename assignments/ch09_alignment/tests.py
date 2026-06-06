@@ -140,6 +140,32 @@ class TestDPOGRPO(unittest.TestCase):
         self.assertTrue(torch.allclose(loss, expected))
         self.assertEqual(acc, 0.5)
 
+    def test_dpo_implicit_rewards_report_reference_relative_margins(self):
+        policy_chosen = torch.tensor([3.0, 1.0])
+        policy_rejected = torch.tensor([1.0, 2.0])
+        ref_chosen = torch.tensor([1.0, 1.0])
+        ref_rejected = torch.tensor([1.0, 1.0])
+        report = submission.dpo_implicit_rewards(
+            policy_chosen,
+            policy_rejected,
+            ref_chosen,
+            ref_rejected,
+            beta=0.5,
+        )
+        self.assertTrue(torch.allclose(report["chosen_rewards"], torch.tensor([1.0, 0.0])))
+        self.assertTrue(torch.allclose(report["rejected_rewards"], torch.tensor([0.0, 0.5])))
+        self.assertTrue(torch.allclose(report["reward_margin"], torch.tensor([1.0, -0.5])))
+        self.assertTrue(torch.allclose(report["preference_prob"], torch.sigmoid(torch.tensor([1.0, -0.5]))))
+        self.assertEqual(report["preference_accuracy"], 0.5)
+        self.assertAlmostEqual(report["mean_margin"], 0.25)
+
+    def test_dpo_implicit_rewards_rejects_bad_inputs(self):
+        values = torch.zeros(2)
+        with self.assertRaises(ValueError):
+            submission.dpo_implicit_rewards(values, torch.zeros(3), values, values)
+        with self.assertRaises(ValueError):
+            submission.dpo_implicit_rewards(values, values, values, values, beta=0.0)
+
     def test_approx_kl_from_logps_masks_padding_tokens(self):
         policy_logps = torch.tensor([[-0.2, -1.0, -3.0]])
         ref_logps = torch.tensor([[-0.4, -0.7, -3.5]])

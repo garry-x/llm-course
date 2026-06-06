@@ -403,7 +403,7 @@ def train(text, vocab_size):
   <div class="katex" data-expr="\text{decode}([t_1, t_2, ..., t_n]) = \text{utf8\_decode}\big(\text{vocab}[t_1] \circ \text{vocab}[t_2] \circ ... \circ \text{vocab}[t_n]\big)" aria-label="\text{decode}([t_1, t_2, ..., t_n]) = \text{utf8\_decode}\big(\text{vocab}[t_1] \circ \text{vocab}[t_2] \circ ... \circ \text{vocab}[t_n]\big)" role="img"></div>
   <p>由于 vocab 中的每个 token 都是字节序列的确定拼接，解码不需要任何搜索或模型——它总是生成唯一结果。这是 BPE 相比其他分词方案的关键优势。</p>
 
-  <h4>编码：贪心最长匹配</h4>
+  <h4>编码：按 merge rank 的确定性贪心合并</h4>
   <p>编码需要将新文本转化为 token ID 序列。策略是：从字节序列开始，反复应用合并规则，每次优先应用<strong>按训练顺序最早</strong>（即优先级最高）的合并。</p>
   <p>具体做法：</p>
   <ol>
@@ -414,7 +414,28 @@ def train(text, vocab_size):
   </ol>
   <p>寻找"最早合并"的技巧：<code>min(stats, key=lambda p: merges.get(p, float('inf')))</code>。如果 pair 不在 merges 中，返回 inf——只有已经学习过的合并规则才会被应用。</p>
 
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>直觉：</strong>训练时先合并的 pair（new_id 小）是"更基础"的模式——它们在文本中更常见、更稳定。编码时优先应用这些基础规则，符合贪心最长匹配的"从大到小"原则。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>直觉：</strong>训练时先合并的 pair（new_id 小）是"更基础"的模式——它们在训练语料中更早被词汇化。编码时优先应用这些固定规则，使同一套 merges 对同一输入始终产生同一切分。</div></div>
+
+  <h4>Worked Example：编码阶段不重新按频率学习</h4>
+  <p>假设训练后得到如下 merge 规则，数字越小表示训练时越早加入、优先级越高：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>merge rank</th><th>pair</th><th>new token</th><th>字节含义</th></tr>
+      <tr><td>256</td><td><code>('l', 'o')</code></td><td><code>lo</code></td><td>先学到常见片段 <code>lo</code></td></tr>
+      <tr><td>257</td><td><code>('lo', 'w')</code></td><td><code>low</code></td><td>再把 <code>lo</code> 和 <code>w</code> 合成 <code>low</code></td></tr>
+      <tr><td>258</td><td><code>('e', 'r')</code></td><td><code>er</code></td><td>最后学到后缀 <code>er</code></td></tr>
+    </table>
+  </div>
+  <p>现在编码新文本 <code>"lower"</code>。初始字节序列是 <code>[l, o, w, e, r]</code>，相邻 pair 有 <code>(l,o)</code>、<code>(o,w)</code>、<code>(w,e)</code>、<code>(e,r)</code>。其中在 merges 中出现的是 <code>(l,o)</code> 和 <code>(e,r)</code>；即使二者在这条新文本中都只出现一次，也必须选择 rank 更早的 <code>(l,o) → lo</code>：</p>
+  <div class="code-block" data-lang="text">
+[l, o, w, e, r]
+  -> apply rank 256: (l, o) -> lo
+[lo, w, e, r]
+  -> apply rank 257: (lo, w) -> low
+[low, e, r]
+  -> apply rank 258: (e, r) -> er
+[low, er]</div>
+  <p>如果编码阶段重新统计当前输入频率或临时选择“看起来最长”的片段，就会破坏训练时保存的 merge 优先级，导致同一词表在不同实现中切分不一致。课程作业中的 <code>encode</code> 因此使用 <code>merges.get(pair, inf)</code> 找当前可用 pair 的最小 rank，而不是重新训练一个局部分词器。</p>
 </section>
 
 <!-- ================================================================ -->

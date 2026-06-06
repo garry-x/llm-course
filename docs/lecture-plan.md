@@ -609,7 +609,7 @@ Quick check：
 - 用 Ch10 代码验证 incremental attention 与 full causal attention 等价。
 - 对一组共享 system prompt 的 tokenized requests 手算 prefix cache hit rate 和 effective prefill tokens。
 - 运行 inference capstone benchmark，读 P95 和 tokens/s。
-- 把一次 benchmark 结果改写成 metric card，区分任务、baseline、指标和结论边界。
+- 把一次 benchmark 结果改写成结构化结论摘要，区分任务、baseline、指标和结论边界。
 
 Quick check：
 
@@ -620,7 +620,7 @@ Quick check：
 
 课后产出：
 
-- Ch10 KV cache 与 metric card 测试通过。
+- Ch10 KV cache 与 benchmark summary 测试通过。
 - 推理项目提案。
 
 ## Week 9 Lecture 18: RAG、Quantization、多模态输入与 Production Readiness

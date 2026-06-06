@@ -62,7 +62,7 @@
 |------|------------------|--------------|
 | 数学建模 | 写出目标函数、概率分解、mask 语义、动态规划递推或复杂度公式，并说明变量含义和边界条件 | 书面题、lecture derivations、worked examples |
 | PyTorch 实现 | 用 tensor 操作实现核心模块，处理 batch、sequence、head、vocab、padding、ignore index 和 dtype 等边界 | Ch01-Ch11 programming assignments |
-| 实验评测 | 区分训练 loss、任务指标、系统指标和人工质量；能解释指标适用范围和失败模式 | Ch07-Ch11、capstone、metric card |
+| 实验评测 | 区分训练 loss、任务指标、系统指标和人工质量；能解释指标适用范围和失败模式 | Ch07-Ch11、capstone、benchmark summary |
 | 工程判断 | 估算显存、FLOPs、token budget、latency、throughput、context packing 和对齐风险 | Ch04-Ch10、training/inference capstone |
 | 论文阅读 | 抽取论文中的问题设定、核心算法、实验设置和方法边界，并映射到课程代码 | reading-list、课堂讨论、阅读复盘 |
 
@@ -80,7 +80,7 @@
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、token constraints、speculative decoding | 解码策略、搜索、多样性、test-time compute、结构化生成 | top-p 为什么是自适应截断？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、LoRA、sequence log-probs、RM/DPO/PPO/GRPO、implicit reward、KL、length bias | 指令微调、偏好优化、reference model、对齐风险 | DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？ |
 | A8 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1 | 经典 NLP、encoder-only、结构化预测、评测指标 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？ |
-| A9 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、benchmark summary、metric card | 推理工程、RAG、服务指标、容量规划 | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？ |
+| A9 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、benchmark summary、指标结论边界 | 推理工程、RAG、服务指标、容量规划 | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？ |
 
 ## 书面题能力层级
 
@@ -90,7 +90,7 @@
 |------|------|------|
 | Level 1: Definition / Shape | 写清输入输出、mask、标签、有效 token、batch/head/sequence 维度 | attention score shape、SFT label mask、KV cache bytes |
 | Level 2: Derivation / Calculation | 展开公式并完成小数值例子，说明每一步分母、归一化或动态规划状态 | softmax CE gradient、top-p nucleus、CRF log-partition、pass@k |
-| Level 3: Experiment / Critique | 设计实验、选择指标、列出失败模式，并说明结果不能推出哪些更强结论 | RAG ablation、DPO vs SFT evaluation、benchmark metric card |
+| Level 3: Experiment / Critique | 设计实验、选择指标、列出失败模式，并说明结果不能推出哪些更强结论 | RAG ablation、DPO vs SFT evaluation、benchmark summary |
 
 ## Capstone 学术要求
 
@@ -137,7 +137,7 @@
 | 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO；训练 capstone 初版 |
 | 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：RNN/dependency/seq2seq/BERT/evaluation 书面题 |
-| 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark/metric card/多模态评估；推理项目提案 |
+| 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark summary/多模态评估；推理项目提案 |
 | 10 | Capstone 综合与前沿 seminar | 两个 capstone 方向；reading-list Week 10 | 训练 capstone + 推理 capstone 总结、前沿方法复盘 |
 
 ## 项目

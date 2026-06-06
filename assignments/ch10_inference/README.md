@@ -34,7 +34,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 - `build_rag_context` 必须在 context token budget 和预留输出 token 约束下装配带 citation 的 chunk，并报告 selected citations、used tokens 和 skipped chunks。
 - `prefix_cache_savings` 必须按请求到达顺序计算最长可复用历史前缀、每条请求新增 prefill token、总节省 token 和 prefix cache hit rate。
 - benchmark summary 应报告 TTFT、TPOT、tokens/s 和显存。
-- metric card 应记录任务、样本量、baseline、指标、风险、不确定性和结论边界。
+- benchmark summary 应记录任务、样本量、baseline、指标、风险、不确定性和结论边界。
 - LSH 检索应在同桶内返回余弦相似度最高的候选。
 
 ## 评分 Rubric
@@ -42,5 +42,5 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
 | Written questions | 35 | 推导 KV cache 显存、prefix cache 节省率、量化误差、InfoNCE/in-batch negatives、pairwise reranker loss、RAG chunk/overlap、Recall@k/MRR/nDCG、MMR、context packing、RAG 失败分解、多模态 token 成本、TTFT/TPOT/tokens/s 和 SLO 的上线意义 |
-| Programming parts | 55 | 实现 KV cache、显存估算、prefix cache 复用估算、INT8 量化、contrastive retrieval loss、pairwise reranker loss、RAG/LSH、检索质量指标、RRF/rerank/MMR、context packing、benchmark 指标汇总和 metric card |
+| Programming parts | 55 | 实现 KV cache、显存估算、prefix cache 复用估算、INT8 量化、contrastive retrieval loss、pairwise reranker loss、RAG/LSH、检索质量指标、RRF/rerank/MMR、context packing、benchmark 指标汇总和结论边界摘要 |
 | Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、多模态失败模式和前沿 benchmark 适用范围 |

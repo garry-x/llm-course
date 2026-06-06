@@ -41,9 +41,9 @@
     <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、benchmark 与 SLO。</li>
     <li><strong>课前阅读：</strong>阅读 vLLM/PagedAttention、FlashAttention、RAG 和 GPTQ/AWQ 摘要，记录每项技术主要优化哪个瓶颈。</li>
     <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试、metric card 和 LSH 检索示例。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告、metric card 和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
 </section>
 
@@ -702,8 +702,8 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
     <tr><td>结论边界</td><td>结论只适用于哪些数据、模型、日期、工具和约束</td><td>把固定开发集结论外推到真实生产流量</td></tr>
   </table>
 
-  <h4>Metric Card：把评测结果写成可复用对象</h4>
-  <p>本章作业中的 <code>build_metric_card</code> 不是复杂算法，而是训练学生把实验结论写成结构化对象。一个合格的 card 至少包含：<code>task</code>、<code>sample_size</code>、<code>baseline</code>、<code>metrics</code>、<code>risks</code>、<code>uncertainty</code> 和 <code>conclusion</code>。这样做的重点不是文档格式，而是防止评测结论离开数据条件后被误读。</p>
+  <h4>Benchmark Summary：把评测结果写清楚</h4>
+  <p>本章作业中的 <code>build_metric_card</code> 不是复杂算法，而是训练学生把实验结论写成结构化摘要。一个合格的摘要至少包含：<code>task</code>、<code>sample_size</code>、<code>baseline</code>、<code>metrics</code>、<code>risks</code>、<code>uncertainty</code> 和 <code>conclusion</code>。这样做的重点不是文档格式，而是防止评测结论离开数据条件后被误读。</p>
 
   <div class="code-block" data-lang="python">
 card = build_metric_card(

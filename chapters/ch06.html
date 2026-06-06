@@ -631,7 +631,7 @@ def load_hf_weights_to_model(hf_model, our_model):
 <!-- 6.8 理论: DeepSeekMoE -->
 <!-- ================================================================ -->
 <section class="card" id="s6-8">
-  <h3>6.8 深度理论：DeepSeekMoE 架构——从 671B 到 37B 的稀疏奇迹</h3>
+  <h3>6.8 深度理论：MoE 架构——把容量和每 token 计算分开</h3>
   <p><strong>Mixture of Experts (MoE)</strong> 是 GPT-2 架构之外最重要的 LLM 扩展。它将每层的 FFN 替换为多个"专家"网络，每个 token 只激活其中少数专家，实现了 <strong>稀疏激活</strong>——总参数量巨大但每次前向的计算量只取决于激活参数。</p>
 
   <h4>DeepSeekMoE 的核心设计</h4>
@@ -639,12 +639,12 @@ def load_hf_weights_to_model(hf_model, our_model):
     <div class="katex" data-expr="\text{MoE}(\mathbf{x}) = \underbrace{\text{SharedExpert}(\mathbf{x})}_{\text{通用知识}} + \sum_{i=1}^{N} \underbrace{G_i(\mathbf{x})}_{\text{路由权重}} \cdot \underbrace{E_i(\mathbf{x})}_{\text{专家输出}}" aria-label="\text{MoE}(\mathbf{x}) = \underbrace{\text{SharedExpert}(\mathbf{x})}_{\text{通用知识}} + \sum_{i=1}^{N} \underbrace{G_i(\mathbf{x})}_{\text{路由权重}} \cdot \underbrace{E_i(\mathbf{x})}_{\text{专家输出}}" role="img"></div>
   </div>
 
-  <p>DeepSeekMoE 在 DeepSeek-V2/V3 中的具体配置：</p>
+  <p>以常见的 DeepSeekMoE 风格设计为例，课程只关注可迁移的结构要点：</p>
   <ul>
-    <li><strong>N = 256 个路由专家：</strong>每个 token 激活 top-K = 8 个（稀疏率 ~3%）</li>
-    <li><strong>1 个共享专家：</strong>所有 token 必定激活，捕获通用知识</li>
-    <li><strong>细粒度专家：</strong>每个专家的中间维度 <span class="katex-inline" data-expr="d_{\text{ff}} = 1536" aria-label="d_{\text{ff}} = 1536" role="img"></span>，小于传统 FFN 的 4x 扩展</li>
-    <li><strong>结果：</strong>总参数 671B，但每次 forward 只激活 37B——这就是"671B 只激活 37B"的由来</li>
+    <li><strong>多个路由专家：</strong>router 为每个 token 选择 top-K 个专家，而不是激活全部专家。</li>
+    <li><strong>共享专家：</strong>所有 token 都经过少量 shared experts，用来保留通用变换路径。</li>
+    <li><strong>细粒度专家：</strong>单个 expert 通常比 dense FFN 更小，但 expert 数量更多。</li>
+    <li><strong>核心问题：</strong>总参数量决定容量上限；每 token 激活专家数决定单次前向计算量；负载均衡决定吞吐是否稳定。</li>
   </ul>
 
   <div class="diagram">
@@ -665,12 +665,29 @@ def load_hf_weights_to_model(hf_model, our_model):
   │   输出 y = 路由加权和 + 共享专家输出                 │
   └────────────────────────────────────────────────────┘</div>
 
-  <h4>为什么 256 个专家只激活 8 个就够了？</h4>
-  <p>DeepSeekMoE 的核心假设是"<strong>专业分化</strong>"——每个专家专注于一小类模式（如"数学推导"、"代码生成"、"中文翻译"）。训练过程中，路由器学会了根据输入特征将 token 分配到最合适的专家。由于专家的高度专业化，每个 token 只需要少量专家就能完成其信息处理。</p>
-  <p>这类似于一个大型医院——有 256 个专科科室（专家），但一个病人（token）通常只需要看 2-3 个科室就够了。</p>
+  <h4>为什么只激活少量专家仍然有效？</h4>
+  <p>MoE 的核心假设是<strong>条件计算</strong>：不同 token 不必经过完全相同的 FFN 参数。router 根据隐藏状态选择专家，使数学符号、代码片段、实体名、格式 token 等不同输入模式走向不同的参数子集。这个假设是否成立取决于训练数据、router 表达能力、专家容量和负载均衡；如果 router 坍缩到少数专家，MoE 会退化成昂贵且不稳定的稠密模型近似。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>实际效果：</strong>DeepSeek-V3 的 671B 参数模型中，每次前向只激活 37B 参数。这意味着它的<strong>计算成本</strong>与 37B 的稠密模型相近，但<strong>模型容量</strong>（可学习的知识）相当于 671B 模型。这是 MoE 最核心的 trade-off：<strong>用总参数量换容量，用稀疏激活保持计算效率</strong>。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心 trade-off：</strong>MoE 用更多总参数扩大容量，用 top-K 稀疏激活控制每 token 计算量。但它额外引入 router 训练、expert load balancing、跨设备通信和 batch 内 token dispatch 问题；这些系统成本必须和容量收益一起分析。</div></div>
   <p>作业中的 <code>moe_parameter_budget</code> 会把这个 trade-off 写成可计算的参数预算。若每个 expert 是 bias-free SwiGLU FFN，单个 expert 参数量为 <code>3 * d_model * d_ff</code>，分别对应 gate/up/down 三个线性矩阵。MoE 的 total expert parameters 需要乘以全部路由专家和 shared experts；每 token activated expert parameters 只乘以 <code>top_k</code> 个路由专家和 shared experts。router 本身还包含 <code>d_model * n_experts</code> 个门控参数。这样可以明确区分“模型容量来自全部专家”和“单次 token 计算只经过少量专家”。</p>
+
+  <div class="worked-example">
+    <h4>Worked Example：手算 MoE 参数预算与负载偏置</h4>
+    <p>设一个 toy MoE 层使用 <code>d_model=16</code>、<code>d_ff=32</code>、8 个 routed experts、<code>top_k=2</code>，并有 1 个 shared expert。每个 bias-free SwiGLU expert 有 <code>3 * 16 * 32 = 1536</code> 个参数：gate、up、down 三个矩阵。</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>项目</th><th>计算</th><th>结果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>全部 expert 参数</td><td><code>(8 + 1) * 1536</code></td><td>13,824</td></tr>
+        <tr><td>router 参数</td><td><code>16 * 8</code></td><td>128</td></tr>
+        <tr><td>总参数</td><td><code>13,824 + 128</code></td><td>13,952</td></tr>
+        <tr><td>每 token 激活 expert 参数</td><td><code>(2 + 1) * 1536</code></td><td>4,608</td></tr>
+        <tr><td>容量/计算比</td><td><code>13,824 / 4,608</code></td><td>3.0</td></tr>
+      </tbody>
+    </table>
+    <p>再看负载均衡。若 4 个专家在一个 batch 中收到 token 计数 <code>[80, 10, 5, 5]</code>，理想负载是 <code>0.25</code>，实际负载是 <code>[0.80, 0.10, 0.05, 0.05]</code>。动态偏置更新 <code>bias += lr * (target_load - load_ratio)</code>，取 <code>lr=0.04</code> 时，专家 0 的增量是 <code>0.04 * (0.25 - 0.80) = -0.022</code>，专家 2 的增量是 <code>0.04 * (0.25 - 0.05) = 0.008</code>。因此过载专家下一步更难被选中，欠载专家更容易进入 top-K；这正是 <code>AuxLossFreeBalancer.update</code> 的方向性要求。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

@@ -302,6 +302,65 @@ def build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_toke
     }
 
 
+def prefix_cache_savings(tokenized_prompts):
+    if not tokenized_prompts:
+        raise ValueError("tokenized_prompts must not be empty")
+
+    cached_prompts = []
+    per_request = []
+    total_tokens = 0
+    saved_tokens = 0
+
+    def normalize(prompt):
+        if torch.is_tensor(prompt):
+            ids = prompt.detach().cpu().flatten().tolist()
+        else:
+            ids = list(prompt)
+        if not ids:
+            raise ValueError("each prompt must contain at least one token")
+        return [int(token_id) for token_id in ids]
+
+    def common_prefix_len(left, right):
+        limit = min(len(left), len(right))
+        idx = 0
+        while idx < limit and left[idx] == right[idx]:
+            idx += 1
+        return idx
+
+    for request_id, prompt in enumerate(tokenized_prompts):
+        ids = normalize(prompt)
+        best_cached = 0
+        best_source = None
+        for source_id, cached in cached_prompts:
+            prefix_len = common_prefix_len(ids, cached)
+            if prefix_len > best_cached:
+                best_cached = prefix_len
+                best_source = source_id
+
+        prompt_tokens = len(ids)
+        new_prefill_tokens = prompt_tokens - best_cached
+        total_tokens += prompt_tokens
+        saved_tokens += best_cached
+        per_request.append(
+            {
+                "request_id": request_id,
+                "prompt_tokens": prompt_tokens,
+                "cached_prefix_tokens": best_cached,
+                "new_prefill_tokens": new_prefill_tokens,
+                "cache_source_request_id": best_source,
+            }
+        )
+        cached_prompts.append((request_id, ids))
+
+    return {
+        "requests": per_request,
+        "total_prompt_tokens": total_tokens,
+        "saved_prefill_tokens": saved_tokens,
+        "effective_prefill_tokens": total_tokens - saved_tokens,
+        "prefix_cache_hit_rate": saved_tokens / total_tokens,
+    }
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         if overlap >= chunk_size:

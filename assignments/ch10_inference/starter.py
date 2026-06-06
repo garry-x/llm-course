@@ -75,6 +75,11 @@ def build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_toke
     raise NotImplementedError
 
 
+def prefix_cache_savings(tokenized_prompts):
+    """Estimate reusable prefix tokens and effective prefill work for a request stream."""
+    raise NotImplementedError
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         raise NotImplementedError

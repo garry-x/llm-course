@@ -244,6 +244,32 @@ class TestRetrievalMetrics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.build_rag_context(chunks, max_context_tokens=4, token_counter=lambda _text: 0)
 
+    def test_prefix_cache_savings_counts_longest_previous_prefix(self):
+        prompts = [
+            [1, 2, 3, 4],
+            [1, 2, 3, 9, 10],
+            [1, 2, 8],
+            [7, 8],
+        ]
+        report = submission.prefix_cache_savings(prompts)
+        self.assertEqual(report["total_prompt_tokens"], 14)
+        self.assertEqual(report["saved_prefill_tokens"], 5)
+        self.assertEqual(report["effective_prefill_tokens"], 9)
+        self.assertAlmostEqual(report["prefix_cache_hit_rate"], 5 / 14)
+        self.assertEqual([item["cached_prefix_tokens"] for item in report["requests"]], [0, 3, 2, 0])
+        self.assertEqual([item["new_prefill_tokens"] for item in report["requests"]], [4, 2, 1, 2])
+        self.assertEqual(report["requests"][1]["cache_source_request_id"], 0)
+        self.assertEqual(report["requests"][2]["cache_source_request_id"], 0)
+
+    def test_prefix_cache_savings_accepts_tensor_prompts_and_rejects_empty_inputs(self):
+        report = submission.prefix_cache_savings([torch.tensor([4, 5, 6]), torch.tensor([4, 5, 9])])
+        self.assertEqual(report["saved_prefill_tokens"], 2)
+        self.assertEqual(report["effective_prefill_tokens"], 4)
+        with self.assertRaises(ValueError):
+            submission.prefix_cache_savings([])
+        with self.assertRaises(ValueError):
+            submission.prefix_cache_savings([[1, 2], []])
+
     def test_reranking_helpers_reject_invalid_inputs(self):
         with self.assertRaises(ValueError):
             submission.reciprocal_rank_fusion([], k=60)

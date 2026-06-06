@@ -596,17 +596,20 @@ Quick check：
 核心推导：
 
 - KV cache bytes `2 * batch * layers * seq_len * kv_heads * head_dim * dtype_bytes`。
+- Prefix cache effective prefill tokens：总 prompt tokens 减去每条请求可复用的最长历史前缀 tokens。
 - tail latency 与并发队列的关系。
 
 课堂 demo：
 
 - 用 Ch10 代码验证 incremental attention 与 full causal attention 等价。
+- 对一组共享 system prompt 的 tokenized requests 手算 prefix cache hit rate 和 effective prefill tokens。
 - 运行 inference capstone benchmark，读 P95 和 tokens/s。
 - 把一次 benchmark 结果改写成 metric card，区分任务、baseline、指标和结论边界。
 
 Quick check：
 
 - KV cache 公式里的 2 表示什么？
+- prefix cache 为什么主要降低 TTFT/prefill 成本，而不是单个 decode step 的 KV 读取量？
 - 平均延迟为什么不能替代 P95？
 - 为什么固定开发集上的 pass rate 不能证明开放域能力？
 

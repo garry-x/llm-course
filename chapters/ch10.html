@@ -43,7 +43,7 @@
     <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
     <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试、metric card 和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告、metric card 和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告、metric card 和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
 </section>
 
@@ -756,6 +756,28 @@ card = build_metric_card(
     <li><strong>量化集成：</strong>原生支持 GPTQ、AWQ、FP8 量化推理</li>
     <li><strong>Chunked Prefill：</strong>将长 prompt 的 prefill 切分为多个小块，避免 prefill 阻塞 decode</li>
   </ul>
+  <div class="coding-exercise">
+    <h4>练习：估算 Prefix Cache 节省的 Prefill Token</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>prefix_cache_savings(tokenized_prompts)</code>，按请求到达顺序计算每条 prompt 能复用的最长历史前缀。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>第一条请求没有历史缓存，新增 prefill token 等于完整 prompt 长度</li>
+        <li>后续请求查找与任意历史 prompt 的最长公共前缀，作为可复用 cached prefix</li>
+        <li>报告每条请求的 <code>cached_prefix_tokens</code>、<code>new_prefill_tokens</code> 和缓存来源请求</li>
+        <li>报告总 prompt token、节省的 prefill token、实际需要 prefill 的 token 和 hit rate</li>
+      </ul>
+      <pre>prompts = [
+    [1, 2, 3, 4],
+    [1, 2, 3, 9, 10],
+    [1, 2, 8],
+    [7, 8],
+]
+# cached prefix: [0, 3, 2, 0]
+# new prefill:   [4, 2, 1, 2]
+# saved_prefill_tokens = 5, effective_prefill_tokens = 9</pre>
+    </div>
+  </div>
 </section>
 
 <!-- ================================================================ -->
@@ -777,7 +799,7 @@ card = build_metric_card(
   </div>
 
   <h4>SGLang 的前缀树共享 (RadixAttention)</h4>
-  <p>当多个请求共享相同的 system prompt 或 few-shot 前缀时，推理引擎可以通过 prefix caching 复用已计算的 KV Cache。vLLM 和 SGLang 都提供了相关能力；SGLang 的 RadixAttention 使用<strong>Radix Tree（基数树）</strong>组织可复用前缀，适合多轮对话和结构化程序生成。实际复用率仍取决于 prompt 模板、缓存配置、调度策略和请求分布。</p>
+  <p>当多个请求共享相同的 system prompt 或 few-shot 前缀时，推理引擎可以通过 prefix caching 复用已计算的 KV Cache。vLLM 和 SGLang 都提供了相关能力；SGLang 的 RadixAttention 使用<strong>Radix Tree（基数树）</strong>组织可复用前缀，适合多轮对话和结构化程序生成。实际复用率仍取决于 prompt 模板、缓存配置、调度策略和请求分布；如果 prompt 模板里包含每次变化的时间戳、随机 id 或无关检索片段，公共前缀会被打断，hit rate 会下降。</p>
 
   <h4>TensorRT-LLM 的图编译</h4>
   <p>TensorRT-LLM 将整个 LLM 的计算图编译为 NVIDIA GPU 最优化的执行计划。这包括：算子融合（如 QKV 投影合并为单个 GEMM）、kernel auto-tuning、FP8/INT4 精度支持。代价是<strong>编译时间较长</strong>（首次加载模型需数分钟），且只支持 NVIDIA GPU。</p>

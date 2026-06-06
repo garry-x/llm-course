@@ -215,10 +215,40 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.4A Self-Attention 的置换等变性 -->
+<!-- 3.4A Worked Example -->
 <!-- ================================================================ -->
 <section class="card" id="s3-4a">
-  <h3>3.4A Self-Attention 的置换等变性：为什么位置仍然要单独编码</h3>
+  <h3>3.4A Worked Example：手算一次带 causal mask 的 attention</h3>
+  <p>考虑单个 query 位置 <code>t=2</code>，head dimension 为 <span class="katex-inline" data-expr="d_k=2" aria-label="d_k=2" role="img"></span>。当前位置的 query 与三个 key/value 如下：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>位置</th><th>Key <code>k_i</code></th><th>Value <code>v_i</code></th><th>是否可见</th></tr>
+      <tr><td>0</td><td>[1, 0]</td><td>[2, 0]</td><td>可见</td></tr>
+      <tr><td>1</td><td>[0, 1]</td><td>[0, 3]</td><td>可见</td></tr>
+      <tr><td>2</td><td>[1, 1]</td><td>[1, 1]</td><td>可见</td></tr>
+      <tr><td>3</td><td>[2, 0]</td><td>[5, 5]</td><td>未来 token，屏蔽</td></tr>
+    </table>
+  </div>
+  <p>令 query <code>q=[1,1]</code>。未缩放 dot product 为 <code>[1, 1, 2, 2]</code>；除以 <span class="katex-inline" data-expr="\sqrt{2}" aria-label="\sqrt{2}" role="img"></span> 后得到近似 <code>[0.707, 0.707, 1.414, 1.414]</code>。causal mask 要在 softmax 前把未来位置 3 设为一个很大的负数：</p>
+  <div class="math-box"><div class="label">Masked logits</div>
+    <div class="katex" data-expr="[0.707,\;0.707,\;1.414,\;-\infty]" aria-label="[0.707,0.707,1.414,-infty]" role="img"></div>
+  </div>
+  <p>softmax 只在可见位置上归一化，因此分母不是四个位置的和，而是前三个位置：</p>
+  <div class="math-box"><div class="label">Softmax denominator</div>
+    <div class="katex" data-expr="Z=e^{0.707}+e^{0.707}+e^{1.414}\approx2.028+2.028+4.113=8.169" aria-label="Z=e^{0.707}+e^{0.707}+e^{1.414}\approx2.028+2.028+4.113=8.169" role="img"></div>
+  </div>
+  <p>注意力权重约为 <code>[0.248, 0.248, 0.504, 0.000]</code>。最终输出是对 value 的加权和：</p>
+  <div class="math-box"><div class="label">Weighted value sum</div>
+    <div class="katex" data-expr="o=0.248[2,0]+0.248[0,3]+0.504[1,1]+0[5,5]\approx[1.000,\;1.248]" aria-label="o=0.248[2,0]+0.248[0,3]+0.504[1,1]+0[5,5]\approx[1.000,1.248]" role="img"></div>
+  </div>
+  <p>这个例子强调三个实现细节：mask 必须加在 softmax 前；masked 位置不进入 softmax 分母；value 是否很大不重要，只要对应 key 被 mask，权重就是 0，它不会进入输出。</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- 3.4A Self-Attention 的置换等变性 -->
+<!-- ================================================================ -->
+<section class="card" id="s3-4b">
+  <h3>3.4B Self-Attention 的置换等变性：为什么位置仍然要单独编码</h3>
   <p>如果不加入位置编码，也不使用 causal mask，self-attention 只看 token 内容之间的相似度。给输入序列乘一个置换矩阵 <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span>，Q、K、V 的行会以同样方式重排，注意力输出也只会以同样方式重排：</p>
   <div class="math-box"><div class="label">Self-attention permutation equivariance</div>
     <div class="katex" data-expr="\text{Attn}(PX)=P\,\text{Attn}(X)" aria-label="\text{Attn}(PX)=P\,\text{Attn}(X)" role="img"></div>
@@ -484,7 +514,7 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
   <p>DeepSeek-V2 提出的 MLA（Multi-head Latent Attention）走了另一条路：不是优化 softmax 的计算方式，而是<strong>从根本上减少 KV Cache 的大小</strong>。</p>
   <p>MLA 的核心思想：将多头 Q、K、V 的高维表示投影到一个<strong>低维潜在空间（latent space）</strong>中，推理时只缓存压缩后的潜在向量，使用时再解压。这使得 KV Cache 大小减少 93%——从每 token 需要存储 h 组 K、V 向量，变为只需存储一个低维向量。</p>
   <p>我们将在第 4 章中深入实现 MLA。</p>
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) 是注意力永恒的张力。</strong>FlashAttention 和 MLA 分别从"计算"和"存储"两个维度缓解了问题，但它们都没有改变 O(n²) 的本质。这也解释了为什么长上下文依然是 LLM 最前沿的研究方向之一——DeepSeek V4 的 CSA+HCA 混合注意力就是为了在 1M 上下文中实用化而设计的。</div></div>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) 是注意力长期存在的张力。</strong>FlashAttention 和 MLA 分别从"计算 I/O"和"KV 存储"两个维度缓解问题，但标准 dense attention 的 pairwise score 仍随序列长度二次增长。长上下文系统还会使用稀疏注意力、滑动窗口、全局 token、压缩注意力或外部检索等方法；任何具体收益都必须绑定模型、上下文长度、硬件、kernel 和评测任务。</div></div>
 </section>
 
 <!-- ================================================================ -->

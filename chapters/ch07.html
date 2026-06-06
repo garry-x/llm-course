@@ -529,8 +529,8 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
 <!-- 7.9 Muon Optimizer Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s7-9">
-  <h3>7.9 DeepSeek Muon 优化器——矩阵正交化的力量</h3>
-  <p><strong>Muon</strong>（Keller Jordan, 2024）是 DeepSeek-V4 在 <strong>1.6T 参数</strong>规模上采用的优化器（不是 DeepSeek 原创，但 V4 是其最大规模的工业验证）。它的核心思想与 AdamW 有<strong>根本的不同</strong>：AdamW 试图自适应地调整每个参数的学习率，而 Muon 试图将<strong>动量矩阵正交化</strong>。</p>
+  <h3>7.9 Muon 优化器案例——矩阵正交化的力量</h3>
+  <p><strong>Muon</strong>（Keller Jordan, 2024）是一类把矩阵参数的动量方向做正交化处理的优化器案例。它的核心思想与 AdamW 有<strong>根本的不同</strong>：AdamW 试图自适应地调整每个参数的学习率，而 Muon 试图将<strong>动量矩阵正交化</strong>，更直接地处理矩阵权重的方向更新。</p>
 
   <h4>为什么正交化有助于优化？</h4>
   <p>当权重矩阵的特征值分布不均匀时（某些方向的变化幅度远大于其他方向），梯度下降的效率很低——模型在"陡峭"方向上震荡，在"平缓"方向上进展缓慢。Muon 通过 <strong>Newton-Schulz 迭代</strong> 将梯度矩阵投影到最近的正交矩阵：</p>
@@ -541,7 +541,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
 
   <h4>Muon vs. AdamW 的内存对比</h4>
   <p>AdamW 需要维护 <span class="katex-inline" data-expr="m_t" aria-label="m_t" role="img"></span> 和 <span class="katex-inline" data-expr="v_t" aria-label="v_t" role="img"></span> 两个状态——每个参数额外 2 个张量。Muon 只维护<strong>一个动量缓冲</strong>（它正交化的是动量、而非原始梯度），因此优化器显存约<strong>减半</strong>。训练 70B 模型时（每个状态按 2 bytes 计）：AdamW 约 <span class="katex-inline" data-expr="70\text{B}\times 2\times 2 = 280" aria-label="70\text{B}\times 2\times 2 = 280" role="img"></span> GB，Muon 约 140 GB——节省约 140GB。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>适用条件：</strong>Muon 对明确具有矩阵结构的参数（<code>nn.Linear</code> 权重、<code>nn.Embedding</code> 权重）效果最好。bias 和 LayerNorm 的 gamma/beta 是 1D 的，不适合 Muon，应退化为标准 SGD 或 AdamW。DeepSeek-V4 将所有 ≥2D 且两个维度都 ≥16 的参数使用 Muon。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>适用条件：</strong>Muon 对明确具有矩阵结构的参数（<code>nn.Linear</code> 权重、<code>nn.Embedding</code> 权重）更自然。bias 和 LayerNorm 的 gamma/beta 是 1D 的，不适合直接做矩阵正交化，通常应退化为标准 SGD、AdamW 或单独参数组。实际采用哪些参数、阈值和混合策略必须由实验设定说明。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -564,8 +564,8 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
   </div>
   <p>缩放因子 <span class="katex-inline" data-expr="s = \max(|x|) / \text{max}" aria-label="s = \max(|x|) / \text{max}" role="img"></span> 确保了块内的最大值被映射到 FP8 的最大可表示值。不同块的缩放因子不同——数值大的区域精度低，数值小的区域精度高。这类似于<strong>非均匀量化</strong>：通过缩放将信息集中在高分辨率区域。</p>
 
-  <h4>DeepSeek-V4 FP4 QAT</h4>
-  <p>DeepSeek-V4 模型卡进一步把 FP4 量化感知训练（QAT）列为低精度能力之一。FP4 只有 16 个可表示的值，QAT 在训练过程中模拟量化误差（常见实现会用 Straight-Through Estimator 一类近似），让模型适应低精度表示。</p>
+  <h4>FP4 QAT：更激进的低精度训练设想</h4>
+  <p>FP4 只有 16 个可表示的值，比 FP8 更激进。量化感知训练（QAT）会在训练过程中模拟量化误差（常见实现会用 Straight-Through Estimator 一类近似），让模型逐步适应低精度表示。课程把 FP4 QAT 作为低精度训练的概念延伸：它可能降低权重存储和带宽压力，但误差控制、scale metadata、kernel 支持和任务质量都必须实测。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>实际收益如何估算：</strong>仅按权重位宽粗算，FP4 权重存储约为 BF16 的 1/4；但真实部署还要计入 scale/metadata、KV cache、激活、通信 buffer、并行切分和框架开销。因此课程报告应写成“按配置估算 + 实测显存”，不要把单个模型卡数字外推到所有模型。</div></div>
 </section>
 
@@ -882,7 +882,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     <a href="https://arxiv.org/abs/1412.6980" target="_blank">Kingma & Ba (2015) — Adam</a> ·
     <a href="https://arxiv.org/abs/1711.05101" target="_blank">Loshchilov & Hutter (2019) — AdamW</a> ·
     <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 (FP8 §3.3.2, DualPipe §3.3.1)</a> ·
-    <a href="https://arxiv.org/abs/2504.19667" target="_blank">DeepSeek-V4 (Muon, FP4 QAT)</a> ·
+    <a href="https://kellerjordan.github.io/posts/muon/" target="_blank">Muon optimizer notes</a> ·
     <a href="https://arxiv.org/abs/2203.15556" target="_blank">Chinchilla — Training Compute-Optimal LLMs</a></div></div>
 </section>
 

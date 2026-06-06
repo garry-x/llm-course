@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/chapters-10-orange" alt="10 chapters">
   <img src="https://img.shields.io/badge/exercises-programming_+_written-blue" alt="programming and written exercises">
   <img src="https://img.shields.io/badge/sections-127-yellow" alt="127 sections">
-  <img src="https://img.shields.io/badge/DeepSeek-V2→R1→V3→V4-green" alt="DeepSeek">
+  <img src="https://img.shields.io/badge/frontier-architecture_cases-green" alt="frontier architecture cases">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
   <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker">
   <img src="https://img.shields.io/badge/db-IndexedDB-red" alt="IndexedDB">
@@ -28,7 +28,7 @@
 **每章的学习循环：**
 > 深度理论 → 理解"为什么" → 编程练习（你写代码）→ 对照参考解答 → 概念练习巩固
 
-融入 **DeepSeek 开源技术体系**（V2 MLA → R1 GRPO → V3 FP8/MoE → V4 CSA+HCA/mHC），用真实的工业级设计来理解每一个组件。
+融入 MLA、MoE、GRPO、FP8、稀疏/压缩注意力、可学习残差连接等工业级架构案例，用它们理解每个组件背后的工程瓶颈，而不是追逐单个模型版本规格。
 
 ## 初学者怎么学
 
@@ -54,7 +54,7 @@
 | 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG 和推理服务如何取舍 |
 | 微调与对齐 | Ch09 | SFT、LoRA、偏好建模、DPO、GRPO 如何改变模型行为 |
 | 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | RNN/LSTM、dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
-| 前沿工程案例 | Ch04-Ch10 | DeepSeek MLA/MoE/FP8/GRPO/稀疏注意力等设计解决了哪些工程瓶颈 |
+| 前沿工程案例 | Ch04-Ch10 | MLA、MoE、FP8、GRPO、稀疏/压缩注意力等设计解决了哪些工程瓶颈 |
 
 高校课程水准的关键不在材料数量，而在每个知识点都能回答三件事：
 
@@ -281,8 +281,8 @@ llm-learner/
 - Radford et al. (2019) — [Language Models are Unsupervised Multitask Learners (GPT-2)](https://d4mucfpksywv.cloudfront.net/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
 - Hoffmann et al. (2022) — [Training Compute-Optimal Large Language Models (Chinchilla)](https://arxiv.org/abs/2203.15556)
 
-**DeepSeek 系列：**
-- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · V3.2 — [DSA 稀疏注意力](https://api-docs.deepseek.com/news/news250929) · R1 — [GRPO 推理涌现 (Nature 2025)](https://www.nature.com/articles/s41586-025-09422-z) · V4 — [CSA+HCA + mHC + Muon](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+**前沿架构案例：**
+- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · DeepSeek-V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · DeepSeek-R1 — [GRPO 与推理行为](https://arxiv.org/abs/2501.12948)
 
 **动手实践：**
 - Andrej Karpathy — [Neural Networks: Zero to Hero](https://www.youtube.com/playlist?list=PLAqhIrjkxBUWIvTOCzB7XwZBt03h4H3kW) · [nanoGPT](https://github.com/karpathy/nanoGPT)

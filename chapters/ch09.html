@@ -784,30 +784,30 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 9.11 V4 On-Policy Distillation -->
+<!-- 9.11 On-Policy Distillation -->
 <!-- ================================================================ -->
 <section class="card" id="s9-11">
-  <h3>9.11 DeepSeek-V4 On-Policy Distillation 与三档推理</h3>
-  <p>DeepSeek-V4 引入了一种名为 <strong>On-Policy Distillation (OPD)</strong> 的新型知识蒸馏方法。</p>
+  <h3>9.11 On-Policy Distillation 与可调推理预算</h3>
+  <p><strong>On-policy distillation</strong> 是一种把蒸馏数据尽量对齐到学生模型当前行为分布的方法。它关注的问题是：学生模型在真实推理时会生成哪些候选、犯哪些错误，以及教师或专家模型应如何在这些候选上给出改进信号。</p>
 
   <h4>传统蒸馏的问题</h4>
   <p>传统方法让学生模型学习教师模型的静态输出分布。但"蒸馏"出来的模型往往不如原始专家模型在特定领域表现好——因为学生只看到了教师的<strong>静态输出</strong>，而没有参与教师的"思考过程"。</p>
 
-  <h4>OPD 的创新</h4>
+  <h4>On-policy 蒸馏的核心思路</h4>
   <ol>
-    <li><strong>Domain Specialist 训练：</strong>对每个专业领域，用该领域的高质量数据微调专用专家模型</li>
-    <li><strong>On-Policy 生成：</strong>通用模型对 prompt 生成多个候选回答，专家模型对这组回答排序和修正。这确保了蒸馏是在"通用模型的分布上"进行（on-policy），而非静态数据集（off-policy）</li>
-    <li><strong>多领域合并：</strong>将多个领域的蒸馏信号合并到通用模型中</li>
+    <li><strong>学生生成候选：</strong>用当前学生模型对 prompt 生成多个候选回答，暴露它真实会访问的错误区域。</li>
+    <li><strong>教师或专家打分/修正：</strong>教师模型、领域专家模型或规则系统对这些候选排序、修正或生成目标答案。</li>
+    <li><strong>回灌训练：</strong>把这些在学生分布上得到的信号用于 SFT、偏好优化或蒸馏损失，使学生逐步贴近更好的行为。</li>
   </ol>
 
-  <h4>三档推理</h4>
-  <p>DeepSeek-V4 支持三种推理模式：</p>
+  <h4>可调推理预算</h4>
+  <p>许多推理型系统会把 test-time compute 暴露成不同档位。课程中可把它理解为在质量、延迟和成本之间做选择：</p>
   <ul>
-    <li><strong>标准推理：</strong>仅主模型，快速响应（日常对话）</li>
-    <li><strong>深度推理：</strong>结合 Domain Specialist 引导（数学推理、代码）</li>
-    <li><strong>超级推理：</strong>多专家投票 + 自我反思（竞赛级难题）</li>
+    <li><strong>快速模式：</strong>少采样或短推理链，优先降低延迟和成本。</li>
+    <li><strong>深度模式：</strong>更多中间推理 token、自一致性采样或 rerank，提升难题成功率。</li>
+    <li><strong>高预算模式：</strong>多候选、多工具或多轮反思，适合竞赛题、代码修复或高价值任务。</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>方法边界：</strong>R1 论文把 GRPO/RL 作为推理能力训练信号；V4 模型卡报告了 on-policy distillation 和多档 reasoning effort modes。可以把 V4 理解为把“可选思考模式”产品化到同一模型族中，但“是否不再需要独立 R1 系列”属于课程解释，不应当作官方结论。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>方法边界：</strong>on-policy distillation、GRPO/RL 和 test-time compute 是不同层面的技术：前者改变训练数据分布，GRPO/RL 改变策略优化信号，推理预算改变部署时花多少 token 和计算。课程报告必须同时写清质量提升、token 成本、延迟和适用任务。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -940,7 +940,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>编程练习 5：DPO vs GRPO 对比</strong> — 收敛速度与准确率</li>
     <li>✅ <strong>对齐评估协议</strong> — 同时看 helpfulness、honesty、harmlessness、过度拒答和能力保留</li>
     <li>✅ <strong>编程练习 6：LoRA 合并推理</strong> — 适配器加载与合并</li>
-    <li>✅ <strong>V4 OPD + 三档推理</strong> — on-policy 蒸馏</li>
+    <li>✅ <strong>On-policy distillation + 可调推理预算</strong> — 训练分布、教师信号和 test-time compute 的关系</li>
     <li>✅ <strong>对齐税</strong> — SS/OS 评估与缓解策略</li>
   </ul>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>

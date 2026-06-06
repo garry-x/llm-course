@@ -120,7 +120,7 @@
   <!-- MLA -->
   <rect class="b2" x="630" y="48" width="290" height="370"/>
   <text class="t2" x="775" y="72" text-anchor="middle">MLA (Multi-head Latent)</text>
-  <text class="ts" x="775" y="88" text-anchor="middle">DeepSeek-V2/V3/V4</text>
+  <text class="ts" x="775" y="88" text-anchor="middle">latent KV cache case</text>
 
   <g transform="translate(645,105)">
     <rect fill="#7baaf7" opacity="0.2" x="0" y="0" width="120" height="16" rx="2"/>

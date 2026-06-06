@@ -680,17 +680,17 @@ print(f"LayerNorm 模块梯度检查: {test_module}")</div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 5.10 DeepSeek V4 mHC -->
+<!-- 5.10 Learnable Hyper-Connections -->
 <!-- ================================================================ -->
 <section class="card" id="s5-10">
-  <h3>5.10 深度理论：DeepSeek V4 mHC 超连接——Birkhoff 约束与 Sinkhorn-Knopp 迭代</h3>
-  <p>DeepSeek-V4 引入的 <strong>mHC（Manifold-Constrained Hyper-Connections，流形约束超连接）</strong>是一种扩展残差连接的前沿设计。它在 ByteDance 的 Hyper-Connections（Zhu et al. 2024）基础上，把可学习的层间连接矩阵<strong>约束在流形（Birkhoff polytope）上</strong>——核心思想是：层间连接强度可以学习，但连接矩阵需要受约束，避免引入过大的放大效应。</p>
+  <h3>5.10 深度理论：可学习超连接——Birkhoff 约束与 Sinkhorn-Knopp 迭代</h3>
+  <p><strong>Hyper-Connections</strong> 这一类设计试图扩展传统残差连接：不再让每层只和相邻层做固定 1:1 残差相加，而是学习更灵活的层间连接权重。为了避免可学习连接矩阵引入过大的信号放大，部分前沿设计会把连接矩阵约束在 <strong>Birkhoff polytope</strong> 等结构化集合上。</p>
 
   <h4>传统残差连接的局限</h4>
   <p>残差连接 <span class="katex-inline" data-expr="x' = f(x) + x" aria-label="x' = f(x) + x" role="img"></span> 假设每层的贡献是固定的 1:1 比例。但不同层对最终输出的贡献可能不同——有些层可能只需要微调前一层的表示，有些层可能需要大幅修改。</p>
 
   <h4>Birkhoff Polytope（双随机矩阵）</h4>
-  <p>mHC 通过学习一个连接矩阵 <span class="katex-inline" data-expr="A \in \mathbb{R}^{L \times L}" aria-label="A \in \mathbb{R}^{L \times L}" role="img"></span> 来控制层间连接强度，但直接学习 <span class="katex-inline" data-expr="A" aria-label="A" role="img"></span> 可能导致梯度爆炸。解决方案：<strong>约束 A 属于 Birkhoff polytope</strong>。</p>
+  <p>可学习超连接可以用一个连接矩阵 <span class="katex-inline" data-expr="A \in \mathbb{R}^{L \times L}" aria-label="A \in \mathbb{R}^{L \times L}" role="img"></span> 控制层间连接强度，但直接学习 <span class="katex-inline" data-expr="A" aria-label="A" role="img"></span> 可能导致梯度放大。一个常见约束思路是让 <span class="katex-inline" data-expr="A" aria-label="A" role="img"></span> 接近 Birkhoff polytope 中的双随机矩阵。</p>
   <div class="math-box"><div class="label">Birkhoff Polytope 定义</div>
     <div class="katex" data-expr="\mathcal{B}_n = \{A \in \mathbb{R}^{n \times n} \mid A \geq 0, A\mathbf{1} = \mathbf{1}, A^\top\mathbf{1} = \mathbf{1}\}" aria-label="\mathcal{B}_n = \{A \in \mathbb{R}^{n \times n} \mid A \geq 0, A\mathbf{1} = \mathbf{1}, A^\top\mathbf{1} = \mathbf{1}\}" role="img"></div>
   </div>
@@ -718,7 +718,7 @@ def sinkhorn_knopp(M, num_iter=10):
         M = M / (M.sum(dim=-1, keepdim=True) + 1e-6)
         M = M / (M.sum(dim=-2, keepdim=True) + 1e-6)
     return M</div>
-  <p>mHC 的多头特性：多个独立的连接矩阵（头）捕获不同类型的层间依赖，最后取均值。DeepSeek-V4 报告显示，在其设定下 Birkhoff 约束把残差路径的信号放大系数压到约 <strong>1.6×</strong>，并用于 <strong>1.6T 参数</strong>（V4-Pro，激活 49B）规模模型的训练。这里的数值应理解为报告中的实验观察，不是跨架构、跨优化器的通用常数。</p>
+  <p>多头超连接可以使用多个独立的连接矩阵捕获不同类型的层间依赖，再对连接结果做合并。课程关注的是这类方法的通用数学结构：连接强度可学习，但需要非负性、行/列归一化、残差缩放或其他约束来控制信号放大。具体收益必须在给定模型、深度、优化器、初始化和训练数据下实测，不能把单个技术报告中的数字当作通用常数。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>直觉：</strong>Sinkhorn-Knopp 迭代的交替归一化与熵正则化最优传输有密切联系。它得到的连接权重在行和列维度上近似满足概率分布约束，使每层"提出"和"接收"的信息量更受控。这有助于解释为什么该约束可能改善深层训练动力学，但不能单独推出完整训练稳定性。</div></div>
 </section>
 
@@ -737,7 +737,7 @@ def sinkhorn_knopp(M, num_iter=10):
     <li>✅ <strong>SwiGLU 参数预算</strong> — 用 8/3 宽度在接近 4x FFN 参数量下引入门控乘法</li>
     <li>✅ <strong>TransformerBlock 组装</strong> — RMSNorm + MHA + SwiGLU + 残差，~25 行核心代码</li>
     <li>✅ <strong>梯度检查</strong> — 用 gradcheck 验证反向传播正确性</li>
-    <li>✅ <strong>DeepSeek V4 mHC</strong> — Birkhoff polytope 约束、Sinkhorn-Knopp 迭代、可学习的超连接</li>
+    <li>✅ <strong>可学习超连接</strong> — Birkhoff polytope 约束、Sinkhorn-Knopp 迭代和层间连接稳定性</li>
   </ul>
   <p>下一章，我们将用 12 个这样的 Block 堆叠出一个完整的 GPT-2 124M 模型，并实现 DeepSeekMoE 架构。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
@@ -745,7 +745,7 @@ def sinkhorn_knopp(M, num_iter=10):
     <a href="https://arxiv.org/abs/1910.07467" target="_blank">Zhang & Sennrich (2019) — RMSNorm</a> ·
     <a href="https://arxiv.org/abs/2002.05202" target="_blank">Shazeer (2020) — GLU Variants Improve Transformer</a> ·
     <a href="https://arxiv.org/abs/2104.08696" target="_blank">Geva et al. (2021) — FFN as Key-Value Memory</a> ·
-    <a href="https://arxiv.org/abs/2504.19667" target="_blank">DeepSeek-V4 — mHC 超连接</a>
+    <a href="https://arxiv.org/abs/2409.19606" target="_blank">Zhu et al. — Hyper-Connections</a>
   </div></div>
 </section>
 
@@ -792,8 +792,8 @@ def sinkhorn_knopp(M, num_iter=10):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="mHC 使用 Birkhoff polytope（双随机矩阵）约束来约束连接矩阵的谱范数。Sinkhorn-Knopp 迭代通过交替行/列归一化将矩阵推向双随机结构。这有助于降低可学习连接权重引发梯度放大的风险，但不是单独的训练稳定性保证。">
-    <h4>练习 4：DeepSeek V4 mHC 超连接通过什么机制约束训练动力学？</h4>
+  <div class="exercise" data-answer="0" data-explain="可学习超连接可以使用 Birkhoff polytope（双随机矩阵）约束来控制连接矩阵的放大效应。Sinkhorn-Knopp 迭代通过交替行/列归一化将矩阵推向双随机结构。这有助于降低可学习连接权重引发梯度放大的风险，但不是单独的训练稳定性保证。">
+    <h4>练习 4：可学习超连接可以通过什么机制约束训练动力学？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q54" value="0"> A. Birkhoff polytope 约束确保连接矩阵的谱范数 ≤ 1，通过 Sinkhorn-Knopp 迭代实现</label>
       <label><input type="radio" name="q54" value="1"> B. 使用固定的 1:1 连接权重，不学习</label>

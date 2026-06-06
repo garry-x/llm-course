@@ -88,6 +88,6 @@
     <text class="t1" x="480" y="518" text-anchor="start" style="fill:#b35c22"><tspan font-weight="700">Muon (DeepSeek)</tspan> — 矩阵正交化, Newton-Schulz 迭代</text>
     <text class="t1" x="480" y="542" text-anchor="start">替代 AdamW 的动量更新为矩阵正交化</text>
     <text class="t1" x="480" y="562" text-anchor="start">配合 Q/K RMSNorm 抑制 logits 爆炸</text>
-    <text class="t1" x="480" y="582" text-anchor="start">DeepSeek-V4 首次在 1.6T MoE 规模部署</text>
+    <text class="t1" x="480" y="582" text-anchor="start">适合矩阵参数；具体收益依赖模型与训练配置</text>
   </g>
 </svg>

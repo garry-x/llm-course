@@ -117,3 +117,52 @@ def tokenizer_group_report(tokenizer, groups, vocab_size=None, d_model=None):
         "min_tokens_per_character_group": min_group,
         "tokens_per_character_disparity": float("inf") if min_rate == 0 else rates[max_group] / min_rate,
     }
+
+
+def bpe_training_trace(text, vocab_size, max_steps=None):
+    if vocab_size < 256:
+        raise ValueError("vocab_size must be >= 256")
+    if max_steps is not None and max_steps <= 0:
+        raise ValueError("max_steps must be positive when provided")
+
+    ids = list(text.encode("utf-8"))
+    vocab = {i: bytes([i]) for i in range(256)}
+    steps = []
+    num_merges = vocab_size - 256
+    if max_steps is not None:
+        num_merges = min(num_merges, int(max_steps))
+
+    initial_length = len(ids)
+    for step in range(num_merges):
+        stats = _get_stats(ids)
+        if not stats:
+            break
+        pair = max(stats, key=stats.get)
+        new_id = 256 + step
+        before_length = len(ids)
+        before_count = stats[pair]
+        vocab[new_id] = vocab[pair[0]] + vocab[pair[1]]
+        ids = _merge(ids, pair, new_id)
+        after_length = len(ids)
+        steps.append(
+            {
+                "step": step,
+                "pair": pair,
+                "count": before_count,
+                "new_id": new_id,
+                "token_bytes": vocab[new_id],
+                "token_text": vocab[new_id].decode("utf-8", errors="replace"),
+                "before_length": before_length,
+                "after_length": after_length,
+                "tokens_saved": before_length - after_length,
+            }
+        )
+
+    return {
+        "initial_length": initial_length,
+        "final_length": len(ids),
+        "total_tokens_saved": initial_length - len(ids),
+        "compression_ratio": len(ids) / initial_length if initial_length else 0.0,
+        "final_ids": ids,
+        "steps": steps,
+    }

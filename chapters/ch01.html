@@ -316,6 +316,10 @@ def _merge(ids, pair, new_id):
   <p>词表的构建方式：新 token 的字节表示是其组成 token 的字节拼接。例如，如果 token 256 = "lo"（由 token 108='l' 和 token 111='o' 合并），则 <code>vocab[256] = vocab[108] + vocab[111]</code>。这个递归定义使得 vocab 中的每个条目都可以追溯到原始字节。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>重要性质：</strong>vocab 是<strong>无损的</strong>——任何 token 都可以还原为原始的字节序列。这是 BPE 解码无需任何模型或概率的数学基础。</div></div>
 
+  <h4>Worked Example：BPE merge trace 与 token savings</h4>
+  <p>以 <code>abababa</code> 为例，初始字节序列长度为 7。第一轮相邻 pair 中 <code>(a,b)</code> 与 <code>(b,a)</code> 都出现 3 次；本章实现按当前扫描顺序选到 <code>(a,b)</code>，创建 <code>256="ab"</code>，非重叠替换后序列从 <code>[a,b,a,b,a,b,a]</code> 变成 <code>[256,256,256,a]</code>，长度 <code>7→4</code>，节省 3 个 token。第二轮 <code>(256,256)</code> 出现 2 次，创建 <code>257="abab"</code>，序列变成 <code>[257,256,a]</code>，长度 <code>4→3</code>，再节省 1 个 token。</p>
+  <p>Ch01 作业中的 <code>bpe_training_trace(text, vocab_size, max_steps)</code> 要求把每一步的 <code>pair</code>、<code>count</code>、<code>new_id</code>、<code>before_length</code>、<code>after_length</code> 和 <code>tokens_saved</code> 都记录下来。这样学生能区分两件事：BPE 的压缩来自高频相邻 pair 的非重叠替换；每轮合并后必须重新统计 pair，不能沿用旧频率表。</p>
+
   <h4>复杂度分析</h4>
   <p>如果语料有 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> 个 token，需要 <span class="katex-inline" data-expr="M = V - 256" aria-label="M = V - 256" role="img"></span> 次合并：</p>
   <ul>

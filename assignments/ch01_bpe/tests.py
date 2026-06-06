@@ -144,5 +144,44 @@ class TestTokenizerReport(unittest.TestCase):
             submission.tokenizer_group_report(tokenizer, {"empty": []})
 
 
+class TestBPETrainingTrace(unittest.TestCase):
+    def test_bpe_training_trace_reports_pair_counts_and_token_savings(self):
+        trace = submission.bpe_training_trace("abababa", vocab_size=258)
+        self.assertEqual(trace["initial_length"], 7)
+        self.assertEqual(trace["final_length"], 3)
+        self.assertEqual(trace["total_tokens_saved"], 4)
+        self.assertAlmostEqual(trace["compression_ratio"], 3 / 7)
+        self.assertEqual(trace["final_ids"], [257, 256, ord("a")])
+
+        first, second = trace["steps"]
+        self.assertEqual(first["step"], 0)
+        self.assertEqual(first["pair"], (ord("a"), ord("b")))
+        self.assertEqual(first["count"], 3)
+        self.assertEqual(first["new_id"], 256)
+        self.assertEqual(first["token_bytes"], b"ab")
+        self.assertEqual(first["token_text"], "ab")
+        self.assertEqual(first["before_length"], 7)
+        self.assertEqual(first["after_length"], 4)
+        self.assertEqual(first["tokens_saved"], 3)
+
+        self.assertEqual(second["pair"], (256, 256))
+        self.assertEqual(second["count"], 2)
+        self.assertEqual(second["new_id"], 257)
+        self.assertEqual(second["token_bytes"], b"abab")
+        self.assertEqual(second["before_length"], 4)
+        self.assertEqual(second["after_length"], 3)
+        self.assertEqual(second["tokens_saved"], 1)
+
+    def test_bpe_training_trace_limits_steps_and_rejects_bad_inputs(self):
+        trace = submission.bpe_training_trace("abababa", vocab_size=300, max_steps=1)
+        self.assertEqual(len(trace["steps"]), 1)
+        self.assertEqual(trace["final_length"], 4)
+
+        with self.assertRaises(ValueError):
+            submission.bpe_training_trace("abc", vocab_size=128)
+        with self.assertRaises(ValueError):
+            submission.bpe_training_trace("abc", vocab_size=260, max_steps=0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

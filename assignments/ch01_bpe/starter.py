@@ -50,3 +50,8 @@ def tokenizer_report(tokenizer, texts, vocab_size=None, d_model=None):
 def tokenizer_group_report(tokenizer, groups, vocab_size=None, d_model=None):
     """Return per-group token-cost statistics and cross-group disparity."""
     raise NotImplementedError
+
+
+def bpe_training_trace(text, vocab_size, max_steps=None):
+    """Return per-merge BPE training trace with pair counts and token savings."""
+    raise NotImplementedError

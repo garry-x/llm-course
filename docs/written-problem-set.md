@@ -14,7 +14,7 @@
 
 ## Ch01 Tokenization / BPE
 
-1. 设语料 token 序列长度为 `N`，词表大小从 `V0` 增加到 `V`。说明 BPE 每次合并如何改变序列长度，并给出贪心合并不能保证全局最优压缩的反例思路。
+1. 设语料 token 序列长度为 `N`，词表大小从 `V0` 增加到 `V`。说明 BPE 每次合并如何改变序列长度；对字符串 `abababa` 手算前两次 merge 的 pair、count、new id、before/after length、tokens saved、final ids 和 compression ratio，并给出贪心合并不能保证全局最优压缩的反例思路。
 2. 比较 word-level、character-level、byte-level BPE 在 OOV、多语言、序列长度和 embedding 参数量上的取舍。
 3. 设计一个 tokenizer 评价实验：按英文、中文、代码、数学公式和 emoji/混合文本分组，比较每组平均 token 数、P95 token 数、tokens/character、round-trip 成功率和 embedding 参数量；计算最高/最低 tokens/character 的 disparity，并说明这些结果如何影响 context、训练 FLOPs、KV Cache 成本和多语言使用体验。
 4. 给定一个小语料，手算前 3 次 BPE merge，并说明 tie-breaking 会怎样影响最终词表。

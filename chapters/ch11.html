@@ -40,7 +40,7 @@
     <li><strong>前置知识：</strong>Ch03 attention、Ch08 beam search、Ch10 RAG rerank 与检索评测。</li>
     <li><strong>学习目标：</strong>区分 recurrent、structured prediction、encoder-decoder、encoder-only 和 decoder-only 的建模假设。</li>
     <li><strong>课前阅读：</strong>阅读 classic NLP handout 中 RNN、dependency parsing、seq2seq、BERT 和 evaluation 部分。</li>
-    <li><strong>本章产出：</strong>RNN 梯度路径、arc-standard parsing trace、seq2seq additive attention、MLM mask、BERT QA span 和 BLEU/ROUGE/UAS/LAS/EM/F1 指标。</li>
+    <li><strong>本章产出：</strong>RNN 梯度路径、arc-standard parsing trace、seq2seq additive attention、MLM mask、BERT QA span、NER span F1 和 BLEU/ROUGE/UAS/LAS/EM/F1 指标。</li>
     <li><strong>完成标准：</strong>你能为一个任务选择 BERT fine-tuning、seq2seq、decoder-only prompting 或结构化 parser，并解释选择依据。</li>
     <li><strong>练习产出：</strong>配套作业见 <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>；专题讲义见 <a href="../docs/classic-nlp-handout.md">classic-nlp-handout.md</a>。</li>
   </ul>
@@ -119,6 +119,7 @@
   <p>若 <code>[CLS]</code> 的 no-answer 分数最高，模型应返回空答案。这和 decoder-only LLM 生成“我不知道”不同：BERT QA 的答案必须绑定到输入 token span。</p>
   <h4>BIO sequence labeling</h4>
   <p>NER、slot filling 和 token classification 常把每个 token 标成 <code>B-TYPE</code>、<code>I-TYPE</code> 或 <code>O</code>。<code>B-ORG I-ORG</code> 表示一个连续组织实体，<code>O</code> 表示实体外部。课程作业中的 <code>bio_tags_to_spans(tokens, tags)</code> 把 token-level 标签解码成 span-level 输出，例如 <code>["B-LOC", "I-LOC"]</code> 对应一个 LOC span。若一个序列以 <code>I-LOC</code> 开头，很多评测脚本会把它容错为新实体开始；严格系统也可以选择直接报错，但必须在数据协议中写清楚。</p>
+  <p>实体识别通常用 <strong>span-level F1</strong>，而不是只看 token accuracy。一个预测实体只有在 <code>type</code>、<code>start</code> 和 <code>end</code> 都和 gold 完全一致时才算 true positive；边界少一个 token 或类型错了都算 false positive，同时对应 gold span 仍是 false negative。Ch11 作业中的 <code>span_f1(gold_spans, pred_spans)</code> 把这个定义落到可计算的 TP/FP/FN、precision、recall 和 F1。</p>
   <h4>Viterbi structured decoding</h4>
   <p>逐 token argmax 会忽略标签之间的约束：例如 <code>B-ORG</code> 后面接 <code>I-ORG</code> 通常比跳回 <code>O</code> 更合理，<code>O</code> 后面直接接 <code>I-PER</code> 往往应被惩罚。Linear-chain CRF 或类似结构化解码把路径分数写成 emission score 加 transition score：</p>
   <div class="math-box"><div class="label">公式 11.7 Linear-chain path score</div>
@@ -167,7 +168,7 @@
     <tr><td><code>run_arc_standard_transitions</code>, <code>attachment_scores</code></td><td>Dependency parsing 与 UAS/LAS</td><td>结构化预测和 attention 诊断有什么区别</td></tr>
     <tr><td><code>additive_attention_context</code></td><td>Seq2Seq alignment</td><td>decoder step 如何读取源序列</td></tr>
     <tr><td><code>build_mlm_example</code>, <code>masked_lm_loss_from_logits</code></td><td>BERT MLM label mask 与 loss</td><td>为什么未 mask 位置不进入 loss 分母</td></tr>
-    <tr><td><code>bio_tags_to_spans</code></td><td>BIO sequence labeling</td><td>如何把 token classification 输出变成实体 span</td></tr>
+    <tr><td><code>bio_tags_to_spans</code> / <code>span_f1</code></td><td>BIO sequence labeling</td><td>如何把 token classification 输出变成实体 span，并按实体级边界评测</td></tr>
     <tr><td><code>viterbi_decode</code></td><td>Linear-chain structured decoding</td><td>为什么最优 tag path 不等于逐 token argmax</td></tr>
     <tr><td><code>linear_chain_log_partition</code></td><td>CRF forward algorithm</td><td>如何对所有 tag paths 做 logsumexp 归一化</td></tr>
     <tr><td><code>linear_chain_crf_nll</code></td><td>CRF training objective</td><td>为什么结构化训练目标是 logZ 减 gold path score</td></tr>
@@ -183,7 +184,7 @@
     <li>Dependency parsing 是离散结构预测，不等于 attention heatmap。</li>
     <li>Seq2Seq attention 把源序列和目标前缀分开建模，是 encoder-decoder 的基本形式。</li>
     <li>BERT/encoder-only 适合分类、reranking、embedding、token classification 和抽取式 QA。</li>
-    <li>BLEU、ROUGE、EM/F1、UAS/LAS 各自衡量不同任务结构；现代 LLM 评测应说明指标边界。</li>
+    <li>BLEU、ROUGE、EM/F1、span F1、UAS/LAS 各自衡量不同任务结构；现代 LLM 评测应说明指标边界。</li>
   </ul>
 </section>
 

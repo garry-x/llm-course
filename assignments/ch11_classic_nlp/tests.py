@@ -245,6 +245,33 @@ class TestQAMetricsAndMLM(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.bio_tags_to_spans(["a"], ["B-"])
 
+    def test_span_f1_scores_exact_entity_type_and_boundaries(self):
+        gold = [
+            {"type": "PER", "start": 0, "end": 1},
+            {"type": "LOC", "start": 3, "end": 5},
+        ]
+        pred = [
+            {"type": "PER", "start": 0, "end": 1},
+            {"type": "LOC", "start": 3, "end": 4},
+            {"type": "ORG", "start": 6, "end": 7},
+        ]
+        scores = solution.span_f1(gold, pred)
+        self.assertEqual(scores["true_positive"], 1)
+        self.assertEqual(scores["false_positive"], 2)
+        self.assertEqual(scores["false_negative"], 1)
+        self.assertAlmostEqual(scores["precision"], 1 / 3)
+        self.assertAlmostEqual(scores["recall"], 1 / 2)
+        self.assertAlmostEqual(scores["f1"], 0.4)
+
+    def test_span_f1_accepts_tuple_spans_and_rejects_bad_boundaries(self):
+        scores = solution.span_f1([("ORG", 1, 3)], [("ORG", 1, 3)])
+        self.assertAlmostEqual(scores["f1"], 1.0)
+        self.assertEqual(solution.span_f1([], [])["f1"], 0.0)
+        with self.assertRaises(ValueError):
+            solution.span_f1([{"type": "PER", "start": 0}], [])
+        with self.assertRaises(ValueError):
+            solution.span_f1([("PER", 2, 2)], [])
+
     def test_viterbi_decode_uses_transition_scores(self):
         # Tags: 0=O, 1=B-ORG, 2=I-ORG. Emissions alone prefer O at the last
         # position, but the transition score makes B-ORG -> I-ORG globally best.

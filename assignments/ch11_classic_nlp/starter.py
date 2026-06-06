@@ -70,6 +70,11 @@ def bio_tags_to_spans(tokens, tags):
     raise NotImplementedError
 
 
+def span_f1(gold_spans, pred_spans):
+    """Compute exact span-level precision, recall, and F1 for sequence labeling."""
+    raise NotImplementedError
+
+
 def viterbi_decode(emissions, transitions, start_scores=None, end_scores=None):
     """Decode the highest-scoring tag path for a linear-chain sequence model."""
     raise NotImplementedError

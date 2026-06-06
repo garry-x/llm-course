@@ -400,6 +400,44 @@ def bio_tags_to_spans(tokens, tags):
     return spans
 
 
+def span_f1(gold_spans, pred_spans):
+    def span_key(span):
+        if isinstance(span, dict):
+            if not {"type", "start", "end"}.issubset(span):
+                raise ValueError("span dictionaries must contain type, start, and end")
+            entity_type = span["type"]
+            start = span["start"]
+            end = span["end"]
+        elif isinstance(span, (tuple, list)) and len(span) == 3:
+            entity_type, start, end = span
+        else:
+            raise ValueError("spans must be dicts or (type, start, end) triples")
+        start = int(start)
+        end = int(end)
+        if start < 0 or end <= start:
+            raise ValueError("span boundaries must satisfy 0 <= start < end")
+        return str(entity_type), start, end
+
+    gold = {span_key(span) for span in gold_spans}
+    pred = {span_key(span) for span in pred_spans}
+    true_positive = len(gold & pred)
+    false_positive = len(pred - gold)
+    false_negative = len(gold - pred)
+    precision = 0.0 if not pred else true_positive / len(pred)
+    recall = 0.0 if not gold else true_positive / len(gold)
+    f1 = 0.0 if precision + recall == 0.0 else 2 * precision * recall / (precision + recall)
+    return {
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "true_positive": true_positive,
+        "false_positive": false_positive,
+        "false_negative": false_negative,
+        "gold_count": len(gold),
+        "pred_count": len(pred),
+    }
+
+
 def viterbi_decode(emissions, transitions, start_scores=None, end_scores=None):
     if not emissions:
         raise ValueError("emissions must not be empty")

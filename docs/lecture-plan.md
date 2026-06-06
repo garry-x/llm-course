@@ -527,6 +527,7 @@ Quick check：
 - seq2seq teacher forcing 与 exposure bias。
 - MLM 与 causal LM 的 mask 方向差异；MLM cross entropy 只在 masked positions 上求平均。
 - BIO tagging 如何把 token classification 转成 entity spans。
+- NER span-level F1 要求 entity type 和边界同时匹配，不能用 token accuracy 替代。
 - Viterbi DP：emission + transition scores 下的最优 tag path。
 - CRF forward algorithm：用 logsumexp 计算所有 tag paths 的 log-partition。
 - CRF NLL：`logZ - gold_path_score`，训练目标不是 Viterbi 最优路径分数。
@@ -536,7 +537,7 @@ Quick check：
 
 - 手写一个 transition parsing 状态序列。
 - 手算 3 步标量 RNN hidden state 和 recurrent gradient factors。
-- 给定 BIO tags，解码 NER spans，并讨论非法 `I-` 标签的处理策略。
+- 给定 BIO tags，解码 NER spans；给定 gold/pred spans，手算 TP/FP/FN、precision、recall 和 F1，并讨论非法 `I-` 标签的处理策略。
 - 给定小型 emission/transition table，手算 Viterbi scores、backpointers、CRF forward alpha 和 gold path NLL。
 - 对比 BERT MLM 输入和 GPT causal LM 输入，并手算一个 masked-token cross entropy。
 - 用 beam candidate table 展示 length-normalized score 如何改变排序。
@@ -545,6 +546,7 @@ Quick check：
 
 - RNN 为什么难以直接学习很远的依赖？LSTM 缓解了什么但没有解决什么？
 - BERT 是 decoder-only 模型吗？
+- 为什么 NER 里的 token accuracy 可能很高但 span-level F1 很低？
 - BLEU 高是否代表事实正确？
 
 课后产出：

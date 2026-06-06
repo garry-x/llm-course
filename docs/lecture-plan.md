@@ -415,20 +415,20 @@ Quick check：
 - self-consistency、best-of-N 和 verifier reranking 的准确率/成本权衡。
 - self-consistency 需要定义 final-answer extractor；多数投票报告 vote distribution，不能只报告最后选出的答案。
 - pass@k：从 `n` 个样本中有 `c` 个正确时，估计抽取 `k` 个至少命中一次的概率。
-- 约束生成把无效 token mask 到候选集之外。
+- 约束生成把无效 token mask 到候选集之外，再在合法集合上重新归一化。
 
 课堂 demo：
 
 - 运行 speculative decoding toy model，记录接受率。
 - 对同一数学题采样多条推理路径，抽取最终答案，比较 single-sample、majority vote 和 best-of-N。
 - 给定 `n,c,k` 手算 pass@k，并讨论它和单样本准确率的差异。
-- 构造 JSON 输出失败和修复策略。
+- 构造 JSON 输出失败和修复策略；给定两行 logits 与各自合法 token 集，手算 constraint mask 后的 greedy 结果。
 
 Quick check：
 
 - draft model 越强是否一定越划算？
 - reasoning 输出更长是否一定代表推理更正确？
-- 约束生成会改变模型概率分布吗？
+- 约束生成会改变原始模型概率分布吗？为什么仍然要在合法集合内重新归一化？
 
 课后产出：
 

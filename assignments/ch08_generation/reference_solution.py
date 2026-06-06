@@ -59,6 +59,52 @@ def apply_repetition_penalty(logits, generated_ids, penalty=1.2):
     return adjusted
 
 
+def apply_token_constraints(logits, allowed_token_ids):
+    if logits.dim() != 2:
+        raise ValueError("logits must have shape [batch, vocab]")
+    batch_size, vocab_size = logits.shape
+    mask = torch.zeros_like(logits, dtype=torch.bool)
+
+    def validate_ids(ids):
+        ids = torch.as_tensor(ids, device=logits.device, dtype=torch.long).flatten()
+        if ids.numel() == 0:
+            raise ValueError("each batch row must allow at least one token")
+        if int(ids.min().item()) < 0 or int(ids.max().item()) >= vocab_size:
+            raise ValueError("allowed_token_ids contains ids outside the vocabulary")
+        return ids
+
+    if torch.is_tensor(allowed_token_ids):
+        if allowed_token_ids.dtype == torch.bool:
+            if tuple(allowed_token_ids.shape) != tuple(logits.shape):
+                raise ValueError("boolean constraint mask must match logits shape")
+            mask = allowed_token_ids.to(device=logits.device)
+        elif allowed_token_ids.dim() == 1:
+            mask[:, validate_ids(allowed_token_ids)] = True
+        elif allowed_token_ids.dim() == 2:
+            if allowed_token_ids.size(0) != batch_size:
+                raise ValueError("per-row allowed_token_ids must match batch size")
+            for batch_idx in range(batch_size):
+                mask[batch_idx, validate_ids(allowed_token_ids[batch_idx])] = True
+        else:
+            raise ValueError("allowed_token_ids tensor must be 1D, 2D, or a boolean mask")
+    elif isinstance(allowed_token_ids, (list, tuple)):
+        if not allowed_token_ids:
+            raise ValueError("allowed_token_ids must be non-empty")
+        if all(isinstance(item, int) for item in allowed_token_ids):
+            mask[:, validate_ids(allowed_token_ids)] = True
+        else:
+            if len(allowed_token_ids) != batch_size:
+                raise ValueError("per-row allowed_token_ids must match batch size")
+            for batch_idx, row_ids in enumerate(allowed_token_ids):
+                mask[batch_idx, validate_ids(row_ids)] = True
+    else:
+        raise TypeError("allowed_token_ids must be a tensor, list, or tuple")
+
+    if not torch.all(mask.any(dim=-1)):
+        raise ValueError("each batch row must allow at least one token")
+    return logits.masked_fill(~mask, -torch.inf)
+
+
 def sample_next_token(
     logits,
     strategy="greedy",
@@ -67,6 +113,7 @@ def sample_next_token(
     p=0.9,
     generated_ids=None,
     repetition_penalty=1.0,
+    allowed_token_ids=None,
 ):
     if logits.dim() == 3:
         logits = logits[:, -1, :]
@@ -74,6 +121,8 @@ def sample_next_token(
         raise ValueError("logits must have shape [batch, vocab] or [batch, seq, vocab]")
     if generated_ids is not None and repetition_penalty != 1.0:
         logits = apply_repetition_penalty(logits, generated_ids, repetition_penalty)
+    if allowed_token_ids is not None:
+        logits = apply_token_constraints(logits, allowed_token_ids)
 
     if strategy == "greedy" or temperature == 0:
         return logits.argmax(dim=-1, keepdim=True)

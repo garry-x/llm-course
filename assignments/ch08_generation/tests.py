@@ -126,6 +126,35 @@ class TestSampling(unittest.TestCase):
         )
         self.assertEqual(token.item(), 1)
 
+    def test_token_constraints_mask_invalid_logits_per_batch_row(self):
+        logits = torch.tensor([[5.0, 4.0, 3.0], [1.0, 2.0, 9.0]])
+        constrained = submission.apply_token_constraints(logits, [[1, 2], [0, 1]])
+        self.assertEqual(torch.isfinite(constrained).tolist(), [[False, True, True], [True, True, False]])
+        self.assertEqual(constrained[0, 1].item(), 4.0)
+        self.assertEqual(constrained[1, 1].item(), 2.0)
+
+        token = submission.sample_next_token(
+            logits,
+            strategy="greedy",
+            allowed_token_ids=[[1, 2], [0, 1]],
+        )
+        self.assertEqual(token.tolist(), [[1], [1]])
+
+    def test_token_constraints_accept_boolean_mask_and_reject_invalid_rows(self):
+        logits = torch.tensor([[5.0, 4.0, 3.0]])
+        mask = torch.tensor([[False, False, True]])
+        constrained = submission.apply_token_constraints(logits, mask)
+        self.assertEqual(torch.isfinite(constrained).tolist(), [[False, False, True]])
+
+        with self.assertRaises(ValueError):
+            submission.apply_token_constraints(logits, [[]])
+        with self.assertRaises(ValueError):
+            submission.apply_token_constraints(logits, [[3]])
+        with self.assertRaises(ValueError):
+            submission.apply_token_constraints(logits, [[0], [1]])
+        with self.assertRaises(ValueError):
+            submission.apply_token_constraints(logits, torch.tensor([[False, False, False]]))
+
     def test_invalid_sampling_hyperparameters_raise(self):
         logits = torch.tensor([[1.0, 2.0]])
         with self.assertRaises(ValueError):

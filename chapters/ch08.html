@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第8章 文本生成</h2>
   <p class="subtitle">采样策略 + DeepSeek MTP 推测解码——从概率到文本的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 14 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 14 小节 · 7 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -43,7 +43,7 @@
     <li><strong>课后阅读：</strong>比较 greedy、beam、temperature、top-k、top-p、typical sampling 和约束解码在质量/多样性/可靠性上的取舍。</li>
     <li><strong>本章产出：</strong>一个能用不同采样策略生成文本的 Generator。</li>
     <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
-    <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
+    <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标、约束 token mask，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
   </ul>
 </section>
 
@@ -744,6 +744,7 @@ def speculative_decoding(target_model, draft_model, tokenizer,
     <li>✅ <strong>编程练习 5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
     <li>✅ <strong>生成评估边界</strong> — 区分多样性、质量、事实性、延迟和任务完成率</li>
     <li>✅ <strong>推理式生成</strong> — CoT、self-consistency voting、pass@k、best-of-N、verifier 和 test-time compute 取舍</li>
+    <li>✅ <strong>约束解码</strong> — 将非法 token 的 logits mask 为 <code>-inf</code>，再在合法集合上重新归一化</li>
     <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，理解分布保持加速的适用条件</li>
     <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
     <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>
@@ -773,6 +774,27 @@ def speculative_decoding(target_model, draft_model, tokenizer,
 
   <h4>实现：基于 JSON Schema 的 Token 过滤</h4>
   <p>以 JSON 为例：将 JSON Schema 编译为<strong>确定性有限自动机（DFA）</strong>。每一步解码时，将词表中每个 token 喂入 DFA 判断是否合法——只有合法 token 可被采样。例如前缀为 <code>{"name":</code> 时，下一个 token 必须是 <code>"</code>。</p>
+
+  <div class="coding-exercise">
+    <h4>练习 7：实现 Token Constraint Mask</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>apply_token_constraints(logits, allowed_token_ids)</code>，把每个 batch row 中不合法的 token logits 设为 <code>-inf</code>。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>输入 logits 形状为 <code>[batch, vocab]</code></li>
+        <li><code>allowed_token_ids</code> 可以是所有样本共享的一组 token，也可以是每个样本各自一组 token</li>
+        <li>每一行至少保留一个合法 token；非法 id 或空集合应报错</li>
+        <li>约束后再执行 greedy、top-k 或 top-p；概率只在合法 token 集合内重新归一化</li>
+      </ul>
+      <pre># 例子：第二行原本 token 2 logit 最高，但 grammar 当前只允许 0 或 1
+logits = torch.tensor([[5.0, 4.0, 3.0],
+                       [1.0, 2.0, 9.0]])
+allowed = [[1, 2], [0, 1]]
+masked = apply_token_constraints(logits, allowed)
+next_token = sample_next_token(masked, strategy="greedy")
+# next_token == [[1], [1]]</pre>
+    </div>
+  </div>
 
   <h4>主流工具</h4>
   <div class="table-wrap">

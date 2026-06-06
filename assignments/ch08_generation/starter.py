@@ -8,6 +8,11 @@ def apply_repetition_penalty(logits, generated_ids, penalty=1.2):
     raise NotImplementedError
 
 
+def apply_token_constraints(logits, allowed_token_ids):
+    """Mask logits so sampling can only choose currently legal token ids."""
+    raise NotImplementedError
+
+
 def sample_next_token(
     logits,
     strategy="greedy",
@@ -16,6 +21,7 @@ def sample_next_token(
     p=0.9,
     generated_ids=None,
     repetition_penalty=1.0,
+    allowed_token_ids=None,
 ):
     raise NotImplementedError
 

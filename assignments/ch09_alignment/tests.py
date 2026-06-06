@@ -262,6 +262,60 @@ class TestDPOGRPO(unittest.TestCase):
         self.assertTrue(torch.allclose(adv.mean(dim=0), torch.zeros(2), atol=1e-6))
         self.assertTrue(torch.allclose(adv.std(dim=0, unbiased=False), torch.ones(2), atol=1e-5))
 
+    def test_grpo_policy_loss_combines_clipped_surrogate_and_kl(self):
+        rewards = torch.tensor([[1.0], [2.0], [3.0]])
+        old_logps = torch.zeros(3, 1, 2)
+        ratios = torch.tensor([[[1.0, 1.5]], [[1.0, 1.0]], [[0.5, 1.0]]])
+        new_logps = torch.log(ratios)
+        ref_logps = torch.zeros_like(new_logps)
+        mask = torch.tensor([[[1, 1]], [[1, 0]], [[1, 1]]])
+
+        report = submission.grpo_policy_loss(
+            new_logps,
+            old_logps,
+            ref_logps,
+            rewards,
+            completion_mask=mask,
+            clip_range=0.2,
+            kl_beta=0.04,
+        )
+
+        expected_adv = (rewards - rewards.mean(dim=0, keepdim=True)) / rewards.std(
+            dim=0,
+            keepdim=True,
+            unbiased=False,
+        )
+        expected_adv_tokens = expected_adv.unsqueeze(-1).expand_as(new_logps)
+        clipped_ratios = ratios.clamp(0.8, 1.2)
+        expected_surrogate = torch.minimum(ratios * expected_adv_tokens, clipped_ratios * expected_adv_tokens)
+        valid = mask.float()
+        expected_policy_loss = -(expected_surrogate * valid).sum() / valid.sum()
+        log_ratio = ref_logps - new_logps
+        expected_kl = ((torch.exp(log_ratio) - log_ratio - 1.0) * valid).sum() / valid.sum()
+
+        self.assertTrue(torch.allclose(report["advantages"], expected_adv, atol=1e-6))
+        self.assertTrue(torch.allclose(report["policy_loss"], expected_policy_loss, atol=1e-6))
+        self.assertTrue(torch.allclose(report["kl_loss"], expected_kl, atol=1e-6))
+        self.assertTrue(torch.allclose(report["loss"], expected_policy_loss + 0.04 * expected_kl, atol=1e-6))
+        self.assertAlmostEqual(report["clip_fraction"], 2 / 5)
+        self.assertAlmostEqual(report["mean_ratio"], ((ratios * valid).sum() / valid.sum()).item())
+
+    def test_grpo_policy_loss_rejects_bad_inputs(self):
+        logps = torch.zeros(3, 1, 2)
+        rewards = torch.ones(3, 1)
+        with self.assertRaises(ValueError):
+            submission.grpo_policy_loss(logps, torch.zeros(3, 1), logps, rewards)
+        with self.assertRaises(ValueError):
+            submission.grpo_policy_loss(logps, logps, logps, torch.ones(3, 1, 1))
+        with self.assertRaises(ValueError):
+            submission.grpo_policy_loss(logps, logps, logps, torch.ones(2, 1))
+        with self.assertRaises(ValueError):
+            submission.grpo_policy_loss(logps, logps, logps, rewards, completion_mask=torch.zeros(3, 1, 2))
+        with self.assertRaises(ValueError):
+            submission.grpo_policy_loss(logps, logps, logps, rewards, clip_range=0.0)
+        with self.assertRaises(ValueError):
+            submission.grpo_policy_loss(logps, logps, logps, rewards, kl_beta=-0.1)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -78,5 +78,18 @@ def grpo_advantages(rewards, eps=1e-8):
     raise NotImplementedError
 
 
+def grpo_policy_loss(
+    new_logps,
+    old_logps,
+    ref_logps,
+    rewards,
+    completion_mask=None,
+    clip_range=0.2,
+    kl_beta=0.04,
+):
+    """Compute GRPO clipped policy loss with a reference-policy KL penalty."""
+    raise NotImplementedError
+
+
 def merge_lora(base_model, lora_weights):
     raise NotImplementedError

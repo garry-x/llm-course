@@ -257,6 +257,69 @@ def grpo_advantages(rewards, eps=1e-8):
     raise ValueError("rewards must be 1D or 2D")
 
 
+def grpo_policy_loss(
+    new_logps,
+    old_logps,
+    ref_logps,
+    rewards,
+    completion_mask=None,
+    clip_range=0.2,
+    kl_beta=0.04,
+):
+    if new_logps.shape != old_logps.shape or new_logps.shape != ref_logps.shape:
+        raise ValueError("new_logps, old_logps and ref_logps must have the same shape")
+    if clip_range <= 0:
+        raise ValueError("clip_range must be positive")
+    if kl_beta < 0:
+        raise ValueError("kl_beta must be non-negative")
+    if rewards.dim() not in {1, 2}:
+        raise ValueError("rewards must be 1D or 2D")
+    if new_logps.dim() not in {rewards.dim(), rewards.dim() + 1}:
+        raise ValueError("new_logps must be sequence-level or token-level for the reward shape")
+    if tuple(new_logps.shape[: rewards.dim()]) != tuple(rewards.shape):
+        raise ValueError("leading log-prob dimensions must match rewards")
+    if completion_mask is not None and completion_mask.shape != new_logps.shape:
+        raise ValueError("completion_mask must have the same shape as log probabilities")
+
+    advantages = grpo_advantages(rewards).to(device=new_logps.device, dtype=new_logps.dtype)
+    if new_logps.dim() == rewards.dim() + 1:
+        advantages_for_tokens = advantages.unsqueeze(-1).expand_as(new_logps)
+    else:
+        advantages_for_tokens = advantages
+
+    log_ratio = new_logps - old_logps
+    ratio = torch.exp(log_ratio)
+    unclipped = ratio * advantages_for_tokens
+    clipped_ratio = ratio.clamp(1.0 - clip_range, 1.0 + clip_range)
+    clipped = clipped_ratio * advantages_for_tokens
+    surrogate = torch.minimum(unclipped, clipped)
+    token_kl = approx_kl_from_logps(new_logps, ref_logps, reduction="none")
+
+    if completion_mask is None:
+        stats_mask = torch.ones_like(new_logps, dtype=new_logps.dtype)
+    else:
+        stats_mask = completion_mask.to(device=new_logps.device, dtype=new_logps.dtype)
+    valid = stats_mask.sum()
+    if valid <= 0:
+        raise ValueError("completion_mask must contain at least one valid token")
+
+    policy_loss = -(surrogate * stats_mask).sum() / valid
+    kl_loss = (token_kl * stats_mask).sum() / valid
+    loss = policy_loss + kl_beta * kl_loss
+    clipped_mask = (torch.abs(ratio - 1.0) > clip_range).to(dtype=new_logps.dtype)
+
+    return {
+        "loss": loss,
+        "policy_loss": policy_loss,
+        "kl_loss": kl_loss,
+        "advantages": advantages,
+        "mean_ratio": ((ratio * stats_mask).sum() / valid).item(),
+        "clip_fraction": ((clipped_mask * stats_mask).sum() / valid).item(),
+        "mean_advantage": ((advantages_for_tokens * stats_mask).sum() / valid).item(),
+        "approx_kl": kl_loss.item(),
+    }
+
+
 def merge_lora(base_model, lora_weights):
     modules = dict(base_model.named_modules())
     for name, params in lora_weights.items():

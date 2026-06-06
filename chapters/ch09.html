@@ -575,6 +575,7 @@ advantages ≈
  [ 0.000,  0.000],
  [ 1.225,  1.225]]</div>
   <p>这个例子说明：组内白化消除了不同 prompt 奖励尺度的差异，但没有改变同一 prompt 内候选的相对排序。实现时使用 <code>std(unbiased=False)</code> 对应总体标准差，使白化后的每列总体标准差为 1；若使用 PyTorch 默认的样本标准差，小组样本较小时优势幅度会被额外缩小。</p>
+  <p>完整 GRPO policy loss 还需要把每条 completion 的序列级 advantage 扩展到有效 completion token 上，再和 old/new policy ratio 组成 PPO clipped surrogate，同时对当前 policy 与 reference policy 的 token log-prob 计算 masked approximate KL。Ch09 作业中的 <code>grpo_policy_loss</code> 因此报告 <code>policy_loss</code>、<code>kl_loss</code>、<code>loss</code>、<code>clip_fraction</code>、<code>mean_ratio</code> 和 <code>mean_advantage</code>；这些量能让学生区分“奖励相对更高”“策略更新被 clipping 限制”和“policy 偏离 reference”。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -592,6 +593,7 @@ advantages ≈
         <li><code>grpo_advantages(rewards, group_size)</code> 计算组内白化后的优势函数</li>
         <li><code>ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask, clip_range)</code> 计算 <code>min(ratio * A, clipped_ratio * A)</code>，并报告 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code></li>
         <li><code>approx_kl_from_logps(policy_logps, ref_logps, mask)</code> 计算有效 completion token 上的近似 KL</li>
+        <li><code>grpo_policy_loss(new_logps, old_logps, ref_logps, rewards, completion_mask, clip_range, kl_beta)</code> 把组内白化、PPO clipping 和 reference KL 合成完整训练目标</li>
         <li>对每组 G 个回答的奖励做 z-score 归一化（减去组均值，除以组标准差）</li>
         <li>PPO clipping 要同时处理正 advantage 和负 advantage，不能把所有超出范围的 ratio 都简单当作奖励提升</li>
         <li>包含 KL 惩罚（使用近似 KL：<span class="katex-inline" data-expr="e^{\log q - \log p} - (\log q - \log p) - 1" aria-label="e^{\log q - \log p} - (\log q - \log p) - 1" role="img"></span>）</li>
@@ -603,7 +605,14 @@ advantages = grpo_advantages(rewards)
 assert advantages.shape == (8, 4)
 # 同一 prompt 的 8 个候选回答 mean ≈ 0, std ≈ 1
 print(advantages.mean(dim=0))  # ~0
-print(advantages.std(dim=0, unbiased=False))   # ~1</pre>
+print(advantages.std(dim=0, unbiased=False))   # ~1
+
+# token-level GRPO loss:
+# new_logps / old_logps / ref_logps shape 为 (group_size, batch, completion_len)
+# rewards shape 为 (group_size, batch)
+# completion_mask 只保留真实 completion token
+report = grpo_policy_loss(new_logps, old_logps, ref_logps, rewards, completion_mask)
+print(report["policy_loss"], report["kl_loss"], report["clip_fraction"])</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
@@ -629,6 +638,33 @@ def approx_kl_from_logps(policy_logps, ref_logps, mask):
     token_kl = torch.exp(log_ratio) - log_ratio - 1.0
     mask = mask.float()
     return (token_kl * mask).sum() / mask.sum().clamp_min(1.0)
+
+def grpo_policy_loss(new_logps, old_logps, ref_logps, rewards,
+                     completion_mask=None, clip_range=0.2, kl_beta=0.04):
+    """GRPO: 组内 advantage + PPO clipping + reference KL"""
+    advantages = grpo_advantages(rewards).to(new_logps)
+    if new_logps.dim() == rewards.dim() + 1:
+        advantages = advantages.unsqueeze(-1).expand_as(new_logps)
+
+    ratio = torch.exp(new_logps - old_logps)
+    unclipped = ratio * advantages
+    clipped = ratio.clamp(1 - clip_range, 1 + clip_range) * advantages
+    surrogate = torch.minimum(unclipped, clipped)
+    token_kl = torch.exp(ref_logps - new_logps) - (ref_logps - new_logps) - 1
+
+    if completion_mask is None:
+        mask = torch.ones_like(new_logps)
+    else:
+        mask = completion_mask.to(new_logps)
+    denom = mask.sum().clamp_min(1.0)
+    policy_loss = -(surrogate * mask).sum() / denom
+    kl_loss = (token_kl * mask).sum() / denom
+    return {
+        "loss": policy_loss + kl_beta * kl_loss,
+        "policy_loss": policy_loss,
+        "kl_loss": kl_loss,
+        "clip_fraction": ((torch.abs(ratio - 1) &gt; clip_range).float() * mask).sum() / denom,
+    }
 
 def grpo_loss(model, ref_model, prompt_ids, prompt_mask,
               tokenizer, reward_model, beta=0.04, group_size=8, epsilon=0.2):

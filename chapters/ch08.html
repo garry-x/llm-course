@@ -242,6 +242,19 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
     <li>只从这个"核心集"（nucleus）中采样</li>
   </ol>
   <p>当分布尖锐时核心集很小（"华盛顿"的例子可能只有 1-3 个 token），当分布平缓时核心集自动扩大。它不需要手动固定 K，是开放式生成中常见的采样策略之一；实际部署仍会结合 temperature、repetition penalty、stop 条件和任务约束调参。</p>
+
+  <h4>Worked Example：同一个分布下 Top-K 与 Top-P 的候选集</h4>
+  <p>假设某一步生成时只有 6 个候选 token，logits 为 <code>[4, 3, 2, 1, 0, -1]</code>。温度 <code>T=1</code> 时 softmax 后的概率约为：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>token</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th></tr>
+      <tr><td>logit</td><td>4</td><td>3</td><td>2</td><td>1</td><td>0</td><td>-1</td></tr>
+      <tr><td>probability</td><td>0.634</td><td>0.233</td><td>0.086</td><td>0.032</td><td>0.012</td><td>0.004</td></tr>
+      <tr><td>cumulative</td><td>0.634</td><td>0.867</td><td>0.953</td><td>0.985</td><td>0.996</td><td>1.000</td></tr>
+    </table>
+  </div>
+  <p><code>top-k=3</code> 会固定保留 <code>A,B,C</code>，然后把三者重新归一化，得到约 <code>[0.718, 0.264, 0.097]</code>。<code>top-p=0.9</code> 会从最高概率开始累加，直到累积概率超过 0.9；这里 <code>A+B=0.867</code> 还不够，加入 <code>C</code> 后达到 <code>0.953</code>，所以候选集同样是 <code>A,B,C</code>。如果改成 <code>top-p=0.8</code>，候选集只需要 <code>A,B</code>。</p>
+  <p>关键区别不在这个单例，而在分布形状变化时的行为。若分布非常尖锐，例如 <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>，<code>top-p=0.9</code> 只保留最高概率 token；若分布平缓，例如 <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>，<code>top-p=0.9</code> 需要保留前 5 个 token。固定 <code>top-k</code> 不会根据上下文不确定性自动改变候选集大小。</p>
 </section>
 
 <!-- ================================================================ -->

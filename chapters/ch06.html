@@ -380,7 +380,7 @@ sample 2 labels: [GPT, EOS,  -100, -100]</div>
 <!-- ================================================================ -->
 <section class="card" id="s6-4">
   <h3>6.4 深度理论：Weight Tying——哪些模型用，哪些不用，为什么？</h3>
-  <p><strong>Weight Tying（权重共享）</strong>让嵌入层（Token Embedding）和输出层（LM Head）共享同一个权重矩阵。直觉：嵌入层"读入"token 的含义，LM Head"输出"token 的分布——本质上是同一个映射的"正向"和"逆向"。</p>
+  <p><strong>Weight Tying（权重共享）</strong>让嵌入层（Token Embedding）和输出层（LM Head）共享同一个权重矩阵。更严谨地说，输入端用第 <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 行向量表示 token <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>；输出端把隐藏状态 <span class="katex-inline" data-expr="h_t" aria-label="h_t" role="img"></span> 与每个 token 行向量做点积，得到 vocab logits。它不是数学意义上的逆映射，而是同一组 token 向量同时承担“读入表示”和“输出分类原型”两种角色。</p>
 
   <div class="math-box"><div class="label">Weight Tying 共享方式</div>
     <div class="katex" data-expr="W_{\text{lm\_head}} = W_{\text{token\_embedding}} \in \mathbb{R}^{\text{vocab\_size} \times d_{\text{model}}}" aria-label="W_{\text{lm\_head}} = W_{\text{token\_embedding}} \in \mathbb{R}^{\text{vocab\_size} \times d_{\text{model}}}" role="img"></div>
@@ -400,13 +400,32 @@ sample 2 labels: [GPT, EOS,  -100, -100]</div>
     </table>
   </div>
 
-  <h4>为什么大模型通常不用？</h4>
-  <p>随着模型规模增大，Weight Tying 的节省效果递减：在 175B 模型中节省的 38.6M 不到 0.1%。同时，不共享可以给模型更大的表达能力——嵌入层和 LM Head 可以学习不同的语义映射。此外，对<strong>多模态模型</strong>（如将文本和图像映射到同一空间），让嵌入层和输出层独立是必要的。</p>
+  <h4>为什么有些大模型不用？</h4>
+  <p>随着非 embedding 参数占比上升，Weight Tying 的参数节省比例会下降：在百亿到千亿参数模型里，<span class="katex-inline" data-expr="|V|d_{\text{model}}" aria-label="|V|d_{\text{model}}" role="img"></span> 往往不再主导总参数量。Untied LM Head 的好处是输入表示和输出分类器可以分别学习，适合需要更大输出端容量、特殊词表设计或多模态输出接口的架构。但这不是固定规则：是否 tying 取决于词表大小、隐藏维度、总参数规模、训练稳定性和模型家族的工程取舍。</p>
 
   <h4>反向传播的影响</h4>
-  <p>共享时，嵌入层的梯度来自两个方向：一是 embedding 自身的梯度（来自词嵌入的前向传播），二是 LM Head 的梯度（来自输出映射的反向传播）。这被称为"<strong>双重训练信号</strong>"——在小模型上是一种有效的正则化，但在大模型上反而可能限制灵活性。</p>
+  <p>共享时，嵌入层的梯度来自两个方向：一是 embedding lookup 路径，二是 LM Head 分类路径。被输入序列用到的 token 行会从 lookup 路径拿到梯度；所有出现在 softmax 分类器里的 token 行都会通过输出分布得到梯度。这个耦合有时像正则化，有时会限制输入端和输出端分别适配任务，不能简单归结为“小模型一定好、大模型一定坏”。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>结论：</strong>Weight Tying 是"小模型时代的优化"——当词表投影占参数比重大时（GPT-2 中 31%），共享权重收益显著。在 100B+ 模型中，词表投影占比不到 0.1%，共享的收益微乎其微，而不共享带来的灵活性更重要。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>结论：</strong>Weight Tying 首先是一个架构约束：它节省 <span class="katex-inline" data-expr="|V|d_{\text{model}}" aria-label="|V|d_{\text{model}}" role="img"></span> 个 LM Head 参数，并让输入 token 空间和输出 token 分类器共享几何结构。参数节省是否重要，要放到具体模型的 vocab、hidden size 和总参数账本里计算。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 6.4A Worked Example -->
+<!-- ================================================================ -->
+<section class="card" id="s6-4a">
+  <h3>6.4A Worked Example：tied LM Head 如何接到 next-token loss</h3>
+  <p>设词表大小 <span class="katex-inline" data-expr="|V|=4" aria-label="|V|=4" role="img"></span>，隐藏维度 <span class="katex-inline" data-expr="d=2" aria-label="d=2" role="img"></span>，token embedding 矩阵为 <span class="katex-inline" data-expr="E\in\mathbb{R}^{4\times 2}" aria-label="E\in\mathbb{R}^{4\times 2}" role="img"></span>。输入序列 <code>[0, 1, 2]</code> 经过 Transformer 后得到隐藏状态 <span class="katex-inline" data-expr="H\in\mathbb{R}^{3\times 2}" aria-label="H\in\mathbb{R}^{3\times 2}" role="img"></span>：</p>
+  <div class="math-box"><div class="label">tied LM Head logits</div>
+    <div class="katex" data-expr="Z = H E^\top,\qquad Z\in\mathbb{R}^{3\times 4}" aria-label="Z = H E^\top,\qquad Z\in\mathbb{R}^{3\times 4}" role="img"></div>
+  </div>
+  <p>第 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 行 logits <span class="katex-inline" data-expr="z_t" aria-label="z_t" role="img"></span> 是隐藏状态 <span class="katex-inline" data-expr="h_t" aria-label="h_t" role="img"></span> 对 4 个 token 行向量的打分。训练 causal LM 时，序列长度为 3 只产生 2 个 next-token 监督项：</p>
+  <div class="code-block" data-lang="text">
+input_ids:      [0, 1, 2]
+logits used:     0  1
+targets:           1  2
+unused logits:          position 2 has no next-token label</div>
+  <p>因此 loss 是 <code>CE(Z[0], 1)</code> 和 <code>CE(Z[1], 2)</code> 的平均值；<code>Z[2]</code> 可以用于推理时预测下一个 token，但在这个训练样本里没有标签。若不做 tying，还需要一个独立的 <span class="katex-inline" data-expr="W_{\text{lm}}\in\mathbb{R}^{4\times 2}" aria-label="W_{\text{lm}}\in\mathbb{R}^{4\times 2}" role="img"></span>，logits 变成 <span class="katex-inline" data-expr="HW_{\text{lm}}^\top" aria-label="HW_{\text{lm}}^\top" role="img"></span>，参数量增加 <span class="katex-inline" data-expr="4\times2=8" aria-label="4\times2=8" role="img"></span>。在真实 GPT-2 small 中，同一项是 <span class="katex-inline" data-expr="50257\times768\approx38.6\text{M}" aria-label="50257\times768\approx38.6\text{M}" role="img"></span>。</p>
+  <p>这个例子同时检查三件事：logits 的最后一维必须是 vocab，label shift 使用 <code>[:-1]</code> 的 logits 预测 <code>[1:]</code> 的 token，tied 权重只节省输出头矩阵，不改变 Transformer block 内部的注意力和 FFN 参数。</p>
 </section>
 
 <!-- ================================================================ -->

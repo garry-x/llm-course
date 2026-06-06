@@ -38,7 +38,7 @@
 | 训练闭环 | Week 5 | Ch07 | MLE、cross entropy、PPL、AdamW、scheduler、checkpoint、分布式训练概念 |
 | 生成方法 | Week 6 | Ch08 | greedy、temperature、top-k/top-p、speculative decoding、structured decoding |
 | 微调与对齐 | Week 7 | Ch09 | SFT、LoRA、preference model、DPO、GRPO、alignment tax |
-| 经典 NLP 与评测 | Week 8 | Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM |
+| 经典 NLP 与评测 | Week 8 | Ch11 + Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM |
 | 推理工程 | Week 9 | Ch10 | KV Cache、quantization、FlashAttention、RAG、vLLM/SGLang、Triton |
 | 项目展示 | Week 10 | Capstone | 训练项目、推理项目、报告、演示和讨论 |
 
@@ -48,7 +48,7 @@
 
 | 项目 | 权重 | 交付内容 |
 |------|:--:|----------|
-| 章节编程作业 | 35% | Ch01-Ch10 starter 实现、测试输出、错误分析 |
+| 章节编程作业 | 35% | Ch01-Ch11 starter 实现、测试输出、错误分析 |
 | 书面推导与概念题 | 20% | 公式推导、复杂度分析、shape trace、概念辨析 |
 | 训练工程 Capstone | 15% | 数据分析、训练日志、checkpoint/resume、成本估算 |
 | 推理工程 Capstone | 20% | API、评测、压测、SLO、容量规划、错误分析 |
@@ -136,7 +136,7 @@
 | 5 | Training Loop | Ch07；reading-list Week 5 | A5：dataset/CE/AdamW/scheduler/train；训练项目提案 |
 | 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO；训练 capstone 初版 |
-| 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：RNN/dependency/seq2seq/BERT/evaluation 书面题 |
+| 8 | 经典 NLP 与评测专题 | Ch11；classic-nlp-handout；reading-list Week 8 | A8：RNN/dependency/seq2seq/BERT/evaluation 作业与书面题 |
 | 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark summary/多模态评估；推理项目提案 |
 | 10 | Capstone 综合与前沿 seminar | 两个 capstone 方向；reading-list Week 10 | 训练 capstone + 推理 capstone 总结、前沿方法复盘 |
 

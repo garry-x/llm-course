@@ -511,7 +511,7 @@ Quick check：
 
 ## Week 8 Lecture 15: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT
 
-对应材料：classic NLP handout、Classic NLP Deep-Dive Teaching Module、reading-list Week 8。
+对应材料：Ch11、classic NLP handout、Classic NLP Deep-Dive Teaching Module、reading-list Week 8。
 
 目标：
 
@@ -528,6 +528,7 @@ Quick check：
 - MLM 与 causal LM 的 mask 方向差异；MLM cross entropy 只在 masked positions 上求平均。
 - BIO tagging 如何把 token classification 转成 entity spans。
 - NER span-level F1 要求 entity type 和边界同时匹配，不能用 token accuracy 替代。
+- 抽取式 QA 的 normalized EM/F1：多 gold answer、token overlap 和 exact match 的区别。
 - Viterbi DP：emission + transition scores 下的最优 tag path。
 - CRF forward algorithm：用 logsumexp 计算所有 tag paths 的 log-partition。
 - CRF NLL：`logZ - gold_path_score`，训练目标不是 Viterbi 最优路径分数。
@@ -540,6 +541,7 @@ Quick check：
 - 给定 BIO tags，解码 NER spans；给定 gold/pred spans，手算 TP/FP/FN、precision、recall 和 F1，并讨论非法 `I-` 标签的处理策略。
 - 给定小型 emission/transition table，手算 Viterbi scores、backpointers、CRF forward alpha 和 gold path NLL。
 - 对比 BERT MLM 输入和 GPT causal LM 输入，并手算一个 masked-token cross entropy。
+- 给定预测答案和多个 gold answers，手算 normalized EM 与 token F1。
 - 用 beam candidate table 展示 length-normalized score 如何改变排序。
 
 Quick check：
@@ -557,7 +559,7 @@ Quick check：
 
 ## Week 8 Lecture 16: Evaluation、Ethics 与 Safety
 
-对应材料：classic NLP handout、reading-list Week 8。
+对应材料：Ch11、classic NLP handout、reading-list Week 8。
 
 目标：
 

@@ -538,7 +538,7 @@
 <li>阅读复盘：R1/GRPO 的方法边界。</li>
 </ul>
 <h3 id="week-8-lecture-15-rnn-lstm-dependency-parsing-seq2seq-与-bert">Week 8 Lecture 15: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT</h3>
-<p>对应材料：classic NLP handout、Classic NLP Deep-Dive Teaching Module、reading-list Week 8。</p>
+<p>对应材料：Ch11、classic NLP handout、Classic NLP Deep-Dive Teaching Module、reading-list Week 8。</p>
 <p>目标：</p>
 <ul>
 <li>补齐 CS224N 式经典神经 NLP 主线：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。</li>
@@ -554,6 +554,7 @@
 <li>MLM 与 causal LM 的 mask 方向差异；MLM cross entropy 只在 masked positions 上求平均。</li>
 <li>BIO tagging 如何把 token classification 转成 entity spans。</li>
 <li>NER span-level F1 要求 entity type 和边界同时匹配，不能用 token accuracy 替代。</li>
+<li>抽取式 QA 的 normalized EM/F1：多 gold answer、token overlap 和 exact match 的区别。</li>
 <li>Viterbi DP：emission + transition scores 下的最优 tag path。</li>
 <li>CRF forward algorithm：用 logsumexp 计算所有 tag paths 的 log-partition。</li>
 <li>CRF NLL：<code>logZ - gold_path_score</code>，训练目标不是 Viterbi 最优路径分数。</li>
@@ -566,6 +567,7 @@
 <li>给定 BIO tags，解码 NER spans；给定 gold/pred spans，手算 TP/FP/FN、precision、recall 和 F1，并讨论非法 <code>I-</code> 标签的处理策略。</li>
 <li>给定小型 emission/transition table，手算 Viterbi scores、backpointers、CRF forward alpha 和 gold path NLL。</li>
 <li>对比 BERT MLM 输入和 GPT causal LM 输入，并手算一个 masked-token cross entropy。</li>
+<li>给定预测答案和多个 gold answers，手算 normalized EM 与 token F1。</li>
 <li>用 beam candidate table 展示 length-normalized score 如何改变排序。</li>
 </ul>
 <p>Quick check：</p>
@@ -582,7 +584,7 @@
 <li>Deep-dive in-class check：RNN-1、DP-1、S2S-2 或 BERT-1 至少完成一项。</li>
 </ul>
 <h3 id="week-8-lecture-16-evaluation-ethics-与-safety">Week 8 Lecture 16: Evaluation、Ethics 与 Safety</h3>
-<p>对应材料：classic NLP handout、reading-list Week 8。</p>
+<p>对应材料：Ch11、classic NLP handout、reading-list Week 8。</p>
 <p>目标：</p>
 <ul>
 <li>比较 perplexity、BLEU、ROUGE、F1、EM、LLM-as-judge。</li>

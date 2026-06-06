@@ -562,6 +562,13 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <h4>为什么它不同于普通 sampling</h4>
   <p>普通 top-p 或 temperature 主要控制输出分布的熵；reasoning 生成关心的是<strong>搜索空间</strong>。同一个问题可以生成多条推理路径，每条路径都有自己的中间状态和最终答案。对有标准答案的任务，评价重点不是 distinct-n，而是 pass@k、majority vote accuracy、verifier accuracy、平均输出 token 数和单位正确答案成本。Ch08 作业中的 <code>pass_at_k</code> 使用 <code>1 - C(n-c,k)/C(n,k)</code> 估计从 <code>n</code> 个样本中抽取 <code>k</code> 个至少命中一个正确答案的概率；<code>self_consistency_vote</code> 则要求你显式定义 final-answer extractor，把多条候选输出聚合成 vote distribution，并同时报告总生成 token 数和平均 token 数。</p>
 
+  <h4>Worked Example：pass@k 不是 <code>c/n</code></h4>
+  <p>假设同一道编程题采样 <code>n=10</code> 个候选，其中 <code>c=2</code> 个候选能通过测试。如果只看单次采样成功率，是 <code>c/n = 0.2</code>。但 pass@3 问的是：从这 10 个候选中随机抽 3 个提交，只要至少一个正确就算成功。失败事件是 3 个全都抽到错误候选：</p>
+  <div class="math-box"><div class="label">pass@3 for n=10, c=2</div>
+    <div class="katex" data-expr="\text{pass@3}=1-\frac{\binom{8}{3}}{\binom{10}{3}}=1-\frac{56}{120}=0.533" aria-label="\text{pass@3}=1-\frac{\binom{8}{3}}{\binom{10}{3}}=1-\frac{56}{120}=0.533" role="img"></div>
+  </div>
+  <p>所以同样的候选集合，pass@1 是 <code>0.2</code>，pass@3 约为 <code>0.533</code>。这说明 pass@k 衡量的是“给定多次尝试预算时至少命中一次”的概率，不是单个样本的平均正确率。报告 reasoning 实验时必须同时写清 <code>n</code>、<code>k</code>、采样参数和平均生成 token 数，否则准确率提升可能只是花了更多 test-time compute。</p>
+
   <h4>计算预算怎么报告</h4>
   <p>如果一个方法把准确率从 60% 提到 72%，但每题从 1 次生成变成 32 次生成，就不能只报告准确率。至少要同时报告：</p>
   <ul>

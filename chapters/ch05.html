@@ -93,7 +93,26 @@
   │              │ x''  │                          │
   │              └──────┘                          │
   └─────────────────────────────────────────────────┘</div>
-  <p>每一层 Block 的输出维度始终保持为 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span>，这使得我们可以堆叠任意数量的 Block——GPT-3 堆叠了 96 层，DeepSeek-V3 堆叠了 61 层。</p>
+  <p>每一层 Block 的输出维度始终保持为 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span>，这使得模型可以堆叠很多层，但深度能否稳定训练还取决于归一化位置、初始化、残差尺度、优化器、学习率调度和数据规模。</p>
+</section>
+
+<section class="card" id="s5-1a">
+  <h3>5.1A Worked Example：Pre-Norm 与 Post-Norm 的梯度路径</h3>
+  <p>用一个标量残差块近似看归一化位置的差异。设子层为 <code>f</code>，归一化为 <code>n</code>。Pre-Norm 写作 <code>y = x + f(n(x))</code>，Post-Norm 写作 <code>y = n(x + f(x))</code>。局部线性化后：</p>
+  <div class="math-box"><div class="label">Local gradient factors</div>
+    <div class="katex" data-expr="\text{PreNorm: }\frac{dy}{dx}=1+f'(n(x))n'(x),\qquad \text{PostNorm: }\frac{dy}{dx}=n'(x+f(x))(1+f'(x))" aria-label="PreNorm dy/dx = 1 + f prime n prime; PostNorm dy/dx = n prime times (1 + f prime)" role="img"></div>
+  </div>
+  <p>给三层 toy block：子层斜率为 <code>[0.2, -0.1, 0.3]</code>，norm 的局部斜率都近似为 <code>0.5</code>。Pre-Norm 的每层梯度因子是：</p>
+  <div class="code-block" data-lang="text">
+Pre-Norm:  [1 + 0.2*0.5, 1 - 0.1*0.5, 1 + 0.3*0.5]
+         = [1.10, 0.95, 1.15]
+product  = 1.20175</div>
+  <p>Post-Norm 的 norm 直接压在残差输出之后：</p>
+  <div class="code-block" data-lang="text">
+Post-Norm: [0.5*(1 + 0.2), 0.5*(1 - 0.1), 0.5*(1 + 0.3)]
+          = [0.60, 0.45, 0.65]
+product   = 0.1755</div>
+  <p>这个 toy 例子解释了为什么 Pre-Norm 更利于深层梯度传播：残差路径中保留了一个显式的 <code>1</code>。但它不是无限深网络的充分保证；真实 Transformer 的 Jacobian 是高维矩阵，还会受到 attention、FFN、初始化、学习率、残差缩放和 optimizer 的共同影响。Ch05 作业中的 <code>residual_gradient_path_factors</code> 就是让学生复算这个局部线性化模型。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -362,7 +381,7 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
 <!-- ================================================================ -->
 <section class="card" id="s5-6">
   <h3>5.6 编程练习 3：实现 FFN 与 SwiGLU 激活</h3>
-  <p>GPT-2 使用 GELU 激活的 FFN，但现代 LLM（Llama、Mistral、DeepSeek）全部使用 <strong>SwiGLU</strong>——一种门控激活函数，通过三个权重矩阵实现信息的选择性通过。</p>
+  <p>GPT-2 使用 GELU 激活的 FFN，许多现代 decoder-only LLM（如 Llama、Mistral、DeepSeek 系列）改用 <strong>SwiGLU</strong> 或近似的 GLU 变体——一种门控激活函数，通过三个权重矩阵实现信息的选择性通过。</p>
 
   <div class="math-box"><div class="label">SwiGLU vs 标准 FFN</div>
     <div class="katex" data-expr="\text{FFN}_{\text{GELU}}(x) = W_2 \cdot \text{GELU}(W_1 \cdot x)" aria-label="\text{FFN}_{\text{GELU}}(x) = W_2 \cdot \text{GELU}(W_1 \cdot x)" role="img"></div>
@@ -753,8 +772,8 @@ def sinkhorn_knopp(M, num_iter=10):
   <p>你构建了 LLM 的核心构建模块——Transformer Block：</p>
   <ul>
     <li>✅ <strong>LayerNorm（从零实现）</strong> — 均值 + 方差归一化 + 仿射变换，理解为什么 LLM 选择它而非 BatchNorm</li>
-    <li>✅ <strong>RMSNorm</strong> — 去掉均值中心化，提升 15% 速度，Llama/DeepSeek 的选择</li>
-    <li>✅ <strong>Pre-Norm vs Post-Norm</strong> — 理解了为什么"归一化放在哪里"决定了能否训练 1000 层网络</li>
+    <li>✅ <strong>RMSNorm</strong> — 去掉均值中心化，只保留 RMS 缩放，理解其参数和计算差异</li>
+    <li>✅ <strong>Pre-Norm vs Post-Norm</strong> — 用局部梯度路径解释归一化位置如何影响深层训练稳定性</li>
     <li>✅ <strong>机制可解释性</strong> — 区分 probing、logit attribution、activation patching 和 ablation 的适用边界</li>
     <li>✅ <strong>SwiGLU 门控 FFN</strong> — 三个权重矩阵 + SiLU 门控，信息选择性通过</li>
     <li>✅ <strong>SwiGLU 参数预算</strong> — 用 8/3 宽度在接近 4x FFN 参数量下引入门控乘法</li>
@@ -776,7 +795,7 @@ def sinkhorn_knopp(M, num_iter=10):
 <section class="card">
   <h3>📝 概念练习巩固</h3>
 
-  <div class="exercise" data-answer="0" data-explain="RMSNorm 去掉均值中心化，只保留 RMS 缩放（除以 sqrt(mean(x^2))），再乘以可学习的 gamma。它在同等质量下提升约 15% 的计算速度。">
+  <div class="exercise" data-answer="0" data-explain="RMSNorm 去掉均值中心化，只保留 RMS 缩放（除以 sqrt(mean(x^2))），再乘以可学习的 gamma。它减少了均值/方差相关计算，实际速度收益取决于 kernel、硬件、序列长度和模型实现。">
     <h4>练习 1：RMSNorm 与 LayerNorm 的主要区别是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q51" value="0"> A. RMSNorm 省略了均值中心化，只做 RMS 缩放</label>
@@ -789,7 +808,7 @@ def sinkhorn_knopp(M, num_iter=10):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="Pre-Norm 将归一化放在子层输入上，残差流保持未归一化——这使梯度可以沿残差路径无衰减传播。Post-Norm 归一化在残差连接之后，限制了深层网络的梯度流动。">
+  <div class="exercise" data-answer="2" data-explain="Pre-Norm 将归一化放在子层输入上，残差流保留显式 shortcut；在局部线性化模型中，梯度路径含有恒等项。Post-Norm 把归一化放在残差输出之后，norm 的 Jacobian 会直接作用在 shortcut 上。">
     <h4>练习 2：关于 Pre-Norm 的描述哪一项是正确的？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q52" value="0"> A. 归一化在残差连接之后执行</label>

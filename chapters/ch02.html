@@ -105,6 +105,10 @@
     <div class="katex" data-expr="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" aria-label="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" role="img"></div>
   </div>
   <p>作业函数 <code>skipgram_negative_sampling_loss</code> 的输入形状是 <code>center_vectors [B,D]</code>、<code>positive_vectors [B,D]</code> 和 <code>negative_vectors [B,K,D]</code>。这让学生看到：word vectors 不是抽象概念，而是由 dot product、sigmoid 和二分类 loss 训练出来的。</p>
+  <div class="math-box"><div class="label">SGNS 对中心向量的梯度</div>
+    <div class="katex" data-expr="\frac{\partial L_b}{\partial \mathbf{v}_{c_b}}=(\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b})-1)\mathbf{u}_{o_b}+\sum_k \sigma(\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\mathbf{u}_{n_{b,k}}" aria-label="\frac{\partial L_b}{\partial \mathbf{v}_{c_b}}=(\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b})-1)\mathbf{u}_{o_b}+\sum_k \sigma(\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\mathbf{u}_{n_{b,k}}" role="img"></div>
+  </div>
+  <p>在 mean reduction 下还要除以 batch size。梯度下降会沿着负梯度更新：正例项把中心向量拉向真实上下文，负样本项把中心向量推离噪声上下文。Ch02 作业中的 <code>sgns_center_gradient</code> 要求学生把这个符号方向写成张量计算，并与 autograd 对齐。</p>
   <p>SGNS 也可以从矩阵分解角度理解。给定 directed co-occurrence count <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span>、中心词边际计数 <span class="katex-inline" data-expr="X_{i*}" aria-label="X_{i*}" role="img"></span>、上下文词边际计数 <span class="katex-inline" data-expr="X_{*j}" aria-label="X_{*j}" role="img"></span> 和总共现数 <span class="katex-inline" data-expr="X_{**}" aria-label="X_{**}" role="img"></span>，PMI 写作：</p>
   <div class="math-box"><div class="label">PMI 与 shifted PMI</div>
     <div class="katex" data-expr="\text{PMI}(i,j)=\log\frac{X_{ij}X_{**}}{X_{i*}X_{*j}},\qquad \text{SPMI}(i,j)=\text{PMI}(i,j)-\log K" aria-label="\text{PMI}(i,j)=\log\frac{X_{ij}X_{**}}{X_{i*}X_{*j}},\qquad \text{SPMI}(i,j)=\text{PMI}(i,j)-\log K" role="img"></div>

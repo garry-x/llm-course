@@ -30,6 +30,11 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     raise NotImplementedError
 
 
+def sgns_center_gradient(center_vectors, positive_vectors, negative_vectors):
+    """Return d(mean SGNS loss)/d(center_vectors)."""
+    raise NotImplementedError
+
+
 def shifted_pmi_matrix(cooccurrence, negative_samples=1):
     """Compute PMI(i,j) - log(negative_samples) for positive co-occurrence counts."""
     raise NotImplementedError

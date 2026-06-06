@@ -70,6 +70,26 @@ def skipgram_negative_sampling_loss(center_vectors, positive_vectors, negative_v
     return (positive_loss + negative_loss).mean()
 
 
+def sgns_center_gradient(center_vectors, positive_vectors, negative_vectors):
+    """Return d(mean SGNS loss)/d(center_vectors)."""
+    if center_vectors.dim() != 2 or positive_vectors.dim() != 2:
+        raise ValueError("center_vectors and positive_vectors must have shape [B, D]")
+    if negative_vectors.dim() != 3:
+        raise ValueError("negative_vectors must have shape [B, K, D]")
+    if center_vectors.shape != positive_vectors.shape:
+        raise ValueError("center_vectors and positive_vectors must have the same shape")
+    if negative_vectors.size(0) != center_vectors.size(0) or negative_vectors.size(2) != center_vectors.size(1):
+        raise ValueError("negative_vectors must align with batch size and embedding dimension")
+
+    batch_size = center_vectors.size(0)
+    positive_logits = torch.sum(center_vectors * positive_vectors, dim=-1, keepdim=True)
+    negative_logits = torch.sum(negative_vectors * center_vectors.unsqueeze(1), dim=-1, keepdim=True)
+
+    positive_grad = (torch.sigmoid(positive_logits) - 1.0) * positive_vectors
+    negative_grad = (torch.sigmoid(negative_logits) * negative_vectors).sum(dim=1)
+    return (positive_grad + negative_grad) / batch_size
+
+
 def shifted_pmi_matrix(cooccurrence, negative_samples=1):
     if cooccurrence.dim() != 2 or cooccurrence.size(0) != cooccurrence.size(1):
         raise ValueError("cooccurrence must be a square [V, V] matrix")

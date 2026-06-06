@@ -97,11 +97,39 @@ class TestWordVectorObjectives(unittest.TestCase):
         ).mean()
         self.assertTrue(torch.allclose(loss, expected, atol=1e-6))
 
+    def test_sgns_center_gradient_matches_autograd(self):
+        center = torch.tensor([[1.0, 0.0], [0.5, 0.5]], requires_grad=True)
+        positive = torch.tensor([[0.5, 0.0], [0.25, 0.75]])
+        negative = torch.tensor(
+            [
+                [[-1.0, 0.0], [0.0, -1.0]],
+                [[-0.5, 0.0], [0.0, -0.5]],
+            ]
+        )
+        loss = submission.skipgram_negative_sampling_loss(center, positive, negative)
+        loss.backward()
+
+        manual = submission.sgns_center_gradient(center.detach(), positive, negative)
+        self.assertTrue(torch.allclose(manual, center.grad, atol=1e-6))
+
+    def test_sgns_center_gradient_pushes_positive_and_negative_directions(self):
+        center = torch.tensor([[0.0, 0.0]])
+        positive = torch.tensor([[1.0, 0.0]])
+        negative = torch.tensor([[[0.0, 1.0]]])
+
+        grad = submission.sgns_center_gradient(center, positive, negative)
+        expected = torch.tensor([[-0.5, 0.5]])
+        self.assertTrue(torch.allclose(grad, expected, atol=1e-6))
+
     def test_skipgram_negative_sampling_loss_rejects_bad_shapes(self):
         with self.assertRaises(ValueError):
             submission.skipgram_negative_sampling_loss(torch.randn(2), torch.randn(2), torch.randn(1, 1, 2))
         with self.assertRaises(ValueError):
             submission.skipgram_negative_sampling_loss(torch.randn(2, 3), torch.randn(2, 3), torch.randn(2, 4))
+        with self.assertRaises(ValueError):
+            submission.sgns_center_gradient(torch.randn(2), torch.randn(2), torch.randn(1, 1, 2))
+        with self.assertRaises(ValueError):
+            submission.sgns_center_gradient(torch.randn(2, 3), torch.randn(2, 3), torch.randn(2, 4))
 
     def test_shifted_pmi_matrix_matches_cooccurrence_formula(self):
         counts = torch.tensor(

@@ -344,12 +344,14 @@ Quick check：
 
 - global batch tokens、steps、tokens/s、GPU hours 的关系。
 - dense LM 近似训练 FLOPs：`6 * params * train_tokens`。
+- AdamW training memory：参数、梯度和两个 moment states；optimizer state sharding 只分摊 optimizer states。
 - checkpoint storage 与保存频率的成本。
 
 课堂 demo：
 
 - 跑 training capstone 的 tiny train + resume。
 - 手算 20B token 预算下的 step count 与 dense LM FLOPs。
+- 给定 1B 参数、bf16 参数/梯度、fp32 AdamW moments，计算训练显存和 optimizer-state sharding 后的单卡估算。
 - 修改 learning rate 观察 loss 异常。
 
 Quick check：

@@ -43,6 +43,19 @@ def dense_lm_training_flops(num_params, train_tokens):
     raise NotImplementedError
 
 
+def optimizer_state_memory_bytes(
+    num_params,
+    param_dtype_bytes=2,
+    grad_dtype_bytes=2,
+    optimizer_state_dtype_bytes=4,
+    num_moments=2,
+    data_parallel_size=1,
+    shard_optimizer_states=False,
+):
+    """Estimate parameter, gradient, and optimizer-state memory for training."""
+    raise NotImplementedError
+
+
 def cross_entropy_manual(logits, targets):
     raise NotImplementedError
 

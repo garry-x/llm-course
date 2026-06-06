@@ -25,6 +25,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 - `TextDataset[i]` 必须返回等长的 `x` 和 `y`，其中 `y` 是 `x` 右移一位的 next-token target。
 - `ngram_repetition_rate` 和 `ngram_overlap_rate` 必须能发现训练语料重复和 train/eval n-gram 重叠。
 - `global_batch_tokens`、`training_steps_for_token_budget` 和 `dense_lm_training_flops` 必须能把 batch 设置、token 预算和 dense LM 近似训练 FLOPs 连起来。
+- `optimizer_state_memory_bytes` 必须区分参数、梯度、AdamW moments，并能粗估 ZeRO-style optimizer state sharding 后的单卡显存。
 - `cross_entropy_manual` 必须使用 log-sum-exp trick，并与 `torch.nn.functional.cross_entropy` 匹配。
 - `cross_entropy_logits_gradient` 必须返回 mean CE 对 logits 的梯度，并支持被 `ignore_index` 屏蔽的位置不贡献梯度。
 - `label_smoothed_cross_entropy` 必须把 hard target 分布改成平滑分布，并让 `ignore_index` 位置不进入平均。
@@ -38,6 +39,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、global batch tokens、训练步数、dense LM 训练 FLOPs、AdamW 偏置修正、warmup+cosine 边界、n-gram 泄漏诊断和 grad clipping 的诊断意义 |
-| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、AdamW、scheduler 和训练循环 |
+| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、AdamW 偏置修正、warmup+cosine 边界、n-gram 泄漏诊断和 grad clipping 的诊断意义 |
+| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、optimizer state 显存估算、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、AdamW、scheduler 和训练循环 |
 | Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、tokens/s 和 resume 行为 |

@@ -93,6 +93,36 @@ def dense_lm_training_flops(num_params, train_tokens):
     return 6 * int(num_params) * int(train_tokens)
 
 
+def optimizer_state_memory_bytes(
+    num_params,
+    param_dtype_bytes=2,
+    grad_dtype_bytes=2,
+    optimizer_state_dtype_bytes=4,
+    num_moments=2,
+    data_parallel_size=1,
+    shard_optimizer_states=False,
+):
+    values = [num_params, param_dtype_bytes, grad_dtype_bytes, optimizer_state_dtype_bytes, data_parallel_size]
+    if any(value <= 0 for value in values):
+        raise ValueError("counts, dtype bytes, and data_parallel_size must be positive")
+    if num_moments < 0:
+        raise ValueError("num_moments must be non-negative")
+
+    param_bytes = int(num_params) * int(param_dtype_bytes)
+    grad_bytes = int(num_params) * int(grad_dtype_bytes)
+    optimizer_state_bytes = int(num_params) * int(num_moments) * int(optimizer_state_dtype_bytes)
+    per_rank_optimizer_state_bytes = optimizer_state_bytes / int(data_parallel_size) if shard_optimizer_states else optimizer_state_bytes
+    total_bytes = param_bytes + grad_bytes + per_rank_optimizer_state_bytes
+    return {
+        "param_bytes": param_bytes,
+        "grad_bytes": grad_bytes,
+        "optimizer_state_bytes": optimizer_state_bytes,
+        "per_rank_optimizer_state_bytes": per_rank_optimizer_state_bytes,
+        "total_bytes": total_bytes,
+        "total_gb": total_bytes / (1024**3),
+    }
+
+
 def cross_entropy_manual(logits, targets):
     batch, seq_len, vocab_size = logits.shape
     logits_flat = logits.reshape(batch * seq_len, vocab_size)

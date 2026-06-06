@@ -69,7 +69,7 @@
 3. 给定 vocab size、目标 token、`epsilon` 和 logits，构造 label-smoothed target distribution，计算 label-smoothed cross entropy，并说明它和 hard one-hot CE、蒸馏 soft targets 的关系。
 4. 设 tied LM head 为 `z_t = h_t E^T`，说明 CE 梯度如何更新正确 token、错误 token 的 output embedding 行，以及它如何继续传回 Transformer hidden state。
 5. 解释 AdamW 中“解耦权重衰减”和 L2 regularization 的区别，并说明 warmup + cosine decay 的作用。
-6. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16`、训练预算 `D=20B tokens` 和 dense LM 参数量 `N=1B`，计算 global batch tokens、训练 step 数和近似训练 FLOPs，并说明这会如何影响 learning rate schedule、checkpoint 间隔与 GPU hours。
+6. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16`、训练预算 `D=20B tokens` 和 dense LM 参数量 `N=1B`，计算 global batch tokens、训练 step 数和近似训练 FLOPs；再按 bf16 参数/梯度、fp32 AdamW 两个 moment states 计算训练显存，并说明 optimizer-state sharding 会改变哪些项。
 7. 给定 train token 序列和 eval token 序列，计算 n-gram repetition rate 与 train/eval overlap rate，并说明它们如何影响 val loss 和泛化判断。
 8. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。
 9. 给定一组 logits、targets 和 confidence bins，计算每个桶的 accuracy、mean confidence 与 ECE，并说明模型过度自信会如何影响拒答阈值或风险控制。

@@ -219,6 +219,7 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
     <div class="katex" data-expr="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" aria-label="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" role="img"></div>
   </div>
   <p>Ch07 作业中的 <code>global_batch_tokens</code> 和 <code>training_steps_for_token_budget</code> 对应这两个公式。举例：<code>micro_batch=4</code>、<code>seq_len=2048</code>、<code>grad_accum=8</code>、<code>data_parallel=16</code> 时，每步消耗 <code>1,048,576</code> 个 token；若训练预算是 <code>20B</code> token，则需要约 <code>19,074</code> 个 optimizer step。dense decoder-only LM 的粗略训练计算量常用 <span class="katex-inline" data-expr="6ND" aria-label="6ND" role="img"></span> 估算，其中 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> 是参数量，<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 是训练 token 数；作业中的 <code>dense_lm_training_flops</code> 用这个近似把规模、数据和算力预算连起来。</p>
+  <p>训练显存还要包含优化器状态。AdamW 通常为每个参数保存梯度、一阶动量 <code>m</code> 和二阶动量 <code>v</code>；如果参数用 bf16、梯度用 bf16、moment 用 fp32，那么每个参数大约需要 <code>2 + 2 + 2*4 = 12</code> bytes。Ch07 作业中的 <code>optimizer_state_memory_bytes</code> 把参数、梯度、optimizer states 和 ZeRO-style optimizer state sharding 的单卡粗估分开计算。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么这很重要：</strong>learning rate schedule、checkpoint 间隔、日志频率和训练成本都依赖 step count。只报告 epoch 不足以复现 LLM 训练，因为同一语料在不同 packing、sequence length、重复采样和数据配比下会产生不同 token 分布。</div></div>
 
   <h4>Data mixture：不是所有 token 等价</h4>

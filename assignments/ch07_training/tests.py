@@ -106,6 +106,34 @@ class TestTrainingBudget(unittest.TestCase):
             120_000_000_000_000_000_000,
         )
 
+    def test_optimizer_state_memory_counts_adamw_states_and_sharding(self):
+        dense = submission.optimizer_state_memory_bytes(
+            num_params=1_000,
+            param_dtype_bytes=2,
+            grad_dtype_bytes=2,
+            optimizer_state_dtype_bytes=4,
+            num_moments=2,
+            data_parallel_size=4,
+            shard_optimizer_states=False,
+        )
+        self.assertEqual(dense["param_bytes"], 2_000)
+        self.assertEqual(dense["grad_bytes"], 2_000)
+        self.assertEqual(dense["optimizer_state_bytes"], 8_000)
+        self.assertEqual(dense["per_rank_optimizer_state_bytes"], 8_000)
+        self.assertEqual(dense["total_bytes"], 12_000)
+
+        sharded = submission.optimizer_state_memory_bytes(
+            num_params=1_000,
+            param_dtype_bytes=2,
+            grad_dtype_bytes=2,
+            optimizer_state_dtype_bytes=4,
+            num_moments=2,
+            data_parallel_size=4,
+            shard_optimizer_states=True,
+        )
+        self.assertEqual(sharded["per_rank_optimizer_state_bytes"], 2_000)
+        self.assertEqual(sharded["total_bytes"], 6_000)
+
     def test_training_budget_rejects_non_positive_values(self):
         with self.assertRaises(ValueError):
             submission.global_batch_tokens(0, 2048)
@@ -113,6 +141,10 @@ class TestTrainingBudget(unittest.TestCase):
             submission.training_steps_for_token_budget(1000, 0)
         with self.assertRaises(ValueError):
             submission.dense_lm_training_flops(0, 1000)
+        with self.assertRaises(ValueError):
+            submission.optimizer_state_memory_bytes(0)
+        with self.assertRaises(ValueError):
+            submission.optimizer_state_memory_bytes(1000, num_moments=-1)
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")

@@ -8,14 +8,14 @@
 
 完成本模块后，学生应能：
 
-| outcome_id | 学习结果 | 可评分依据 |
+| outcome_id | 学习结果 | 学习产出 |
 |------------|----------|------------|
 | CL-NLP-1 | 用 transition system 描述 dependency parsing，并计算 UAS/LAS | 手写 stack/buffer/arcs trace；Ch11 `run_arc_standard_transitions` 与 `attachment_scores` 测试 |
 | CL-NLP-2 | 计算标量 RNN hidden state 和 BPTT 梯度连乘，解释 LSTM 为什么缓解长程依赖 | Ch11 `scalar_rnn_forward` 与 `recurrent_gradient_factors` 测试；手算题 |
 | CL-NLP-3 | 写出 seq2seq teacher forcing 和 beam search 的目标、搜索状态和 length bias | 书面题；beam table；metric failure case |
 | CL-NLP-4 | 区分 encoder-decoder attention alignment 与 decoder-only causal self-attention | 信息流图；错误解释短答 |
 | CL-NLP-5 | 构造 BERT-style MLM input、labels、loss mask、抽取式 QA span 和 `[CLS]` no-answer 产出 | Ch11 `build_mlm_example` 与 `select_extractive_qa_span` 测试；书面题 |
-| CL-NLP-6 | 判断 BLEU/ROUGE/EM/F1 与人工评价各自能支持什么 claim | 指标反例；项目 metric_card |
+| CL-NLP-6 | 判断 BLEU/ROUGE/EM/F1 与人工评价各自能支持什么 claim | 指标反例；短答解释 |
 
 最低通过标准：学生不能只背术语。每个主题都必须给出一个状态/张量/指标的可计算例子，并说明该例子不能证明什么。
 
@@ -28,7 +28,7 @@
 | 12 周扩展版 B | L16 | RNN/LSTM language modeling and BPTT | scalar recurrence + gradient path drill |
 | 12 周扩展版 C | L17 | Seq2Seq/NMT, attention alignment, beam search | beam search / BLEU drill |
 | 12 周扩展版 D | L18 | BERT/encoder-only and representation fine-tuning | MLM label mask drill |
-| 12 周扩展版 E | L19 | Evaluation failure cases and ethics | metric_card + failure taxonomy |
+| 12 周扩展版 E | L19 | Evaluation failure cases and ethics | metric failure examples |
 
 如果课时有限，依然应保留 RNN/LSTM、dependency parsing、seq2seq、BERT 与 decoder-only LM 的对比表；否则学生容易把所有 NLP 任务都误解为 prompt-based generation。
 

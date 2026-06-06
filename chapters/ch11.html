@@ -148,7 +148,45 @@
 </section>
 
 <section class="card" id="s11-5a">
-  <h3>11.5A Worked Example：Viterbi 解码与 CRF 训练不是一回事</h3>
+  <h3>11.5A Worked Example：MLM loss、masked-token accuracy 与抽取式 QA span</h3>
+  <p>Encoder-only 模型的训练和预测常见错误，是把“输入中所有 token 都可见”和“所有位置都参与 loss”混为一谈。BERT 的 self-attention 可以双向看整句，但 MLM loss 只在被 mask 的位置计算。</p>
+
+  <h4>MLM：只在 mask 位置求平均</h4>
+  <p>设输入 tokens 为 <code>[CLS] the cat sat [SEP]</code>，mask positions 为 <code>[2, 3]</code>，则模型输入和 labels 是：</p>
+  <div class="code-block" data-lang="text">
+masked input: [CLS] the [MASK] [MASK] [SEP]
+labels:       None  None cat    sat    None</div>
+  <p>假设词表只有 <code>[cat, sat, dog]</code> 三个候选，mask 位置的 logits 为：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>position</th><th>gold</th><th>logits for [cat, sat, dog]</th><th>argmax</th></tr>
+      <tr><td>2</td><td>cat</td><td><code>[4.0, 0.0, 0.0]</code></td><td>cat</td></tr>
+      <tr><td>3</td><td>sat</td><td><code>[0.0, 1.0, 3.0]</code></td><td>dog</td></tr>
+    </table>
+  </div>
+  <p>该样本的 MLM loss 是两个 masked positions 的 cross entropy 平均：</p>
+  <div class="math-box"><div class="label">MLM loss denominator</div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{MLM}}=\frac{1}{2}\left[-\log p(\text{cat}\mid x_{\setminus 2,3})-\log p(\text{sat}\mid x_{\setminus 2,3})\right]" aria-label="\mathcal{L}_{\text{MLM}}=\frac{1}{2}[-\log p(cat)-\log p(sat)]" role="img"></div>
+  </div>
+  <p>masked-token accuracy 是 <code>1/2</code>，因为位置 2 预测正确，位置 3 预测成 <code>dog</code>。未 mask 的 <code>[CLS]</code>、<code>the</code> 和 <code>[SEP]</code> 虽然参与上下文编码，但不进入 loss 分母，也不计入 MLM accuracy。这个定义对应作业函数 <code>masked_lm_loss_from_logits</code> 返回的 <code>num_masked</code>、<code>positions</code> 和 <code>accuracy</code>。</p>
+
+  <h4>抽取式 QA：从 start/end logits 选择合法 span</h4>
+  <p>BERT-style QA head 不生成自由文本，而是在输入 passage 中选择一个连续 span。设输入是 <code>[CLS] who founded OpenAI [SEP] Sam Altman founded OpenAI [SEP]</code>，候选答案必须来自 passage token 位置。start/end logits 最高的组合可能如下：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>token</th><th>position</th><th>start logit</th><th>end logit</th></tr>
+      <tr><td><code>[CLS]</code></td><td>0</td><td>1.0</td><td>1.0</td></tr>
+      <tr><td><code>Sam</code></td><td>5</td><td>4.0</td><td>0.2</td></tr>
+      <tr><td><code>Altman</code></td><td>6</td><td>0.5</td><td>3.5</td></tr>
+      <tr><td><code>OpenAI</code></td><td>8</td><td>0.2</td><td>1.8</td></tr>
+    </table>
+  </div>
+  <p>合法 span 要满足 <code>start <= end</code> 且长度不超过 <code>max_answer_len</code>。若 <code>max_answer_len >= 2</code>，<code>Sam Altman</code> 的分数为 <code>4.0 + 3.5 = 7.5</code>，高于 no-answer 的 <code>[CLS]</code> 分数 <code>1.0 + 1.0 = 2.0</code>，所以返回该 span。若 <code>[CLS]</code> 分数最高，系统返回 no-answer；这与 decoder-only LLM 生成一段解释不同，是一个受输入 span 约束的预测问题。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>统一视角：</strong>MLM、token classification、CRF、extractive QA 都把 encoder 输出接到不同 prediction head 上。它们的共同优势是输出空间受控；共同边界是不能自然生成输入中不存在的新文本。</div></div>
+</section>
+
+<section class="card" id="s11-5b">
+  <h3>11.5B Worked Example：Viterbi 解码与 CRF 训练不是一回事</h3>
   <p>考虑一个长度为 2 的 toy NER 序列，标签集合为 <code>O</code> 和 <code>B-PER</code>。模型给出的 emission score 如下，transition score 只考虑从第 1 个 token 到第 2 个 token：</p>
   <div class="table-wrap">
     <table>

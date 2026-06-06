@@ -426,7 +426,7 @@ def summarize_benchmark(latencies, generated_tokens, memory_gb):
     }
 
 
-def build_metric_card(task, metrics, baseline, sample_size, risks=None, uncertainty=None, conclusion=None):
+def build_benchmark_summary(task, metrics, baseline, sample_size, risks=None, uncertainty=None, conclusion=None):
     if not isinstance(task, str) or not task.strip():
         raise ValueError("task must be a non-empty string")
     if not isinstance(metrics, dict) or not metrics:
@@ -453,7 +453,7 @@ def build_metric_card(task, metrics, baseline, sample_size, risks=None, uncertai
         "metrics": normalized_metrics,
         "risks": risk_items,
         "uncertainty": uncertainty or "single_run_limit",
-        "conclusion": conclusion or "metric_card_describes_results_but_does_not_prove_general_capability",
+        "conclusion": conclusion or "summary_describes_results_but_does_not_prove_general_capability",
     }
 
 

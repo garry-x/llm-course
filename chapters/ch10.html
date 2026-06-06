@@ -703,10 +703,10 @@ print(f"量化加速: {result_cache['ms_per_token'] / result_quant['ms_per_token
   </table>
 
   <h4>Benchmark Summary：把评测结果写清楚</h4>
-  <p>本章作业中的 <code>build_metric_card</code> 不是复杂算法，而是训练学生把实验结论写成结构化摘要。一个合格的摘要至少包含：<code>task</code>、<code>sample_size</code>、<code>baseline</code>、<code>metrics</code>、<code>risks</code>、<code>uncertainty</code> 和 <code>conclusion</code>。这样做的重点不是文档格式，而是防止评测结论离开数据条件后被误读。</p>
+  <p>本章作业中的 <code>build_benchmark_summary</code> 不是复杂算法，而是训练学生把实验结论写成结构化摘要。一个合格的摘要至少包含：<code>task</code>、<code>sample_size</code>、<code>baseline</code>、<code>metrics</code>、<code>risks</code>、<code>uncertainty</code> 和 <code>conclusion</code>。这样做的重点不是文档格式，而是防止评测结论离开数据条件后被误读。</p>
 
   <div class="code-block" data-lang="python">
-card = build_metric_card(
+summary = build_benchmark_summary(
     task="RAG customer support QA",
     metrics={"answer_pass_rate": 0.82, "citation_hit_rate": 0.76, "p95_ms": 420.0},
     baseline="bm25-only",

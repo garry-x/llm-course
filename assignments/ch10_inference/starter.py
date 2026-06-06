@@ -98,7 +98,7 @@ def summarize_benchmark(latencies, generated_tokens, memory_gb):
     raise NotImplementedError
 
 
-def build_metric_card(task, metrics, baseline, sample_size, risks=None, uncertainty=None, conclusion=None):
+def build_benchmark_summary(task, metrics, baseline, sample_size, risks=None, uncertainty=None, conclusion=None):
     raise NotImplementedError
 
 

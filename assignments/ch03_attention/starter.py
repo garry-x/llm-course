@@ -35,6 +35,11 @@ def attention_logits_gradient(attn_weights, values, grad_output):
     raise NotImplementedError
 
 
+def attention_qkv_gradients(Q, K, V, grad_output, mask=None):
+    """Return manual (dQ, dK, dV) for scaled dot-product attention."""
+    raise NotImplementedError
+
+
 def attention_entropy(attn_weights, eps=1e-12):
     """Return Shannon entropy over the key dimension for attention weights."""
     raise NotImplementedError

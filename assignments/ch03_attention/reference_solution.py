@@ -80,6 +80,56 @@ def attention_logits_gradient(attn_weights, values, grad_output):
     return attn_weights * (grad_attn - expected_grad)
 
 
+def attention_qkv_gradients(Q, K, V, grad_output, mask=None):
+    """Return manual (dQ, dK, dV) for scaled dot-product attention."""
+    if Q.shape != K.shape or Q.shape != V.shape or Q.shape != grad_output.shape:
+        raise ValueError("Q, K, V, and grad_output must have the same shape")
+    if Q.dim() == 2:
+        Q_batch = Q.unsqueeze(0)
+        K_batch = K.unsqueeze(0)
+        V_batch = V.unsqueeze(0)
+        grad_batch = grad_output.unsqueeze(0)
+        squeeze = True
+    elif Q.dim() == 3:
+        Q_batch, K_batch, V_batch, grad_batch = Q, K, V, grad_output
+        squeeze = False
+    else:
+        raise ValueError("Q, K, V, and grad_output must have shape [T, D] or [B, T, D]")
+
+    batch_size, seq_len, d_k = Q_batch.shape
+    scale = math.sqrt(d_k)
+    scores = torch.matmul(Q_batch, K_batch.transpose(-2, -1)) / scale
+
+    expanded_mask = None
+    if mask is not None:
+        if mask.dim() == 2:
+            if tuple(mask.shape) != (seq_len, seq_len):
+                raise ValueError("2D mask must have shape [T, T]")
+            expanded_mask = mask.to(device=Q_batch.device, dtype=torch.bool).unsqueeze(0)
+        elif mask.dim() == 3:
+            if tuple(mask.shape) != (batch_size, seq_len, seq_len):
+                raise ValueError("3D mask must have shape [B, T, T]")
+            expanded_mask = mask.to(device=Q_batch.device, dtype=torch.bool)
+        else:
+            raise ValueError("mask must have shape [T, T] or [B, T, T]")
+        scores = scores.masked_fill(~expanded_mask, -1e9)
+
+    attn = torch.softmax(scores, dim=-1)
+    grad_v = torch.matmul(attn.transpose(-2, -1), grad_batch)
+    grad_attn = torch.matmul(grad_batch, V_batch.transpose(-2, -1))
+    row_mean = torch.sum(attn * grad_attn, dim=-1, keepdim=True)
+    grad_scores = attn * (grad_attn - row_mean)
+    if expanded_mask is not None:
+        grad_scores = grad_scores.masked_fill(~expanded_mask, 0.0)
+
+    grad_q = torch.matmul(grad_scores, K_batch) / scale
+    grad_k = torch.matmul(grad_scores.transpose(-2, -1), Q_batch) / scale
+
+    if squeeze:
+        return grad_q.squeeze(0), grad_k.squeeze(0), grad_v.squeeze(0)
+    return grad_q, grad_k, grad_v
+
+
 def attention_entropy(attn_weights, eps=1e-12):
     if attn_weights.dim() < 1:
         raise ValueError("attn_weights must have at least one dimension")

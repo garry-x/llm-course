@@ -108,6 +108,53 @@ class TestAttentionBackwardMath(unittest.TestCase):
         manual = submission.attention_logits_gradient(attn.detach(), values, grad_output)
         self.assertTrue(torch.allclose(manual, logits.grad, atol=1e-6))
 
+    def test_attention_qkv_gradients_match_autograd(self):
+        torch.manual_seed(13)
+        Q = torch.randn(2, 4, 3, requires_grad=True)
+        K = torch.randn(2, 4, 3, requires_grad=True)
+        V = torch.randn(2, 4, 3, requires_grad=True)
+        grad_output = torch.randn(2, 4, 3)
+
+        output, _ = submission.scaled_dot_product_attention(Q, K, V)
+        loss = torch.sum(output * grad_output)
+        loss.backward()
+
+        manual_q, manual_k, manual_v = submission.attention_qkv_gradients(
+            Q.detach(),
+            K.detach(),
+            V.detach(),
+            grad_output,
+        )
+        self.assertTrue(torch.allclose(manual_q, Q.grad, atol=1e-6))
+        self.assertTrue(torch.allclose(manual_k, K.grad, atol=1e-6))
+        self.assertTrue(torch.allclose(manual_v, V.grad, atol=1e-6))
+
+    def test_attention_qkv_gradients_match_autograd_with_mask(self):
+        torch.manual_seed(17)
+        Q = torch.randn(3, 4, requires_grad=True)
+        K = torch.randn(3, 4, requires_grad=True)
+        V = torch.randn(3, 4, requires_grad=True)
+        grad_output = torch.randn(3, 4)
+        mask = torch.tensor(
+            [[1, 0, 0], [1, 1, 0], [1, 1, 1]],
+            dtype=torch.bool,
+        )
+
+        output, _ = submission.scaled_dot_product_attention(Q, K, V, mask=mask)
+        loss = torch.sum(output * grad_output)
+        loss.backward()
+
+        manual_q, manual_k, manual_v = submission.attention_qkv_gradients(
+            Q.detach(),
+            K.detach(),
+            V.detach(),
+            grad_output,
+            mask=mask,
+        )
+        self.assertTrue(torch.allclose(manual_q, Q.grad, atol=1e-6))
+        self.assertTrue(torch.allclose(manual_k, K.grad, atol=1e-6))
+        self.assertTrue(torch.allclose(manual_v, V.grad, atol=1e-6))
+
     def test_attention_backward_helpers_reject_bad_shapes(self):
         with self.assertRaises(ValueError):
             submission.softmax_jacobian(torch.randn(2, 2))
@@ -115,6 +162,21 @@ class TestAttentionBackwardMath(unittest.TestCase):
             submission.attention_logits_gradient(torch.randn(2, 1), torch.randn(2, 3), torch.randn(3))
         with self.assertRaises(ValueError):
             submission.attention_logits_gradient(torch.randn(2), torch.randn(2, 3), torch.randn(4))
+        with self.assertRaises(ValueError):
+            submission.attention_qkv_gradients(
+                torch.randn(2, 3),
+                torch.randn(2, 3),
+                torch.randn(2, 4),
+                torch.randn(2, 3),
+            )
+        with self.assertRaises(ValueError):
+            submission.attention_qkv_gradients(
+                torch.randn(1, 2, 3),
+                torch.randn(1, 2, 3),
+                torch.randn(1, 2, 3),
+                torch.randn(1, 2, 3),
+                mask=torch.ones(2, 2, 1, dtype=torch.bool),
+            )
 
     def test_attention_entropy_measures_sharpness(self):
         peaked = torch.tensor([[1.0, 0.0, 0.0]])

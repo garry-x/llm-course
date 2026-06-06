@@ -350,7 +350,11 @@ dL/dz_2 = 0.3 * (-3.0 - (-1.8)) = -0.36
 dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
     <p>三个 logits 梯度相加为 0，这是 softmax 的平移不变性：所有 logits 同时加同一个常数不会改变概率分布。这个例子对应作业中的 <code>attention_logits_gradient</code>，也说明了 value 内容会影响哪些 attention logits 被推高或压低。</p>
   </div>
-  <p>Ch03 作业中的 <code>softmax_jacobian</code> 和 <code>attention_logits_gradient</code> 对应这条路径。学生不需要手写完整 Transformer backward，但应该能解释：梯度先穿过 value 加权和，再穿过 softmax Jacobian，最后才回到 Q/K 点积。</p>
+  <p>Ch03 作业中的 <code>softmax_jacobian</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 对应这条路径。学生不需要手写完整 Transformer backward，但应该能解释：梯度先穿过 value 加权和，再穿过 softmax Jacobian，最后回到 Q/K 点积。</p>
+  <div class="math-box"><div class="label">从 logits 梯度回到 Q/K/V</div>
+    <div class="katex" data-expr="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" aria-label="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" role="img"></div>
+  </div>
+  <p>这里的关键不是背公式，而是把链式法则和矩阵乘法方向对齐：<code>dV</code> 来自 attention weights 对 value 的加权，<code>dQ</code> 和 <code>dK</code> 来自 score 矩阵对点积两侧的梯度，且二者都必须带上 <code>1/sqrt(d_k)</code>。这也是为什么课程要求把手写梯度和 PyTorch autograd 数值对齐。</p>
 </section>
 
 <!-- ================================================================ -->

@@ -79,7 +79,7 @@
 <li>若 <code>q_i, k_i</code> 独立且均值 0、方差 1，推导 <code>q^T k</code> 的方差，并说明为什么 attention scores 要除以 <code>sqrt(d_k)</code>。</li>
 <li>证明或数值验证无位置编码、无遮挡 self-attention 满足 <code>Attn(PX)=P Attn(X)</code>；说明为什么 causal mask 或位置编码会打破完整置换等变性。</li>
 <li>写出 causal mask 在 <code>T=4</code> 时的矩阵；给定 padding mask <code>[[1,1,0,0],[1,1,1,0]]</code>，写出合成后的 <code>[B,T,T]</code> attention mask，并说明 mask 值应该在 softmax 前还是 softmax 后应用。</li>
-<li>推导 softmax Jacobian <code>J_ij = p_i(delta_ij - p_j)</code>，并说明 attention 输出梯度如何通过 <code>p @ V</code> 传回 logits。</li>
+<li>推导 softmax Jacobian <code>J_ij = p_i(delta_ij - p_j)</code>，并说明 attention 输出梯度如何通过 <code>p @ V</code> 传回 logits；进一步对 <code>S = QK^T/sqrt(d_k)</code> 推导 <code>dQ = dS K / sqrt(d_k)</code>、<code>dK = dS^T Q / sqrt(d_k)</code> 和 <code>dV = P^T dO</code>，写清每个张量的 shape。</li>
 <li>给定 attention weights <code>[1,0,0]</code> 和 <code>[1/3,1/3,1/3]</code>，计算 attention entropy，并说明它如何反映 softmax 分布尖锐程度。</li>
 <li>分析 self-attention 的时间复杂度和显存复杂度；给定 <code>B,H,T,dtype_bytes</code>，计算 dense attention score 矩阵的显存，并区分训练时保存 activation 与推理时 KV Cache 的差异。</li>
 <li>给定一张 attention heatmap，说明它能支持哪些路由诊断、不能单独支持哪些因果解释；设计一个 ablation 或 counterfactual prompt 比较模型行为变化。</li>

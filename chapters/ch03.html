@@ -367,6 +367,26 @@ def create_causal_mask(seq_len):
     <div class="task">
       <p><strong>任务：</strong>实现 <code>combine_causal_padding_mask(padding_mask)</code>。输入 <code>padding_mask</code> 形状为 <code>(batch, seq_len)</code>，True 表示真实 token，False 表示 padding；输出形状为 <code>(batch, seq_len, seq_len)</code>，同时屏蔽未来 key 和 padding key。</p>
       <p><strong>关键 shape：</strong><code>causal_mask</code> 为 <code>(T,T)</code>，扩展成 <code>(1,T,T)</code>；<code>padding_mask</code> 作为 key mask 扩展成 <code>(B,1,T)</code>；二者逻辑与得到 <code>(B,T,T)</code>。</p>
+      <h4>Worked Example：一行 padding mask 如何变成注意力矩阵</h4>
+      <p>设单个样本长度为 4，<code>padding_mask = [True, True, True, False]</code>，最后一个位置是 padding。因果 mask 只允许每个 query 看见自己和过去；padding mask 只允许看见真实 key。二者合成后得到：</p>
+      <pre>causal mask:
+[[1, 0, 0, 0],
+ [1, 1, 0, 0],
+ [1, 1, 1, 0],
+ [1, 1, 1, 1]]
+
+valid key mask broadcast:
+[[1, 1, 1, 0],
+ [1, 1, 1, 0],
+ [1, 1, 1, 0],
+ [1, 1, 1, 0]]
+
+combined mask:
+[[1, 0, 0, 0],
+ [1, 1, 0, 0],
+ [1, 1, 1, 0],
+ [1, 1, 1, 0]]</pre>
+      <p>注意最后一行仍然能“看见”前三个真实 key，这是因为这个函数只屏蔽 padding key 列；实际训练 loss 会用 label mask 或 attention/output mask 跳过 padding query 位置。把 padding query 行也清零通常会导致整行 softmax 全是 <code>-inf</code>，需要额外处理，因此作业里先要求学生正确实现 key-side padding mask。</p>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">

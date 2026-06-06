@@ -94,7 +94,7 @@
 </ol>
 <h3 id="ch05-transformer-block-norm-ffn">Ch05 Transformer Block / Norm / FFN</h3>
 <ol>
-<li>推导 LayerNorm 的 <code>mu</code>、<code>var</code>、<code>x_hat</code>，说明反向传播中为什么不能把 <code>mu</code> 和 <code>var</code> 当常数。</li>
+<li>推导 LayerNorm 的 <code>mu</code>、<code>var</code>、<code>x_hat</code>，说明反向传播中为什么不能把 <code>mu</code> 和 <code>var</code> 当常数；再对 <code>RMSNorm(x)=gamma*x/sqrt(mean(x^2)+eps)</code> 推导 <code>dL/dx</code>，指出梯度中为什么会出现跨特征维度的 coupling term。</li>
 <li>比较 Pre-Norm 与 Post-Norm 的梯度路径；给定若干层的子层局部斜率和 norm 局部斜率，在线性化标量模型中计算逐层梯度因子，并解释为什么深层 decoder-only 模型常用 Pre-Norm。</li>
 <li>比较 GELU FFN、SwiGLU 和 MoE FFN 的参数量、激活参数量和训练稳定性取舍。</li>
 <li>推导 SwiGLU 中 <code>d_ff = 8/3 * d_model</code> 与 4x GELU FFN 参数量近似相等；令 <code>d_model=24</code>，计算 bias-free GELU FFN 与 SwiGLU 的隐藏宽度和参数量，并解释门控乘法能表达哪些 token 条件化交互。</li>

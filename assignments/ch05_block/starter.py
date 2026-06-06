@@ -35,6 +35,11 @@ class RMSNorm(nn.Module):
         raise NotImplementedError
 
 
+def rms_norm_input_gradient(x, gamma, grad_output, eps=1e-6):
+    """Return dL/dx for RMSNorm(x) = gamma * x / sqrt(mean(x^2) + eps)."""
+    raise NotImplementedError
+
+
 class FFN(nn.Module):
     def __init__(self, d_model, d_ff=None):
         super().__init__()

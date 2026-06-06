@@ -59,6 +59,23 @@ class RMSNorm(nn.Module):
         return x / rms * self.gamma
 
 
+def rms_norm_input_gradient(x, gamma, grad_output, eps=1e-6):
+    """Return dL/dx for RMSNorm(x) = gamma * x / sqrt(mean(x^2) + eps)."""
+    if x.dim() < 1:
+        raise ValueError("x must have at least one dimension")
+    if gamma.shape != (x.size(-1),):
+        raise ValueError("gamma must have shape [D]")
+    if grad_output.shape != x.shape:
+        raise ValueError("grad_output must have the same shape as x")
+    if eps <= 0:
+        raise ValueError("eps must be positive")
+
+    inv_rms = torch.rsqrt(x.pow(2).mean(dim=-1, keepdim=True) + eps)
+    scaled_grad = grad_output * gamma
+    coupling = torch.sum(scaled_grad * x, dim=-1, keepdim=True) / x.size(-1)
+    return scaled_grad * inv_rms - x * coupling * inv_rms.pow(3)
+
+
 class FFN(nn.Module):
     def __init__(self, d_model, d_ff=None):
         super().__init__()

@@ -63,6 +63,29 @@ class TestRMSNorm(unittest.TestCase):
         self.assertFalse(torch.allclose(y.mean(dim=-1), torch.zeros(2, 5), atol=1e-2))
         self.assertFalse(hasattr(rms_norm, "beta"))
 
+    def test_rms_norm_input_gradient_matches_autograd(self):
+        torch.manual_seed(22)
+        x = torch.randn(2, 3, 5, requires_grad=True)
+        gamma = torch.randn(5)
+        grad_output = torch.randn(2, 3, 5)
+        eps = 1e-6
+
+        rms = torch.sqrt(x.pow(2).mean(dim=-1, keepdim=True) + eps)
+        y = x / rms * gamma
+        loss = torch.sum(y * grad_output)
+        loss.backward()
+
+        manual = submission.rms_norm_input_gradient(x.detach(), gamma, grad_output, eps=eps)
+        self.assertTrue(torch.allclose(manual, x.grad, atol=1e-6))
+
+    def test_rms_norm_input_gradient_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.rms_norm_input_gradient(torch.randn(2, 3), torch.randn(4), torch.randn(2, 3))
+        with self.assertRaises(ValueError):
+            submission.rms_norm_input_gradient(torch.randn(2, 3), torch.randn(3), torch.randn(2, 4))
+        with self.assertRaises(ValueError):
+            submission.rms_norm_input_gradient(torch.randn(2, 3), torch.randn(3), torch.randn(2, 3), eps=0)
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch05 block tests")
 class TestFeedForward(unittest.TestCase):

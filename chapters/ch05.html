@@ -256,6 +256,10 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
     </div>
     <p>因此输出约为 <code>[0.471, 0.943, 0.943, 1.414]</code>。它的 RMS 等于 1，但均值仍约为 <code>0.883</code>，并没有变成 0。LayerNorm 会先减去均值 <code>2.0</code> 再除以标准差；RMSNorm 保留原向量方向，只把长度缩放到稳定尺度。这就是为什么作业测试会检查输出 RMS 接近 1，同时确认输出均值不一定为 0。</p>
   </div>
+  <div class="math-box"><div class="label">RMSNorm 输入梯度</div>
+    <div class="katex" data-expr="r=\sqrt{\frac{1}{d}\sum_i x_i^2+\epsilon},\quad g=\frac{\partial L}{\partial y}\odot\gamma,\quad \frac{\partial L}{\partial x}= \frac{g}{r}-x\frac{\operatorname{mean}(g\odot x)}{r^3}" aria-label="r=\sqrt{\frac{1}{d}\sum_i x_i^2+\epsilon},\quad g=\frac{\partial L}{\partial y}\odot\gamma,\quad \frac{\partial L}{\partial x}= \frac{g}{r}-x\frac{\operatorname{mean}(g\odot x)}{r^3}" role="img"></div>
+  </div>
+  <p>第二项是 RMSNorm 反向传播中最容易漏掉的耦合项：每个特征都会影响共享的 RMS 分母，所以某一维的梯度不只取决于本维的上游梯度。Ch05 作业中的 <code>rms_norm_input_gradient</code> 要求学生把这个公式写成张量计算，并与 PyTorch autograd 对齐。</p>
 
   <div class="coding-exercise">
     <h4>🖥️ 练习 2：RMSNorm 模块</h4>

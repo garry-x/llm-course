@@ -48,7 +48,7 @@
 
 ## Ch05 Transformer Block / Norm / FFN
 
-1. 推导 LayerNorm 的 `mu`、`var`、`x_hat`，说明反向传播中为什么不能把 `mu` 和 `var` 当常数。
+1. 推导 LayerNorm 的 `mu`、`var`、`x_hat`，说明反向传播中为什么不能把 `mu` 和 `var` 当常数；再对 `RMSNorm(x)=gamma*x/sqrt(mean(x^2)+eps)` 推导 `dL/dx`，指出梯度中为什么会出现跨特征维度的 coupling term。
 2. 比较 Pre-Norm 与 Post-Norm 的梯度路径；给定若干层的子层局部斜率和 norm 局部斜率，在线性化标量模型中计算逐层梯度因子，并解释为什么深层 decoder-only 模型常用 Pre-Norm。
 3. 比较 GELU FFN、SwiGLU 和 MoE FFN 的参数量、激活参数量和训练稳定性取舍。
 4. 推导 SwiGLU 中 `d_ff = 8/3 * d_model` 与 4x GELU FFN 参数量近似相等；令 `d_model=24`，计算 bias-free GELU FFN 与 SwiGLU 的隐藏宽度和参数量，并解释门控乘法能表达哪些 token 条件化交互。

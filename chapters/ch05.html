@@ -229,6 +229,15 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
     <div class="katex" data-expr="\text{RMSNorm}(\mathbf{x}) = \gamma \odot \frac{\mathbf{x}}{\sqrt{\text{RMS}(\mathbf{x})^2 + \epsilon}}, \quad \text{RMS}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2}" aria-label="\text{RMSNorm}(\mathbf{x}) = \gamma \odot \frac{\mathbf{x}}{\sqrt{\text{RMS}(\mathbf{x})^2 + \epsilon}}, \quad \text{RMS}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2}" role="img"></div>
   </div>
 
+  <div class="worked-example">
+    <h4>Worked Example：RMSNorm 不做均值中心化</h4>
+    <p>取一个 4 维向量 <code>x=[1, 2, 2, 3]</code>，先不考虑 <code>eps</code> 和 <code>gamma</code>。RMSNorm 计算平方均值：</p>
+    <div class="math-box"><div class="label">RMS 手算</div>
+      <div class="katex" data-expr="\text{RMS}(x)=\sqrt{(1^2+2^2+2^2+3^2)/4}=\sqrt{18/4}\approx 2.121" aria-label="\text{RMS}(x)=\sqrt{(1^2+2^2+2^2+3^2)/4}=\sqrt{18/4}\approx 2.121" role="img"></div>
+    </div>
+    <p>因此输出约为 <code>[0.471, 0.943, 0.943, 1.414]</code>。它的 RMS 等于 1，但均值仍约为 <code>0.883</code>，并没有变成 0。LayerNorm 会先减去均值 <code>2.0</code> 再除以标准差；RMSNorm 保留原向量方向，只把长度缩放到稳定尺度。这就是为什么作业测试会检查输出 RMS 接近 1，同时确认输出均值不一定为 0。</p>
+  </div>
+
   <div class="coding-exercise">
     <h4>🖥️ 练习 2：RMSNorm 模块</h4>
     <div class="task">

@@ -316,6 +316,25 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <div class="math-box"><div class="label">Attention Backward Path</div>
     <div class="katex" data-expr="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" aria-label="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" role="img"></div>
   </div>
+  <div class="worked-example">
+    <h4>Worked Example：从输出梯度手算回 attention logits</h4>
+    <p>设某个 query 的注意力权重为 <code>p=[0.2, 0.3, 0.5]</code>，三个 value 为 <code>v1=[1,0]</code>、<code>v2=[0,2]</code>、<code>v3=[-1,1]</code>，上游梯度为 <code>g=[0.5,-1.5]</code>。先计算每个 value 对 loss 的局部贡献：</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>位置</th><th>value</th><th><code>dL/dp_i = g dot v_i</code></th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><code>[1,0]</code></td><td><code>0.5</code></td></tr>
+        <tr><td>2</td><td><code>[0,2]</code></td><td><code>-3.0</code></td></tr>
+        <tr><td>3</td><td><code>[-1,1]</code></td><td><code>-2.0</code></td></tr>
+      </tbody>
+    </table>
+    <p>加权平均项为 <code>sum_i p_i dL/dp_i = 0.2*0.5 + 0.3*(-3.0) + 0.5*(-2.0) = -1.8</code>。因此 logits 梯度为：</p>
+    <pre>dL/dz_1 = 0.2 * ( 0.5 - (-1.8)) =  0.46
+dL/dz_2 = 0.3 * (-3.0 - (-1.8)) = -0.36
+dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
+    <p>三个 logits 梯度相加为 0，这是 softmax 的平移不变性：所有 logits 同时加同一个常数不会改变概率分布。这个例子对应作业中的 <code>attention_logits_gradient</code>，也说明了 value 内容会影响哪些 attention logits 被推高或压低。</p>
+  </div>
   <p>Ch03 作业中的 <code>softmax_jacobian</code> 和 <code>attention_logits_gradient</code> 对应这条路径。学生不需要手写完整 Transformer backward，但应该能解释：梯度先穿过 value 加权和，再穿过 softmax Jacobian，最后才回到 Q/K 点积。</p>
 </section>
 

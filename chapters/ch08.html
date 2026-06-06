@@ -642,7 +642,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <div class="coding-exercise">
     <h4>练习 6：实现推测解码</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>speculative_decoding(target_model, draft_model, tokenizer, input_ids, gamma=4)</code>。</p>
+      <p><strong>任务：</strong>实现 <code>speculative_decoding(target_model, draft_model, input_ids, gamma=4, max_new_tokens=100, eos_token_id=None)</code>。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>草稿模型用 Top-P 采样生成 <code>gamma</code> 个候选 token</li>
@@ -652,28 +652,27 @@ metrics     distinct-2, repetition rate, task score, latency</div>
         <li>全部接受则额外从目标模型采样一个 token</li>
       </ul>
       <pre># 预期用法
-output = speculative_decoding(
+output, stats = speculative_decoding(
     target_model=model_7b,       # 大模型
     draft_model=model_100m,      # 小模型
-    tokenizer=tokenizer,
     input_ids=prompt,
     gamma=4,
 )
-print(f"生成 {output.size(1)} tokens")</pre>
+print(stats)  # proposed, accepted, acceptance_rate</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
-def speculative_decoding(target_model, draft_model, tokenizer,
-                         input_ids, gamma=4, max_new_tokens=100):
-    """
-    推测解码：草稿 → 验证 → 拒绝采样 → 分布保持加速
-    """
+def speculative_decoding(target_model, draft_model,
+                         input_ids, gamma=4, max_new_tokens=100,
+                         eos_token_id=None):
+    """推测解码：草稿 → 验证 → 拒绝采样 → 分布保持加速"""
     device = next(target_model.parameters()).device
     prefix = input_ids.to(device)
     n_orig = prefix.size(1)
+    proposed = 0
+    accepted_count = 0
 
     while prefix.size(1) - n_orig < max_new_tokens:
-        # —— 1. 草稿阶段 ——
         draft_ids = prefix.clone()
         with torch.no_grad():
             for _ in range(gamma):
@@ -682,60 +681,69 @@ def speculative_decoding(target_model, draft_model, tokenizer,
                 next_token = torch.multinomial(probs, 1)
                 draft_ids = torch.cat([draft_ids, next_token], dim=-1)
 
-        draft_tokens = draft_ids[:, -gamma:]
-
-        # —— 2. 验证：目标模型一次 forward ——
-        with torch.no_grad():
             target_logits = target_model(draft_ids)
             draft_logits = draft_model(draft_ids)
 
-        # 获取候选位置的概率
-        target_probs = torch.softmax(
-            target_logits[:, -(gamma+1):-1, :], dim=-1)
-        draft_probs = torch.softmax(
-            draft_logits[:, -(gamma+1):-1, :], dim=-1)
+        draft_tokens = draft_ids[:, -gamma:]
+        proposed += draft_tokens.size(1)
+        target_probs = torch.softmax(target_logits[:, -(gamma + 1):-1, :], dim=-1)
+        draft_probs = torch.softmax(draft_logits[:, -(gamma + 1):-1, :], dim=-1)
 
-        # —— 3. 拒绝采样 ——
         accepted = []
         n_accepted = 0
-
         for t in range(gamma):
             token = draft_tokens[0, t].item()
             p = target_probs[0, t, token].item()
-            q = draft_probs[0, t, token].item()
-
-            if p >= q:
+            q = max(draft_probs[0, t, token].item(), 1e-12)
+            if p >= q or torch.rand(1).item() < p / q:
                 accepted.append(token)
                 n_accepted += 1
+                accepted_count += 1
             else:
-                if torch.rand(1).item() < p / q:
-                    accepted.append(token)
-                    n_accepted += 1
-                else:
-                    # 从修正分布采样
-                    residual = (target_probs[0, t] - draft_probs[0, t]).clamp(min=0)
-                    residual /= residual.sum()
-                    corrected = torch.multinomial(residual, 1).item()
-                    accepted.append(corrected)
-                    break
+                residual = (target_probs[0, t] - draft_probs[0, t]).clamp(min=0)
+                residual = residual / residual.sum()
+                accepted.append(torch.multinomial(residual, 1).item())
+                break
 
         if n_accepted == gamma:
-            # 全部接受：额外采样一个 token
-            last_logit = target_logits[:, -1, :]
-            extra_probs = torch.softmax(last_logit, dim=-1)
-            extra = torch.multinomial(extra_probs, 1).item()
-            accepted.append(extra)
+            extra_probs = torch.softmax(target_logits[:, -1, :], dim=-1)
+            accepted.append(torch.multinomial(extra_probs, 1).item())
 
-        # —— 4. 添加结果 ——
-        prefix = torch.cat([
-            prefix,
-            torch.tensor([accepted], device=device)
-        ], dim=-1)
+        accepted = accepted[:max_new_tokens - (prefix.size(1) - n_orig)]
+        prefix = torch.cat([prefix, torch.tensor([accepted], device=device)], dim=-1)
+        if eos_token_id is not None and accepted[-1] == eos_token_id:
+            break
 
-    return prefix</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>分布保持分析：</strong>在草稿/目标概率、采样温度和拒绝采样实现都满足论文假设时，最终输出分布可与直接用目标模型采样保持一致。加速比可用 <span class="katex-inline" data-expr="\gamma / (1 + \alpha \gamma)" aria-label="\gamma / (1 + \alpha \gamma)" role="img"></span> 作一阶估算，其中 <span class="katex-inline" data-expr="\alpha = t_{\text{draft}} / t_{\text{target}}" aria-label="\alpha = t_{\text{draft}} / t_{\text{target}}" role="img"></span>；真实收益还取决于接受率、batching、kernel 和服务调度。</p>
-    </div>
+    stats = {
+        "proposed": proposed,
+        "accepted": accepted_count,
+        "acceptance_rate": accepted_count / proposed if proposed else 0.0,
+    }
+    return prefix, stats</div>
+	      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>分布保持分析：</strong>在草稿/目标概率、采样温度和拒绝采样实现都满足论文假设时，最终输出分布可与直接用目标模型采样保持一致。速度收益不能只看 <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span>：如果每轮草稿生成 <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span> 个 token、目标模型验证 1 次、草稿单步耗时是目标单步的 <span class="katex-inline" data-expr="\alpha" aria-label="\alpha" role="img"></span>，则每轮耗时约为 <span class="katex-inline" data-expr="1+\alpha\gamma" aria-label="1+\alpha\gamma" role="img"></span> 个目标模型单步单位；真正的分子是该轮实际写入输出的 token 数，取决于接受率。</p>
+	    </div>
+	  </div>
+	</section>
+
+<!-- ================================================================ -->
+<!-- 8.9A Worked Example -->
+<!-- ================================================================ -->
+<section class="card" id="s8-9a">
+  <h3>8.9A Worked Example：推测解码的接受率与速度账本</h3>
+  <p>设 <code>gamma=4</code>，草稿模型生成一个 token 的耗时是目标模型单步耗时的 <span class="katex-inline" data-expr="\alpha=0.2" aria-label="\alpha=0.2" role="img"></span>。每轮都先用草稿模型提议 4 个 token，再用目标模型做 1 次并行验证。考虑三轮生成：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>轮次</th><th>草稿提议数</th><th>被接受的草稿 token</th><th>写入输出 token</th><th>说明</th></tr>
+      <tr><td>1</td><td>4</td><td>4</td><td>5</td><td>4 个全接受，目标模型额外采样 1 个 token</td></tr>
+      <tr><td>2</td><td>4</td><td>2</td><td>3</td><td>第 3 个草稿 token 被拒绝，写入 2 个接受 token + 1 个修正 token</td></tr>
+      <tr><td>3</td><td>4</td><td>3</td><td>4</td><td>接受 3 个后拒绝 1 个，写入修正 token 后进入下一轮</td></tr>
+    </table>
   </div>
+  <p>这三轮一共提议 <code>12</code> 个草稿 token，接受 <code>9</code> 个，接受率是 <code>9/12=75%</code>；实际写入输出 <code>5+3+4=12</code> 个 token。若不用推测解码，目标模型需要 12 次自回归 forward。使用推测解码时，目标模型只验证 3 次，但草稿模型运行了 12 次，所以粗略耗时为：</p>
+  <div class="math-box"><div class="label">speculative decoding rough speedup</div>
+    <div class="katex" data-expr="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" aria-label="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" role="img"></div>
+  </div>
+  <p>这个账本解释了两个常见误区：第一，<code>gamma=4</code> 不代表固定 4 倍加速，因为草稿模型也要花时间，且拒绝会减少每轮产出的 token；第二，接受率高也不自动等于端到端高吞吐，真实服务还受 batching、KV cache、内存带宽、网络和排队影响。因此实验报告应同时给出 <code>proposed</code>、<code>accepted</code>、<code>acceptance_rate</code>、目标模型调用次数和生成 token 数。</p>
 </section>
 
 <!-- ================================================================ -->

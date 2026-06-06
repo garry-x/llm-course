@@ -508,6 +508,19 @@ class SimpleRAG:
   <p>训练 bi-encoder retrieval embedding 时，常用 in-batch negatives：同一个 batch 中第 <code>i</code> 个 query 的正样本文档是第 <code>i</code> 个 document，其余 document 都作为负样本。Ch10 作业中的 <code>contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature)</code> 对 embedding 做 L2 normalization，计算 <code>Q D^T / temperature</code>，再用对角线标签做 cross entropy。这就是 InfoNCE / contrastive retrieval loss 的最小形式；它训练的是向量空间，后续仍要用 Recall@k、MRR、nDCG 和端到端答案质量检验是否真的改善 RAG。</p>
   <p>Cross-encoder reranker 的训练方式不同：它直接读取 query 和候选文档拼接后的文本，输出一个相关性分数。给定同一 query 下的 chosen/rejected 文档对，<code>pairwise_reranker_loss(chosen_scores, rejected_scores)</code> 可用 <code>-log sigmoid(s_chosen - s_rejected)</code> 训练排序方向。Bi-encoder 适合大规模召回，cross-encoder 更适合对 top-k 候选做精排；二者的 loss、输入形式和服务成本都不同。</p>
   <p>Ch10 作业中的 <code>recall_at_k(retrieved_ids, relevant_ids, k)</code>、<code>reciprocal_rank_at_k(...)</code> 和 <code>ndcg_at_k(retrieved_ids, relevance_scores, k)</code> 分别对应三个问题：top-k 里是否包含应命中的文档、第一个相关文档排在第几位、分级相关性更高的文档是否排得更靠前。nDCG 的 DCG 项通常写作 <code>(2^rel - 1) / log2(rank + 1)</code>，再除以理想排序的 IDCG，使分数落在 0 到 1 附近。若 Recall@5 很低，生成模型通常没有足够上下文；若 Recall@5 高但 reciprocal rank 或 nDCG 低，说明相关 chunk 被排在后面，容易被 prompt 截断或被无关上下文干扰。作业还加入 <code>reciprocal_rank_fusion</code>、<code>rerank_documents</code> 与 <code>maximal_marginal_relevance</code>，让学生实现 hybrid search、cross-encoder rerank 和去冗余 chunk selection 的最小版本。</p>
+
+  <h4>Worked Example：Recall@k、MRR 与 nDCG 看到的是不同失败</h4>
+  <p>设某个 query 的检索结果为 <code>[doc9, doc2, doc5, doc1]</code>，标准相关文档集合为 <code>{doc1, doc2, doc7}</code>。看 top-3 时，只命中了 <code>doc2</code> 一个相关文档：</p>
+  <div class="math-box"><div class="label">Recall and reciprocal rank at k=3</div>
+    <div class="katex" data-expr="\text{Recall@3}=\frac{1}{3},\qquad \text{MRR@3}=\frac{1}{2}" aria-label="\text{Recall@3}=\frac{1}{3},\qquad \text{MRR@3}=\frac{1}{2}" role="img"></div>
+  </div>
+  <p>Recall@3 低说明召回不足：三个 gold 文档只找回一个。MRR@3 是 <code>1/2</code>，因为第一个相关文档排在第 2 位；它不关心后面是否还有更多相关文档。因此一个系统可能 Recall 不高但 MRR 还可以，表示“第一条证据还算靠前，但证据覆盖不足”。</p>
+
+  <p>nDCG 进一步处理分级相关性。若 <code>doc1=3</code>、<code>doc2=2</code>、<code>doc3=1</code>，理想排序是 <code>[doc1, doc2, doc3]</code>。若系统给出 <code>[doc3, doc2, doc1]</code>，则高相关文档被放到后面：</p>
+  <div class="math-box"><div class="label">nDCG@3 for a poor ranking</div>
+    <div class="katex" data-expr="\text{nDCG@3}=\frac{(2^1-1)/\log_2 2+(2^2-1)/\log_2 3+(2^3-1)/\log_2 4}{(2^3-1)/\log_2 2+(2^2-1)/\log_2 3+(2^1-1)/\log_2 4}\approx 0.68" aria-label="\text{nDCG@3}=\frac{(2^1-1)/\log_2 2+(2^2-1)/\log_2 3+(2^3-1)/\log_2 4}{(2^3-1)/\log_2 2+(2^2-1)/\log_2 3+(2^1-1)/\log_2 4}\approx 0.68" role="img"></div>
+  </div>
+  <p>这个例子说明：Recall 判断是否找到了足够证据，MRR 判断第一条有用证据多靠前，nDCG 判断高价值证据是否排在前面。RAG debug 时要先看检索指标，再看 context packing 和生成忠实性，否则很容易把“没检索到证据”误判成“生成模型幻觉”。</p>
   <p>检索和重排之后还要做 <strong>context packing</strong>。<code>build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_tokens)</code> 在 prompt 预算内装配带 citation 的 chunk，并报告 <code>used_tokens</code>、<code>citations</code> 和 <code>skipped</code>。这一步能暴露一种常见错误：相关 chunk 已经被检索到，但因为排序靠后、重复 chunk 太多或输出预算预留过大，最终没有进入 prompt。</p>
   <p>MMR 的选择规则是每一步选最大化 <code>lambda * sim(query, doc) - (1 - lambda) * max_sim(doc, selected)</code> 的候选。它不是提高召回的训练目标，而是 prompt assembly 前的贪心选择策略：当多个 chunk 都来自同一段近重复文本时，MMR 会牺牲一点 query 相似度，换取覆盖互补信息的上下文。</p>
 

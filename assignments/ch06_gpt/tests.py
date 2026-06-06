@@ -7,6 +7,7 @@ import unittest
 try:
     import torch
     import torch.nn as nn
+    import torch.nn.functional as F
 except ModuleNotFoundError:
     torch = None
     nn = None
@@ -104,6 +105,44 @@ class TestGPTModel(unittest.TestCase):
         self.assertEqual(groups["position_embedding"], 1_024 * 768)
         self.assertEqual(groups["lm_head"], 0)
         self.assertEqual(groups["total"], 124_439_808)
+
+    def test_causal_lm_loss_shifts_labels_to_next_token(self):
+        logits = torch.tensor(
+            [
+                [
+                    [4.0, 1.0, 0.0, -1.0],
+                    [0.0, 3.0, 1.0, -2.0],
+                    [-1.0, 0.0, 2.0, 1.0],
+                ]
+            ]
+        )
+        input_ids = torch.tensor([[0, 1, 2]])
+        loss = submission.causal_lm_loss_from_logits(logits, input_ids)
+        expected = F.cross_entropy(
+            torch.stack([logits[0, 0], logits[0, 1]]),
+            torch.tensor([1, 2]),
+        )
+        self.assertTrue(torch.allclose(loss, expected, atol=1e-6))
+
+    def test_causal_lm_loss_respects_ignore_index_after_shift(self):
+        logits = torch.randn(1, 4, 5)
+        input_ids = torch.tensor([[1, 2, -100, 4]])
+        loss = submission.causal_lm_loss_from_logits(logits, input_ids, ignore_index=-100)
+        expected = F.cross_entropy(
+            torch.stack([logits[0, 0], logits[0, 2]]),
+            torch.tensor([2, 4]),
+        )
+        self.assertTrue(torch.allclose(loss, expected, atol=1e-6))
+
+    def test_causal_lm_loss_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.causal_lm_loss_from_logits(torch.randn(2, 3), torch.ones(2, 3, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.causal_lm_loss_from_logits(torch.randn(2, 3, 4), torch.ones(2, 2, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.causal_lm_loss_from_logits(torch.randn(1, 1, 4), torch.ones(1, 1, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.causal_lm_loss_from_logits(torch.randn(1, 2, 4), torch.full((1, 2), -100))
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch06 GPT tests")

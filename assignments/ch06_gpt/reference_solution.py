@@ -150,6 +150,28 @@ def parameter_breakdown(model):
     return groups
 
 
+def causal_lm_loss_from_logits(logits, input_ids, ignore_index=-100):
+    if logits.dim() != 3:
+        raise ValueError("logits must have shape [B, T, V]")
+    if input_ids.dim() != 2:
+        raise ValueError("input_ids must have shape [B, T]")
+    if logits.shape[:2] != input_ids.shape:
+        raise ValueError("logits and input_ids must agree on batch and sequence dimensions")
+    if logits.size(1) < 2:
+        raise ValueError("sequence length must be at least 2")
+
+    vocab_size = logits.size(-1)
+    labels = input_ids[:, 1:].contiguous()
+    if not torch.any(labels != ignore_index):
+        raise ValueError("at least one next-token label must be valid")
+    shift_logits = logits[:, :-1, :].contiguous()
+    return F.cross_entropy(
+        shift_logits.view(-1, vocab_size),
+        labels.view(-1),
+        ignore_index=ignore_index,
+    )
+
+
 def moe_parameter_budget(
     d_model,
     expert_hidden,

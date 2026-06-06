@@ -68,6 +68,11 @@ def parameter_breakdown(model):
     raise NotImplementedError
 
 
+def causal_lm_loss_from_logits(logits, input_ids, ignore_index=-100):
+    """Compute next-token cross entropy: logits[:, :-1] predicts input_ids[:, 1:]."""
+    raise NotImplementedError
+
+
 def moe_parameter_budget(
     d_model,
     expert_hidden,

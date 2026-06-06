@@ -319,6 +319,7 @@ inputs = tokens[:, :-1]   # [BOS, The, cat, sat]
 labels = tokens[:, 1:]    # [The, cat, sat, EOS]
 logits = model(inputs)    # (batch, seq-1, vocab)
 loss = F.cross_entropy(logits.reshape(-1, vocab), labels.reshape(-1))</div>
+  <p>Ch06 作业中的 <code>causal_lm_loss_from_logits(logits, input_ids)</code> 让学生把这一步写成函数：<code>logits[:, :-1, :]</code> 对齐 <code>input_ids[:, 1:]</code>，并用 <code>ignore_index</code> 跳过 padding 或不参与训练的位置。这个函数不应该使用 <code>logits[:, 1:, :]</code>，也不应该让 <code>logits[:, t, :]</code> 预测 <code>input_ids[:, t]</code>。</p>
 
   <h4>Teacher forcing 与并行训练</h4>
   <p>训练阶段并不是让模型一步步生成再把生成结果喂回去，而是使用真实前缀并行预测所有下一 token。这叫 <strong>teacher forcing</strong>。它让长度为 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 的序列在一次 forward 中产生 <span class="katex-inline" data-expr="T-1" aria-label="T-1" role="img"></span> 个分类任务，因此训练可以充分利用 GPU 并行性。推理阶段则不同：模型只能使用自己已经生成的 token，逐步扩展上下文。</p>

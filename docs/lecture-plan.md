@@ -239,11 +239,13 @@ Quick check：
 核心推导：
 
 - 自回归分解 `p(x)=prod_t p(x_t|x_<t)`。
+- Next-token CE：`logits[:, :-1, :]` 预测 `input_ids[:, 1:]`，`ignore_index` 不进入均值分母。
 - tied LM head 下 embedding 权重只计一次。
 
 课堂 demo：
 
 - 实例化 tiny GPT，打印每个模块参数量。
+- 对 `[BOS,a,b,c,EOS]` 手算 label shift，并用 `causal_lm_loss_from_logits` 对齐 logits/labels。
 - 改变未来 token，验证当前位置 logits 不应变化。
 
 Quick check：
@@ -253,7 +255,7 @@ Quick check：
 
 课后产出：
 
-- Ch06 GPTModel forward 和参数量测试通过。
+- Ch06 GPTModel forward、causal LM loss 和参数量测试通过。
 - 书面题：GPT-2 small 参数分析。
 
 ## Week 4 Lecture 8: MoE、Routing 与 Load Balancing

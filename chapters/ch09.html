@@ -224,6 +224,21 @@ def sft_step(model, batch, optimizer):
   </div>
   <p>在作业中，这个目标对应 <code>pairwise_reward_loss(chosen_rewards, rejected_rewards)</code>：先计算每个偏好对的奖励边际 <span class="katex-inline" data-expr="m_i=r_i^w-r_i^l" aria-label="m_i=r_i^w-r_i^l" role="img"></span>，再对 <span class="katex-inline" data-expr="-\log\sigma(m_i)" aria-label="-\log\sigma(m_i)" role="img"></span> 取均值。若 <span class="katex-inline" data-expr="m_i&gt;0" aria-label="m_i&gt;0" role="img"></span> 的比例很低，说明奖励模型尚未把 chosen 排到 rejected 前面；若比例很高但泛化差，则要检查偏好对是否被长度、模板或候选分布主导。</p>
 
+  <div class="worked-example">
+    <h4>Worked Example：手算 Reward Model pairwise loss</h4>
+    <p>设一个 batch 有两个偏好对，奖励模型输出如下：</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>样本</th><th>chosen reward</th><th>rejected reward</th><th>margin</th><th>preference probability</th><th>loss</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>2.0</td><td>0.5</td><td>1.5</td><td><code>sigmoid(1.5)=0.818</code></td><td><code>-log(0.818)=0.201</code></td></tr>
+        <tr><td>2</td><td>0.2</td><td>0.8</td><td>-0.6</td><td><code>sigmoid(-0.6)=0.354</code></td><td><code>-log(0.354)=1.037</code></td></tr>
+      </tbody>
+    </table>
+    <p>第一个样本把 chosen 排在 rejected 前面，loss 较小；第二个样本顺序排反，loss 较大。batch 平均 loss 是 <code>(0.201 + 1.037) / 2 = 0.619</code>，preference accuracy 是 <code>1/2 = 0.5</code>。这个例子说明 RM loss 不要求奖励有绝对标尺，只要求同一 prompt 下 chosen 与 rejected 的相对边际越来越大。</p>
+  </div>
+
   <h4>RLHF 三步曲</h4>
   <ol>
     <li><strong>SFT</strong> — 在高质量指令-回答对上微调，获得初始化策略</li>

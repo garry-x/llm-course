@@ -522,6 +522,21 @@ class SimpleRAG:
   </div>
   <p>这个例子说明：Recall 判断是否找到了足够证据，MRR 判断第一条有用证据多靠前，nDCG 判断高价值证据是否排在前面。RAG debug 时要先看检索指标，再看 context packing 和生成忠实性，否则很容易把“没检索到证据”误判成“生成模型幻觉”。</p>
   <p>检索和重排之后还要做 <strong>context packing</strong>。<code>build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_tokens)</code> 在 prompt 预算内装配带 citation 的 chunk，并报告 <code>used_tokens</code>、<code>citations</code> 和 <code>skipped</code>。这一步能暴露一种常见错误：相关 chunk 已经被检索到，但因为排序靠后、重复 chunk 太多或输出预算预留过大，最终没有进入 prompt。</p>
+
+  <h4>Worked Example：context packing 可能丢掉已召回证据</h4>
+  <p>设检索和重排后得到 3 个 chunk，生成回答需要预留 2 个 token，整段 prompt 给检索上下文的最大预算是 9 个 token。每个 citation marker 如 <code>[A]</code> 也要占 1 个 token：</p>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>chunk</th><th>文本 token</th><th>citation token</th><th>总成本</th><th>是否进入 context</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>A</td><td><code>alpha beta</code> = 2</td><td>1</td><td>3</td><td>是，used = 3</td></tr>
+      <tr><td>B</td><td><code>gamma delta epsilon</code> = 3</td><td>1</td><td>4</td><td>是，used = 7</td></tr>
+      <tr><td>C</td><td><code>zeta eta theta iota</code> = 4</td><td>1</td><td>5</td><td>否，剩余预算 0</td></tr>
+    </tbody>
+  </table>
+  <p>真正可用于上下文的预算是 <code>9 - 2 = 7</code>。因此最终 prompt 只包含 <code>[A] alpha beta</code> 和 <code>[B] gamma delta epsilon</code>，报告 <code>citations=[A,B]</code>、<code>used_tokens=7</code>、<code>skipped=1</code>。如果 <code>C</code> 是回答所需的关键证据，检索指标可能显示“已经召回”，但生成模型实际看不到它；这时应该优化排序、去重、压缩 chunk 或调整输出预留，而不是直接责怪生成模型。</p>
+
   <p>MMR 的选择规则是每一步选最大化 <code>lambda * sim(query, doc) - (1 - lambda) * max_sim(doc, selected)</code> 的候选。它不是提高召回的训练目标，而是 prompt assembly 前的贪心选择策略：当多个 chunk 都来自同一段近重复文本时，MMR 会牺牲一点 query 相似度，换取覆盖互补信息的上下文。</p>
 
   <h4>一个可复现实验设置</h4>

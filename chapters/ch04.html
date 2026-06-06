@@ -507,6 +507,7 @@ class GroupedQueryAttention(nn.Module):
     <li>不用解压 K 就能直接和潜在向量 <span class="katex-inline" data-expr="\mathbf{c}_s^K" aria-label="\mathbf{c}_s^K" role="img"></span> 做点积</li>
     <li><strong>KV Cache 只需要存储潜在向量 <span class="katex-inline" data-expr="\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}" aria-label="\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}" role="img"></span></strong></li>
   </ul>
+  <p>Ch04 作业中的 <code>mla_absorbed_attention_scores(q, latent_kv, up_k_weight)</code> 要求学生验证这个等价性。输入 <code>q</code> 的形状是 <code>[B,H,T_q,D]</code>，latent cache 是 <code>[B,T_k,L]</code>，K 解压矩阵权重是 <code>[H*D,L]</code>。参考测试先显式计算 <code>K = W_{UK} c</code> 并得到 <code>qK^T</code>，再把 <code>W_{UK}</code> 按 head reshape 为 <code>[H,D,L]</code>，计算 <code>(q W_{UK}) c^T</code>；两者必须逐元素相等。这一步说明 MLA 的缓存节省来自线性代数结合律，而不是把 K/V 信息“免费变没”。</p>
 
   <h4>在 DeepSeek-V2/V3 中的配置</h4>
   <div class="table-wrap">

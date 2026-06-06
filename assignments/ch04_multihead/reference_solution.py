@@ -132,6 +132,30 @@ class MLA(nn.Module):
         return self.W_o(out), attn, latent
 
 
+def mla_absorbed_attention_scores(q, latent_kv, up_k_weight, scale=None):
+    if q.dim() != 4:
+        raise ValueError("q must have shape [B, H, T_q, D]")
+    if latent_kv.dim() != 3:
+        raise ValueError("latent_kv must have shape [B, T_k, D_latent]")
+    if up_k_weight.dim() != 2:
+        raise ValueError("up_k_weight must have shape [H * D, D_latent]")
+    batch, n_heads, _t_q, d_head = q.shape
+    if latent_kv.size(0) != batch:
+        raise ValueError("q and latent_kv batch sizes must match")
+    if up_k_weight.size(0) != n_heads * d_head:
+        raise ValueError("up_k_weight output dimension must equal H * D")
+    if up_k_weight.size(1) != latent_kv.size(-1):
+        raise ValueError("up_k_weight input dimension must match latent_kv width")
+    if scale is None:
+        scale = d_head**0.5
+    if scale <= 0:
+        raise ValueError("scale must be positive")
+
+    up_k_by_head = up_k_weight.reshape(n_heads, d_head, latent_kv.size(-1))
+    absorbed_q = torch.einsum("bhtd,hdl->bhtl", q, up_k_by_head)
+    return torch.matmul(absorbed_q, latent_kv.transpose(1, 2).unsqueeze(1)) / scale
+
+
 def count_params(model):
     return sum(p.numel() for p in model.parameters())
 

@@ -45,6 +45,11 @@ class MLA(nn.Module):
         raise NotImplementedError
 
 
+def mla_absorbed_attention_scores(q, latent_kv, up_k_weight, scale=None):
+    """Compute MLA content attention scores without explicitly decompressing K."""
+    raise NotImplementedError
+
+
 def count_params(model):
     raise NotImplementedError
 

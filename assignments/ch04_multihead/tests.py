@@ -115,6 +115,36 @@ class TestMLA(unittest.TestCase):
         self.assertTrue(torch.allclose(weights.sum(dim=-1), torch.ones(2, 4, 5), atol=1e-6))
         self.assertEqual(mla.W_dkv.weight.numel(), 32 * 6)
 
+    def test_mla_absorbed_scores_match_explicit_k_decompression(self):
+        torch.manual_seed(3)
+        batch, n_heads, t_q, t_k, d_head, d_latent = 2, 3, 4, 5, 2, 7
+        q = torch.randn(batch, n_heads, t_q, d_head)
+        latent = torch.randn(batch, t_k, d_latent)
+        up_k_weight = torch.randn(n_heads * d_head, d_latent)
+
+        explicit_k = torch.nn.functional.linear(latent, up_k_weight)
+        explicit_k = explicit_k.reshape(batch, t_k, n_heads, d_head).transpose(1, 2)
+        explicit_scores = torch.matmul(q, explicit_k.transpose(-2, -1)) / (d_head**0.5)
+        absorbed_scores = submission.mla_absorbed_attention_scores(q, latent, up_k_weight)
+
+        self.assertTrue(torch.allclose(absorbed_scores, explicit_scores, atol=1e-5))
+        self.assertEqual(tuple(absorbed_scores.shape), (batch, n_heads, t_q, t_k))
+
+    def test_mla_absorbed_scores_reject_bad_shapes(self):
+        q = torch.randn(2, 3, 4, 2)
+        latent = torch.randn(2, 5, 7)
+        up_k_weight = torch.randn(6, 7)
+        with self.assertRaises(ValueError):
+            submission.mla_absorbed_attention_scores(torch.randn(2, 4, 2), latent, up_k_weight)
+        with self.assertRaises(ValueError):
+            submission.mla_absorbed_attention_scores(q, torch.randn(2, 7), up_k_weight)
+        with self.assertRaises(ValueError):
+            submission.mla_absorbed_attention_scores(q, latent, torch.randn(5, 7))
+        with self.assertRaises(ValueError):
+            submission.mla_absorbed_attention_scores(q, latent, torch.randn(6, 8))
+        with self.assertRaises(ValueError):
+            submission.mla_absorbed_attention_scores(q, latent, up_k_weight, scale=0.0)
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch04 multi-head tests")
 class TestKVCacheAnalysis(unittest.TestCase):

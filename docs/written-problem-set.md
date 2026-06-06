@@ -43,7 +43,7 @@
 1. 证明标准 MHA 与一个同宽度单头 attention 在 Q/K/V/O 投影参数量上相同，但表达方式不同。
 2. 给定 `n_heads=8`、`n_kv_heads=2`，写出每个 Q head 对应的 KV head 映射；若 K/V 张量形状为 `[B,2,T,D]`，说明重复后如何得到 `[B,8,T,D]`，并说明 `n_kv_heads=1` 和 `n_kv_heads=n_heads` 分别对应什么特例。
 3. 给定 `n_layers=24`、`batch=4`、`seq_len=2048`、`n_heads=32`、`n_kv_heads=8`、`head_dim=128`、`d_latent=512` 和 fp16，计算 MHA、GQA 与 MLA 的每 token KV Cache 元素数、总显存和相对 MHA 的压缩比。
-4. 用低秩近似解释 MLA 为什么能减少缓存；同时说明“缓存低维 latent”不等价于“完全免费解压”。
+4. 用低秩近似解释 MLA 为什么能减少缓存；给定 `q_h`、latent `c_s` 和 K 解压矩阵 `W_UK,h`，推导 `q_h^T (W_UK,h c_s) = (q_h W_UK,h)^T c_s`，说明如何不显式解压 K 就在 latent 空间计算 attention score；同时说明“缓存低维 latent”不等价于“完全免费解压”。
 5. 解释 head redundancy 为什么会出现；比较 head pruning、GQA 和 MLA 分别压缩了什么，以及它们可能损失哪些表示能力。
 
 ## Ch05 Transformer Block / Norm / FFN

@@ -132,6 +132,42 @@
   <div class="info-box key"><span class="icon">🔑</span><div><strong>连接到下一节：</strong><code>nn.Embedding</code> 只负责把 token id 查成初始向量；真正的上下文语义要经过位置编码、注意力和多层 Transformer 才逐步形成。不要把“embedding 相似”误解为模型最终理解的全部。</div></div>
 </section>
 
+<section class="card" id="s2-1b">
+  <h3>2.1B Worked Example：从共现计数到 PMI、SGNS 和类比</h3>
+  <p>为了把 word vectors 从口号变成可计算对象，考虑一个只有三个词的 toy 词表：<code>king</code>、<code>queen</code>、<code>apple</code>。滑动窗口统计得到如下 directed co-occurrence matrix，行是 center word，列是 context word：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th><code>C_{center,context}</code></th><th>king</th><th>queen</th><th>apple</th><th>row sum</th></tr>
+      <tr><td>king</td><td>0</td><td>8</td><td>1</td><td>9</td></tr>
+      <tr><td>queen</td><td>6</td><td>0</td><td>1</td><td>7</td></tr>
+      <tr><td>apple</td><td>1</td><td>1</td><td>0</td><td>2</td></tr>
+      <tr><td>column sum</td><td>7</td><td>9</td><td>2</td><td>18</td></tr>
+    </table>
+  </div>
+
+  <h4>PMI 衡量“比随机独立更常共同出现多少”</h4>
+  <p>对 <code>king</code> 作为 center、<code>queen</code> 作为 context 的共现对：</p>
+  <div class="math-box"><div class="label">PMI(king, queen)</div>
+    <div class="katex" data-expr="\text{PMI}=\log\frac{C_{\text{king},\text{queen}}\cdot C_{**}}{C_{\text{king},*}\cdot C_{*,\text{queen}}}=\log\frac{8\cdot18}{9\cdot9}\approx0.575" aria-label="\text{PMI}=\log\frac{C_{\text{king},\text{queen}}\cdot C_{**}}{C_{\text{king},*}\cdot C_{*,\text{queen}}}=\log\frac{8\cdot18}{9\cdot9}\approx0.575" role="img"></div>
+  </div>
+  <p>对 <code>king</code> 和 <code>apple</code>：</p>
+  <div class="math-box"><div class="label">PMI(king, apple)</div>
+    <div class="katex" data-expr="\text{PMI}=\log\frac{1\cdot18}{9\cdot2}=\log1=0" aria-label="\text{PMI}=\log\frac{1\cdot18}{9\cdot2}=\log1=0" role="img"></div>
+  </div>
+  <p>这说明 <code>king</code> 与 <code>queen</code> 的共现频率高于独立假设下的期望，而 <code>king</code> 与 <code>apple</code> 在这个 toy 语料里接近独立。若 SGNS 使用 <span class="katex-inline" data-expr="K=5" aria-label="K=5" role="img"></span> 个负样本，shifted PMI 会整体减去 <span class="katex-inline" data-expr="\log5" aria-label="\log5" role="img"></span>；这不是说语义变差了，而是负采样目标改变了 dot product 的零点。</p>
+
+  <h4>SGNS 把共现变成二分类训练信号</h4>
+  <p>假设某个 batch 中正例 <code>(center=king, context=queen)</code> 的 dot product 为 1.5，两个负样本 <code>apple</code> 和另一个随机词的 dot product 分别为 -0.4 和 0.2。该样本的负对数似然为：</p>
+  <div class="math-box"><div class="label">SGNS 单样本 loss</div>
+    <div class="katex" data-expr="-\left[\log\sigma(1.5)+\log\sigma(0.4)+\log\sigma(-0.2)\right]" aria-label="-[\log sigma(1.5)+log sigma(0.4)+log sigma(-0.2)]" role="img"></div>
+  </div>
+  <p>正例 dot product 越大，第一项 loss 越小；负样本 dot product 越小，后两项 loss 越小。训练不是直接给“king 和 queen 很像”这个标签，而是通过许多局部上下文二分类样本，让经常出现在相似上下文中的词获得相似向量。</p>
+
+  <h4>类比推理是空间结构的诊断，不是目标函数保证</h4>
+  <p>3CosAdd 查询 <span class="katex-inline" data-expr="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" aria-label="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" role="img"></span> 的含义是：从 <code>king</code> 的向量中减去与 <code>man</code> 相关的方向，再加上与 <code>woman</code> 相关的方向，然后找余弦相似度最高的候选。这个过程通常还要排除输入词 <code>king</code>、<code>man</code>、<code>woman</code>，否则最近邻可能只是原词本身。</p>
+  <p>类比成功依赖很多条件：语料中相关关系足够系统，向量经过合适训练，频率和多义性没有主导距离，评价集也接受单一词答案。因此本课程把类比题作为“向量空间是否学到某类线性规律”的检查，而不是把它作为语义理解的充分证明。</p>
+</section>
+
 <!-- ================================================================ -->
 <!-- 编程练习 1: TokenEmbedding -->
 <!-- ================================================================ -->

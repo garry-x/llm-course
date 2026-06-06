@@ -506,11 +506,11 @@ class AdamW:
             # 2. 偏置修正
             m_hat = self.m[i] / (1 - self.beta1 ** self.t)
             v_hat = self.v[i] / (1 - self.beta2 ** self.t)
-            # 3. Adam 更新
-            p.data -= self.lr * m_hat / (torch.sqrt(v_hat) + self.eps)
-            # 4. 解耦权重衰减
+            # 3. 解耦权重衰减：作用在 Adam 更新前的参数上
             if self.weight_decay > 0:
-                p.data -= self.lr * self.weight_decay * p.data</div>
+                p.data *= (1 - self.lr * self.weight_decay)
+            # 4. Adam 更新
+            p.data -= self.lr * m_hat / (torch.sqrt(v_hat) + self.eps)</div>
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么偏置修正是必要的？</strong>Adam 初始化 <span class="katex-inline" data-expr="m_0 = 0, v_0 = 0" aria-label="m_0 = 0, v_0 = 0" role="img"></span>，所以初期几步的动量估计严重偏向 0。偏置修正通过除以 <span class="katex-inline" data-expr="1-\beta^t" aria-label="1-\beta^t" role="img"></span> 来补偿这种偏差。随着 t 增大，<span class="katex-inline" data-expr="1-\beta^t \to 1" aria-label="1-\beta^t \to 1" role="img"></span>，修正自动消失。</p>
     </div>
   </div>
@@ -616,7 +616,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
 <!-- ================================================================ -->
 <section class="card" id="s7-11">
   <h3>7.11 编程练习 5：实现完整的训练循环</h3>
-  <p>现在把你之前实现的组件组合在一起——一个包含 forward + backward + AMP + gradient clipping + logging 的完整训练循环。</p>
+  <p>现在把你之前实现的组件组合在一起——一个包含 forward + backward + AMP + gradient clipping + logging 的完整训练循环。真实训练中还要处理 gradient accumulation；下面的参考实现是单 batch 一个 optimizer step 的最小版本，累积版本见后面的 worked example。</p>
 
   <div class="coding-exercise">
     <h4>练习 5：训练循环</h4>
@@ -706,10 +706,38 @@ def train(model, dataloader, optimizer, scheduler, config,
 </section>
 
 <!-- ================================================================ -->
-<!-- 7.11A 训练日志诊断 -->
+<!-- 7.11A Worked Example -->
 <!-- ================================================================ -->
 <section class="card" id="s7-11a">
-  <h3>7.11A 如何读训练日志：从 loss 曲线到系统瓶颈</h3>
+  <h3>7.11A Worked Example：一次 optimizer step 的顺序账本</h3>
+  <p>假设使用 <code>grad_accum_steps=4</code>，每个 micro-batch 的 mean loss 分别是 <code>[2.4, 2.0, 1.8, 2.2]</code>。为了让 4 个 micro-batch 累积后的梯度等价于一个大 batch mean，需要在每次 backward 前把 loss 除以 4：</p>
+  <div class="math-box"><div class="label">gradient accumulation 的 loss scaling</div>
+    <div class="katex" data-expr="\nabla_\theta \left(\frac{1}{4}\sum_{i=1}^4 \mathcal{L}_i\right)=\sum_{i=1}^4 \nabla_\theta\left(\frac{\mathcal{L}_i}{4}\right)" aria-label="\nabla_\theta \left(\frac{1}{4}\sum_{i=1}^4 \mathcal{L}_i\right)=\sum_{i=1}^4 \nabla_\theta\left(\frac{\mathcal{L}_i}{4}\right)" role="img"></div>
+  </div>
+  <div class="code-block" data-lang="python">
+optimizer.zero_grad(set_to_none=True)
+for micro_idx, batch in enumerate(micro_batches):
+    with autocast(device_type="cuda", dtype=torch.float16):
+        logits = model(batch["input_ids"])
+        loss = F.cross_entropy(logits.reshape(-1, V), batch["labels"].reshape(-1),
+                               ignore_index=-100)
+        loss = loss / grad_accum_steps
+    scaler.scale(loss).backward()
+
+scaler.unscale_(optimizer)
+grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+scaler.step(optimizer)
+scaler.update()
+scheduler.step()</div>
+  <p>如果没有把 loss 除以 <code>grad_accum_steps</code>，累积梯度会比大 batch mean 大 4 倍，等价于把学习率放大 4 倍。若使用 FP16 <code>GradScaler</code>，裁剪必须发生在 <code>unscale_</code> 之后；否则你裁剪的是被 scaler 放大的梯度，<code>max_norm=1.0</code> 不再对应真实梯度范数。学习率调度器通常在成功的 optimizer step 后推进一次，而不是每个 micro-batch 推进一次；否则 warmup 和 cosine decay 会按 micro-step 过快走完。</p>
+  <p>这也是训练日志里 <code>step</code> 和 <code>tokens</code> 要同时记录的原因：4 个 micro-batch 只对应 1 次 optimizer step，但消耗的 token 是四个 micro-batch 的总和。PPL 应由未除以 accumulation 的原始 mean loss 计算；用于 backward 的缩放 loss 只是梯度尺度技巧，不是模型困惑度。</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- 7.11B 训练日志诊断 -->
+<!-- ================================================================ -->
+<section class="card" id="s7-11b">
+  <h3>7.11B 如何读训练日志：从 loss 曲线到系统瓶颈</h3>
   <p>能让 loss 下降只是训练工程的起点。高校级课程需要学生能解释<strong>为什么</strong>曲线这样变化：哪些现象是正常随机波动，哪些说明优化器、数据、数值精度或系统吞吐出了问题。训练日志至少应同时记录 <code>train_loss</code>、<code>val_loss</code>、<code>lr</code>、<code>grad_norm</code>、<code>tokens/s</code> 和 step。</p>
 
   <h4>先区分三类问题</h4>

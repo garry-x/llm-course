@@ -506,6 +506,35 @@ class SimpleRAG:
   <h4>离线评估与线上指标</h4>
   <p>离线阶段先构造 query-answer-document 三元组：每个问题对应一个标准答案和应命中的文档片段。检索模块报告 Recall@k、MRR、nDCG；生成模块报告答案正确率、引用一致性和未命中时是否拒绝编造。线上阶段再看延迟、成本和用户行为：检索耗时、rerank 耗时、prompt token 数、回答 token 数、用户追问率、人工接管率。</p>
   <p>训练 bi-encoder retrieval embedding 时，常用 in-batch negatives：同一个 batch 中第 <code>i</code> 个 query 的正样本文档是第 <code>i</code> 个 document，其余 document 都作为负样本。Ch10 作业中的 <code>contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature)</code> 对 embedding 做 L2 normalization，计算 <code>Q D^T / temperature</code>，再用对角线标签做 cross entropy。这就是 InfoNCE / contrastive retrieval loss 的最小形式；它训练的是向量空间，后续仍要用 Recall@k、MRR、nDCG 和端到端答案质量检验是否真的改善 RAG。</p>
+
+  <h4>Worked Example：in-batch negatives 如何变成检索分类题</h4>
+  <p>设一个 batch 里有 2 个 query 和 2 个 document，向量都已 L2 normalize，温度 <code>temperature=0.5</code>。对角线是正样本配对：<code>q0 -> d0</code>，<code>q1 -> d1</code>。</p>
+  <div class="math-box"><div class="label">bi-encoder contrastive logits</div>
+    <div class="katex" data-expr="Q D^\top =
+\begin{bmatrix}
+0.8 & 0.2\\
+0.1 & 0.7
+\end{bmatrix},\qquad
+\frac{QD^\top}{0.5} =
+\begin{bmatrix}
+1.6 & 0.4\\
+0.2 & 1.4
+\end{bmatrix}" aria-label="Q D^\top =
+\begin{bmatrix}
+0.8 & 0.2\\
+0.1 & 0.7
+\end{bmatrix},\qquad
+\frac{QD^\top}{0.5} =
+\begin{bmatrix}
+1.6 & 0.4\\
+0.2 & 1.4
+\end{bmatrix}" role="img"></div>
+  </div>
+  <p>训练时把每一行当成一个分类问题，标签是 <code>[0, 1]</code>：第 0 个 query 应选第 0 个 doc，第 1 个 query 应选第 1 个 doc。第一行 softmax 后正样本概率是 <code>exp(1.6)/(exp(1.6)+exp(0.4)) ≈ 0.768</code>；第二行同理也是约 <code>0.768</code>。batch loss 是两个负对数概率的平均：</p>
+  <div class="math-box"><div class="label">InfoNCE batch loss</div>
+    <div class="katex" data-expr="\mathcal{L}= -\frac{1}{2}(\log 0.768+\log 0.768)\approx0.264" aria-label="\mathcal{L}= -\frac{1}{2}(\log 0.768+\log 0.768)\approx0.264" role="img"></div>
+  </div>
+  <p>这个例子也说明了 in-batch negatives 的边界：它假设 batch 内非对角文档都是负样本。如果 <code>d1</code> 其实也能回答 <code>q0</code>，训练会把一个真实相关文档当负例推远；真实 RAG 训练需要去重、hard negative 标注和多正样本处理，不能只靠 loss 下降判断检索质量。</p>
   <p>Cross-encoder reranker 的训练方式不同：它直接读取 query 和候选文档拼接后的文本，输出一个相关性分数。给定同一 query 下的 chosen/rejected 文档对，<code>pairwise_reranker_loss(chosen_scores, rejected_scores)</code> 可用 <code>-log sigmoid(s_chosen - s_rejected)</code> 训练排序方向。Bi-encoder 适合大规模召回，cross-encoder 更适合对 top-k 候选做精排；二者的 loss、输入形式和服务成本都不同。</p>
   <p>Ch10 作业中的 <code>recall_at_k(retrieved_ids, relevant_ids, k)</code>、<code>reciprocal_rank_at_k(...)</code> 和 <code>ndcg_at_k(retrieved_ids, relevance_scores, k)</code> 分别对应三个问题：top-k 里是否包含应命中的文档、第一个相关文档排在第几位、分级相关性更高的文档是否排得更靠前。nDCG 的 DCG 项通常写作 <code>(2^rel - 1) / log2(rank + 1)</code>，再除以理想排序的 IDCG，使分数落在 0 到 1 附近。若 Recall@5 很低，生成模型通常没有足够上下文；若 Recall@5 高但 reciprocal rank 或 nDCG 低，说明相关 chunk 被排在后面，容易被 prompt 截断或被无关上下文干扰。作业还加入 <code>reciprocal_rank_fusion</code>、<code>rerank_documents</code> 与 <code>maximal_marginal_relevance</code>，让学生实现 hybrid search、cross-encoder rerank 和去冗余 chunk selection 的最小版本。</p>
 

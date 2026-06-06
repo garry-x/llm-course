@@ -124,3 +124,14 @@
 4. BERT/Encoder-only：比较 MLM 与 causal LM 的 mask 方式、训练目标和下游 fine-tuning 输入格式；给定 masked positions、vocab logits 和 labels，计算只在 mask 位置上的 MLM cross entropy 与 accuracy；给定 BIO tags 解码 NER/entity spans；给定 gold/pred spans，计算 span-level precision、recall、F1、TP、FP 和 FN；给定 emission/transition scores 手算 Viterbi 最优 tag path、CRF forward log-partition、gold path score 与 CRF NLL；给定 `[CLS] question [SEP] passage [SEP]` 的 start/end logits，选择抽取式 QA 的最佳 span，并说明 `[CLS]` no-answer 的含义。
 5. Evaluation：比较 perplexity、BLEU、ROUGE、F1、exact match 和 LLM-as-judge 的适用范围与失效模式。
 6. Ethics/Safety：列出一个 RAG 医疗问答系统的隐私、幻觉、偏见和评测污染风险，并给出缓解方案。
+
+## 跨章节综合题
+
+这些题用于期末复习或课程综合讨论。答案必须同时写出公式、shape、计算步骤和结论边界。
+
+1. End-to-end decoder-only trace：给定 `input_ids` shape `[B=2,T=5]`、`vocab_size=8`、`d_model=4`、`n_heads=2`，写出 embedding、Q/K/V、attention scores、hidden states、logits 和 shifted labels 的 shape；若 labels 中有 3 个 `-100`，说明 CE mean reduction 的有效分母是多少。
+2. Token cost to serving cost：给定两个 tokenizer 对同一组英文、中文、代码 prompt 的 token counts、一个 24 层 GQA 模型配置和 fp16 KV cache，计算每组平均 prompt tokens、KV cache bytes、prefill token work 和多语言 token cost disparity；说明 tokenizer 选择如何同时影响 embedding 参数、context budget、TTFT 和服务成本。
+3. Training-to-alignment objective chain：从 causal LM CE 写到 SFT mask，再到 DPO chosen/rejected reference log-ratio。给定一组 policy/ref sequence log-probs，计算 SFT 有效 token loss、DPO implicit rewards、preference probability 和近似 KL；说明这些数值分别支持什么结论、不支持什么结论。
+4. Retrieval-to-generation failure analysis：给定 dense/BM25 排序、reranker scores、MMR 相似度表、context token budget、生成答案和 gold answer，计算 RRF、rerank top-k、MMR selection、最终 citations、Recall@k、MRR、answer EM/F1 和 used tokens；判断失败更可能来自 retrieval、reranking、context packing 还是 generation。
+5. Decoding and evaluation tradeoff：给定同一 prompt 的 greedy、top-p、self-consistency 和 constrained decoding 输出，计算 distinct-n、pass@k、vote distribution、token cost 和格式合法率；说明在开放式写作、代码生成、JSON 工具调用和数学题中应如何选择不同策略。
+6. Model family selection：对同一信息抽取任务，比较 decoder-only generation、encoder-only token classification、BERT span QA、RAG + constrained decoding 四种方案。写出每种方案的输入输出形式、训练或推理目标、可用指标、主要失败模式和服务成本。

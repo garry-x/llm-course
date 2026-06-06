@@ -220,6 +220,24 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   </div>
   <p>Ch07 作业中的 <code>global_batch_tokens</code> 和 <code>training_steps_for_token_budget</code> 对应这两个公式。举例：<code>micro_batch=4</code>、<code>seq_len=2048</code>、<code>grad_accum=8</code>、<code>data_parallel=16</code> 时，每步消耗 <code>1,048,576</code> 个 token；若训练预算是 <code>20B</code> token，则需要约 <code>19,074</code> 个 optimizer step。dense decoder-only LM 的粗略训练计算量常用 <span class="katex-inline" data-expr="6ND" aria-label="6ND" role="img"></span> 估算，其中 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> 是参数量，<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 是训练 token 数；作业中的 <code>dense_lm_training_flops</code> 用这个近似把规模、数据和算力预算连起来。</p>
   <p>训练显存还要包含优化器状态。AdamW 通常为每个参数保存梯度、一阶动量 <code>m</code> 和二阶动量 <code>v</code>；如果参数用 bf16、梯度用 bf16、moment 用 fp32，那么每个参数大约需要 <code>2 + 2 + 2*4 = 12</code> bytes。Ch07 作业中的 <code>optimizer_state_memory_bytes</code> 把参数、梯度、optimizer states 和 ZeRO-style optimizer state sharding 的单卡粗估分开计算。</p>
+
+  <h4>Worked Example：AdamW 显存账本与 ZeRO-1 分片</h4>
+  <p>以一个 <code>7B</code> 参数的 dense decoder-only LM 为例，假设参数用 bf16（2 bytes）、梯度用 bf16（2 bytes）、AdamW 的一阶/二阶动量 <code>m,v</code> 用 fp32（各 4 bytes）。训练显存不能只按“7B × 2 bytes”估算，因为那只覆盖模型权重本身：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>项目</th><th>每参数 bytes</th><th>7B 参数总量</th><th>说明</th></tr>
+      <tr><td>Parameters</td><td>2</td><td>14 GB</td><td>bf16 模型权重</td></tr>
+      <tr><td>Gradients</td><td>2</td><td>14 GB</td><td>反向传播后用于 optimizer step</td></tr>
+      <tr><td>AdamW first moment <code>m</code></td><td>4</td><td>28 GB</td><td>fp32 一阶动量</td></tr>
+      <tr><td>AdamW second moment <code>v</code></td><td>4</td><td>28 GB</td><td>fp32 二阶动量</td></tr>
+      <tr><td><strong>合计</strong></td><td><strong>12</strong></td><td><strong>84 GB</strong></td><td>只包含参数、梯度和优化器状态</td></tr>
+    </table>
+  </div>
+  <p>如果使用 8 路数据并行但不分片，每张卡仍然复制完整的 84 GB 状态，显存不会因为数据并行自动下降。ZeRO-1 只把 optimizer states 分到不同 rank 上：参数和梯度仍然每卡各 14 GB，但 AdamW 的 <code>m,v</code> 总计 56 GB 会被 8 张卡分摊，每卡只保留约 7 GB。</p>
+  <div class="math-box"><div class="label">ZeRO-1 per-rank state memory</div>
+    <div class="katex" data-expr="M_{\text{rank}}=14+14+\frac{56}{8}=35\text{ GB}" aria-label="M_{\text{rank}}=14+14+\frac{56}{8}=35\text{ GB}" role="img"></div>
+  </div>
+  <p>因此在这个配置下，ZeRO-1 把参数/梯度/optimizer state 的每卡显存从约 84 GB 降到约 35 GB。这个数字仍然没有包含激活、activation checkpointing、通信 buffer、临时矩阵、CUDA allocator 碎片和 checkpoint 写入峰值；这些部分会继续限制实际 micro-batch size。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么这很重要：</strong>learning rate schedule、checkpoint 间隔、日志频率和训练成本都依赖 step count。只报告 epoch 不足以复现 LLM 训练，因为同一语料在不同 packing、sequence length、重复采样和数据配比下会产生不同 token 分布。</div></div>
 
   <h4>Data mixture：不是所有 token 等价</h4>

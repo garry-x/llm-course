@@ -302,6 +302,45 @@ def build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_toke
     }
 
 
+def rag_answer_diagnostics(retrieved_ids, relevant_ids, cited_ids, answer_correct, k):
+    if k <= 0:
+        raise ValueError("k must be positive")
+    relevant = set(relevant_ids)
+    if not relevant:
+        raise ValueError("relevant_ids must not be empty")
+    cited = list(cited_ids or [])
+    retrieved_top_k = list(retrieved_ids[:k])
+    retrieved_relevant = set(retrieved_top_k) & relevant
+    cited_set = set(cited)
+    cited_relevant = cited_set & relevant
+
+    retrieval_recall = len(retrieved_relevant) / len(relevant)
+    retrieval_hit = bool(retrieved_relevant)
+    citation_precision = len(cited_relevant) / len(cited_set) if cited_set else 0.0
+    citation_recall = len(cited_relevant) / len(relevant)
+
+    if answer_correct:
+        failure_mode = "success"
+    elif not retrieval_hit:
+        failure_mode = "retrieval_miss"
+    elif not cited_relevant:
+        failure_mode = "context_or_citation_miss"
+    else:
+        failure_mode = "generation_error"
+
+    return {
+        "answer_correct": bool(answer_correct),
+        "retrieval_recall_at_k": retrieval_recall,
+        "retrieval_mrr_at_k": reciprocal_rank_at_k(retrieved_ids, relevant, k),
+        "retrieval_hit": retrieval_hit,
+        "citation_precision": citation_precision,
+        "citation_recall": citation_recall,
+        "cited_relevant_ids": sorted(cited_relevant),
+        "missing_relevant_ids": sorted(relevant - set(retrieved_top_k)),
+        "failure_mode": failure_mode,
+    }
+
+
 def prefix_cache_savings(tokenized_prompts):
     if not tokenized_prompts:
         raise ValueError("tokenized_prompts must not be empty")

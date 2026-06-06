@@ -75,6 +75,11 @@ def build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_toke
     raise NotImplementedError
 
 
+def rag_answer_diagnostics(retrieved_ids, relevant_ids, cited_ids, answer_correct, k):
+    """Attribute a RAG answer outcome to retrieval, citation/context use, or generation."""
+    raise NotImplementedError
+
+
 def prefix_cache_savings(tokenized_prompts):
     """Estimate reusable prefix tokens and effective prefill work for a request stream."""
     raise NotImplementedError

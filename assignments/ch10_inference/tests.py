@@ -244,6 +244,60 @@ class TestRetrievalMetrics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.build_rag_context(chunks, max_context_tokens=4, token_counter=lambda _text: 0)
 
+    def test_rag_answer_diagnostics_attributes_generation_error(self):
+        report = submission.rag_answer_diagnostics(
+            retrieved_ids=["doc9", "doc2", "doc5", "doc1"],
+            relevant_ids={"doc1", "doc2", "doc7"},
+            cited_ids=["doc2", "doc9"],
+            answer_correct=False,
+            k=3,
+        )
+        self.assertAlmostEqual(report["retrieval_recall_at_k"], 1 / 3)
+        self.assertAlmostEqual(report["retrieval_mrr_at_k"], 1 / 2)
+        self.assertTrue(report["retrieval_hit"])
+        self.assertAlmostEqual(report["citation_precision"], 1 / 2)
+        self.assertAlmostEqual(report["citation_recall"], 1 / 3)
+        self.assertEqual(report["cited_relevant_ids"], ["doc2"])
+        self.assertEqual(report["missing_relevant_ids"], ["doc1", "doc7"])
+        self.assertEqual(report["failure_mode"], "generation_error")
+
+    def test_rag_answer_diagnostics_distinguishes_retrieval_and_citation_misses(self):
+        retrieval_miss = submission.rag_answer_diagnostics(
+            retrieved_ids=["doc9", "doc8"],
+            relevant_ids={"doc1"},
+            cited_ids=[],
+            answer_correct=False,
+            k=2,
+        )
+        self.assertEqual(retrieval_miss["failure_mode"], "retrieval_miss")
+        self.assertFalse(retrieval_miss["retrieval_hit"])
+
+        citation_miss = submission.rag_answer_diagnostics(
+            retrieved_ids=["doc1", "doc9"],
+            relevant_ids={"doc1"},
+            cited_ids=["doc9"],
+            answer_correct=False,
+            k=2,
+        )
+        self.assertEqual(citation_miss["failure_mode"], "context_or_citation_miss")
+        self.assertTrue(citation_miss["retrieval_hit"])
+        self.assertEqual(citation_miss["citation_recall"], 0.0)
+
+        success = submission.rag_answer_diagnostics(
+            retrieved_ids=["doc1", "doc9"],
+            relevant_ids={"doc1"},
+            cited_ids=["doc1"],
+            answer_correct=True,
+            k=2,
+        )
+        self.assertEqual(success["failure_mode"], "success")
+
+    def test_rag_answer_diagnostics_rejects_invalid_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.rag_answer_diagnostics(["doc1"], {"doc1"}, [], False, k=0)
+        with self.assertRaises(ValueError):
+            submission.rag_answer_diagnostics(["doc1"], set(), [], False, k=1)
+
     def test_prefix_cache_savings_counts_longest_previous_prefix(self):
         prompts = [
             [1, 2, 3, 4],

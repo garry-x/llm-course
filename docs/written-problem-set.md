@@ -110,7 +110,7 @@
 2. 区分 TTFT、TPOT、tokens/s、吞吐、并发和 P95 latency；说明它们分别对应哪个用户体验或成本问题。
 3. 给定 tokenized prompts `[[1,2,3,4],[1,2,3,9,10],[1,2,8],[7,8]]`，按请求顺序计算每条请求可复用的最长历史前缀、new prefill tokens、总 saved prefill tokens、effective prefill tokens 和 prefix cache hit rate；说明为什么随机时间戳会破坏 prefix cache。
 4. 给定 query/document embedding batch，写出 in-batch negatives 的 InfoNCE logits、label 和 loss；给定 chosen/rejected reranker scores，计算 pairwise reranker loss；给定 dense 检索排序、BM25 排序、retrieved document ids、relevant document ids、graded relevance scores、MMR 相似度表和 `k`，计算 RRF 融合排序、Recall@k、reciprocal rank、nDCG@k 与 MMR 选择结果，并说明它们分别衡量 RAG 检索的哪一类问题。
-5. 给定一个 RAG 失败案例，判断可能是 chunking、embedding、retrieval、reranking、prompt assembly 还是 generation 的问题；若给出候选 chunk、citation id、token 数、context budget 和 reserved output budget，写出最终进入 prompt 的 citation 列表、used tokens 和 skipped chunks。
+5. 给定一个 RAG 失败案例：retrieved ids `[doc9,doc2,doc5,doc1]`、relevant ids `{doc1,doc2,doc7}`、cited ids `[doc2,doc9]`、`k=3`、答案错误。计算 retrieval recall@k、MRR@k、citation precision、citation recall、missing relevant ids，并判断 failure mode 是 retrieval miss、context/citation miss 还是 generation error；若同时给出候选 chunk、citation id、token 数、context budget 和 reserved output budget，写出最终进入 prompt 的 citation 列表、used tokens 和 skipped chunks。
 6. 比较 INT8 weight-only quantization、KV Cache quantization 和 FP8/FP4 mixed precision 的目标、风险和验证指标。
 7. 说明为什么前沿模型 benchmark 数字必须同时给出任务、数据集、推理设置和评测版本。
 8. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank、hybrid+MMR 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。

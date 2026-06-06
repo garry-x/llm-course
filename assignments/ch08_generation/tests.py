@@ -273,6 +273,38 @@ class TestBeamSearch(unittest.TestCase):
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")
 class TestSpeculativeDecoding(unittest.TestCase):
+    def test_speculative_decoding_speedup_matches_worked_example(self):
+        report = submission.speculative_decoding_speedup(
+            accepted_counts=[4, 2, 3],
+            output_token_counts=[5, 3, 4],
+            gamma=4,
+            draft_cost_ratio=0.2,
+        )
+        self.assertEqual(report["rounds"], 3)
+        self.assertEqual(report["proposed"], 12)
+        self.assertEqual(report["accepted"], 9)
+        self.assertEqual(report["generated_tokens"], 12)
+        self.assertEqual(report["baseline_target_steps"], 12)
+        self.assertEqual(report["target_verify_calls"], 3)
+        self.assertEqual(report["draft_steps"], 12)
+        self.assertAlmostEqual(report["acceptance_rate"], 0.75)
+        self.assertAlmostEqual(report["speculative_time_units"], 5.4)
+        self.assertAlmostEqual(report["speedup"], 12 / 5.4)
+
+    def test_speculative_decoding_speedup_rejects_invalid_accounting(self):
+        with self.assertRaises(ValueError):
+            submission.speculative_decoding_speedup([], [], gamma=4)
+        with self.assertRaises(ValueError):
+            submission.speculative_decoding_speedup([1], [1, 1], gamma=4)
+        with self.assertRaises(ValueError):
+            submission.speculative_decoding_speedup([5], [1], gamma=4)
+        with self.assertRaises(ValueError):
+            submission.speculative_decoding_speedup([1], [6], gamma=4)
+        with self.assertRaises(ValueError):
+            submission.speculative_decoding_speedup([1], [1], gamma=0)
+        with self.assertRaises(ValueError):
+            submission.speculative_decoding_speedup([1], [1], gamma=4, draft_cost_ratio=-0.1)
+
     def test_speculative_decoding_returns_stats_and_respects_budget(self):
         torch.manual_seed(1)
         target = ScriptedModel(vocab_size=8)

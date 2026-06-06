@@ -309,6 +309,46 @@ def self_consistency_vote(outputs, answer_extractor=None, token_counts=None):
     }
 
 
+def speculative_decoding_speedup(accepted_counts, output_token_counts, gamma=4, draft_cost_ratio=0.2):
+    if gamma <= 0:
+        raise ValueError("gamma must be positive")
+    if draft_cost_ratio < 0:
+        raise ValueError("draft_cost_ratio must be non-negative")
+    if not accepted_counts or not output_token_counts:
+        raise ValueError("accepted_counts and output_token_counts must be non-empty")
+    if len(accepted_counts) != len(output_token_counts):
+        raise ValueError("accepted_counts and output_token_counts must have the same length")
+
+    accepted_counts = [int(count) for count in accepted_counts]
+    output_token_counts = [int(count) for count in output_token_counts]
+    if any(count < 0 or count > gamma for count in accepted_counts):
+        raise ValueError("each accepted count must be in [0, gamma]")
+    if any(count <= 0 or count > gamma + 1 for count in output_token_counts):
+        raise ValueError("each output token count must be in [1, gamma + 1]")
+
+    rounds = len(accepted_counts)
+    proposed = rounds * gamma
+    accepted = sum(accepted_counts)
+    generated_tokens = sum(output_token_counts)
+    speculative_time_units = rounds + proposed * float(draft_cost_ratio)
+    baseline_target_steps = generated_tokens
+    speedup = baseline_target_steps / speculative_time_units
+
+    return {
+        "rounds": rounds,
+        "proposed": proposed,
+        "accepted": accepted,
+        "generated_tokens": generated_tokens,
+        "acceptance_rate": accepted / proposed if proposed else 0.0,
+        "baseline_target_steps": baseline_target_steps,
+        "target_verify_calls": rounds,
+        "draft_steps": proposed,
+        "draft_cost_ratio": float(draft_cost_ratio),
+        "speculative_time_units": speculative_time_units,
+        "speedup": speedup,
+    }
+
+
 def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
     if input_ids.size(0) != 1:
         raise ValueError("beam_search currently supports batch size 1")

@@ -85,7 +85,7 @@
 3. 给定 logits `[4.0, 3.0, -1.0]`、已生成 token ids `[0,2]` 和 repetition penalty `2.0`，手算采样前 logits 如何变化，并说明为什么正负 logit 的处理方向不同。
 4. 说明 beam search 为什么常需要长度惩罚，并比较它与 sampling 在开放式生成任务中的适用场景。
 5. 给定一个 beam table，分别用 raw logprob 和 length-normalized score 排序，说明排序改变是否一定意味着质量更好。
-6. 解释 speculative decoding 的接受率如何影响吞吐，为什么 draft model 过弱或过强都可能不划算。
+6. 给定 speculative decoding 的三轮记录：`gamma=4`，每轮接受草稿 token 数 `[4,2,3]`，实际写入输出 token 数 `[5,3,4]`，draft 单步成本是 target 单步成本的 `0.2`。计算 proposed、accepted、acceptance rate、baseline target steps、target verify calls、draft steps、粗略耗时和 speedup，并解释为什么 draft model 过弱或过强都可能不划算。
 7. 给定两行 logits `[[5,4,3],[1,2,9]]` 和合法 token 集 `[[1,2],[0,1]]`，写出约束 mask 后哪些位置为 `-inf`，并给出 greedy 解码结果；说明为什么约束解码需要重新归一化。
 8. 设计一个比较 greedy、top-p 和 temperature sampling 的小实验：写出 prompt 集、随机种子、输出长度、distinct-n、重复率、任务正确率或人工偏好指标，并说明每个指标的局限。
 9. 对数学或代码题设计一个 reasoning 生成实验：比较 single-sample、self-consistency、best-of-N 和 verifier reranking；给定 5 条候选输出，写出 final-answer extractor、majority vote 的票数分布和 tie-breaking 规则；给定 `n` 个样本中 `c` 个正确，计算 `pass@k = 1 - C(n-c,k)/C(n,k)`，并报告平均输出 token 数、延迟和单位正确答案成本。

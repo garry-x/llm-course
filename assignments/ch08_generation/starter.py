@@ -84,6 +84,11 @@ def self_consistency_vote(outputs, answer_extractor=None, token_counts=None):
     raise NotImplementedError
 
 
+def speculative_decoding_speedup(accepted_counts, output_token_counts, gamma=4, draft_cost_ratio=0.2):
+    """Estimate speculative decoding acceptance rate and rough target-step speedup."""
+    raise NotImplementedError
+
+
 def beam_search(model, input_ids, max_new_tokens=100, num_beams=4, eos_token_id=None, length_penalty_alpha=0.0):
     """Run beam search for a single prompt and return (best_sequence, beam_table)."""
     raise NotImplementedError

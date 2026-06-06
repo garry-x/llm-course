@@ -149,6 +149,72 @@ def sample_next_token(
     raise ValueError(f"unknown strategy: {strategy}")
 
 
+def decoding_distribution_report(
+    logits,
+    strategy="temperature",
+    temperature=1.0,
+    k=40,
+    p=0.9,
+    generated_ids=None,
+    repetition_penalty=1.0,
+    allowed_token_ids=None,
+):
+    if logits.dim() == 3:
+        logits = logits[:, -1, :]
+    if logits.dim() != 2:
+        raise ValueError("logits must have shape [batch, vocab] or [batch, seq, vocab]")
+    if temperature < 0:
+        raise ValueError("temperature must be non-negative")
+
+    processed = logits.clone()
+    if generated_ids is not None and repetition_penalty != 1.0:
+        processed = apply_repetition_penalty(processed, generated_ids, repetition_penalty)
+    if allowed_token_ids is not None:
+        processed = apply_token_constraints(processed, allowed_token_ids)
+
+    if strategy == "greedy" or temperature == 0:
+        filtered = processed
+    else:
+        scaled = processed / temperature
+        vocab_size = scaled.size(-1)
+        if strategy == "temperature":
+            filtered = scaled
+        elif strategy == "top-k":
+            if k <= 0:
+                raise ValueError("k must be positive")
+            k = min(k, vocab_size)
+            top_logits, top_indices = torch.topk(scaled, k, dim=-1)
+            filtered = torch.full_like(scaled, -torch.inf)
+            filtered.scatter_(dim=-1, index=top_indices, src=top_logits)
+        elif strategy == "top-p":
+            filtered = top_p_filter(scaled, p=p)
+        else:
+            raise ValueError(f"unknown strategy: {strategy}")
+
+    probabilities = torch.softmax(filtered, dim=-1)
+    finite_mask = torch.isfinite(filtered)
+    kept_token_ids = []
+    kept_probabilities = []
+    entropy = []
+    for batch_idx in range(filtered.size(0)):
+        ids = torch.nonzero(finite_mask[batch_idx], as_tuple=False).flatten()
+        probs = probabilities[batch_idx, ids]
+        kept_token_ids.append([int(token_id.item()) for token_id in ids])
+        kept_probabilities.append([float(prob.item()) for prob in probs])
+        positive_probs = probs[probs > 0]
+        entropy.append(float(-(positive_probs * torch.log(positive_probs)).sum().item()))
+
+    return {
+        "processed_logits": processed,
+        "filtered_logits": filtered,
+        "probabilities": probabilities,
+        "kept_token_ids": kept_token_ids,
+        "kept_probabilities": kept_probabilities,
+        "entropy": entropy,
+        "selected_token_ids": torch.argmax(probabilities, dim=-1).tolist(),
+    }
+
+
 def _generate(model, input_ids, max_new_tokens, strategy, eos_token_id=None, **kwargs):
     model.eval()
     device = _model_device(model)

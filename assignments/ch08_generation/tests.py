@@ -172,6 +172,43 @@ class TestSampling(unittest.TestCase):
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")
+class TestDecodingDistributionReport(unittest.TestCase):
+    def test_report_traces_repetition_penalty_top_p_and_entropy(self):
+        logits = torch.tensor([[4.0, 3.0, -1.0]])
+        report = submission.decoding_distribution_report(
+            logits,
+            strategy="top-p",
+            temperature=1.0,
+            p=0.8,
+            generated_ids=torch.tensor([[0, 2]]),
+            repetition_penalty=2.0,
+        )
+
+        self.assertTrue(torch.allclose(report["processed_logits"], torch.tensor([[2.0, 3.0, -2.0]])))
+        self.assertEqual(report["kept_token_ids"], [[0, 1]])
+        self.assertEqual(report["selected_token_ids"], [1])
+        expected_probs = torch.tensor([[1 / (1 + torch.exp(torch.tensor(1.0))), 1 / (1 + torch.exp(torch.tensor(-1.0))), 0.0]])
+        self.assertTrue(torch.allclose(report["probabilities"], expected_probs, atol=1e-6))
+        kept_probs = report["kept_probabilities"][0]
+        self.assertAlmostEqual(sum(kept_probs), 1.0)
+        expected_entropy = float(-(expected_probs[0, :2] * torch.log(expected_probs[0, :2])).sum().item())
+        self.assertAlmostEqual(report["entropy"][0], expected_entropy, places=6)
+
+    def test_report_applies_constraints_before_renormalizing(self):
+        logits = torch.tensor([[5.0, 4.0, 3.0], [1.0, 2.0, 9.0]])
+        report = submission.decoding_distribution_report(
+            logits,
+            strategy="temperature",
+            allowed_token_ids=[[1, 2], [0, 1]],
+        )
+
+        self.assertEqual(report["kept_token_ids"], [[1, 2], [0, 1]])
+        self.assertEqual(report["selected_token_ids"], [1, 1])
+        self.assertEqual(torch.isfinite(report["filtered_logits"]).tolist(), [[False, True, True], [True, True, False]])
+        self.assertTrue(torch.allclose(report["probabilities"].sum(dim=-1), torch.ones(2)))
+
+
+@unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")
 class TestGenerator(unittest.TestCase):
     def test_generator_decodes_and_distinct_ngrams(self):
         model = ScriptedModel(vocab_size=4)

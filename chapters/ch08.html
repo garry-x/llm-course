@@ -505,6 +505,10 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <h4>Repetition penalty 的位置</h4>
   <p>Repetition penalty 不是新的概率分布，也不是训练目标；它是在 softmax 与采样之前作用在 logits 上的 processor。常见规则是：对已经出现在 prefix 中的 token，若 logit 为正则除以 penalty，若 logit 为负则乘以 penalty，使这些 token 的相对概率下降。Ch08 作业中的 <code>apply_repetition_penalty</code> 要求学生手写这个变换，并验证它会在 greedy、top-k 或 top-p 选择之前改变候选排序。</p>
 
+  <h4>Worked Example：从 logits processor 到最终采样分布</h4>
+  <p>给定 logits <code>[4.0, 3.0, -1.0]</code>，已生成 token ids 为 <code>[0,2]</code>，repetition penalty 为 <code>2.0</code>。先处理重复 token：token 0 的正 logit 从 <code>4.0</code> 变为 <code>2.0</code>，token 2 的负 logit 从 <code>-1.0</code> 变为 <code>-2.0</code>，得到 <code>[2.0,3.0,-2.0]</code>。若随后使用 <code>top_p=0.8</code>，softmax 后 token 1 的概率约为 <code>0.721</code>，还没达到 0.8；加入 token 0 后累计约为 <code>0.986</code>，因此 nucleus 是 token <code>{1,0}</code>，token 2 被截断。</p>
+  <p>最终采样前要在保留集合上重新归一化：token 0 和 token 1 的概率约为 <code>[0.269,0.731]</code>，entropy 约为 <code>0.582</code>，最高概率 token 是 1。作业中的 <code>decoding_distribution_report</code> 要求返回处理后的 logits、保留候选、归一化概率、entropy 和当前最高概率 token；它帮助学生把“采样参数改变了输出”落实到可检查的概率账本。</p>
+
   <h4>策略选择的实际判断</h4>
   <ul>
     <li><strong>代码、数学、抽取：</strong>优先低温或 beam / pass@k；多样性不是主要目标，正确性和可复现性更重要。</li>

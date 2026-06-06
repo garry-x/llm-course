@@ -26,6 +26,20 @@ def sample_next_token(
     raise NotImplementedError
 
 
+def decoding_distribution_report(
+    logits,
+    strategy="temperature",
+    temperature=1.0,
+    k=40,
+    p=0.9,
+    generated_ids=None,
+    repetition_penalty=1.0,
+    allowed_token_ids=None,
+):
+    """Return processed logits, kept candidates, probabilities, and entropy before sampling."""
+    raise NotImplementedError
+
+
 def top_p_filter(logits, p=0.9):
     raise NotImplementedError
 

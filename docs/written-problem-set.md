@@ -82,7 +82,7 @@
 
 1. 比较 greedy、temperature、top-k、top-p 和 repetition penalty 的质量/多样性/可复现性/延迟取舍。
 2. 手算一个 5 token 词表的 top-p nucleus：给定概率 `[0.40, 0.25, 0.20, 0.10, 0.05]`，当 `p=0.7` 和 `p=0.9` 时各保留哪些 token。
-3. 给定 logits `[4.0, 3.0, -1.0]`、已生成 token ids `[0,2]` 和 repetition penalty `2.0`，手算采样前 logits 如何变化，并说明为什么正负 logit 的处理方向不同。
+3. 给定 logits `[4.0, 3.0, -1.0]`、已生成 token ids `[0,2]` 和 repetition penalty `2.0`，手算采样前 logits 如何变化；再用 `top_p=0.8` 计算保留的候选 token、重新归一化后的概率、entropy 和 greedy token，并说明为什么正负 logit 的处理方向不同。
 4. 说明 beam search 为什么常需要长度惩罚，并比较它与 sampling 在开放式生成任务中的适用场景。
 5. 给定一个 beam table，分别用 raw logprob 和 length-normalized score 排序，说明排序改变是否一定意味着质量更好。
 6. 给定 speculative decoding 的三轮记录：`gamma=4`，每轮接受草稿 token 数 `[4,2,3]`，实际写入输出 token 数 `[5,3,4]`，draft 单步成本是 target 单步成本的 `0.2`。计算 proposed、accepted、acceptance rate、baseline target steps、target verify calls、draft steps、粗略耗时和 speedup，并解释为什么 draft model 过弱或过强都可能不划算。

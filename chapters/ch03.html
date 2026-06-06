@@ -160,6 +160,21 @@ class QKVProjection(nn.Module):
   </div>
 </section>
 
+<section class="card" id="s3-3a">
+  <h3>3.3A Worked Example：Q/K/V 的 shape 与参数量账本</h3>
+  <p>设一个教学配置为 <code>B=2</code>、<code>T=3</code>、<code>d_model=4</code>、<code>d_k=2</code>。输入张量 <code>X</code> 的形状是 <code>[2,3,4]</code>，三个投影矩阵分别是 <code>W_Q,W_K,W_V</code>，每个形状为 <code>[4,2]</code>。因此：</p>
+  <div class="code-block" data-lang="text">
+Q = X @ W_Q  -> [2, 3, 2]
+K = X @ W_K  -> [2, 3, 2]
+V = X @ W_V  -> [2, 3, 2]</div>
+  <p>参数量不是 <code>B*T*d_model*d_k</code>，因为 batch 和 sequence length 不是模型参数；它们只是同一组权重被应用多少次。无 bias 时参数量为：</p>
+  <div class="math-box"><div class="label">QKV projection parameters</div>
+    <div class="katex" data-expr="3 \times d_{\text{model}} \times d_k = 3 \times 4 \times 2 = 24" aria-label="3*d_model*d_k = 24" role="img"></div>
+  </div>
+  <p>随后注意力分数来自 <code>QK^T</code>。对每个 batch 样本，<code>Q[3,2]</code> 与 <code>K[3,2]</code> 相乘得到 <code>[3,3]</code> 的 token-to-token score matrix；整个 batch 的 score 形状是 <code>[2,3,3]</code>。再乘以 <code>V[2,3,2]</code> 后，输出回到 <code>[2,3,2]</code>。Ch04 多头注意力会把这个过程复制到多个 head 上，再把各 head 输出拼接回 <code>d_model</code>。</p>
+  <p>这个例子对应 Ch03 作业中 <code>QKVProjection</code> 的测试：权重参数只来自三个线性层，输出 shape 与 batch/sequence 对齐，后续 attention score 的二次项来自 <code>T*T</code>，而不是参数量增长。</p>
+</section>
+
 <!-- ================================================================ -->
 <!-- 编程练习 2: Scaled Dot-Product Attention -->
 <!-- ================================================================ -->

@@ -185,7 +185,7 @@
         <li>使用 <code>nn.Embedding(vocab_size, d_model)</code> 作为内部查表</li>
         <li><code>forward(x)</code> 输入形状 <code>(batch, seq_len)</code>，输出形状 <code>(batch, seq_len, d_model)</code></li>
         <li><code>one_hot(token_ids)</code> 的形状应为 <code>(batch, seq_len, vocab_size)</code>，与 <code>embedding_weight</code> 相乘后得到 <code>(batch, seq_len, d_model)</code></li>
-        <li>输出乘以 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span>（GPT-2 风格的缩放初始化）</li>
+        <li>输出乘以 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span>（本章实现采用的 embedding 尺度约定）</li>
         <li>让 <code>forward</code> 返回的输出的 L2 范数大约为 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span></li>
       </ul>
       <pre># 预期用法
@@ -227,9 +227,30 @@ print(f"输入: {x.shape} → 输出: {out.shape}")
 print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
 # 输出形状: (2, 16, 768)
 # 参数: 38,400,000</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么乘以 √d_model？</strong>GPT-2 通过这个缩放使嵌入向量的 L2 范数近似为 <span class="katex-inline" data-expr="\sqrt{d}" aria-label="\sqrt{d}" role="img"></span>，避免后续 LayerNorm 被大数值主导。这不是必需操作，但已成为常见惯例。查看 <code>nn.Embedding</code> 的权重形状：<code>emb.embed.weight.shape</code> 返回 <code>[50000, 768]</code>。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么乘以 √d_model？</strong>本章作业采用这个缩放，是为了让学生显式观察 embedding 数值尺度如何进入后续层。它不是所有 decoder-only 模型都必须采用的结构规则；真实实现会把初始化、残差尺度、LayerNorm 和训练稳定性一起设计。查看 <code>nn.Embedding</code> 的权重形状：<code>emb.embed.weight.shape</code> 返回 <code>[50000, 768]</code>。</p>
     </div>
   </div>
+</section>
+
+<section class="card" id="s2-2a">
+  <h3>2.2A Worked Example：embedding lookup、缩放与 tied LM head</h3>
+  <p>设词表大小 <code>V=3</code>、嵌入维度 <code>d=2</code>，embedding 矩阵为：</p>
+  <div class="code-block" data-lang="text">
+E = [[1, 0],
+     [0, 2],
+     [3, 4]]</div>
+  <p>输入 token ids 为 <code>[[0, 2], [1, 0]]</code>，直接查表得到形状 <code>[B=2, T=2, d=2]</code> 的张量：</p>
+  <div class="code-block" data-lang="text">
+E[token_ids] =
+[[[1, 0], [3, 4]],
+ [[0, 2], [1, 0]]]</div>
+  <p>显式 one-hot 乘法完全等价：<code>one_hot(token_ids)</code> 的形状是 <code>[2,2,3]</code>，与 <code>E[3,2]</code> 相乘后得到 <code>[2,2,2]</code>。实际模型不会构造这个巨大 one-hot 张量，因为查表更省内存和带宽。</p>
+  <p>若采用本章作业的 embedding 缩放约定，输出还要乘以 <code>sqrt(d)=sqrt(2)</code>。例如 token 2 的原始向量是 <code>[3,4]</code>，缩放后为 <code>[3sqrt(2),4sqrt(2)]</code>。缩放改变数值尺度，不改变参数个数；参数仍是 <code>V*d=6</code>。</p>
+  <p>如果把同一个矩阵用于输出层的 LM head（weight tying），某个隐藏状态 <code>h=[1,1]</code> 对三个 token 的 logits 是：</p>
+  <div class="math-box"><div class="label">Tied output projection</div>
+    <div class="katex" data-expr="\text{logits}=hE^\top=[1,\;2,\;7]" aria-label="logits = h E^T = [1,2,7]" role="img"></div>
+  </div>
+  <p>这意味着输入 token embedding 和输出分类器共享同一组 token 向量。若不用 weight tying，输入 embedding 需要 <code>V*d</code> 参数，输出投影还要另一个 <code>d*V</code> 参数；在大词表模型中这会显著增加参数量。后续 Ch06 的 causal LM loss 正是用每个位置的 hidden state 经过 LM head 产生 <code>[B,T,V]</code> logits，再与 shifted labels 计算交叉熵。</p>
 </section>
 
 <!-- ================================================================ -->

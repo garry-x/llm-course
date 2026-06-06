@@ -54,6 +54,64 @@
 | 推理工程 Capstone | 20% | API、评测、压测、SLO、容量规划、错误分析 |
 | 阅读复盘与课堂参与 | 10% | 论文摘要、技术细节、批判性问题、同伴反馈 |
 
+## 学习成果矩阵
+
+本课程的评分不是只检查“能否跑通代码”。每个模块都同时考查四类能力：数学定义、可运行实现、实验评测和工程判断。学生应能把同一个概念从公式、张量 shape、测试用例和系统取舍四个角度讲清楚。
+
+| 能力 | 课程中的具体要求 | 主要对应材料 |
+|------|------------------|--------------|
+| 数学建模 | 写出目标函数、概率分解、mask 语义、动态规划递推或复杂度公式，并说明变量含义和边界条件 | 书面题、lecture derivations、worked examples |
+| PyTorch 实现 | 用 tensor 操作实现核心模块，处理 batch、sequence、head、vocab、padding、ignore index 和 dtype 等边界 | Ch01-Ch11 programming assignments |
+| 实验评测 | 区分训练 loss、任务指标、系统指标和人工质量；能解释指标适用范围和失败模式 | Ch07-Ch11、capstone、metric card |
+| 工程判断 | 估算显存、FLOPs、token budget、latency、throughput、context packing 和对齐风险 | Ch04-Ch10、training/inference capstone |
+| 论文阅读 | 抽取论文中的问题设定、核心算法、实验设置和方法边界，并映射到课程代码 | reading-list、课堂讨论、阅读复盘 |
+
+## 编程作业路线图
+
+章节作业按“从 token 到服务”的顺序递进。每次作业都应保留简短错误分析：哪些 shape、mask、dtype、边界条件或评价指标最容易出错，以及你如何用测试定位问题。
+
+| 作业 | 核心实现 | 关键概念 | 学生完成后应能回答 |
+|------|----------|----------|--------------------|
+| A1 Ch01-Ch02 | BPE、tokenizer report、embedding lookup、RoPE、word-vector objectives | 表示学习、子词压缩、分布式语义、位置编码 | tokenization 如何影响 context、训练成本和 embedding 参数量？ |
+| A2 Ch03 | scaled attention、causal/padding mask、softmax Jacobian、attention entropy | Q/K/V、mask 语义、attention 反向传播 | 为什么 mask 必须在 softmax 前应用？attention score 的 shape 为什么是四维？ |
+| A3 Ch04-Ch05 | MHA/GQA/MLA、repeat KV heads、LayerNorm/RMSNorm、SwiGLU、block resource estimates | 多头结构、KV cache、残差路径、激活显存 | GQA 为什么能省推理显存？Pre-Norm 为什么更利于深层训练？ |
+| A4 Ch06 | GPT config/model、weight tying、causal LM label shift、MoE router 和参数预算 | decoder-only LM、LM head、MoE 稀疏激活 | 为什么 logits 位置 `t` 预测 label `t+1`？MoE 的总参数和激活参数为什么不同？ |
+| A5 Ch07 | dataset/dataloader、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory | 训练闭环、优化器、校准、训练成本 | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？ |
+| A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、token constraints、speculative decoding | 解码策略、搜索、多样性、test-time compute、结构化生成 | top-p 为什么是自适应截断？约束解码如何改变采样分布？ |
+| A7 Ch09 | SFT mask、LoRA、sequence log-probs、RM/DPO/PPO/GRPO、implicit reward、KL、length bias | 指令微调、偏好优化、reference model、对齐风险 | DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？ |
+| A8 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1 | 经典 NLP、encoder-only、结构化预测、评测指标 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？ |
+| A9 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、benchmark summary、metric card | 推理工程、RAG、服务指标、容量规划 | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？ |
+
+## 书面题能力层级
+
+书面题按难度分为三层。基础题检查定义和 shape；推导题要求从公式到数值例子；设计题要求学生提出可复现实验并说明结论边界。
+
+| 层级 | 要求 | 示例 |
+|------|------|------|
+| Level 1: Definition / Shape | 写清输入输出、mask、标签、有效 token、batch/head/sequence 维度 | attention score shape、SFT label mask、KV cache bytes |
+| Level 2: Derivation / Calculation | 展开公式并完成小数值例子，说明每一步分母、归一化或动态规划状态 | softmax CE gradient、top-p nucleus、CRF log-partition、pass@k |
+| Level 3: Experiment / Critique | 设计实验、选择指标、列出失败模式，并说明结果不能推出哪些更强结论 | RAG ablation、DPO vs SFT evaluation、benchmark metric card |
+
+## Capstone 学术要求
+
+两个 capstone 分别训练学生做“受约束的建模实验”和“受约束的系统实验”。最终报告应像课程 project paper，而不是产品介绍。
+
+训练工程 Capstone 必须回答：
+
+- 数据：训练/验证拆分、去重或泄漏风险、token 统计、样本质量问题。
+- 模型：架构规模、参数量、训练 token budget、batch tokens、optimizer state 和 checkpoint 策略。
+- 优化：loss/PPL 曲线、learning rate schedule、gradient clipping、resume、失败 run 处理。
+- 评测：至少一个 held-out 指标、一个人工错误分析维度和一个能力退化或偏差风险。
+- 结论：哪些发现只适用于当前数据、规模、预算和随机种子。
+
+推理工程 Capstone 必须回答：
+
+- 服务：模型、硬件、batching、context length、generation 参数和 API 行为。
+- 检索/上下文：chunking、embedding、retrieval、reranking、MMR、context packing 和 citation 策略。
+- 性能：TTFT、TPOT、tokens/s、P50/P95/P99、显存、并发和错误率。
+- 质量：任务指标、失败案例、结构化输出或 tool/JSON 回归。
+- 结论：哪些结果依赖当前负载、评测集、缓存命中率、硬件和实现。
+
 每次编程作业必须包含：
 
 - 核心代码实现。

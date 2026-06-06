@@ -850,6 +850,19 @@ card = build_metric_card(
     </table>
   </div>
 
+  <h4>Worked Example：从 token 时间戳算 TTFT、TPOT 与 tokens/s</h4>
+  <p>假设一条请求生成 4 个 token，服务端记录到的时间间隔如下：第一个 token 在请求后 <code>180 ms</code> 到达，后续 token 间隔分别为 <code>35 ms</code>、<code>40 ms</code>、<code>45 ms</code>。那么这条请求的指标不是一个“总耗时”就能概括：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>token</th><th>到达时间</th><th>解释</th></tr>
+      <tr><td>1</td><td>180 ms</td><td>TTFT，包含排队、prefill 和首步 decode</td></tr>
+      <tr><td>2</td><td>215 ms</td><td>第 2 个 token 比前一个晚 35 ms</td></tr>
+      <tr><td>3</td><td>255 ms</td><td>第 3 个 token 比前一个晚 40 ms</td></tr>
+      <tr><td>4</td><td>300 ms</td><td>第 4 个 token 比前一个晚 45 ms</td></tr>
+    </table>
+  </div>
+  <p>这条请求的 <code>TTFT = 180 ms</code>，<code>TPOT = (35 + 40 + 45) / 3 = 40 ms/token</code>，总生成时间为 <code>300 ms</code>，单请求平均吞吐为 <code>4 / 0.300 ≈ 13.3 tokens/s</code>。但线上 SLO 不能只看这一条样本：如果 100 条请求的 TTFT 排序后第 95 条是 <code>920 ms</code>，即使平均 TTFT 只有 <code>260 ms</code>，也没有满足 <code>P95 &lt; 800 ms</code> 的目标。课程项目应同时报告 P50/P95/P99，并按 prompt tokens、completion tokens 和是否命中 prefix cache 分层。</p>
+
   <h4>上线方案</h4>
   <ul>
     <li><strong>容量：</strong>测过目标 prompt 长度、输出长度、并发数下的 P50/P95/P99。</li>

@@ -133,6 +133,46 @@
   <p>Ch11 作业中的 <code>linear_chain_log_partition</code> 用 log-space forward DP 计算这个归一化项，<code>linear_chain_crf_nll</code> 再显式计算 gold path score，并返回 <code>log_partition - gold_score</code>。它们和 <code>viterbi_decode</code> 的状态形状相同，但语义不同：Viterbi 用于预测最优路径，CRF NLL 用于训练时比较 gold path 与所有竞争路径。</p>
 </section>
 
+<section class="card" id="s11-5a">
+  <h3>11.5A Worked Example：Viterbi 解码与 CRF 训练不是一回事</h3>
+  <p>考虑一个长度为 2 的 toy NER 序列，标签集合为 <code>O</code> 和 <code>B-PER</code>。模型给出的 emission score 如下，transition score 只考虑从第 1 个 token 到第 2 个 token：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th></th><th>token 1</th><th>token 2</th></tr>
+      <tr><td><code>O</code></td><td>1.2</td><td>0.3</td></tr>
+      <tr><td><code>B-PER</code></td><td>0.4</td><td>1.1</td></tr>
+    </table>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <tr><th>transition</th><th>to <code>O</code></th><th>to <code>B-PER</code></th></tr>
+      <tr><td>from <code>O</code></td><td>0.2</td><td>0.6</td></tr>
+      <tr><td>from <code>B-PER</code></td><td>-0.1</td><td>0.1</td></tr>
+    </table>
+  </div>
+
+  <h4>Viterbi：找最高分路径</h4>
+  <p>第 1 步的最佳分数就是 emission：<code>O=1.2</code>，<code>B-PER=0.4</code>。第 2 步若以 <code>O</code> 结尾，比较两条来源：</p>
+  <div class="math-box"><div class="label">Viterbi step to O</div>
+    <div class="katex" data-expr="\max(1.2+0.2+0.3,\;0.4-0.1+0.3)=1.7" aria-label="\max(1.2+0.2+0.3,\;0.4-0.1+0.3)=1.7" role="img"></div>
+  </div>
+  <p>若以 <code>B-PER</code> 结尾：</p>
+  <div class="math-box"><div class="label">Viterbi step to B-PER</div>
+    <div class="katex" data-expr="\max(1.2+0.6+1.1,\;0.4+0.1+1.1)=2.9" aria-label="\max(1.2+0.6+1.1,\;0.4+0.1+1.1)=2.9" role="img"></div>
+  </div>
+  <p>所以最优路径是 <code>O, B-PER</code>，分数为 2.9。注意这个结果不是逐 token argmax 的简单拼接；它利用了 transition score，偏好从 <code>O</code> 进入 <code>B-PER</code> 的路径。</p>
+
+  <h4>CRF NLL：比较 gold path 与所有路径</h4>
+  <p>若 gold path 也是 <code>O, B-PER</code>，gold score 为 <code>1.2 + 0.6 + 1.1 = 2.9</code>。CRF 训练还要计算所有路径的 log-partition：</p>
+  <div class="math-box"><div class="label">四条路径的分数</div>
+    <div class="katex" data-expr="\begin{aligned}s(O,O)&=1.2+0.2+0.3=1.7\\s(O,B)&=1.2+0.6+1.1=2.9\\s(B,O)&=0.4-0.1+0.3=0.6\\s(B,B)&=0.4+0.1+1.1=1.6\end{aligned}" aria-label="s(O,O)=1.7, s(O,B)=2.9, s(B,O)=0.6, s(B,B)=1.6" role="img"></div>
+  </div>
+  <div class="math-box"><div class="label">CRF negative log-likelihood</div>
+    <div class="katex" data-expr="\mathcal{L}=\log\left(e^{1.7}+e^{2.9}+e^{0.6}+e^{1.6}\right)-2.9" aria-label="\mathcal{L}=\log(e^{1.7}+e^{2.9}+e^{0.6}+e^{1.6})-2.9" role="img"></div>
+  </div>
+  <p>这个 loss 会推动 gold path 的分数相对所有竞争路径上升，而不只是让当前 Viterbi 预测正确。若模型已经预测对但第二名路径分数很接近，CRF NLL 仍会给出非零梯度；这就是结构化训练比“解码后看是否正确”更细的地方。</p>
+</section>
+
 <section class="card" id="s11-6">
   <h3>11.6 评测：BLEU、ROUGE、EM/F1 与结构指标</h3>
   <p>评测指标必须匹配任务结构。翻译常用 BLEU，摘要常用 ROUGE，抽取式 QA 常用 Exact Match 和 token-level F1，dependency parsing 用 UAS/LAS。它们都不是“语言质量”的完整度量。</p>

@@ -558,6 +558,26 @@ def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
 </section>
 
 <!-- ================================================================ -->
+<!-- 9.8A Worked Example -->
+<!-- ================================================================ -->
+<section class="card" id="s9-8a">
+  <h3>9.8A Worked Example：GRPO 组内白化的尺度账本</h3>
+  <p>设一个 batch 中有 2 个 prompt，每个 prompt 采样 <code>G=3</code> 个回答，奖励矩阵按 <code>[group, batch]</code> 排列：</p>
+  <div class="code-block" data-lang="text">
+rewards =
+[[ 1, 10],
+ [ 2, 20],
+ [ 3, 30]]</div>
+  <p>GRPO 不是把 6 个奖励混在一起归一化，而是对每个 prompt 的 3 个候选分别计算组内均值和标准差。第一列奖励 <code>[1,2,3]</code> 的均值是 2，总体标准差是 <span class="katex-inline" data-expr="\sqrt{2/3}\approx0.816" aria-label="\sqrt{2/3}\approx0.816" role="img"></span>；第二列 <code>[10,20,30]</code> 的均值是 20，总体标准差是 <span class="katex-inline" data-expr="\sqrt{200/3}\approx8.165" aria-label="\sqrt{200/3}\approx8.165" role="img"></span>。因此两列的优势都变成同样的相对形状：</p>
+  <div class="code-block" data-lang="text">
+advantages ≈
+[[-1.225, -1.225],
+ [ 0.000,  0.000],
+ [ 1.225,  1.225]]</div>
+  <p>这个例子说明：组内白化消除了不同 prompt 奖励尺度的差异，但没有改变同一 prompt 内候选的相对排序。实现时使用 <code>std(unbiased=False)</code> 对应总体标准差，使白化后的每列总体标准差为 1；若使用 PyTorch 默认的样本标准差，小组样本较小时优势幅度会被额外缩小。</p>
+</section>
+
+<!-- ================================================================ -->
 <!-- 编程练习 4: GRPO Advantage -->
 <!-- ================================================================ -->
 <section class="card" id="s9-9">
@@ -583,7 +603,7 @@ advantages = grpo_advantages(rewards)
 assert advantages.shape == (8, 4)
 # 同一 prompt 的 8 个候选回答 mean ≈ 0, std ≈ 1
 print(advantages.mean(dim=0))  # ~0
-print(advantages.std(dim=0))   # ~1</pre>
+print(advantages.std(dim=0, unbiased=False))   # ~1</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
     <div class="solution"><div class="code-block" data-lang="python">
@@ -595,12 +615,12 @@ def grpo_advantages(rewards):
     if rewards.dim() == 1:
         # 单组情况：整个 batch 作为一个组
         mean = rewards.mean()
-        std = rewards.std() + 1e-8
+        std = rewards.std(unbiased=False) + 1e-8
         return (rewards - mean) / std
     else:
         # 多组情况：对每组分别归一化
         mean = rewards.mean(dim=0, keepdim=True)
-        std = rewards.std(dim=0, keepdim=True) + 1e-8
+        std = rewards.std(dim=0, keepdim=True, unbiased=False) + 1e-8
         return (rewards - mean) / std
 
 def approx_kl_from_logps(policy_logps, ref_logps, mask):

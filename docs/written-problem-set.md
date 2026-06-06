@@ -74,8 +74,9 @@
 8. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。
 9. 给定一组 logits、targets 和 confidence bins，计算每个桶的 accuracy、mean confidence 与 ECE，并说明模型过度自信会如何影响拒答阈值或风险控制。
 10. 给定两个参数张量的梯度，计算 global grad norm、clip coefficient 和裁剪后的梯度；说明它与逐参数裁剪的区别。
-11. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
-12. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
+11. 给定 `grad_accum_steps=4`、四个 micro-batch mean losses、每个 micro-batch 的 token 数和 warmup scheduler，计算每次 backward 使用的 scaled loss、一次 optimizer step 消耗的 token 数、scheduler 应推进几次，以及如果忘记除以 `grad_accum_steps` 会等价于怎样改变学习率。
+12. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
+13. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
 
 ## Ch08 Generation / Decoding
 

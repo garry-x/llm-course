@@ -75,6 +75,11 @@ def clip_grad_norm(parameters, max_norm, eps=1e-6):
     raise NotImplementedError
 
 
+def gradient_accumulation_step_accounting(micro_batch_losses, grad_accum_steps, tokens_per_micro_batch):
+    """Account for loss scaling, optimizer steps, scheduler steps, and consumed tokens."""
+    raise NotImplementedError
+
+
 class AdamW:
     def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1):
         raise NotImplementedError

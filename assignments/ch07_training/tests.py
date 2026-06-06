@@ -239,6 +239,44 @@ class TestLossOptimizerScheduler(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.clip_grad_norm([p], max_norm=1.0, eps=0.0)
 
+    def test_gradient_accumulation_step_accounting_scales_loss_and_steps_once(self):
+        result = submission.gradient_accumulation_step_accounting(
+            micro_batch_losses=[2.4, 2.0, 1.8, 2.2],
+            grad_accum_steps=4,
+            tokens_per_micro_batch=8192,
+        )
+        self.assertEqual(result["scaled_losses"], [0.6, 0.5, 0.45, 0.55])
+        self.assertEqual(result["group_raw_means"], [2.1])
+        self.assertEqual(result["group_backward_loss_sums"], [2.1])
+        self.assertEqual(result["optimizer_steps"], 1)
+        self.assertEqual(result["scheduler_steps"], 1)
+        self.assertEqual(result["consumed_tokens"], 32768)
+
+    def test_gradient_accumulation_step_accounting_counts_optimizer_groups(self):
+        result = submission.gradient_accumulation_step_accounting(
+            micro_batch_losses=[1.0, 3.0, 2.0, 6.0],
+            grad_accum_steps=2,
+            tokens_per_micro_batch=10,
+        )
+        self.assertEqual(result["scaled_losses"], [0.5, 1.5, 1.0, 3.0])
+        self.assertEqual(result["group_raw_means"], [2.0, 4.0])
+        self.assertEqual(result["group_backward_loss_sums"], [2.0, 4.0])
+        self.assertEqual(result["optimizer_steps"], 2)
+        self.assertEqual(result["scheduler_steps"], 2)
+        self.assertEqual(result["consumed_tokens"], 40)
+
+    def test_gradient_accumulation_step_accounting_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.gradient_accumulation_step_accounting([], 4, 8192)
+        with self.assertRaises(ValueError):
+            submission.gradient_accumulation_step_accounting([1.0, 2.0], 0, 8192)
+        with self.assertRaises(ValueError):
+            submission.gradient_accumulation_step_accounting([1.0, 2.0], 2, 0)
+        with self.assertRaises(ValueError):
+            submission.gradient_accumulation_step_accounting([1.0, 2.0, 3.0], 2, 8192)
+        with self.assertRaises(ValueError):
+            submission.gradient_accumulation_step_accounting([1.0, float("nan")], 2, 8192)
+
     def test_adamw_single_step_matches_expected_update(self):
         p = torch.nn.Parameter(torch.tensor([1.0, -2.0]))
         p.grad = torch.tensor([0.1, -0.2])

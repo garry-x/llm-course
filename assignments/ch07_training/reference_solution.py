@@ -214,6 +214,39 @@ def clip_grad_norm(parameters, max_norm, eps=1e-6):
     return {"total_norm": float(total_norm.item()), "clip_coef": clip_coef}
 
 
+def gradient_accumulation_step_accounting(micro_batch_losses, grad_accum_steps, tokens_per_micro_batch):
+    """Account for loss scaling, optimizer steps, scheduler steps, and consumed tokens."""
+    if grad_accum_steps <= 0 or tokens_per_micro_batch <= 0:
+        raise ValueError("grad_accum_steps and tokens_per_micro_batch must be positive")
+    if not micro_batch_losses:
+        raise ValueError("micro_batch_losses must be non-empty")
+    if len(micro_batch_losses) % grad_accum_steps != 0:
+        raise ValueError("micro_batch_losses must contain complete accumulation groups")
+
+    losses = [float(loss) for loss in micro_batch_losses]
+    if any(not math.isfinite(loss) for loss in losses):
+        raise ValueError("micro_batch_losses must be finite")
+
+    scaled_losses = [loss / grad_accum_steps for loss in losses]
+    optimizer_steps = len(losses) // grad_accum_steps
+    group_raw_means = []
+    group_backward_sums = []
+    for start in range(0, len(losses), grad_accum_steps):
+        group = losses[start : start + grad_accum_steps]
+        scaled_group = scaled_losses[start : start + grad_accum_steps]
+        group_raw_means.append(sum(group) / grad_accum_steps)
+        group_backward_sums.append(sum(scaled_group))
+
+    return {
+        "scaled_losses": scaled_losses,
+        "group_raw_means": group_raw_means,
+        "group_backward_loss_sums": group_backward_sums,
+        "optimizer_steps": optimizer_steps,
+        "scheduler_steps": optimizer_steps,
+        "consumed_tokens": len(losses) * int(tokens_per_micro_batch),
+    }
+
+
 class AdamW:
     def __init__(self, params, lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1):
         self.params = list(params)

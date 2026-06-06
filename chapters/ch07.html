@@ -729,7 +729,7 @@ grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 scaler.step(optimizer)
 scaler.update()
 scheduler.step()</div>
-  <p>如果没有把 loss 除以 <code>grad_accum_steps</code>，累积梯度会比大 batch mean 大 4 倍，等价于把学习率放大 4 倍。若使用 FP16 <code>GradScaler</code>，裁剪必须发生在 <code>unscale_</code> 之后；否则你裁剪的是被 scaler 放大的梯度，<code>max_norm=1.0</code> 不再对应真实梯度范数。学习率调度器通常在成功的 optimizer step 后推进一次，而不是每个 micro-batch 推进一次；否则 warmup 和 cosine decay 会按 micro-step 过快走完。</p>
+  <p>如果没有把 loss 除以 <code>grad_accum_steps</code>，累积梯度会比大 batch mean 大 4 倍，等价于把学习率放大 4 倍。若使用 FP16 <code>GradScaler</code>，裁剪必须发生在 <code>unscale_</code> 之后；否则你裁剪的是被 scaler 放大的梯度，<code>max_norm=1.0</code> 不再对应真实梯度范数。学习率调度器通常在成功的 optimizer step 后推进一次，而不是每个 micro-batch 推进一次；否则 warmup 和 cosine decay 会按 micro-step 过快走完。Ch07 作业中的 <code>gradient_accumulation_step_accounting</code> 把 scaled losses、optimizer steps、scheduler steps 和 consumed tokens 明确算出来。</p>
   <p>这也是训练日志里 <code>step</code> 和 <code>tokens</code> 要同时记录的原因：4 个 micro-batch 只对应 1 次 optimizer step，但消耗的 token 是四个 micro-batch 的总和。PPL 应由未除以 accumulation 的原始 mean loss 计算；用于 backward 的缩放 loss 只是梯度尺度技巧，不是模型困惑度。</p>
 </section>
 

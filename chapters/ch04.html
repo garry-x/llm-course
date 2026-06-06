@@ -502,6 +502,14 @@ class GroupedQueryAttention(nn.Module):
   </div>
   <p>对比 MHA：MLA <strong>只缓存一个共享潜在向量</strong> <span class="katex-inline" data-expr="\mathbf{c}^{KV} \in \mathbb{R}^{512}" aria-label="\mathbf{c}^{KV} \in \mathbb{R}^{512}" role="img"></span>（K、V 在用时由它分别解压重建），再加解耦 RoPE 键 <span class="katex-inline" data-expr="\mathbf{k}^R \in \mathbb{R}^{64}" aria-label="\mathbf{k}^R \in \mathbb{R}^{64}" role="img"></span>，共约 <span class="katex-inline" data-expr="576" aria-label="576" role="img"></span> 维/token；对比 MHA 的 <span class="katex-inline" data-expr="2 \times 64 \times 128 = 16,384" aria-label="2 \times 64 \times 128 = 16,384" role="img"></span>——<strong>约 28 倍压缩</strong>（DeepSeek 报告约 93% 缩减）。注意：缓存的是 <em>单个</em> 潜向量，不是 K、V 各一份。</p>
 
+  <h4>Worked Example：RoPE 如何把相对位置写进点积</h4>
+  <p>RoPE 将每两个维度看成一个 2D 平面，并按 token 位置旋转 Q 和 K。设某个频率下每前进 1 个位置旋转 <code>30°</code>，且未旋转前 <code>q = [1, 0]</code>、<code>k = [1, 0]</code>。若 query 在位置 5、key 在位置 2，则二者分别旋转 <code>150°</code> 和 <code>60°</code>，点积等于两者夹角 <code>90°</code> 的余弦：</p>
+  <div class="math-box"><div class="label">2D RoPE dot product</div>
+    <div class="katex" data-expr="(R_5 q)^\top (R_2 k)=q^\top R_{2-5}k=\cos(90^\circ)=0" aria-label="(R_5 q)^\top (R_2 k)=q^\top R_{2-5}k=\cos(90^\circ)=0" role="img"></div>
+  </div>
+  <p>如果把整段文本整体右移 10 个位置，query 变成位置 15、key 变成位置 12，二者的绝对旋转角都变了，但相对差仍是 3 个位置，点积仍为 <code>cos(90°)=0</code>。这就是 RoPE 的核心性质：attention score 可以感知相对距离，而不是只记住绝对位置编号。</p>
+  <p>这个性质来自旋转矩阵的正交性和可加性：<code>R_m^T R_n = R_{n-m}</code>。也正因为旋转依赖位置 <code>m,n</code>，它不能随意和 MLA 的固定解压矩阵交换次序。内容向量可以做矩阵吸收，但位置旋转部分通常需要单独保留和计算。</p>
+
   <h4>解耦 RoPE 的必要性</h4>
   <p>MLA 面临一个关键问题：RoPE 旋转本身是<strong>线性正交变换</strong>，但它依赖 token 位置；这个位置相关旋转与固定的解压矩阵一般不能交换，也不能被统一吸收到同一个 Q 投影中。如果将 RoPE 应用在解压后的 K 上，内容部分的矩阵吸收就不再直接成立。</p>
   <p>DeepSeek 的解决方案是<strong>解耦 RoPE</strong>：将 K 分为两部分——内容部分（通过低秩压缩/解压）和 RoPE 部分（单独投影，不经过压缩）。推理时只有内容部分参与矩阵吸收，RoPE 部分单独计算点积贡献。</p>

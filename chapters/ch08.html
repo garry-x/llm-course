@@ -530,6 +530,23 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   </div>
   <p>Ch08 作业中的 <code>length_normalized_score</code> 和 <code>beam_search</code> 对应这个过程。这里使用的是教学版 batch size 1 实现，目的是让学生看清 beam table、raw score 和 normalized score 的关系。</p>
 
+  <div class="worked-example">
+    <h4>Worked Example：两步 Beam Search 与长度归一化</h4>
+    <p>设 <code>num_beams=2</code>，第一步从 prompt 扩展出两个候选：<code>A</code> 的 log probability 为 <code>-0.2</code>，<code>EOS</code> 的 log probability 为 <code>-0.4</code>。若允许早停，<code>EOS</code> 是一条长度为 1 的完整短答案；<code>A</code> 还要继续生成。</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>步骤</th><th>候选</th><th>新增 logp</th><th>累计 logp</th><th>长度</th><th><code>alpha=1</code> 归一化分数</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><code>EOS</code></td><td>-0.4</td><td>-0.4</td><td>1</td><td>-0.400</td></tr>
+        <tr><td>1</td><td><code>A</code></td><td>-0.2</td><td>-0.2</td><td>1</td><td>-0.200</td></tr>
+        <tr><td>2</td><td><code>A B</code></td><td>-0.3</td><td>-0.5</td><td>2</td><td>-0.250</td></tr>
+        <tr><td>2</td><td><code>A C</code></td><td>-1.0</td><td>-1.2</td><td>2</td><td>-0.600</td></tr>
+      </tbody>
+    </table>
+    <p>如果只看累计 logp，短答案 <code>EOS</code> 的 <code>-0.4</code> 高于 <code>A B</code> 的 <code>-0.5</code>，beam 可能偏向过短输出。使用 <code>s(y)=logp/|y|</code> 后，<code>A B</code> 的分数是 <code>-0.25</code>，优于 <code>EOS</code> 的 <code>-0.4</code>。这就是 length penalty 的作用：不是无条件奖励长句，而是减少“每多一个 token 就多加一个负数”造成的短句偏置。</p>
+  </div>
+
   <h4>什么时候用 beam</h4>
   <ul>
     <li><strong>适合：</strong>翻译、抽取、代码候选、数学短答、schema 受限输出等有明确目标的任务。</li>

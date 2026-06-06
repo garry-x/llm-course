@@ -279,6 +279,22 @@ print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
   </div>
   <p>其中 <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span> 是位置索引，<span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 是维度索引，<span class="katex-inline" data-expr="d" aria-label="d" role="img"></span> 是嵌入维度。</p>
 
+  <div class="worked-example">
+    <h4>Worked Example：<code>d_model=4</code> 时的正弦编码</h4>
+    <p>当 <code>d=4</code> 时有两组 sin/cos 频率：第 0/1 维使用分母 <code>10000^{0/4}=1</code>，第 2/3 维使用分母 <code>10000^{2/4}=100</code>。因此低维变化更快，高维变化更慢：</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>位置</th><th>第 0 维 <code>sin(pos)</code></th><th>第 1 维 <code>cos(pos)</code></th><th>第 2 维 <code>sin(pos/100)</code></th><th>第 3 维 <code>cos(pos/100)</code></th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>0.000</td><td>1.000</td><td>0.000</td><td>1.000</td></tr>
+        <tr><td>1</td><td>0.841</td><td>0.540</td><td>0.010</td><td>1.000</td></tr>
+        <tr><td>2</td><td>0.909</td><td>-0.416</td><td>0.020</td><td>1.000</td></tr>
+      </tbody>
+    </table>
+    <p>位置 0 的所有偶数维为 0、奇数维为 1，这正对应作业测试中的 <code>row0[0::2] == 0</code> 与 <code>row0[1::2] == 1</code>。更高频维度快速区分相邻位置；更低频维度在短距离内变化很小，用来承载更长尺度的位置变化。</p>
+  </div>
+
   <h4>为什么这样设计？</h4>
   <p><strong>多尺度频率：</strong>低维度（小 <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>）使用高频率——sin/cos 波形变化快，相邻位置的编码差异大，适合编码<strong>局部位置信息</strong>。高维度（大 <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>）使用低频率——变化缓慢，适合编码<strong>全局位置信息</strong>。这种设计模仿了傅里叶特征：将位置编码在不同频率的基函数上，模型可以学习选择性地关注高频或低频维度。</p>
 

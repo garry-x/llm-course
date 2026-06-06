@@ -172,6 +172,37 @@ def causal_lm_loss_from_logits(logits, input_ids, ignore_index=-100):
     )
 
 
+def tied_lm_head_gradients(hidden_states, embedding_weight, target_ids, ignore_index=-100):
+    """Return (loss, d_hidden, d_embedding) for logits = hidden_states @ embedding_weight.T."""
+    if hidden_states.dim() != 2:
+        raise ValueError("hidden_states must have shape [N, D]")
+    if embedding_weight.dim() != 2:
+        raise ValueError("embedding_weight must have shape [V, D]")
+    if target_ids.dim() != 1:
+        raise ValueError("target_ids must have shape [N]")
+    if hidden_states.size(0) != target_ids.size(0) or hidden_states.size(1) != embedding_weight.size(1):
+        raise ValueError("hidden_states, embedding_weight, and target_ids shapes are incompatible")
+
+    valid = target_ids != ignore_index
+    if not torch.any(valid):
+        raise ValueError("at least one target id must be valid")
+    if torch.any((target_ids[valid] < 0) | (target_ids[valid] >= embedding_weight.size(0))):
+        raise ValueError("target id out of vocabulary range")
+
+    logits = hidden_states @ embedding_weight.T
+    loss = F.cross_entropy(logits, target_ids, ignore_index=ignore_index)
+
+    probs = F.softmax(logits, dim=-1)
+    grad_logits = probs
+    grad_logits[valid, target_ids[valid]] -= 1.0
+    grad_logits[~valid] = 0.0
+    grad_logits = grad_logits / valid.sum()
+
+    grad_hidden = grad_logits @ embedding_weight
+    grad_embedding = grad_logits.T @ hidden_states
+    return loss, grad_hidden, grad_embedding
+
+
 def moe_parameter_budget(
     d_model,
     expert_hidden,

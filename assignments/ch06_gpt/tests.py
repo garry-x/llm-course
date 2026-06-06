@@ -144,6 +144,48 @@ class TestGPTModel(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.causal_lm_loss_from_logits(torch.randn(1, 2, 4), torch.full((1, 2), -100))
 
+    def test_tied_lm_head_gradients_match_autograd(self):
+        torch.manual_seed(13)
+        hidden = torch.randn(4, 3, requires_grad=True)
+        embedding = torch.randn(5, 3, requires_grad=True)
+        targets = torch.tensor([1, 3, -100, 0])
+
+        logits = hidden @ embedding.T
+        expected_loss = F.cross_entropy(logits, targets, ignore_index=-100)
+        expected_loss.backward()
+
+        loss, grad_hidden, grad_embedding = submission.tied_lm_head_gradients(
+            hidden.detach(),
+            embedding.detach(),
+            targets,
+            ignore_index=-100,
+        )
+        self.assertTrue(torch.allclose(loss, expected_loss.detach(), atol=1e-6))
+        self.assertTrue(torch.allclose(grad_hidden, hidden.grad, atol=1e-6))
+        self.assertTrue(torch.allclose(grad_embedding, embedding.grad, atol=1e-6))
+
+    def test_tied_lm_head_gradients_updates_all_softmax_rows(self):
+        hidden = torch.tensor([[1.0, 0.0]])
+        embedding = torch.tensor([[0.0, 0.0], [1.0, 0.0], [-1.0, 0.0]])
+        targets = torch.tensor([1])
+
+        _loss, _grad_hidden, grad_embedding = submission.tied_lm_head_gradients(hidden, embedding, targets)
+        self.assertLess(grad_embedding[1, 0].item(), 0.0)
+        self.assertGreater(grad_embedding[0, 0].item(), 0.0)
+        self.assertGreater(grad_embedding[2, 0].item(), 0.0)
+
+    def test_tied_lm_head_gradients_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.tied_lm_head_gradients(torch.randn(2, 3, 4), torch.randn(5, 4), torch.ones(2, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.tied_lm_head_gradients(torch.randn(2, 3), torch.randn(5, 4), torch.ones(2, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.tied_lm_head_gradients(torch.randn(2, 3), torch.randn(5, 3), torch.ones(2, 1, dtype=torch.long))
+        with self.assertRaises(ValueError):
+            submission.tied_lm_head_gradients(torch.randn(1, 3), torch.randn(5, 3), torch.tensor([8]))
+        with self.assertRaises(ValueError):
+            submission.tied_lm_head_gradients(torch.randn(1, 3), torch.randn(5, 3), torch.tensor([-100]))
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch06 GPT tests")
 class TestCausalAttention(unittest.TestCase):

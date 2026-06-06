@@ -1,6 +1,6 @@
 # Chapter 6 Assignment: GPT Model Assembly
 
-本作业对应第 6 章的完整 GPT 组装练习。重点是实现 GPT-2 风格的稠密 Decoder-only 模型：token embedding、learned position embedding、causal self-attention、GELU MLP、LayerNorm、LM head 和 weight tying，并通过 MoE 路由与参数预算理解容量和每 token 计算量的区别。
+本作业对应第 6 章的完整 GPT 组装练习。重点是实现 GPT-2 风格的稠密 Decoder-only 模型：token embedding、learned position embedding、causal self-attention、GELU MLP、LayerNorm、LM head 和 weight tying，并通过 tied LM head 梯度、MoE 路由与参数预算理解容量和每 token 计算量的区别。
 
 ## Files
 
@@ -25,6 +25,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch06_gpt/tests.py
 - `GPTConfig()` 默认值应对应 GPT-2 small：`vocab_size=50257`、`max_seq_len=1024`、`d_model=768`、`n_heads=12`、`n_layers=12`。
 - `GPTModel.forward(input_ids)` 返回形状为 `[batch, seq_len, vocab_size]` 的 logits。
 - `causal_lm_loss_from_logits` 必须用 `logits[:, :-1, :]` 预测 `input_ids[:, 1:]`，并正确处理 `ignore_index`。
+- `tied_lm_head_gradients` 需要手写 `logits = H E^T` 下的 CE 梯度，返回 loss、`dH` 和 `dE`。
 - causal mask 必须阻止当前位置关注未来 token。
 - `tie_weights=True` 时，`lm_head.weight` 和 `token_embedding.weight` 必须是同一个参数对象。
 - 默认 GPT-2 small 参数量应为 `124,439,808`，这是 HuggingFace GPT-2 small 的常见总量；其中包含 tied embedding/LM head 只计一次。
@@ -35,6 +36,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch06_gpt/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 30 | 计算 GPT-2 small 参数量，解释 label shift、next-token cross entropy、weight tying、causal leakage 测试、MoE 稀疏激活、参数预算和负载均衡 |
-| Programming parts | 60 | 实现 GPTConfig、causal attention、GPTModel、初始化/tying、causal LM loss、MoE 参数预算和 MoE router |
+| Written questions | 30 | 计算 GPT-2 small 参数量，解释 label shift、next-token cross entropy、weight tying、tied LM head 梯度、causal leakage 测试、MoE 稀疏激活、参数预算和负载均衡 |
+| Programming parts | 60 | 实现 GPTConfig、causal attention、GPTModel、初始化/tying、causal LM loss、tied LM head gradient、MoE 参数预算和 MoE router |
 | Analysis / style | 10 | 区分 total/activated parameters，报告参数分析、next-token logits 对齐和未来 token 泄漏检查 |

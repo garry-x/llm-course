@@ -405,6 +405,10 @@ sample 2 labels: [GPT, EOS,  -100, -100]</div>
 
   <h4>反向传播的影响</h4>
   <p>共享时，嵌入层的梯度来自两个方向：一是 embedding lookup 路径，二是 LM Head 分类路径。被输入序列用到的 token 行会从 lookup 路径拿到梯度；所有出现在 softmax 分类器里的 token 行都会通过输出分布得到梯度。这个耦合有时像正则化，有时会限制输入端和输出端分别适配任务，不能简单归结为“小模型一定好、大模型一定坏”。</p>
+  <div class="math-box"><div class="label">tied LM Head 梯度</div>
+    <div class="katex" data-expr="Z=HE^\top,\quad G=\frac{\partial L}{\partial Z},\quad \frac{\partial L}{\partial H}=GE,\quad \frac{\partial L}{\partial E}=G^\top H" aria-label="Z=HE^\top,\quad G=\frac{\partial L}{\partial Z},\quad \frac{\partial L}{\partial H}=GE,\quad \frac{\partial L}{\partial E}=G^\top H" role="img"></div>
+  </div>
+  <p>其中 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 是 cross entropy 对 logits 的梯度：有效 token 行为 <code>(softmax - one_hot) / N_valid</code>，被 <code>ignore_index</code> 跳过的行全为 0。Ch06 作业中的 <code>tied_lm_head_gradients</code> 要求学生手写这三步，并和 autograd 对齐。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>结论：</strong>Weight Tying 首先是一个架构约束：它节省 <span class="katex-inline" data-expr="|V|d_{\text{model}}" aria-label="|V|d_{\text{model}}" role="img"></span> 个 LM Head 参数，并让输入 token 空间和输出 token 分类器共享几何结构。参数节省是否重要，要放到具体模型的 vocab、hidden size 和总参数账本里计算。</div></div>
 </section>
@@ -425,7 +429,7 @@ logits used:     0  1
 targets:           1  2
 unused logits:          position 2 has no next-token label</div>
   <p>因此 loss 是 <code>CE(Z[0], 1)</code> 和 <code>CE(Z[1], 2)</code> 的平均值；<code>Z[2]</code> 可以用于推理时预测下一个 token，但在这个训练样本里没有标签。若不做 tying，还需要一个独立的 <span class="katex-inline" data-expr="W_{\text{lm}}\in\mathbb{R}^{4\times 2}" aria-label="W_{\text{lm}}\in\mathbb{R}^{4\times 2}" role="img"></span>，logits 变成 <span class="katex-inline" data-expr="HW_{\text{lm}}^\top" aria-label="HW_{\text{lm}}^\top" role="img"></span>，参数量增加 <span class="katex-inline" data-expr="4\times2=8" aria-label="4\times2=8" role="img"></span>。在真实 GPT-2 small 中，同一项是 <span class="katex-inline" data-expr="50257\times768\approx38.6\text{M}" aria-label="50257\times768\approx38.6\text{M}" role="img"></span>。</p>
-  <p>这个例子同时检查三件事：logits 的最后一维必须是 vocab，label shift 使用 <code>[:-1]</code> 的 logits 预测 <code>[1:]</code> 的 token，tied 权重只节省输出头矩阵，不改变 Transformer block 内部的注意力和 FFN 参数。</p>
+  <p>这个例子同时检查四件事：logits 的最后一维必须是 vocab，label shift 使用 <code>[:-1]</code> 的 logits 预测 <code>[1:]</code> 的 token，tied 权重只节省输出头矩阵，不改变 Transformer block 内部的注意力和 FFN 参数；反向传播时 <code>dE = G^T H</code> 说明所有 softmax 行都可能得到输出端梯度，而不只是正确 token 行。</p>
 </section>
 
 <!-- ================================================================ -->

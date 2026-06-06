@@ -58,7 +58,7 @@
 ## Ch06 GPT Assembly / MoE
 
 1. 按 embedding、position embedding、12 个 block、final LayerNorm 和 tied LM head 逐项计算 GPT-2 small 的参数量。
-2. 解释 weight tying 为什么既减少参数又可能改善输入/输出词向量的一致性。
+2. 解释 weight tying 为什么既减少参数又可能改善输入/输出词向量的一致性；给定 `logits = H E^T`、target ids 和 CE mean reduction，推导 `dH = G E` 与 `dE = G^T H`，并说明 `ignore_index` 如何改变有效分母。
 3. 给定 bias-free SwiGLU expert 的 `d_model=16`、`expert_hidden=32`、`256` 个路由专家、`top_k=8` 和 1 个 shared expert，计算单个 expert 参数量、router 参数量、total expert parameters、每 token activated expert parameters 和 capacity-to-compute ratio；再给定某个 batch 的 expert token counts 和每 expert capacity，计算 overflow 与 drop rate，并解释负载不均衡为什么会导致吞吐下降或 token drop。
 4. 给定 token 序列 `[BOS, a, b, c, EOS]`，写出 GPT 训练时的 `inputs`、`labels` 和每个 `logits[:, t, :]` 对应的预测目标；给定一组小 vocab logits，按 `logits[:, :-1, :]` 与 `input_ids[:, 1:]` 手算 next-token cross entropy，并说明 causal leakage 会如何让训练 loss 虚高地好看。
 

@@ -73,6 +73,11 @@ def causal_lm_loss_from_logits(logits, input_ids, ignore_index=-100):
     raise NotImplementedError
 
 
+def tied_lm_head_gradients(hidden_states, embedding_weight, target_ids, ignore_index=-100):
+    """Return (loss, d_hidden, d_embedding) for logits = hidden_states @ embedding_weight.T."""
+    raise NotImplementedError
+
+
 def moe_parameter_budget(
     d_model,
     expert_hidden,

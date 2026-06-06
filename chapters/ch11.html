@@ -197,7 +197,19 @@
     <tr><td>EM/F1</td><td>答案规范化后 exact match 或 token overlap</td><td>抽取式 QA、短答</td><td>多答案、别名和推理型答案需要额外处理</td></tr>
     <tr><td>UAS/LAS</td><td>head 是否正确，label 是否也正确</td><td>依存句法分析</td><td>只评估句法结构，不等于下游任务成功</td></tr>
   </table>
-  <p>这也是现代 LLM benchmark 需要 metric card 的原因：指标、任务、样本、baseline、置信区间和失败模式必须同时给出，不能只报一个漂亮数字。</p>
+  <div class="worked-example">
+    <h4>Worked Example：BLEU clipping 与 ROUGE-L</h4>
+    <p>BLEU 不是简单数候选句里有多少词出现在参考句中。设 candidate 为 <code>the the the the</code>，reference 为 <code>the cat is here</code>。只看 unigram 时，candidate 中 <code>the</code> 出现 4 次，但 reference 中最多只出现 1 次，所以 clipped match 只能算 1 次：</p>
+    <div class="math-box"><div class="label">BLEU-1 clipped precision</div>
+      <div class="katex" data-expr="p_1=\frac{\min(4,1)}{4}=0.25" aria-label="p_1=\frac{\min(4,1)}{4}=0.25" role="img"></div>
+    </div>
+    <p>这一步防止模型靠重复高频词刷高 precision。若 candidate 是 <code>cat sat</code>，reference 是 <code>cat sat on mat</code>，unigram precision 为 1，但候选句长度 2 小于参考句长度 4，需要 brevity penalty：</p>
+    <div class="math-box"><div class="label">Brevity penalty</div>
+      <div class="katex" data-expr="\text{BP}=\exp(1-r/c)=\exp(1-4/2)=e^{-1}\approx 0.368" aria-label="\text{BP}=\exp(1-r/c)=\exp(1-4/2)=e^{-1}\approx 0.368" role="img"></div>
+    </div>
+    <p>因此短句不能因为每个词都命中就得到满分。ROUGE-L 关注最长公共子序列。若 candidate 为 <code>a b c d</code>，reference 为 <code>a x b c</code>，最长公共子序列是 <code>a b c</code>，长度为 3；precision = 3/4，recall = 3/4，F1 = 0.75。Ch11 作业中的 <code>sentence_bleu</code> 与 <code>rouge_l_f1</code> 正是把这些定义写成可运行函数。</p>
+  </div>
+  <p>因此评测报告不能只写“BLEU 高”或“ROUGE 高”。必须说明任务结构、候选输出、参考答案集合和指标局限，否则一个分数很容易被误读成完整的语言质量判断。</p>
 </section>
 
 <section class="card" id="s11-7">

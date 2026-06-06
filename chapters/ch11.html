@@ -116,6 +116,24 @@
   <p>Teacher forcing 训练时把 gold 前缀喂给 decoder；推理时只能喂模型自己生成的前缀，因此会出现 exposure bias。Beam search 缓解搜索错误，但也引入 length bias，所以 Ch08 的 length-normalized score 与 Ch11 的 seq2seq 评测是同一条内容线。</p>
 </section>
 
+<section class="card" id="s11-4a">
+  <h3>11.4A Worked Example：手算一次 additive attention</h3>
+  <p>设 decoder 当前状态 <span class="katex-inline" data-expr="s_t=[1,0]" aria-label="s_t=[1,0]" role="img"></span>，源序列有两个 encoder hidden states：<span class="katex-inline" data-expr="h_1=[1,1]" aria-label="h_1=[1,1]" role="img"></span>、<span class="katex-inline" data-expr="h_2=[0,2]" aria-label="h_2=[0,2]" role="img"></span>。取一个最小的 additive attention 参数：</p>
+  <div class="code-block" data-lang="text">
+W_s = [[1, 0]]
+W_h = [[0.5, 0.5]]
+v   = [1]</div>
+  <p>先把 decoder state 和每个 source state 投到同一个 attention hidden 维度，再过 <code>tanh</code> 打分：</p>
+  <div class="math-box"><div class="label">Additive attention scores</div>
+    <div class="katex" data-expr="e_{t,1}=\tanh(1+0.5+0.5)=\tanh(2)\approx0.964,\quad e_{t,2}=\tanh(1+0+1)=\tanh(2)\approx0.964" aria-label="e_t1=tanh(2), e_t2=tanh(2)" role="img"></div>
+  </div>
+  <p>两个分数相同，所以 alignment weights 是 <code>[0.5, 0.5]</code>。context vector 是源端 hidden states 的加权和：</p>
+  <div class="math-box"><div class="label">Context vector</div>
+    <div class="katex" data-expr="c_t=0.5[1,1]+0.5[0,2]=[0.5,1.5]" aria-label="c_t=0.5[1,1]+0.5[0,2]=[0.5,1.5]" role="img"></div>
+  </div>
+  <p>这说明 cross-attention 的 K/V 来自源序列，而不是 decoder 已生成前缀。若把 <code>h_2</code> 改成与当前 decoder state 更匹配的表示，softmax 权重会偏向第二个源位置，<code>c_t</code> 也会随之改变；decoder 下一步预测依赖的是 <code>y_{<t}</code> 和这个源端 context 的组合。</p>
+</section>
+
 <section class="card" id="s11-5">
   <h3>11.5 BERT / Encoder-only：MLM、分类与抽取式 QA</h3>
   <p>BERT-style encoder 可以双向看见输入中的左右上下文，不是自回归生成器。它的预训练目标之一是 Masked Language Modeling：只在被 mask 的位置计算 cross entropy，未 mask 的 token 使用 ignore index。课程作业中的 <code>masked_lm_loss_from_logits</code> 会显式返回 masked-token loss、accuracy 和参与 loss 的位置，帮助区分“输入中有哪些 token 可见”和“哪些位置贡献训练目标”。</p>

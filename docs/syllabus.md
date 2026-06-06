@@ -25,7 +25,7 @@
 
 - 复习 tensor indexing、broadcast、矩阵乘法和 cross entropy。
 - 跑通 Ch01 BPE 作业，确认本地 Python 环境可用。
-- 若 PyTorch 不熟，先完成 Python/PyTorch review session 中的 shape tracing 练习。
+- 若 PyTorch 不熟，先完成 Python/PyTorch 复习 handout 中的 shape tracing 练习。
 
 ## 课程结构
 
@@ -52,7 +52,7 @@
 | 书面推导与概念题 | 20% | 公式推导、复杂度分析、shape trace、概念辨析 |
 | 训练工程 Capstone | 15% | 数据分析、训练日志、checkpoint/resume、成本估算 |
 | 推理工程 Capstone | 20% | API、评测、压测、SLO、容量规划、错误分析 |
-| 阅读复盘与课堂参与 | 10% | 论文摘要、技术细节、批判性问题、同伴反馈 |
+| 阅读复盘与课堂参与 | 10% | 论文摘要、技术细节、批判性问题、课堂讨论 |
 
 ## 学习成果矩阵
 
@@ -136,9 +136,9 @@
 | 5 | Training Loop | Ch07；reading-list Week 5 | A5：dataset/CE/AdamW/scheduler/train；训练项目提案 |
 | 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO；训练 capstone 初版 |
-| 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：RNN/dependency/seq2seq/BERT/evaluation 书面题；同伴 review |
+| 8 | 经典 NLP 与评测专题 | classic-nlp-handout；reading-list Week 8 | A8：RNN/dependency/seq2seq/BERT/evaluation 书面题 |
 | 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark/metric card/多模态评估；推理项目提案 |
-| 10 | Capstone 展示与前沿 seminar | 两个 capstone README；reading-list Week 10 | 训练 capstone + 推理 capstone 报告、演示、复现包 |
+| 10 | Capstone 综合与前沿 seminar | 两个 capstone 方向；reading-list Week 10 | 训练 capstone + 推理 capstone 总结、前沿方法复盘 |
 
 ## 项目
 

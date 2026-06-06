@@ -555,35 +555,38 @@ Quick check：
 - 阅读复盘：RNN/LSTM、BERT 或 seq2seq 的一个 inductive bias。
 - Deep-dive in-class check：RNN-1、DP-1、S2S-2 或 BERT-1 至少完成一项。
 
-## Week 8 Lecture 16: Evaluation、Ethics、Safety 与同伴 Review
+## Week 8 Lecture 16: Evaluation、Ethics 与 Safety
 
-对应材料：classic NLP handout、presentation peer review、项目报告要求。
+对应材料：classic NLP handout、reading-list Week 8。
 
 目标：
 
 - 比较 perplexity、BLEU、ROUGE、F1、EM、LLM-as-judge。
 - 讨论隐私、偏见、幻觉、评测污染和安全拒答。
-- 训练同伴 review 的评价标准和反馈质量。
+- 区分自动指标、人工评测、系统指标和安全评估的适用边界。
 
 核心推导：
 
 - precision/recall/F1 与 exact match。
 - benchmark contamination 与 data leakage 的区别。
+- safety evaluation 中的 attack success rate、refusal rate、over-refusal rate 和 task utility 不是同一个指标。
 
 课堂 demo：
 
 - 对同一输出分别用 ROUGE、EM 和人工判断打分。
-- 现场 review 一段项目摘要，标出最强产出和最大风险。
+- 构造一个“高 ROUGE 但事实错误”的摘要例子，并解释为什么需要事实性检查。
+- 对一个安全拒答案例同时判断 helpfulness、harmlessness 和 over-refusal。
 
 Quick check：
 
 - 为什么单一指标不能覆盖 LLM 质量？
-- review 里“建议更好”为什么不是可执行反馈？
+- 为什么高拒答率不等于高安全性？
+- LLM-as-judge 可能有哪些位置偏置或模型偏置？
 
 课后产出：
 
-- 第 8 周同伴 review。
 - 经典 NLP/evaluation 书面题。
+- 阅读复盘：一个 automatic metric failure case。
 
 ## Week 9 Lecture 17: KV Cache、FlashAttention 与 Serving Metrics
 
@@ -669,64 +672,67 @@ Quick check：
 - A9 RAG/context packing/quantization/benchmark 测试通过。
 - 推理 capstone 初版，包含 RAG 或多模态输入的失败模式分析。
 
-## Week 10 Lecture 19: Capstone Reproducibility Workshop
+## Week 10 Lecture 19: Frontier Methods、Benchmark 边界与系统取舍
 
-对应材料：两个 capstone README、frontier reading notes。
+对应材料：reading-list Week 10、Ch10 前沿推理部分、两个 capstone 方向。
 
 目标：
 
-- 检查项目报告是否包含 seed、环境、日志、评测集和失败案例。
-- 区分实验结论、模型卡声明和推断性说法。
-- 修复复现包中的命令、依赖和路径问题。
+- 区分论文或模型卡中的实验结论、工程 claim 和课堂推断。
+- 比较 interpretability、multimodality、agents、reasoning 和 safety 的评测对象。
+- 连接训练成本、推理成本、质量指标和安全边界。
 
 核心推导：
 
 - capacity/cost 估算随 batch、context、dtype、GPU memory 变化。
 - ablation 应只改变一个关键变量。
+- benchmark validity：任务定义、数据集版本、推理设置、评测器和置信区间共同决定结论范围。
 
 课堂 demo：
 
-- 互换项目复现命令，记录首个失败点。
 - 分析一个前沿模型 claim 的任务设置、评测版本和适用范围。
+- 给定两个系统的质量、P95 latency 和成本表，判断哪一个适合在线客服、代码生成或离线批处理。
 
 Quick check：
 
 - “本实验条件下成立”和“一般成立”有什么区别？
-- 没有失败案例的项目报告可信度如何？
+- 为什么一个模型在 VQA 上强，不代表 OCR、图表推理或视觉定位都可靠？
+- 为什么 reasoning benchmark 的 pass@k 必须同时报告 token 成本？
 
 课后产出：
 
-- capstone 最终报告草稿。
-- reading notes 表格。
+- 前沿方法阅读复盘。
+- capstone 结论边界说明。
 
-## Week 10 Lecture 20: Final Presentation、Poster Session 与课程回顾
+## Week 10 Lecture 20: End-to-End LLM Pipeline 与课程综合
 
-对应材料：presentation peer review、syllabus。
+对应材料：syllabus、lecture-plan、worked-example-pack。
 
 目标：
 
-- 完成项目展示、问答和同伴 review。
 - 回顾从 tokenizer 到 serving 的端到端数据流。
-- 明确学生最终应能独立复现和解释的产出。
+- 综合比较 decoder-only、encoder-only、encoder-decoder、RAG、对齐和推理系统的适用场景。
+- 明确学生最终应能独立解释的公式、shape、实现和评测边界。
 
 核心推导：
 
 - 从输入 token 到输出 token 的完整 shape trace。
 - 从训练成本到推理成本的指标链路。
+- 从预训练目标到 SFT/DPO/GRPO 的目标函数链路。
 
 课堂 demo：
 
-- 每组 5-8 分钟展示，2-3 分钟问答。
-- 助教现场核对最小复现命令和报告要求。
+- 对一个用户任务，判断应采用检索、微调、结构化解码、抽取式 QA 还是普通生成。
+- 从 tokenizer cost、context budget、KV cache、decoding strategy 和 evaluation metric 逐项分析一个系统设计。
 
 Quick check：
 
-- 你的项目中最强产出和最大风险各是什么？
-- 哪个结论需要更多数据或更强 benchmark 才能支撑？
+- 为什么 decoder-only LLM 不是所有 NLP 任务的唯一合理形式？
+- 一个系统同时优化 helpfulness、latency 和 safety 时会遇到哪些冲突？
 
 课后产出：
 
-- 最终报告、复现包、展示材料、同伴 review 修改说明。
+- 课程综合复盘：选择三个章节概念，说明它们如何在同一个 LLM 系统中相互约束。
 
 ## Discussion Section 模板
 

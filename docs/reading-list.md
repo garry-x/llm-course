@@ -230,15 +230,15 @@
 - 多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？
 - 一个 metric card 应怎样限制 benchmark 结论的适用范围？
 
-## Week 10: Capstone 报告、复现与前沿方法边界
+## Week 10: 前沿方法、Benchmark 边界与课程综合
 
-对应材料：两个 capstone README 和前沿主题阅读。
+对应材料：两个 capstone 方向、Ch10 前沿推理部分和前沿主题阅读。
 
 必读：
 
-- Stanford CS224N coursework/final project 页面：重点看 assignment、project proposal、milestone、poster/report 的分工。
-- 本课程两个 Capstone README 中的项目报告要求。
+- Stanford CS224N coursework/final project 页面：重点看 project 如何把问题设定、方法、实验和结论组织成课程级研究产出。
 - 目标方向的官方论文、课程讲义或模型卡：interpretability、multimodality、social impact、agents 或 reasoning。
+- 本课程 worked-example-pack：重点复盘每个模块的可计算定义和常见误解。
 
 选读：
 
@@ -248,5 +248,6 @@
 
 复盘问题：
 
-- 你的项目最强产出是什么？最弱产出是什么？
-- 报告中哪些结论只能说“本实验条件下成立”，不能推广为一般事实？
+- 目标方向的 benchmark 衡量什么能力？没有衡量什么能力？
+- 论文或模型卡中的哪个 claim 依赖特定数据集、推理设置或评测器？
+- 如果把该方法接入本课程的训练或推理系统，最先受影响的是显存、延迟、质量、安全性还是成本？

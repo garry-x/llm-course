@@ -355,6 +355,17 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
   </div>
   <p>核心含义：在上述建模假设下，我们可以不训练独立 Reward Model，而用 <strong>policy/reference 的 log 概率比值</strong>构造一个与偏好概率相关的隐式奖励差。DPO 优化的是由 chosen/rejected 偏好对诱导出的分类式损失，而不是任意意义上的“直接最大化奖励”。</p>
   <p>作业中的 <code>dpo_implicit_rewards</code> 会把这个关系显式算出来：<span class="katex-inline" data-expr="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" aria-label="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" role="img"></span>。对每个偏好对，chosen/rejected 的隐式 reward margin 为 <span class="katex-inline" data-expr="\hat r_w-\hat r_l" aria-label="\hat r_w-\hat r_l" role="img"></span>，<span class="katex-inline" data-expr="\sigma(\hat r_w-\hat r_l)" aria-label="\sigma(\hat r_w-\hat r_l)" role="img"></span> 可以解释为当前 policy/reference 比值诱导出的偏好概率。这个诊断能发现一种常见错误：只比较 policy 原始 log probability，而忘记 reference model 的锚定作用。</p>
+
+  <h4>Worked Example：DPO 看的是相对 reference 的提升</h4>
+  <p>考虑一个偏好对 <code>(prompt, chosen, rejected)</code>，四个序列 log probability 如下。注意这里 policy 的原始 log probability 仍然更偏向 rejected，因为 <code>-11 &gt; -12</code>；但 DPO 不直接比较这两个数。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>回答</th><th>policy logp</th><th>reference logp</th><th>log-ratio = policy - reference</th><th>隐式 reward, beta=0.1</th></tr>
+      <tr><td>chosen</td><td>-12.0</td><td>-15.0</td><td>3.0</td><td>0.3</td></tr>
+      <tr><td>rejected</td><td>-11.0</td><td>-10.0</td><td>-1.0</td><td>-0.1</td></tr>
+    </table>
+  </div>
+  <p>chosen 的绝对概率仍然较低，但它相对 reference 提升了 <code>3.0</code>；rejected 相对 reference 反而下降了 <code>1.0</code>。因此 DPO logit 是 <code>beta * (3 - (-1)) = 0.4</code>，当前偏好概率为 <code>sigmoid(0.4) ≈ 0.599</code>，单样本损失为 <code>-log sigmoid(0.4) ≈ 0.513</code>。如果学生只写 <code>policy_chosen_logp &gt; policy_rejected_logp</code> 作为偏好准确率，就会把这个样本误判为失败；正确诊断应比较 <code>chosen_log_ratio &gt; rejected_log_ratio</code>。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO vs RLHF：</strong>DPO 的主要优势是简化训练管线：在常见实现中不需要单独训练 reward model，也不需要 PPO 的 Actor-Critic rollout，而是用 policy/reference 在 chosen/rejected 上的 log 概率比值构造损失。它通常比 PPO 式 RLHF 更容易实现和调参，但稳定性仍取决于偏好数据质量、reference model、<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span>、长度偏差和优化设置，不能写成无条件优于所有 RLHF 方案。</div></div>
 </section>
 

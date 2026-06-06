@@ -559,6 +559,24 @@ def encode(text, merges):
   <p>选取英文、中文、代码、数学公式和 emoji/混合文本各 100 条，分别用不同 vocab size 或不同 tokenizer 编码，报告平均 token 数、P95 token 数、round-trip 是否成功，以及 embedding 参数量 <span class="katex-inline" data-expr="V \times d_{\text{model}}" aria-label="V \times d_{\text{model}}" role="img"></span>。如果中文平均 token 数是英文的 2-3 倍，那么同样 8K context 对中文用户的有效文本容量就更小；这不是模型能力问题，而是分词器成本问题。</p>
   <p>Ch01 作业中的 <code>tokenizer_report(tokenizer, texts, vocab_size, d_model)</code> 对应这个实验的最小版本：它统计 <code>avg_tokens</code>、<code>p95_tokens</code>、<code>tokens_per_character</code>、<code>round_trip_success_rate</code> 和 <code>embedding_params</code>。进一步的 <code>tokenizer_group_report(tokenizer, groups, vocab_size, d_model)</code> 会按英文、中文、代码、数学或 emoji 等分组分别报告 token 成本，并计算最高/最低 <code>tokens_per_character</code> 的 disparity。学生应该用同一个文本集合比较不同 vocab size，而不是只报告“能 encode/decode”或一个全局平均数。</p>
 
+  <div class="worked-example">
+    <h4>Worked Example：从 tokenizer report 看成本</h4>
+    <p>设同一个 tokenizer 对 4 条文本的编码长度如下：</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>文本组</th><th>字符数</th><th>token 数</th><th>tokens/character</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>英文</td><td>20</td><td>6</td><td>0.30</td></tr>
+        <tr><td>中文</td><td>8</td><td>12</td><td>1.50</td></tr>
+        <tr><td>代码</td><td>16</td><td>10</td><td>0.625</td></tr>
+        <tr><td>emoji/混合</td><td>10</td><td>14</td><td>1.40</td></tr>
+      </tbody>
+    </table>
+    <p>全局总 token 数为 <code>6+12+10+14=42</code>，平均每条 <code>avg_tokens=10.5</code>，排序后长度为 <code>[6,10,12,14]</code>，教学版 P95 可取最大值 <code>14</code>。总字符数为 <code>54</code>，所以 <code>tokens_per_character=42/54≈0.778</code>。若词表大小 <code>V=50,000</code>、<code>d_model=768</code>，仅输入嵌入矩阵就有 <code>50,000 * 768 = 38.4M</code> 参数。</p>
+    <p>分组成本也不能忽略：中文的 <code>1.50</code> 与英文的 <code>0.30</code> 相比，disparity 为 <code>1.50/0.30=5.0</code>。这意味着同样 8K token 上下文能容纳的中文字符数远少于英文字符数。评价 tokenizer 时必须同时看压缩率、round-trip 和 embedding 参数，而不是只看词表大小。</p>
+  </div>
+
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tokenizer 是模型架构的一部分。它决定“文本长度”在模型眼里是多少，也决定 embedding、attention 和 KV Cache 的实际成本。</div></div>
 </section>
 

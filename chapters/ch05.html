@@ -485,6 +485,20 @@ print(f"比例: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for
   <p>激活显存估算包含主要张量：Q/K/V、SwiGLU 的 gate/value 中间激活、attention scores 以及残差流。attention scores 的大小是 <span class="katex-inline" data-expr="B \times H \times T^2" aria-label="B \times H \times T^2" role="img"></span>，这就是为什么长序列训练比短序列训练贵得多。FlashAttention 可以避免完整物化 attention matrix，但普通教学实现会显式保存它。</p>
   <p><strong>Activation checkpointing</strong> 的取舍不同：它不改变参数量，也不改变最终数学函数，而是在 forward 时少保存部分中间激活，backward 时重新计算这些激活。Ch05 作业中的 <code>activation_checkpointing_tradeoff</code> 用一个简化模型估算：若 checkpoint fraction 为 <code>c</code>，大约节省 <code>c * activation_bytes</code>，同时在反向传播中额外支付 <code>c * forward_flops</code> 的重算成本。</p>
 
+  <h4>Worked Example：一个教学 Block 的资源账本</h4>
+  <p>设 <code>B=2</code>、<code>T=128</code>、<code>d_model=768</code>、<code>n_heads=12</code>、<code>d_ff=2048</code>，使用 fp16/bf16 激活（2 bytes）。此时 <code>d_head=64</code>，单个 Pre-Norm + MHA + SwiGLU block 的主要参数量为：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>组件</th><th>公式</th><th>参数量</th></tr>
+      <tr><td>Q/K/V/O projections</td><td><code>4 * d_model^2</code></td><td>2,359,296</td></tr>
+      <tr><td>SwiGLU FFN</td><td><code>3 * d_model * d_ff</code></td><td>4,718,592</td></tr>
+      <tr><td>Two RMSNorm scales</td><td><code>2 * d_model</code></td><td>1,536</td></tr>
+      <tr><td><strong>Total</strong></td><td></td><td><strong>7,079,424</strong></td></tr>
+    </table>
+  </div>
+  <p>同一配置下，主要 forward FLOPs 约为 <code>3.72B</code>：QKV 投影约 <code>0.91B</code>，attention score 和 value mixing 各约 <code>0.05B</code>，输出投影约 <code>0.30B</code>，SwiGLU 三个线性层约 <code>2.42B</code>。在短序列 <code>T=128</code> 下，FFN 已经是主要计算项；当 <code>T</code> 变长时，attention 的 <code>T^2</code> 项会迅速变得重要。</p>
+  <p>主要激活显存约 <code>4.63 MiB</code>，其中 attention scores 为 <code>B * H * T^2 * 2 bytes = 0.75 MiB</code>。如果 checkpoint 其中一半激活，前向保存的主要激活可减少约 <code>2.31 MiB</code>；代价是在 backward 中额外重算约 <code>1.86B</code> FLOPs，使简化训练 FLOPs 从 <code>3 * forward</code> 增加到约 <code>1.17x</code>。这就是 activation checkpointing 的本质：不改变模型，只用额外计算换训练显存。</p>
+
   <div class="info-box key"><span class="icon">🔑</span><div><strong>使用边界：</strong>这是课程级量级估算，不包含 kernel fusion、optimizer state、dropout mask、通信、allocator 碎片或具体硬件效率。它的作用是让学生能解释“哪个项随 T 二次增长，哪个项随 d_model 和 d_ff 增长”，以及 checkpointing 为什么是用计算换训练显存。</div></div>
 </section>
 

@@ -206,6 +206,31 @@ def sft_step(model, batch, optimizer):
   </div>
 </section>
 
+<section class="card" id="s9-3a">
+  <h3>9.3A Worked Example：SFT label mask 与有效 token 分母</h3>
+  <p>把 response-only SFT 写成逐 token 目标，可以避免两个常见错误：把 prompt 也当成监督目标，或者 shift 后漏掉第一个 assistant token。设一条已经 tokenized 的对话为：</p>
+  <div class="code-block" data-lang="text">
+位置:   0      1       2        3      4       5            6     7        8          9
+token: BOS  &lt;user&gt; explain  BP  &lt;/user&gt; &lt;assistant&gt; BP  computes gradients  EOS</div>
+  <p>训练输入仍然是完整序列，但 label 只保留 assistant 回答的 token，其余位置设为 <code>-100</code>：</p>
+  <div class="code-block" data-lang="text">
+labels: -100  -100    -100    -100   -100     -100       BP  computes gradients EOS</div>
+  <p>自回归交叉熵不会用 <code>logits[t]</code> 预测当前位置 token，而是用 <code>logits[t]</code> 预测 <code>labels[t+1]</code>。因此实际参与损失的 shifted target 是：</p>
+  <div class="code-block" data-lang="text">
+logits position: 0    1      2      3      4      5        6        7          8
+target label:   -100 -100   -100   -100   -100   BP       computes gradients  EOS
+valid mask:       0    0      0      0      0     1          1        1        1</div>
+  <p>这条样本的 loss 分母是 4，而不是序列长度 10，也不是 shifted 长度 9。第一个有效监督来自 <code>logits[5]</code> 预测 assistant 的第一个回答 token <code>BP</code>；如果把 <code>&lt;assistant&gt;</code> 后第一个 token 仍设成 <code>-100</code>，模型就不会学习回答如何开始。</p>
+  <div class="formula">L_{\text{SFT}} =
+  -\frac{1}{4}\left[
+  \log p(\text{BP}\mid x_{\le 5})+
+  \log p(\text{computes}\mid x_{\le 6})+
+  \log p(\text{gradients}\mid x_{\le 7})+
+  \log p(\text{EOS}\mid x_{\le 8})
+  \right]</div>
+  <p>批处理中还要把 padding token 的 label 设为 <code>-100</code>。这样不同长度样本的平均损失只由真实 assistant response token 决定，不会因为 padding 数量改变。</p>
+</section>
+
 <!-- ================================================================ -->
 <!-- 9.4 Bradley-Terry + RLHF -->
 <!-- ================================================================ -->

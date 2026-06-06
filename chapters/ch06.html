@@ -688,6 +688,41 @@ def load_hf_weights_to_model(hf_model, our_model):
     </table>
     <p>再看负载均衡。若 4 个专家在一个 batch 中收到 token 计数 <code>[80, 10, 5, 5]</code>，理想负载是 <code>0.25</code>，实际负载是 <code>[0.80, 0.10, 0.05, 0.05]</code>。动态偏置更新 <code>bias += lr * (target_load - load_ratio)</code>，取 <code>lr=0.04</code> 时，专家 0 的增量是 <code>0.04 * (0.25 - 0.80) = -0.022</code>，专家 2 的增量是 <code>0.04 * (0.25 - 0.05) = 0.008</code>。因此过载专家下一步更难被选中，欠载专家更容易进入 top-K；这正是 <code>AuxLossFreeBalancer.update</code> 的方向性要求。</p>
   </div>
+
+  <h4>Router 概率、top-k 归一化与梯度路径</h4>
+  <p>MoE router 首先把每个 token 的隐藏状态 <span class="katex-inline" data-expr="\mathbf{x}_{b,t}\in\mathbb{R}^{d}" aria-label="\mathbf{x}_{b,t}\in\mathbb{R}^{d}" role="img"></span> 投影成专家 logits：</p>
+  <div class="math-box"><div class="label">Router logits and probabilities</div>
+    <div class="katex" data-expr="\mathbf{s}_{b,t}=\mathbf{x}_{b,t}W_g,\quad \mathbf{p}_{b,t}=\operatorname{softmax}(\mathbf{s}_{b,t})" aria-label="\mathbf{s}_{b,t}=\mathbf{x}_{b,t}W_g,\quad \mathbf{p}_{b,t}=\operatorname{softmax}(\mathbf{s}_{b,t})" role="img"></div>
+  </div>
+  <p>top-k 路由只保留概率最大的 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span> 个专家。因为被丢弃专家的概率质量不再参与输出，保留下来的权重必须重新归一化：</p>
+  <div class="math-box"><div class="label">Top-k mixture weights</div>
+    <div class="katex" data-expr="\alpha_i=\frac{p_i}{\sum_{j\in \operatorname{TopK}(\mathbf{p})}p_j},\quad i\in\operatorname{TopK}(\mathbf{p}),\qquad y=\sum_i \alpha_iE_i(x)" aria-label="\alpha_i=\frac{p_i}{\sum_{j\in \operatorname{TopK}(\mathbf{p})}p_j,\quad i\in\operatorname{TopK}(\mathbf{p}),\qquad y=\sum_i \alpha_iE_i(x)" role="img"></div>
+  </div>
+  <p>这一步解释了作业为什么检查 <code>top_weights.sum(dim=-1) == 1</code>。没有重新归一化时，不同 token 的 expert 输出会被不同的残余概率质量缩放，模型的残差流尺度会随 router 分布变化，训练更不稳定。</p>
+
+  <h4>Capacity、token dispatch 与负载不均衡</h4>
+  <p>参数预算只回答“一个 token 理论上激活多少专家”，还没有回答“一个 batch 能否顺利执行”。实际 MoE 层需要把 token 分发到专家上。若每个 expert 的容量为 <span class="katex-inline" data-expr="C" aria-label="C" role="img"></span> 个 token，expert <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 收到 <span class="katex-inline" data-expr="n_i" aria-label="n_i" role="img"></span> 个 token，则：</p>
+  <div class="math-box"><div class="label">Expert overflow</div>
+    <div class="katex" data-expr="\operatorname{overflow}_i=\max(0,n_i-C),\qquad \operatorname{drop\_rate}=\frac{\sum_i \operatorname{overflow}_i}{B\cdot T\cdot k}" aria-label="\operatorname{overflow}_i=\max(0,n_i-C),\qquad \operatorname{drop\_rate}=\frac{\sum_i \operatorname{overflow}_i}{B\cdot T\cdot k}" role="img"></div>
+  </div>
+  <p>即使没有显式丢 token，极端不均衡也会让最忙的 expert 决定整层延迟，其他设备或专家空等。因此 MoE 的质量和吞吐不仅取决于 top-k，还取决于 load distribution、capacity factor、专家并行通信和 dispatch/combine kernel 的实现。</p>
+
+  <div class="worked-example">
+    <h4>Worked Example：计算 MoE overflow 与 drop rate</h4>
+    <p>设 batch 中有 <code>B*T=12</code> 个 token，<code>top_k=2</code>，所以总路由分配数是 <code>24</code>。有 4 个 experts，每个 capacity 为 <code>C=8</code>，本步 token counts 是 <code>[12, 6, 4, 2]</code>。</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>expert</th><th>token count</th><th>capacity</th><th>overflow</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>12</td><td>8</td><td>4</td></tr>
+        <tr><td>1</td><td>6</td><td>8</td><td>0</td></tr>
+        <tr><td>2</td><td>4</td><td>8</td><td>0</td></tr>
+        <tr><td>3</td><td>2</td><td>8</td><td>0</td></tr>
+      </tbody>
+    </table>
+    <p>总 overflow 是 <code>4</code>，drop rate 是 <code>4 / 24 = 16.7%</code>。如果实现选择丢弃超容量分配，这些 token 的部分 expert 路径不会被计算；如果实现选择扩容或重排，就会增加显存、通信或等待时间。这个例子说明：MoE 的“每 token 激活参数少”并不自动推出“训练和推理一定更快”。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->
@@ -907,8 +942,8 @@ for step in range(10):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="DeepSeekMoE 使用 256 个路由专家，每个 token 激活 top-8（K=8），外加 1 个共享专家（always on）。总参数 671B，每次前向激活参数仅 37B。">
-    <h4>练习 4：DeepSeekMoE 中每个 token 激活多少个专家？</h4>
+  <div class="exercise" data-answer="0" data-explain="在这个配置下，每个 token 经过 top-8 个路由专家，外加 1 个 shared expert，因此激活 9 条 expert 路径。总专家数决定容量上限，top-k 与 shared experts 决定每 token 的激活计算。">
+    <h4>练习 4：一个 MoE 层有 256 个 routed experts、top_k=8，并有 1 个 shared expert。每个 token 激活多少条 expert 路径？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q64" value="0"> A. 总共 256 个专家，每个 token 激活 top-8 + 1 共享 = 9 个</label>
       <label><input type="radio" name="q64" value="1"> B. 总共 16 个专家，每个 token 激活全部 16 个</label>

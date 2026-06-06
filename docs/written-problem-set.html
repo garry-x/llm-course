@@ -105,7 +105,7 @@
 <ol>
 <li>按 embedding、position embedding、12 个 block、final LayerNorm 和 tied LM head 逐项计算 GPT-2 small 的参数量。</li>
 <li>解释 weight tying 为什么既减少参数又可能改善输入/输出词向量的一致性。</li>
-<li>给定 bias-free SwiGLU expert 的 <code>d_model=16</code>、<code>expert_hidden=32</code>、<code>256</code> 个路由专家、<code>top_k=8</code> 和 1 个 shared expert，计算单个 expert 参数量、router 参数量、total expert parameters、每 token activated expert parameters 和 capacity-to-compute ratio；再解释负载不均衡为什么会导致吞吐下降或 token drop。</li>
+<li>给定 bias-free SwiGLU expert 的 <code>d_model=16</code>、<code>expert_hidden=32</code>、<code>256</code> 个路由专家、<code>top_k=8</code> 和 1 个 shared expert，计算单个 expert 参数量、router 参数量、total expert parameters、每 token activated expert parameters 和 capacity-to-compute ratio；再给定某个 batch 的 expert token counts 和每 expert capacity，计算 overflow 与 drop rate，并解释负载不均衡为什么会导致吞吐下降或 token drop。</li>
 <li>给定 token 序列 <code>[BOS, a, b, c, EOS]</code>，写出 GPT 训练时的 <code>inputs</code>、<code>labels</code> 和每个 <code>logits[:, t, :]</code> 对应的预测目标；给定一组小 vocab logits，按 <code>logits[:, :-1, :]</code> 与 <code>input_ids[:, 1:]</code> 手算 next-token cross entropy，并说明 causal leakage 会如何让训练 loss 虚高地好看。</li>
 </ol>
 <h3 id="ch07-training-loop">Ch07 Training Loop</h3>

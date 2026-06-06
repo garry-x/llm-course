@@ -343,6 +343,36 @@ print(f"QKV 投影参数相同: {mha.W_qkv.weight.numel()} == {sha.W_qkv.weight.
   <div class="info-box tip"><span class="icon">💡</span><div><strong>历史趣闻：</strong>MQA 早在 2019 年由 Shazeer 在 Fast Transformer Decoding 中提出，但直到 2023 年 Llama 2 大规模采用后，MQA/GQA 才被广泛关注。好工程有时需要时间才能"出圈"。</div></div>
 </section>
 
+<section class="card" id="s4-5a">
+  <h3>4.5A Worked Example：GQA head mapping 与 KV Cache 预算</h3>
+  <p>设一个小模型有 <code>n_heads=8</code> 个 query heads，<code>n_kv_heads=2</code> 个 KV heads，每个 head 维度 <code>d_k=4</code>。因为 <code>n_rep = n_heads / n_kv_heads = 4</code>，每 4 个 query heads 共享 1 个 KV head：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Q head</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
+      <tr><td>KV head</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+    </table>
+  </div>
+  <p>如果原始 K/V cache 形状是 <code>[B, H_kv, T, D] = [1, 2, 3, 4]</code>，那么注意力计算前可以用 <code>repeat_kv_heads(k, n_rep=4)</code> 扩展成 <code>[1, 8, 3, 4]</code>，让它与 Q 的 <code>[1, 8, 3, 4]</code> 匹配。关键是：<strong>cache 本身仍只保存 2 个 KV heads</strong>，repeat 是计算时的语义扩展，不是把缓存显存也复制 4 份。</p>
+
+  <h4>每 token cache 对比</h4>
+  <p>MHA 每 token 需要存 K 和 V 两份：</p>
+  <div class="math-box"><div class="label">MHA per-token KV elements</div>
+    <div class="katex" data-expr="2 \times H_q \times D = 2 \times 8 \times 4 = 64" aria-label="2 * H_q * D = 2 * 8 * 4 = 64" role="img"></div>
+  </div>
+  <p>GQA 只保存 <code>H_kv=2</code> 份 K/V：</p>
+  <div class="math-box"><div class="label">GQA per-token KV elements</div>
+    <div class="katex" data-expr="2 \times H_{kv} \times D = 2 \times 2 \times 4 = 16" aria-label="2 * H_kv * D = 2 * 2 * 4 = 16" role="img"></div>
+  </div>
+  <p>所以这个配置的 GQA cache 是 MHA 的 <code>1/4</code>，压缩比等于 <span class="katex-inline" data-expr="H_q/H_{kv}=4" aria-label="H_q/H_kv=4" role="img"></span>。</p>
+
+  <h4>从 per-token 到服务显存</h4>
+  <p>真正部署时还要乘上 batch、层数、序列长度和 dtype bytes。若 <code>B=4</code>、<code>L=1024</code>、<code>n_layers=24</code>、FP16，则：</p>
+  <div class="math-box"><div class="label">GQA total KV cache bytes</div>
+    <div class="katex" data-expr="4 \times 1024 \times 24 \times (2 \times 2 \times 4) \times 2 = 3{,}145{,}728\text{ bytes}\approx3.0\text{ MiB}" aria-label="4 * 1024 * 24 * (2 * 2 * 4) * 2 = 3,145,728 bytes approx 3.0 MiB" role="img"></div>
+  </div>
+  <p>同配置 MHA 约为 12.0 MiB。这个 toy 例子数值很小，但公式完全相同；把 <code>H</code>、<code>D</code>、<code>L</code>、<code>B</code> 和 <code>n_layers</code> 换成真实模型后，就得到推理服务的 KV cache 预算。</p>
+</section>
+
 <!-- ================================================================ -->
 <!-- 编程练习 3: GQA -->
 <!-- ================================================================ -->

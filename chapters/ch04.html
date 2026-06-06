@@ -83,9 +83,23 @@
   <div class="math-box"><div class="label">参数等价性</div>
     <div class="katex" data-expr="n_h \times (d_{\text{model}} \times d_k) \times 3 = 3 \cdot d_{\text{model}}^2 \; \; (\text{因为 } d_k = d_{\text{model}} / n_h)" aria-label="n_h \times (d_{\text{model}} \times d_k) \times 3 = 3 \cdot d_{\text{model}}^2 \; \; (\text{因为 } d_k = d_{\text{model}} / n_h)" role="img"></div>
   </div>
+  <div class="worked-example">
+    <h4>Worked Example：MHA 不是靠增加参数变强</h4>
+    <p>设 <code>d_model=8</code>，使用 <code>n_heads=2</code>，则每个头的维度 <code>d_k=4</code>。单头注意力若把 Q/K/V 都投影到 8 维，需要 <code>3 * 8 * 8 = 192</code> 个 QKV 参数；两个头各自有 <code>3 * 8 * 4 = 96</code> 个参数，总计仍是 <code>2 * 96 = 192</code>。</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>方案</th><th>Q/K/V 投影空间</th><th>QKV 参数量</th><th>注意力分数形状</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>单头</td><td>1 个 8 维空间</td><td><code>3 * 8 * 8 = 192</code></td><td><code>[T, T]</code></td></tr>
+        <tr><td>2 头 MHA</td><td>2 个 4 维空间</td><td><code>2 * 3 * 8 * 4 = 192</code></td><td><code>[2, T, T]</code></td></tr>
+      </tbody>
+    </table>
+    <p>两者参数量相同，但 MHA 产生两张不同投影空间里的注意力图，再把两个 4 维 head 输出拼回 8 维并交给 <code>W_O</code> 混合。它的表达优势来自“多个可学习相似度函数并行工作”，而不是单纯增加参数。</p>
+  </div>
   <p>换句话说，多头注意力不是在"变大"，而是将已有的参数量<strong>重新组织</strong>成了多个更小的子空间。每个子空间学习不同的关注模式，最后的 <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span> 负责将这些分散的信息整合在一起。</p>
   <p>这是"<strong>Divide and Conquer</strong>"在深度学习中的经典体现——将一个大问题分解为多个更小、更专业的子问题并行解决。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么参数相同但效果好？</strong>因为每个头的 <span class="katex-inline" data-expr="d_k = d_{\text{model}} / n_h" aria-label="d_k = d_{\text{model}} / n_h" role="img"></span> 比 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span> 小得多——在一个更低维的空间中搜索注意力模式更容易收敛。就像在 64 维空间中找最近邻比在 768 维空间中更容易（维度灾难的反面）。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么参数相同但效果好？</strong>每个头有独立的 Q/K/V 投影，可以学习不同的相似度函数；输出投影 <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span> 再把这些子空间结果重组。MHA 的收益来自表示分解和可学习混合，而不是“头越多参数越多”。</div></div>
 </section>
 <section class="card">
 <div class="svg-diagram" style="max-width:800px">

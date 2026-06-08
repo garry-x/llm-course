@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第1章 BPE 分词器</h2>
   <p class="subtitle">从零实现 Byte Pair Encoding——LLM 的"第一道门"</p>
-  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 15 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 110 分钟 · 16 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -645,6 +645,47 @@ round-trip tests pass for multilingual and tool-call samples</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>Tokenizer 定义了模型能读写的离散接口。BPE merge 规则、特殊 token、chat template 和 vocab size 必须随模型一起版本化；否则训练 loss、对齐数据、checkpoint 加载和推理服务看到的就不是同一个任务。</div></div>
 </section>
 
+<section class="card" id="s1-12c">
+  <h3>1.12C 多语种 Tokenizer 训练：从语料配比到 token 成本</h3>
+  <p>面向真实 LLM 时，tokenizer 不是在一份英文语料上随手训练出来的工具，而是跨语言、跨脚本、跨领域的数据接口。它会决定不同语言在同样 context window 中能表达多少信息，也会影响训练 batch 的有效文本量、推理计费、KV Cache 显存和长上下文体验。多语模型尤其需要把 tokenizer 训练看成一次数据工程决策。</p>
+
+  <h4>1. 语料配比会改变 merge 规则</h4>
+  <p>BPE 只看训练语料中的相邻符号频率。如果 tokenizer 训练语料中英文占 95%，中文、阿拉伯文、印地语、代码和数学公式只占很小比例，高频 merge 会优先服务英文模式；其他语言会更多回退到字节或短片段，表现为 token 数变多、上下文容量下降。反过来，如果为了少数语言盲目过采样，也会牺牲高流量语言和领域文本的压缩率。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>设计项</th><th>工程问题</th><th>推荐做法</th><th>典型失败</th></tr>
+      <tr><td>语言采样</td><td>不同语言是否都能获得足够 merge 预算</td><td>按目标用户和训练数据设定采样上限/下限，而不是直接按原始网页量采样</td><td>低资源语言被切成字节，8K context 实际只能装很短文本</td></tr>
+      <tr><td>领域采样</td><td>代码、数学、表格、JSON 是否被合理压缩</td><td>为代码缩进、常见符号、LaTeX、结构化标记保留代表性样本</td><td>代码空格和标点过碎，工具调用 JSON 更容易超长</td></tr>
+      <tr><td>Unicode 归一化</td><td>视觉相同字符是否映射为同一序列</td><td>明确 NFC/NFKC、大小写、全角/半角、空白字符策略，并在训练与推理保持一致</td><td>同一文本因归一化不同产生不同 token，影响去重、评测和缓存</td></tr>
+      <tr><td>Byte fallback</td><td>未见字符能否被无损表示</td><td>保留 byte-level fallback 或等价机制，保证任意 Unicode 字符可编码</td><td>罕见字符、emoji、混合脚本输入出现 OOV 或不可逆解码</td></tr>
+      <tr><td>特殊 token 预算</td><td>chat、tool、多模态占位符是否需要原子边界</td><td>预留系统、角色、工具、图像/音频占位、未来扩展 token</td><td>后续新增 token 导致 embedding 形状变化，需要重新适配模型</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 用 fertility 衡量不同语言的 token 负担</h4>
+  <p>多语 tokenizer 常用 <strong>fertility</strong> 描述一个自然单位被切成多少 token。对英文可以看 tokens/word，对中文、日文、泰文等无空格或弱空格语言，更稳定的是 tokens/character 或 tokens/byte。课程中建议同时报告三类量：</p>
+  <ul>
+    <li><strong>tokens/character：</strong>衡量同样字符长度下的 context 成本，适合中英对比。</li>
+    <li><strong>tokens/byte：</strong>衡量 UTF-8 多字节脚本是否被过度回退，适合跨脚本比较。</li>
+    <li><strong>P95 token length：</strong>衡量长尾样本是否会在 packing、RAG context 或工具参数中爆掉。</li>
+  </ul>
+  <p>假设同一 tokenizer 对 1,000 字符英文平均产生 300 token，对 1,000 字符中文产生 1,500 token。在 8K token context 下，英文约可容纳 26,666 字符，中文约可容纳 5,333 字符。这个差异会直接影响长文问答、RAG chunk size、缓存命中率和用户感知成本。</p>
+
+  <h4>Worked Example：为什么 tokenizer 训练采样不能只看总量</h4>
+  <p>设 tokenizer 训练预算是 10B 字符，原始候选数据中英文 8B、中文 1B、代码 0.8B、其他语言 0.2B。如果直接按原始比例训练，英文 pair 会主导前几万次 merge；如果把所有语言均匀采样，又会让真实高流量语言损失过多压缩率。一个更稳妥的做法是先定义服务目标，再设采样配比：</p>
+  <ol>
+    <li>为主要服务语言设置最低覆盖，例如英文、中文、代码各至少占 tokenizer 训练样本的某个比例。</li>
+    <li>对低资源语言设置温度采样，避免完全按网页量被淹没，也避免过度复制小语料。</li>
+    <li>保留 byte fallback，让没有显式覆盖到的字符仍可无损编码。</li>
+    <li>训练多个候选 tokenizer，用同一组多语/代码/工具调用样本比较 tokens/character、round-trip、P95 长度和 embedding 参数量。</li>
+    <li>最终选择时同时看训练成本和推理成本：少 10% token 可能意味着少 10% attention/KV 成本，但更大的词表会增加 embedding 和 LM head 参数。</li>
+  </ol>
+
+  <h4>3. Tokenizer 决策会传导到训练和推理</h4>
+  <p>多语 tokenizer 的影响不是停留在第 1 章。第 7 章的数据 packing 会按 token 数而非字符数切 batch；第 9 章的 SFT/DPO 会在 token 序列上计算 loss 和 log probability；第 10 章的 KV Cache、TTFT、TPOT 和计费也都按 token 发生。一个语言的 fertility 更高，意味着同样文本会消耗更多训练 FLOPs、更多 KV Cache 和更高推理延迟。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级 LLM 课程不能把 tokenizer 当成“预处理细节”。对训练和推理工程师来说，tokenizer 是数据分布、模型参数、上下文容量、服务成本和多语体验之间的共同接口。</div></div>
+</section>
+
 <!-- ================================================================ -->
 <!-- 1.13 总结 -->
 <!-- ================================================================ -->
@@ -657,6 +698,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
     <li>✅ <strong>encode / decode</strong> —— 使用训练好的 merges 和 vocab 进行推理</li>
     <li>✅ 理解了 BPE 的<strong>数据压缩本质</strong>和频率选择的<strong>信息论基础</strong></li>
     <li>✅ 能从压缩率、可逆性、多语言成本、词表预算和特殊 token 评价 tokenizer</li>
+    <li>✅ 能解释多语 tokenizer 训练中的语料配比、Unicode 归一化、byte fallback 和 fertility 指标</li>
   </ul>
   <p>全部代码约 <strong>50 行</strong>，但这是一个可用的 BPE 分词器核心。生产分词器（如 tiktoken）会在同一思想上加入正则预分词、特殊 token、工程优化和兼容性处理；课程实现只保留最小可解释内核。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>

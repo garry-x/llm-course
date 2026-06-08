@@ -37,6 +37,7 @@
       <span class="hero-tag">🐍 可运行 Python 代码</span>
       <span class="hero-tag">🧪 编程作业 + 书面推导 + Capstone</span>
       <span class="hero-tag">🧭 对齐高校 NLP/LLM 课程主线</span>
+      <span class="hero-tag">🛠 训练工程 + 推理工程路线</span>
       <span class="hero-tag">🔬 Reasoning / Interpretability / Multimodal</span>
     </div>
     <h2>系统学习大语言模型：表示、架构、训练、生成、对齐与服务</h2>
@@ -62,10 +63,10 @@
     <div class="path-grid">
       <div class="path-step"><strong>1. 表示层</strong><span>Ch01-Ch02：BPE、token id、embedding lookup、位置编码与 RoPE，回答“文本如何进入神经网络”。</span></div>
       <div class="path-step"><strong>2. Transformer 核心</strong><span>Ch03-Ch06：Q/K/V、causal mask、MHA/GQA/MLA、Norm、FFN、MoE、机制可解释性与完整 GPT 前向传播。</span></div>
-      <div class="path-step"><strong>3. 训练闭环</strong><span>Ch07：next-token maximum likelihood、CE 梯度路径、PPL、AdamW、scheduler、checkpoint 与分布式训练。</span></div>
-      <div class="path-step"><strong>4. 生成与推理</strong><span>Ch08-Ch10：prefill/decode、sampling、reasoning/test-time compute、speculative decoding、KV cache、FlashAttention、RAG 与推理服务。</span></div>
+      <div class="path-step"><strong>3. 训练闭环</strong><span>Ch07：next-token maximum likelihood、CE 梯度路径、PPL、AdamW、scheduler、checkpoint、ZeRO/FSDP/TP/PP、低精度和 MFU 诊断。</span></div>
+      <div class="path-step"><strong>4. 生成与推理</strong><span>Ch08-Ch10：prefill/decode、sampling、reasoning/test-time compute、speculative decoding、KV cache、FlashAttention、active KV tokens、admission control、RAG 与推理服务。</span></div>
       <div class="path-step"><strong>5. 微调与对齐</strong><span>Ch09：SFT、LoRA、preference modeling、DPO、GRPO、偏好数据质量、对齐评估和能力退化权衡。</span></div>
-      <div class="path-step"><strong>6. 经典 NLP 与评测</strong><span>Ch11：RNN、dependency parsing、seq2seq、BERT/encoder-only、BLEU/ROUGE/EM/F1/UAS/LAS。</span></div>
+      <div class="path-step"><strong>6. 经典 NLP 与评测</strong><span>Ch11：RNN、dependency parsing、seq2seq、BERT/encoder-only、BLEU/ROUGE/EM/F1/UAS/LAS、LLM-as-judge、安全拒答与过度拒答。</span></div>
     </div>
   </section>
 
@@ -96,9 +97,11 @@
       <span>模型结构读懂</span>
       <span>TTFT / TPOT / TPS 拆解</span>
       <span>KV Cache 与显存预算</span>
+      <span>Active KV / Admission Control</span>
       <span>量化与推理内核</span>
       <span>vLLM / SGLang 服务架构</span>
-      <span>RAG / 多模态 / Agent 评测</span>
+      <span>RAG / 多模态 / LLM 评测</span>
+      <span>LLM-as-judge / Safety</span>
     </div>
     <div class="role-actions">
       <a class="role-project-link" href="inference-engineer-curriculum.html">学习路线 →</a>
@@ -114,7 +117,9 @@
       <span>Loss / Optimizer / Scheduler</span>
       <span>Checkpoint 与 Resume</span>
       <span>Metrics 与开发集监控</span>
-      <span>对齐评估与训练成本</span>
+      <span>ZeRO / FSDP / TP / PP</span>
+      <span>MFU / 吞吐诊断</span>
+      <span>实验设计 / Ablation / 成本</span>
     </div>
     <div class="role-actions">
       <a class="role-project-link" href="training-engineer-curriculum.html">学习路线 →</a>
@@ -153,8 +158,8 @@
     </div>
     <div class="dash-card">
       <div class="dash-icon">⏱️</div>
-      <div class="num">~10h</div>
-      <div class="label">预计学习时间</div>
+      <div class="num">10 周</div>
+      <div class="label">建议课程周期</div>
     </div>
     <div class="dash-card">
       <div class="dash-icon">🎯</div>

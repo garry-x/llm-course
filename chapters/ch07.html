@@ -1072,6 +1072,90 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>选型：</strong>单 GPU 够放模型状态和激活 → DDP。模型状态装不下 → ZeRO/FSDP。单层矩阵或带宽成为瓶颈 → TP。层数太深或超大模型需要跨设备切层 → PP。MoE 还要额外关注 expert all-to-all 和 router 负载均衡。</div></div>
 </section>
 
+<!-- ================================================================ -->
+<!-- 7.15A 训练运行计划 -->
+<!-- ================================================================ -->
+<section class="card" id="s7-15a">
+  <h3>7.15A 训练运行计划——把一次实验变成可恢复的工程流程</h3>
+  <p>训练工程师不能只会写 <code>for batch in dataloader</code>。真实 LLM 训练的主要风险往往来自实验流程：数据版本变了、seed 不一致、checkpoint 没有恢复 optimizer、评测频率拖慢吞吐、扩容后 global batch 变了、失败重跑浪费 GPU 小时。一个严谨的训练运行计划应把<strong>数据、配置、token 进度、评估、checkpoint、恢复和扩容</strong>放在同一张工程账本里。</p>
+
+  <h4>1. 先写清楚训练对象</h4>
+  <p>运行计划的第一部分不是命令行，而是定义“这次训练到底在训练什么”。最少包含：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>项目</th><th>必须写清</th><th>常见错误</th></tr>
+      <tr><td>Model</td><td>参数量、层数、hidden size、head/GQA、context length、tokenizer</td><td>只写模型名，无法解释显存和 FLOPs</td></tr>
+      <tr><td>Data</td><td>数据源、过滤规则、去重、train/val split、mixture weight</td><td>训练中途换数据但沿用同一 run 名称</td></tr>
+      <tr><td>Objective</td><td>next-token CE、SFT mask、DPO/GRPO 或多任务 loss 权重</td><td>把训练 loss 和最终业务指标混为一谈</td></tr>
+      <tr><td>Batch</td><td>micro-batch、seq_len、grad_accum、data_parallel、global batch tokens</td><td>扩卡后没有重新计算 global batch 和 lr schedule</td></tr>
+      <tr><td>Optimizer</td><td>AdamW/Muon、lr、betas、weight decay、warmup、decay steps、clipping</td><td>resume 后 scheduler step 与 consumed tokens 不一致</td></tr>
+      <tr><td>Precision</td><td>fp32/bf16/fp16/fp8、loss scaler、master weights、activation checkpointing</td><td>只看参数显存，忽略激活和临时 buffer</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 用 token 进度管理训练，而不是用 epoch 口号</h4>
+  <p>大规模语言模型通常按 token budget 规划。若同一个语料被 packed 成不同长度，或不同数据源按 mixture 重采样，<code>epoch</code> 已经不是稳定单位。运行计划应使用 <code>consumed_tokens</code>、<code>optimizer_step</code> 和 <code>global_batch_tokens</code> 作为主坐标。</p>
+  <div class="math-box"><div class="label">Token progress</div>
+    <div class="katex" data-expr="\text{consumed\_tokens}(s)=s\cdot B_{\text{micro}}\cdot T_{\text{seq}}\cdot A_{\text{grad}}\cdot N_{\text{dp}}" aria-label="\text{consumed\_tokens}(s)=s\cdot B_{\text{micro}}\cdot T_{\text{seq}}\cdot A_{\text{grad}}\cdot N_{\text{dp}}" role="img"></div>
+  </div>
+  <p>例如 <code>micro_batch=2</code>、<code>seq_len=4096</code>、<code>grad_accum=16</code>、<code>DP=64</code>，每个 optimizer step 消耗 <code>8,388,608</code> tokens。若目标是 <code>300B</code> tokens，需要约 <code>35,763</code> steps。warmup、eval、checkpoint 和学习率 decay 都应对齐这个 step/token 坐标；否则同一个“训练 300B tokens”的实验在不同并行配置下会走出不同优化轨迹。</p>
+
+  <h4>3. Checkpoint 保存的是训练状态，不只是模型权重</h4>
+  <p>一个能恢复训练的 checkpoint 至少包含：</p>
+  <ul>
+    <li><strong>model state：</strong>参数、buffer、可能的 LoRA adapter 或 FSDP shard。</li>
+    <li><strong>optimizer state：</strong>AdamW 的 <code>m/v</code>、step count、weight decay 分组。</li>
+    <li><strong>scheduler state：</strong>warmup/cosine 的当前位置，不能只从 wall-clock 时间推断。</li>
+    <li><strong>scaler/precision state：</strong>FP16 GradScaler、FP8 scale 或 amax history。</li>
+    <li><strong>rng state：</strong>Python、NumPy、PyTorch CPU/CUDA RNG，影响 dropout、sampling 和数据顺序。</li>
+    <li><strong>dataloader position：</strong>数据 shard、epoch/offset、shuffle seed、mixture sampler 状态。</li>
+    <li><strong>run config：</strong>模型、数据、batch、optimizer、precision 和环境版本。</li>
+  </ul>
+  <p>只保存 <code>model.state_dict()</code> 适合推理导出，不适合中断后继续训练。少了 optimizer state，恢复后的 loss 可能短期震荡；少了 scheduler state，学习率会跳错；少了数据采样位置，训练 token 分布会和原计划偏离。</p>
+
+  <h4>4. Eval cadence 要服务于决策，而不是打断训练</h4>
+  <p>评估太少会看不见过拟合和数据问题；评估太频繁会降低 MFU、拉长训练时钟时间。训练计划应区分三类评估：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>评估类型</th><th>频率</th><th>回答的问题</th><th>注意事项</th></tr>
+      <tr><td>小 dev loss</td><td>高频，例如每 100-500 steps</td><td>loss 是否正常下降，是否 NaN、spike 或 train/val 分叉</td><td>样本固定，速度快，不代表最终能力</td></tr>
+      <tr><td>任务 benchmark</td><td>中频，例如每几个 checkpoint</td><td>代码、数学、QA、分类等能力是否随训练改善</td><td>固定 prompt 模板、解码参数和样本集</td></tr>
+      <tr><td>人工或 LLM judge</td><td>低频，接近 milestone</td><td>开放式输出、指令遵循、安全拒答和风格是否可接受</td><td>记录 judge 模型、rubric、温度和不确定性</td></tr>
+    </table>
+  </div>
+  <p>如果每次 eval 都在主训练进程同步生成大量样本，tokens/s 会出现周期性下降。工程上常见做法是：训练进程只保存 checkpoint 和轻量 dev loss；独立评估 worker 异步加载 checkpoint，跑更慢的 benchmark。这样训练吞吐和质量观察不会互相阻塞。</p>
+
+  <h4>5. 扩容要按阶段推进</h4>
+  <p>直接从单卡代码跳到上百卡训练，失败时很难定位问题。推荐扩容阶梯如下：</p>
+  <ol>
+    <li><strong>单卡小数据过拟合：</strong>确认 label shift、loss mask、optimizer 和 generation 都能工作。</li>
+    <li><strong>单卡完整数据短跑：</strong>确认 dataloader、数据过滤、val loss、checkpoint 和 resume。</li>
+    <li><strong>少卡 DDP：</strong>确认 global batch tokens、AllReduce、吞吐和 seed 行为。</li>
+    <li><strong>FSDP/ZeRO：</strong>确认参数分片、checkpoint 格式、activation checkpointing 和峰值显存。</li>
+    <li><strong>TP/PP/MoE：</strong>确认通信拓扑、pipeline bubble、expert 负载均衡和跨节点网络。</li>
+    <li><strong>长跑前 rehearsal：</strong>用目标配置跑足几个 eval/checkpoint 周期，测量真实 MFU、失败恢复时间和存储压力。</li>
+  </ol>
+
+  <h4>6. 失败恢复也要进入成本模型</h4>
+  <p>假设集群每小时成本为 <code>C</code>，平均每 <code>H</code> 小时出现一次中断，checkpoint 间隔为 <code>I</code> 小时。一次中断平均丢失约 <code>I/2</code> 小时训练进度，预期浪费成本近似为：</p>
+  <div class="math-box"><div class="label">Expected restart waste</div>
+    <div class="katex" data-expr="\text{waste\_cost/hour}\approx C\cdot \frac{I}{2H}" aria-label="\text{waste\_cost/hour}\approx C\cdot \frac{I}{2H}" role="img"></div>
+  </div>
+  <p>checkpoint 越频繁，失败丢失越少，但写盘、网络和对象存储成本会上升；checkpoint 越稀疏，正常训练更快，但失败重跑代价更高。训练工程师的任务是选择一个让吞吐、存储和失败恢复都可接受的间隔，而不是盲目“每一步都保存”。</p>
+
+  <h4>7. 一个合格的训练运行表</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>阶段</th><th>配置</th><th>继续推进的条件</th><th>停止或回退信号</th></tr>
+      <tr><td>Smoke run</td><td>1 GPU，1k-10k steps，小模型或小数据</td><td>loss 降、无 NaN、resume 后 step 连续</td><td>label shift 错、loss 全 -100、checkpoint 不能恢复</td></tr>
+      <tr><td>Scale rehearsal</td><td>目标并行策略，短 token budget</td><td>MFU、显存、eval、checkpoint 周期稳定</td><td>通信等待过高、OOM、吞吐被 eval/checkpoint 打断</td></tr>
+      <tr><td>Main run</td><td>目标数据 mixture 和 token budget</td><td>train/val 曲线、benchmark 和成本符合计划</td><td>val loss 长期恶化、数据污染、频繁失败重跑</td></tr>
+      <tr><td>Final selection</td><td>选择 checkpoint 或继续训练</td><td>任务指标、PPL、生成质量和成本达到目标</td><td>只在训练集改善，开放式质量或安全指标退化</td></tr>
+    </table>
+  </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级训练工程能力不是“跑完一个脚本”，而是能解释这次训练消耗了多少 token 和 GPU 小时、为什么这个 checkpoint 可恢复、为什么扩容后优化轨迹仍然可比，以及当 loss、吞吐或评估异常时该先查哪一层。</div></div>
+</section>
+
 
 <section class="card">
   <h3>概念练习巩固</h3>

@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第3章 单头自注意力</h2>
   <p class="subtitle">从零实现 Scaled Dot-Product Attention——LLM 一切魔力的源头</p>
-  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 13 小节 · 5 道编程练习 · 6 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 14 小节 · 5 道编程练习 · 6 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -355,6 +355,56 @@ dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
     <div class="katex" data-expr="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" aria-label="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" role="img"></div>
   </div>
   <p>这里的关键不是背公式，而是把链式法则和矩阵乘法方向对齐：<code>dV</code> 来自 attention weights 对 value 的加权，<code>dQ</code> 和 <code>dK</code> 来自 score 矩阵对点积两侧的梯度，且二者都必须带上 <code>1/sqrt(d_k)</code>。这也是为什么课程要求把手写梯度和 PyTorch autograd 数值对齐。</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- 3.6A Attention 诊断账本 -->
+<!-- ================================================================ -->
+<section class="card" id="s3-6a">
+  <h3>3.6A Attention 诊断账本：logits、entropy、梯度和 mask</h3>
+  <p>训练 Transformer 时，attention heatmap 很直观，但它不是第一诊断工具。真正需要先看的是一组数值量：它们能告诉你 attention 是否在正确位置归一化、logits 是否过大、mask 是否泄漏、梯度是否还能穿过 softmax，以及当前序列长度是否已经触发显存瓶颈。</p>
+
+  <h4>先记录哪些量</h4>
+  <p>对一层中的一个 batch，可以按 head 和序列位置统计下面这些量。它们不要求改变模型结构，只需要在调试模式下从 <code>scores = QK^T / sqrt(d_k)</code>、mask 后 logits、softmax 权重和反向梯度中读取。</p>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>量</th><th>含义</th><th>异常时通常说明什么</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>score_mean/std/max/min</code></td><td>attention logits 的尺度</td><td>缺少 <code>1/sqrt(d_k)</code>、Q/K 初始化或 LayerNorm 分布异常</td></tr>
+      <tr><td><code>max_attention_prob</code></td><td>每个 query 最关注的 key 概率</td><td>接近 1 且大面积出现时，softmax 可能过早饱和</td></tr>
+      <tr><td><code>attention_entropy</code></td><td>注意力分布的熵</td><td>熵长期接近 0 表示极尖锐，长期接近 <code>log(visible_keys)</code> 表示近似均匀</td></tr>
+      <tr><td><code>masked_position_prob_sum</code></td><td>被 mask 位置获得的总概率</td><td>非零通常表示 mask 方向、广播维度或应用顺序有错误</td></tr>
+      <tr><td><code>all_masked_rows</code></td><td>某些 query 是否没有任何可见 key</td><td>softmax 可能产生 NaN，常见于 padding mask 和 causal mask 组合错误</td></tr>
+      <tr><td><code>grad_norm_q/k/v</code></td><td>Q/K/V 三条路径的梯度范数</td><td>Q/K 梯度消失而 V 正常时，常见原因是 softmax 饱和或 mask 截断了 score 路径</td></tr>
+      <tr><td><code>score_memory_bytes</code></td><td>dense score 张量 <code>[B,H,T,T]</code> 的物化成本</td><td>长上下文训练或推理需要 FlashAttention、分块或 KV cache 策略</td></tr>
+    </tbody>
+  </table>
+
+  <h4>用熵判断分布锐度</h4>
+  <p>对单个 query，如果它能看到 <code>m</code> 个 key，完全均匀的 attention 分布熵为 <span class="katex-inline" data-expr="\log m" aria-label="\log m" role="img"></span>；几乎 one-hot 的分布熵接近 0。注意力熵不是“越高越好”或“越低越好”：复制、括号匹配、分隔符定位等行为可能自然产生低熵；但如果训练早期所有层、所有 head 都低熵，就要检查 logits 缩放、mask 和数值精度。</p>
+  <div class="worked-example">
+    <h4>Worked Example：两个 logits 向量的诊断差异</h4>
+    <p>设某个 query 的 mask 后 logits 为 <code>[0.0, 0.0, 0.0, -inf]</code>。最后一个位置被屏蔽，前三个可见位置 softmax 后为均匀分布 <code>[1/3, 1/3, 1/3, 0]</code>，熵为 <code>log(3) ≈ 1.099</code>。这说明模型没有偏向某个 key，但 mask 本身生效。</p>
+    <p>如果 logits 为 <code>[8.0, 0.0, -1.0, -inf]</code>，softmax 约为 <code>[0.9995, 0.0003, 0.0001, 0]</code>，熵接近 0。此时 heatmap 看起来“很确定”，但 softmax Jacobian 中多数项也接近 0，Q/K 路径的梯度可能很弱。若训练一开始就普遍出现这种模式，应优先检查是否漏掉了 <code>sqrt(d_k)</code> 缩放，或混合精度下的 mask sentinel 是否导致数值异常。</p>
+  </div>
+
+  <h4>常见症状到排查方向</h4>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>症状</th><th>优先排查</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>未来 token 的 attention probability 非零</td><td>causal mask 上三角/下三角方向、mask 是否在 softmax 前应用、mask 维度是否能正确广播到 <code>[B,H,T,T]</code></td></tr>
+      <tr><td>第一批训练就大量低熵、<code>max_attention_prob</code> 接近 1</td><td><code>1/sqrt(d_k)</code> 缩放、temperature、Q/K 权重初始化、LayerNorm 输出尺度</td></tr>
+      <tr><td>所有 head 长期近似均匀</td><td>Q/K 投影是否被训练、学习率是否过小、mask 是否只留下很少可见位置、输入是否被错误置零</td></tr>
+      <tr><td>attention 权重出现 NaN</td><td>是否存在 all-masked row、是否出现 <code>inf - inf</code>、fp16/bf16 下是否使用了不合适的极小值</td></tr>
+      <tr><td>V 梯度正常但 Q/K 梯度接近 0</td><td>softmax 饱和、mask 阻断 score 路径、loss 是否只通过 value 内容产生弱监督</td></tr>
+      <tr><td>长序列显存突然按平方增长</td><td>score 矩阵是否被显式保存，是否需要 FlashAttention、activation checkpoint、序列分块或推理端 KV cache</td></tr>
+    </tbody>
+  </table>
+
+  <p>Ch03 作业中的 <code>attention_entropy</code>、<code>attention_score_memory_bytes</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 分别对应上表中的分布锐度、显存估算、logits 反向路径和 Q/K/V 梯度路径。完成这些函数后，你应该能从一段 attention 训练日志判断：问题是 mask 错、logits 尺度错、梯度被 softmax 饱和压住，还是单纯的长上下文计算成本过高。</p>
 </section>
 
 <!-- ================================================================ -->

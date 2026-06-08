@@ -370,6 +370,45 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
 </section>
 
 <!-- ================================================================ -->
+<!-- 9.5A LoRA Engineering -->
+<!-- ================================================================ -->
+<section class="card" id="s9-5a">
+  <h3>9.5A LoRA/PEFT 工程账本：省的是哪些显存，代价在哪里</h3>
+  <p>LoRA 的公式 <span class="katex-inline" data-expr="W'=W_0+\frac{\alpha}{r}BA" aria-label="W'=W_0+\frac{\alpha}{r}BA" role="img"></span> 只说明了参数化方式。训练工程中更重要的是显存账本：基础权重 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 冻结后不需要保存梯度和优化器状态，只有小矩阵 <span class="katex-inline" data-expr="A,B" aria-label="A,B" role="img"></span> 参与更新。</p>
+
+  <h4>1. 可训练参数量</h4>
+  <p>对一个线性层 <code>Linear(d_in, d_out)</code>，原始参数量为 <code>d_out * d_in</code>。LoRA rank 为 <code>r</code> 时，新增参数为：</p>
+  <div class="math-box"><div class="label">LoRA 参数量</div>
+    <div class="katex" data-expr="N_{\text{LoRA}}=r\cdot d_{\text{in}}+d_{\text{out}}\cdot r=r(d_{\text{in}}+d_{\text{out}})" aria-label="N_LoRA=r(d_in+d_out)" role="img"></div>
+  </div>
+  <p>如果 <code>d_in=d_out=4096</code> 且 <code>r=8</code>，单个投影层只新增 <code>8*(4096+4096)=65,536</code> 个可训练参数，而原始矩阵有 <code>16,777,216</code> 个参数。这个数量级差异解释了为什么 LoRA 可以在较小显存上完成任务适配。</p>
+
+  <h4>2. 显存节省来自梯度和优化器状态</h4>
+  <p>以 AdamW 为例，训练一个可训练参数通常至少需要权重、梯度、一阶矩和二阶矩。全量微调时这些状态会覆盖所有参数；LoRA 微调时，基础权重仍要加载用于 forward/backward，但梯度和优化器状态只为 adapter 参数保存：</p>
+  <div class="code-block" data-lang="text">
+full fine-tuning train states ~= all_params * (weights + grads + Adam m + Adam v)
+LoRA train states ~= base_weights + lora_params * (weights + grads + Adam m + Adam v)</div>
+  <p>因此 LoRA 省下的主要不是前向所需的基础模型权重，而是全量梯度和优化器状态。若再结合 4-bit/8-bit base weight 量化，就形成 QLoRA 类方法：冻结的基础模型以低精度存储，LoRA adapter 以较高精度训练。课程中不要求实现 QLoRA kernel，但要理解它把“存储基础模型”和“训练 adapter”这两部分显存压力进一步拆开。</p>
+
+  <h4>3. target modules 不是随便选</h4>
+  <p>LoRA 常打到 attention 的 <code>q_proj</code>、<code>v_proj</code>，也可扩展到 <code>k_proj</code>、<code>o_proj</code>、MLP 的 up/down/gate projection。选择目标模块时要考虑：</p>
+  <ul>
+    <li><strong>任务类型：</strong>指令格式和风格适配常从 attention projection 开始；领域知识或复杂转换可能需要 MLP adapter。</li>
+    <li><strong>可训练参数预算：</strong>target modules 越多，adapter 越大，优化器状态和通信也越多。</li>
+    <li><strong>推理部署：</strong>多个 adapter 同时在线服务时，未合并 adapter 会引入额外矩阵乘；合并 adapter 可降低开销，但切换任务需要重新加载或维护多份权重。</li>
+    <li><strong>稳定性：</strong>rank 太小可能欠拟合，rank 太大更接近全量微调，容易过拟合小数据或放大脏标签。</li>
+  </ul>
+
+  <h4>4. alpha、rank 和 dropout 的角色</h4>
+  <p><code>alpha/r</code> 是 LoRA 分支的缩放。rank 增大时如果不缩放，adapter 输出幅度可能随 rank 改变；使用 <code>alpha/r</code> 让不同 rank 的初始更新尺度更可控。LoRA dropout 则在 adapter 输入上做随机失活，常用于小数据集避免 adapter 记住训练样本表面模式。</p>
+  <p>一个合格实验报告不应只写“用了 LoRA”。至少要写清：target modules、rank、alpha、dropout、基础模型是否量化、训练 dtype、可训练参数比例、是否合并推理，以及和全量微调或冻结 baseline 的质量/成本对比。</p>
+
+  <h4>5. 合并推理与多 adapter 服务</h4>
+  <p>推理时可以把 <span class="katex-inline" data-expr="\Delta W=\frac{\alpha}{r}BA" aria-label="\Delta W=alpha/r BA" role="img"></span> 加回基础权重，得到普通线性层。这会消除 LoRA 分支的额外计算，适合单一 adapter 固定部署。但如果一个服务要按租户、语言或任务动态切换多个 adapter，提前合并会带来权重管理成本；未合并 adapter 则需要在推理引擎里高效 batch 不同 adapter 请求。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>LoRA 不是“免费微调”。它用较少可训练参数降低训练显存和分发成本，但仍要评估 target module 覆盖、rank 容量、数据质量、adapter 切换、合并推理和量化误差。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 9.6 DPO Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s9-6">

@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第5章 Transformer Block</h2>
   <p class="subtitle">RMSNorm + FFN + SwiGLU + mHC 超连接——构建 LLM 的核心单元</p>
-  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 13 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 115 分钟 · 14 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -614,6 +614,64 @@ print(f"所有参数有梯度: {all(p.grad is not None for p in block.parameters
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 这里约 25 行核心代码完成了完整的 Transformer Block。关键设计是"<strong>归一化路径与残差路径分离</strong>"——信息沿残差路径无阻碍流动（无非线性、无归一化），RMSNorm 只应用于子层的输入。</p>
     </div>
   </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 5.7A Block 实现稳定性账本 -->
+<!-- ================================================================ -->
+<section class="card" id="s5-7a">
+  <h3>5.7A Block 实现稳定性账本：残差、初始化、dropout 与精度</h3>
+  <p>一个 Transformer Block 的数学形式很短，但训练是否稳定取决于许多实现细节。课程级实现可以先写出 Pre-Norm + RMSNorm + Attention + SwiGLU；工程级实现还要说明残差分支如何初始化、dropout 放在哪里、norm 用什么精度、bias 是否保留、checkpointing 如何选择，以及这些选择如何影响 loss 曲线、梯度范数和吞吐。</p>
+
+  <h4>1. 残差分支要控制初始扰动</h4>
+  <p>Pre-Norm 保留了直接梯度路径，但如果每个子层一开始就向残差流写入过大的更新，深层堆叠仍会不稳定。常见做法包括较小初始化、对残差投影做深度相关缩放，或使用可学习 residual gate。抽象地写：</p>
+  <div class="math-box"><div class="label">Residual update scale</div>
+    <div class="katex" data-expr="x_{l+1}=x_l+\alpha_l f_l(\mathrm{Norm}(x_l))" aria-label="x_{l+1}=x_l+\alpha_l f_l(Norm(x_l))" role="img"></div>
+  </div>
+  <p><span class="katex-inline" data-expr="\alpha_l" aria-label="alpha_l" role="img"></span> 可以是固定缩放、初始化策略的隐式结果，也可以是显式 gate。它的作用不是改变模型表达能力，而是控制训练初期每层对 residual stream 的扰动幅度。若 <code>grad_norm</code> 在前几百 step 频繁 spike，除了学习率和数据异常，也应检查残差输出尺度和初始化。</p>
+
+  <h4>2. Dropout 位置影响训练和推理等价性</h4>
+  <p>教学代码常把 dropout 放在 attention/FFN 输出之后、残差相加之前：</p>
+  <div class="code-block" data-lang="python">
+x = x + dropout(attention(norm1(x), mask))
+x = x + dropout(ffn(norm2(x)))</div>
+  <p>这个位置的含义是：训练时随机丢掉子层写入 residual stream 的部分更新；推理时 dropout 必须关闭。若把 dropout 放到 residual 之后，就会随机破坏 identity path；若在 attention probabilities 上使用 dropout，则是在随机丢弃 key 的贡献，效果与 output dropout 不同。训练报告里如果比较 ablation，需要写清 dropout 的位置和概率。</p>
+
+  <h4>3. Norm 和 softmax 常需要更高精度</h4>
+  <p>bf16/fp16 训练中，矩阵乘可以使用低精度 tensor core，但归一化统计、softmax 分母和某些累加最好在 fp32 中完成，再 cast 回模型 dtype。否则可能出现两类问题：</p>
+  <ul>
+    <li><strong>RMSNorm/LayerNorm 统计误差：</strong>低精度平方和与均值在大维度上累积误差，影响尺度稳定。</li>
+    <li><strong>Attention softmax 溢出或下溢：</strong>logits 过大、mask sentinel 不合适或全屏蔽行会产生 NaN。</li>
+  </ul>
+  <p>许多高性能 kernel 会内部处理这些细节；手写教学实现则要显式知道哪些张量应该转换精度。</p>
+
+  <h4>4. Bias 策略要和架构约定一致</h4>
+  <p>现代 decoder-only LLM 常在 QKV、输出投影、SwiGLU 线性层中省略 bias，并使用 RMSNorm 而非带 beta 的 LayerNorm。这不是硬性定理，而是一组工程约定：减少参数和 kernel 分支，配合 Pre-Norm/RMSNorm 的尺度控制。若复现某个 checkpoint，bias 策略必须与原模型一致；否则参数量、state_dict key、输出分布都会不匹配。</p>
+
+  <h4>5. Activation checkpointing 按子层选择</h4>
+  <p>Checkpointing 不必“一刀切”整个 block。更合理的选择取决于哪部分激活最贵：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>子层</th><th>主要激活</th><th>什么时候优先 checkpoint</th><th>代价</th></tr>
+      <tr><td>Attention</td><td>Q/K/V、attention scores 或 kernel 内部状态</td><td>长序列、attention score 显存占主导</td><td>重算 QKV、scores、softmax/value mixing</td></tr>
+      <tr><td>SwiGLU FFN</td><td>gate/value 中间激活</td><td>短序列但 d_ff 很大，FFN 激活占主导</td><td>重算三块线性和 SiLU/gate 乘法</td></tr>
+      <tr><td>整层 block</td><td>两个子层全部中间状态</td><td>显存极紧张，需要最大节省</td><td>重算最多，tokens/s 下降更明显</td></tr>
+    </table>
+  </div>
+  <p>因此 Ch05 的 <code>activation_checkpointing_tradeoff</code> 只是第一步；真实训练要结合 profiler 看每个子层的 activation bytes、forward time 和 backward recompute time。</p>
+
+  <h4>6. Block 级异常如何定位</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>症状</th><th>优先怀疑</th><th>检查方式</th></tr>
+      <tr><td>loss 开始就 NaN</td><td>mask 全屏蔽行、softmax sentinel、norm eps、lr 过大</td><td>打印 logits/norm 输出是否 finite，缩小 batch 单步复现</td></tr>
+      <tr><td>grad_norm 持续爆炸</td><td>残差输出尺度、初始化、Post-Norm、clipping 位置</td><td>分层记录 residual update norm 与 input norm 比例</td></tr>
+      <tr><td>train loss 降但 val loss 很差</td><td>dropout/weight decay、数据重复、模型容量过强</td><td>比较 train/val split、关闭 dropout 做小数据过拟合测试</td></tr>
+      <tr><td>tokens/s 低于预期</td><td>attention layout、未融合 kernel、checkpoint 重算、dataloader</td><td>用 profiler 分离 attention、FFN、norm 和数据等待</td></tr>
+      <tr><td>不同实现输出不一致</td><td>bias、RMSNorm eps、mask 语义、dropout train/eval 模式</td><td>固定 seed，逐层比较 hidden states 和参数命名</td></tr>
+    </table>
+  </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Transformer Block 的工程质量不只看 forward 是否返回正确 shape。一个可靠实现应能解释 residual update norm、norm 精度、dropout 位置、bias 策略和 checkpointing 决策，并能在 loss 或吞吐异常时定位到具体子层。</div></div>
 </section>
 
 <!-- ================================================================ -->

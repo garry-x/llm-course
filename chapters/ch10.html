@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / 稀疏注意力 / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 155 分钟 · 22 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 165 分钟 · 23 小节 · 6 道编程练习 · 7 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -41,9 +41,9 @@
     <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、benchmark 与 SLO。</li>
     <li><strong>课前阅读：</strong>阅读 vLLM/PagedAttention、FlashAttention、RAG 和 GPTQ/AWQ 摘要，记录每项技术主要优化哪个瓶颈。</li>
     <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、基准测试、指标结论摘要和 LSH 检索示例。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用设计、基准测试、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、tool schema 设计、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
 </section>
 
@@ -610,6 +610,66 @@ class SimpleRAG:
     <li><strong>输入消毒：</strong>对工具输出进行安全检查</li>
   </ul>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Claude Code 案例：</strong>Claude Code 是一个基于 Claude 的自主编码 Agent。它读取 PR 描述 → 搜索代码库 → 读取文件 → 执行命令 → 编写代码 → 提交 PR。每个步骤中 Agent 都可能"反思"前一步的结果并调整策略。生成循环预测的是<strong>下一个 token</strong>，Agentic Loop 决定的是<strong>下一个行动</strong>。</div></div>
+</section>
+
+<section class="card" id="s10-9a">
+  <h3>10.9A Tool Use 工程协议：schema、循环控制与失败恢复</h3>
+  <p>把工具接进 LLM 服务时，核心难点不是让模型“想调用工具”，而是把一次工具调用变成可验证、可限权、可恢复的系统协议。模型输出只是候选行动；真正的执行必须经过 schema 校验、权限检查、预算控制、工具结果回填和最终答案约束。工程师需要把工具调用看成一个带状态的控制循环，而不是普通文本生成的附属功能。</p>
+
+  <h4>一次工具调用的最小协议</h4>
+  <p>典型工具调用链路可以拆成 7 个状态：</p>
+  <ol>
+    <li><strong>Tool registry：</strong>服务端声明工具名、用途、参数 schema、超时、权限等级和返回格式。</li>
+    <li><strong>Model proposal：</strong>模型在当前 messages、system policy 和 tool definitions 下生成候选 tool call。</li>
+    <li><strong>Schema validation：</strong>服务端校验工具名存在、参数类型正确、必填字段齐全、枚举值合法。</li>
+    <li><strong>Policy check：</strong>根据用户、租户、任务类型和工具风险等级决定是否允许执行，必要时要求人工确认。</li>
+    <li><strong>Execution：</strong>工具在隔离环境中执行，并记录 latency、status、输入摘要和输出摘要。</li>
+    <li><strong>Observation injection：</strong>工具结果以 tool message 形式回填给模型，而不是拼成无结构文本。</li>
+    <li><strong>Finalization：</strong>模型基于 observation 生成最终答复，服务端再次检查格式、安全和引用约束。</li>
+  </ol>
+
+  <p>这条链路和 RAG 的区别在于：RAG 通常是服务端主动检索证据，工具调用则允许模型选择下一步行动。模型获得了更强的外部操作能力，也把错误空间从“答案不准”扩展到“调用了错误工具、传了错误参数、过度循环、越权执行、把工具结果误读为事实”。</p>
+
+  <h4>Schema 不是文档，而是执行边界</h4>
+  <p>一个工具 schema 至少应明确参数类型、取值范围、默认值和错误返回。下面是课程级的抽象例子：</p>
+  <pre><code class="language-json">{
+  "name": "search_docs",
+  "description": "Search approved course documents by query.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {"type": "string", "minLength": 3, "maxLength": 200},
+      "top_k": {"type": "integer", "minimum": 1, "maximum": 8},
+      "source": {"type": "string", "enum": ["chapters", "assignments", "docs"]}
+    },
+    "required": ["query"]
+  },
+  "timeout_ms": 1200,
+  "risk": "read_only"
+}</code></pre>
+  <p>如果模型输出 <code>{"top_k": 100}</code>，服务端必须拒绝或修正，而不是把它直接传给检索器。若工具会写文件、发邮件、下单、执行命令或访问隐私数据，schema 仍然不够；还需要权限系统、沙箱、执行日志、人工确认和可回滚策略。</p>
+
+  <h4>循环预算：防止 agent 把系统拖入不可控状态</h4>
+  <p>Agent 循环必须有硬预算。常见预算包括最大 tool calls、最大 wall-clock time、最大 observation tokens、最大外部 API cost、最大失败重试次数和最大连续同类工具调用次数。预算不是产品体验细节，而是推理服务的容量控制：一个请求如果反复搜索、读长文档、执行代码，会同时拉高 TTFT、总延迟、外部服务成本和上下文 token 数。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>失败模式</th><th>表现</th><th>工程缓解</th><th>评测指标</th></tr>
+      <tr><td>Invalid call</td><td>工具名不存在或 JSON 不合法</td><td>schema-constrained decoding、参数校验、repair prompt</td><td>valid tool-call rate</td></tr>
+      <tr><td>Wrong tool</td><td>该检索时执行代码，或该问用户时调用 API</td><td>工具选择分类集、few-shot 反例、policy router</td><td>tool selection accuracy</td></tr>
+      <tr><td>Bad arguments</td><td>query 过泛、日期错误、top_k 过大</td><td>参数范围、query rewrite、参数级错误反馈</td><td>argument accuracy / repair success</td></tr>
+      <tr><td>Looping</td><td>多次调用相同工具但没有新信息</td><td>max calls、重复 observation 检测、stop rule</td><td>avg calls、loop rate、timeout rate</td></tr>
+      <tr><td>Observation misuse</td><td>工具返回“不确定”，模型却当成事实</td><td>结构化 observation、citation check、final answer verifier</td><td>grounded answer rate</td></tr>
+      <tr><td>Prompt injection</td><td>检索文档或网页诱导模型忽略系统规则</td><td>把工具输出标为不可信数据、指令/数据分离</td><td>injection success rate</td></tr>
+    </table>
+  </div>
+
+  <h4>Worked Example：课程问答 agent 的一次决策</h4>
+  <p>用户问：“Ch10 的 RAG 作业要实现哪些评测指标？” 若模型直接回答，可能遗漏细节；若调用 <code>search_docs</code>，合理参数是 <code>{"query":"ch10 rag metrics recall mrr ndcg diagnostics","top_k":4,"source":"assignments"}</code>。服务端先验证 <code>top_k<=8</code>，执行检索后把命中文档和片段 id 作为 observation 回填。最终答案应引用 Recall@k、MRR、nDCG、citation precision/recall 和 failure mode，并说明这些指标分别对应检索、排序、引用和生成归因。</p>
+
+  <p>若模型连续三次搜索相同 query，系统应停止工具循环并要求模型基于已有 observation 作答或向用户澄清。若检索结果为空，模型不应编造作业要求，而应报告“未找到足够证据”，并给出下一步可执行动作。这种行为边界和 Ch11 的 benchmark validity、安全评估是同一件事：高分 agent 不是工具调用越多越好，而是在正确时机调用正确工具，并在证据不足时停止。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tool use 是推理工程的一部分。它同时改变质量、延迟、成本和风险：你需要评测工具选择、参数正确性、循环预算、工具结果忠实性和安全边界，而不是只看最终回答是否看起来合理。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1514,6 +1574,19 @@ def forward(image, text_prompt):
       <label><input type="radio" name="q6" value="3"> D. 因为 prefix cache 会让所有请求都不占显存</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="2" data-explain="工具调用必须经过 schema 校验、权限检查、循环预算和 observation 回填。只靠 prompt 要求模型别乱调用无法防止无效参数、越权执行、重复循环或把不可信工具输出当成事实。">
+    <h4>练习 7：为什么 agent/tool use 不能只靠 prompt 约束？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q7" value="0"> A. 因为工具调用只影响最终答案质量，不影响延迟和成本</label>
+      <label><input type="radio" name="q7" value="1"> B. 因为只要模型足够大，就能自动保证参数合法和权限安全</label>
+      <label><input type="radio" name="q7" value="2"> C. 因为工具执行需要服务端 schema 校验、权限检查、预算限制和结果回填协议</label>
+      <label><input type="radio" name="q7" value="3"> D. 因为 RAG 已经等价于所有工具调用，不需要单独协议</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q7')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>

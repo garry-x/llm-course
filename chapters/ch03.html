@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第3章 单头自注意力</h2>
   <p class="subtitle">从零实现 Scaled Dot-Product Attention——LLM 一切魔力的源头</p>
-  <div class="reading-time">⏱ 预计阅读: 85 分钟 · 12 小节 · 5 道编程练习 · 6 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 13 小节 · 5 道编程练习 · 6 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -467,6 +467,66 @@ print("位置0的注意力:", attn[0, 0])  # 应该只有 [0] > 0
 print("位置3的注意力:", attn[0, 3])  # [0,1,2,3] 都应该 > 0</div>
     </div>
   </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 3.7A Attention 实现边界 -->
+<!-- ================================================================ -->
+<section class="card" id="s3-7a">
+  <h3>3.7A Attention 实现边界：从教学函数到真实模型</h3>
+  <p>教学版 attention 用几十行代码就能跑通，但真实模型里的 attention 往往出错在边界条件，而不是公式本身。工程师需要知道哪些地方可以简化，哪些地方不能简化：mask 的语义、dtype、广播、全屏蔽 query、混合精度 sentinel、增量解码和高性能 kernel 的 API 约定。</p>
+
+  <h4>1. Mask 语义必须先固定</h4>
+  <p>不同库对 mask 的约定并不完全一致。课程作业约定 <code>True/1 = 可见</code>、<code>False/0 = 屏蔽</code>，并在 softmax 前把屏蔽位置写成很大的负数。某些 PyTorch API 或模型实现会使用 additive mask：可见位置加 <code>0</code>，屏蔽位置加 <code>-inf</code>。这两种写法等价，但不能混用。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Mask 类型</th><th>形状</th><th>语义</th><th>常见错误</th></tr>
+      <tr><td>Causal mask</td><td><code>[T,T]</code></td><td>每个 query 只能看自己和过去 key</td><td>上三角/下三角方向写反，导致未来泄漏</td></tr>
+      <tr><td>Padding key mask</td><td><code>[B,T]</code> → <code>[B,1,T]</code></td><td>所有 query 都不能看 padding key</td><td>误把 padding query 行全清零，softmax 得到 NaN</td></tr>
+      <tr><td>Batch mask</td><td><code>[B,T,T]</code></td><td>不同样本有不同可见 key</td><td>广播维度放错，样本之间共享了错误 mask</td></tr>
+      <tr><td>Additive mask</td><td><code>[B,1,T,T]</code> 或可广播</td><td>直接加到 attention logits 上</td><td>把 bool mask 当作 additive mask 相加</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Mask 必须在 softmax 前进入 logits</h4>
+  <p>如果先 softmax 再把屏蔽位置权重乘 0，剩余可见位置的概率和会小于 1，输出尺度会随屏蔽数量变化。正确流程是：</p>
+  <div class="math-box"><div class="label">Masked attention logits</div>
+    <div class="katex" data-expr="P=\mathrm{softmax}\left(\frac{QK^\top}{\sqrt{d_k}} + M\right),\quad M_{ij}=0\text{ if visible},\;-\infty\text{ if masked}" aria-label="P=softmax(QK^T/sqrt(d_k)+M), Mij=0 if visible and -infty if masked" role="img"></div>
+  </div>
+  <p>这样 softmax 的分母只包含可见 key。Ch03 的 worked example 中，未来 token 的 value 即使很大也不会进入输出，因为它在 softmax 前已经被移出概率分布。</p>
+
+  <h4>3. 全屏蔽 query 要单独处理</h4>
+  <p>如果某一行 logits 全部是 <code>-inf</code> 或等价的大负数，softmax 的数学分母为 0，很多实现会得到 NaN。训练中最常见来源是 padding query 行：这个 query 本身是 padding，不应该产生 loss，但它仍经过 attention 前向。课程作业选择只屏蔽 padding key，不把 padding query 行全清零，就是为了避免这个问题。</p>
+  <p>生产实现通常会用两层机制处理：</p>
+  <ul>
+    <li><strong>attention mask：</strong>确保真实 query 不读取未来或 padding key。</li>
+    <li><strong>loss/output mask：</strong>确保 padding query 的输出不进入 loss、metric 或后续任务统计。</li>
+  </ul>
+
+  <h4>4. 混合精度下的 sentinel 不是随便填</h4>
+  <p>教学代码常用 <code>-1e9</code>，但在 fp16/bf16、FlashAttention 或 fused SDPA kernel 中，推荐做法会因实现而异。关键原则是：屏蔽值必须足够小，使 <code>exp(masked_logit)</code> 在当前 dtype 下近似为 0；同时不能引入 NaN 或 dtype overflow。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>写法</th><th>优点</th><th>风险</th></tr>
+      <tr><td><code>masked_fill(~mask, -1e9)</code></td><td>教学直观，float32 中稳定</td><td>低精度或某些 kernel 中可能不合适</td></tr>
+      <tr><td><code>torch.finfo(dtype).min</code></td><td>按 dtype 选择最小有限值</td><td>全屏蔽行仍可能 NaN，需要额外处理</td></tr>
+      <tr><td>bool mask 交给 fused kernel</td><td>让库处理 sentinel 和 tiling</td><td>必须确认 API 中 True/False 的含义</td></tr>
+    </table>
+  </div>
+
+  <h4>5. 训练 attention 与增量解码 attention 的形状不同</h4>
+  <p>训练时通常一次处理完整序列，Q/K/V 形状类似 <code>[B,T,D]</code>，score 是 <code>[B,T,T]</code>。增量解码时每步只给一个新 query，Q 形状更像 <code>[B,1,D]</code>，K/V 来自历史 cache，形状是 <code>[B,T_cache,D]</code>，score 变成 <code>[B,1,T_cache]</code>。此时 causal mask 不再是完整 <code>[T,T]</code> 下三角，而是“当前 query 只能看已有 cache 和自己”。如果 position_ids、cache length 或 prefix cache 对不上，模型仍能输出 token，但相对位置和可见上下文已经错了。</p>
+
+  <h4>6. 高性能 API 的等价条件</h4>
+  <p>PyTorch 的 <code>scaled_dot_product_attention</code>、FlashAttention 和推理引擎 kernel 可以替代手写 attention，但只有在以下条件对齐时才等价：</p>
+  <ul>
+    <li><strong>缩放一致：</strong>是否默认除以 <code>sqrt(d_k)</code>，有没有额外 scale。</li>
+    <li><strong>mask 一致：</strong>causal flag、padding mask、additive mask 的语义是否一致。</li>
+    <li><strong>dropout 一致：</strong>训练时 attention dropout 是否开启，推理时必须关闭。</li>
+    <li><strong>精度一致：</strong>softmax 是否在 fp32 accumulation 中完成，输出 dtype 如何回写。</li>
+    <li><strong>layout 一致：</strong>输入是 <code>[B,T,H,D]</code>、<code>[B,H,T,D]</code> 还是 packed varlen 格式。</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Attention 的公式只有一行，但可靠实现依赖 mask 语义、数值稳定和 shape 契约。能写出教学版 attention 是第一步；能判断它和 fused kernel、KV cache、padding batch 是否等价，才是工程能力。</div></div>
 </section>
 
 <!-- ================================================================ -->

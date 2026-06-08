@@ -79,6 +79,18 @@
     </div>
   </section>
 
+  <section class="learning-path">
+    <h3>训练到推理的课程闭环</h3>
+    <div class="path-grid">
+      <div class="path-step"><strong>1. 数据进入模型</strong><span>Ch01、Ch07：多语 tokenizer、数据质量、去重、隐私、packing 和 token budget 决定训练样本真正进入模型的形态。</span></div>
+      <div class="path-step"><strong>2. 架构决定成本</strong><span>Ch03-Ch06：attention、GQA/MLA、FFN、MoE、norm、checkpoint 兼容性和 interpretability 共同决定参数量、FLOPs、KV Cache 与可诊断性。</span></div>
+      <div class="path-step"><strong>3. 训练产生可交付产物</strong><span>Ch07、Ch09：预训练、SFT、LoRA、DPO/GRPO 不是孤立实验；它们必须输出可恢复 checkpoint、训练记录、对齐评估和能力保留结论。</span></div>
+      <div class="path-step"><strong>4. 发布包进入服务</strong><span>Ch10：模型权重、config、tokenizer、chat template、adapter、量化配置、固定样本和回滚版本共同定义一个可上线模型。</span></div>
+      <div class="path-step"><strong>5. 服务用实验约束结论</strong><span>Ch08-Ch11：生成策略、RAG、多模态、benchmark validity、safety/social impact 和 LLM-as-judge 必须和 TTFT、TPOT、显存、成本一起报告。</span></div>
+      <div class="path-step"><strong>6. Capstone 收束能力</strong><span>训练 Capstone 交付可复现训练闭环；推理 Capstone 交付 OpenAI-compatible API、压测、评测、容量规划和上线复盘。</span></div>
+    </div>
+  </section>
+
   <section class="role-path">
     <h3>课程材料</h3>
     <div class="role-grid">

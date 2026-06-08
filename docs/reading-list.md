@@ -162,11 +162,14 @@
 - Loshchilov and Hutter. [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101). 重点看 AdamW 与 L2 正则的差别。
 - Hoffmann et al. [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556). 重点看 Chinchilla scaling law 的数据/参数权衡。
 - Rajbhandari et al. [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054). 重点看 optimizer/gradient/parameter state sharding。
+- Shoeybi et al. [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053). 重点看 tensor parallelism 如何切分 Transformer 层内矩阵。
 
 选读：
 
+- Huang et al. [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://arxiv.org/abs/1811.06965). 重点看 micro-batch、pipeline bubble 和 activation rematerialization。
 - PyTorch documentation: `torch.amp`, `DistributedDataParallel`, FSDP。
 - DeepSeek-V3 Technical Report 中 FP8 mixed precision 与 DualPipe。
+- NVIDIA / PyTorch profiler 文档中 GPU utilization、kernel timeline、communication overlap 和 dataloader bottleneck 的诊断方法。
 
 复盘问题：
 
@@ -174,6 +177,8 @@
 - 在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？
 - 训练日志里 loss 下降但开发集变差时，应该先查哪些产出？
 - 参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？
+- DDP、ZeRO/FSDP、tensor parallel 和 pipeline parallel 分别解决容量、通信还是吞吐中的哪一类瓶颈？
+- MFU 低时，如何区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合？
 - Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？
 
 ## Week 6: Generation、Search 与 Speculative Decoding
@@ -240,11 +245,13 @@
 - Dao et al. [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://arxiv.org/abs/2205.14135). 重点看 IO-aware attention。
 - Lewis et al. [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401). 重点看 retriever/generator 组合。
 - Dettmers et al. [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314). 重点看 4-bit quantization 与 LoRA 结合。
+- Yu et al. [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu). 重点看 iteration-level scheduling 和 continuous batching 为什么能减少队列浪费。
 
 选读：
 
 - vLLM documentation on PagedAttention and continuous batching。
 - SGLang, TensorRT-LLM, llama.cpp 官方文档中 serving、quantization 或 batching 部分。
+- Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。
 - Liu et al. [Visual Instruction Tuning](https://arxiv.org/abs/2304.08485). 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。
 - OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。
 
@@ -256,6 +263,8 @@
 - 一个 benchmark summary 应怎样限制结论的适用范围？
 - prefill 和 decode 阶段的计算/访存瓶颈为什么不同？
 - quantization 的误差会优先影响哪些任务、层或 token 分布？
+- 为什么 serving admission control 不能只按并发请求数，而要看 active KV tokens、prompt/output token 分布和 SLO 队列？
+- 长 prompt 进入 continuous batching 时，chunked prefill 和 prefix cache 分别缓解哪类 TTFT 问题？
 
 ## Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics
 

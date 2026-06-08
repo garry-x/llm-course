@@ -185,11 +185,14 @@
 <li>Loshchilov and Hutter. <a href="https://arxiv.org/abs/1711.05101">Decoupled Weight Decay Regularization</a>. 重点看 AdamW 与 L2 正则的差别。</li>
 <li>Hoffmann et al. <a href="https://arxiv.org/abs/2203.15556">Training Compute-Optimal Large Language Models</a>. 重点看 Chinchilla scaling law 的数据/参数权衡。</li>
 <li>Rajbhandari et al. <a href="https://arxiv.org/abs/1910.02054">ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</a>. 重点看 optimizer/gradient/parameter state sharding。</li>
+<li>Shoeybi et al. <a href="https://arxiv.org/abs/1909.08053">Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism</a>. 重点看 tensor parallelism 如何切分 Transformer 层内矩阵。</li>
 </ul>
 <p>选读：</p>
 <ul>
+<li>Huang et al. <a href="https://arxiv.org/abs/1811.06965">GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism</a>. 重点看 micro-batch、pipeline bubble 和 activation rematerialization。</li>
 <li>PyTorch documentation: <code>torch.amp</code>, <code>DistributedDataParallel</code>, FSDP。</li>
 <li>DeepSeek-V3 Technical Report 中 FP8 mixed precision 与 DualPipe。</li>
+<li>NVIDIA / PyTorch profiler 文档中 GPU utilization、kernel timeline、communication overlap 和 dataloader bottleneck 的诊断方法。</li>
 </ul>
 <p>复盘问题：</p>
 <ul>
@@ -197,6 +200,8 @@
 <li>在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？</li>
 <li>训练日志里 loss 下降但开发集变差时，应该先查哪些产出？</li>
 <li>参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？</li>
+<li>DDP、ZeRO/FSDP、tensor parallel 和 pipeline parallel 分别解决容量、通信还是吞吐中的哪一类瓶颈？</li>
+<li>MFU 低时，如何区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合？</li>
 <li>Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？</li>
 </ul>
 <h3 id="week-6-generation-search-与-speculative-decoding">Week 6: Generation、Search 与 Speculative Decoding</h3>
@@ -254,11 +259,13 @@
 <li>Dao et al. <a href="https://arxiv.org/abs/2205.14135">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</a>. 重点看 IO-aware attention。</li>
 <li>Lewis et al. <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. 重点看 retriever/generator 组合。</li>
 <li>Dettmers et al. <a href="https://arxiv.org/abs/2305.14314">QLoRA: Efficient Finetuning of Quantized LLMs</a>. 重点看 4-bit quantization 与 LoRA 结合。</li>
+<li>Yu et al. <a href="https://www.usenix.org/conference/osdi22/presentation/yu">Orca: A Distributed Serving System for Transformer-Based Generative Models</a>. 重点看 iteration-level scheduling 和 continuous batching 为什么能减少队列浪费。</li>
 </ul>
 <p>选读：</p>
 <ul>
 <li>vLLM documentation on PagedAttention and continuous batching。</li>
 <li>SGLang, TensorRT-LLM, llama.cpp 官方文档中 serving、quantization 或 batching 部分。</li>
+<li>Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。</li>
 <li>Liu et al. <a href="https://arxiv.org/abs/2304.08485">Visual Instruction Tuning</a>. 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。</li>
 <li>OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。</li>
 </ul>
@@ -270,6 +277,8 @@
 <li>一个 benchmark summary 应怎样限制结论的适用范围？</li>
 <li>prefill 和 decode 阶段的计算/访存瓶颈为什么不同？</li>
 <li>quantization 的误差会优先影响哪些任务、层或 token 分布？</li>
+<li>为什么 serving admission control 不能只按并发请求数，而要看 active KV tokens、prompt/output token 分布和 SLO 队列？</li>
+<li>长 prompt 进入 continuous batching 时，chunked prefill 和 prefix cache 分别缓解哪类 TTFT 问题？</li>
 </ul>
 <h3 id="week-9-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</h3>
 <p>对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。</p>

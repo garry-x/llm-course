@@ -241,6 +241,41 @@ def moe_parameter_budget(
     }
 
 
+def moe_load_balance_loss(router_probs, expert_indices, n_experts=None):
+    if router_probs.dim() < 2:
+        raise ValueError("router_probs must have an expert dimension")
+    if expert_indices.shape[:-1] != router_probs.shape[:-1]:
+        raise ValueError("expert_indices must match router_probs except for the top-k dimension")
+    if n_experts is None:
+        n_experts = router_probs.size(-1)
+    if n_experts <= 0 or n_experts != router_probs.size(-1):
+        raise ValueError("n_experts must match router_probs.size(-1)")
+    if expert_indices.numel() == 0:
+        raise ValueError("expert_indices must be non-empty")
+    if torch.any((expert_indices < 0) | (expert_indices >= n_experts)):
+        raise ValueError("expert_indices contains invalid expert ids")
+    prob_sums = router_probs.sum(dim=-1)
+    if not torch.allclose(prob_sums, torch.ones_like(prob_sums), atol=1e-5):
+        raise ValueError("router_probs must sum to 1 over experts")
+
+    flat_probs = router_probs.reshape(-1, n_experts).float()
+    flat_indices = expert_indices.reshape(-1).long()
+    token_count = flat_probs.size(0)
+    assignment_count = flat_indices.numel()
+    assignment_counts = torch.bincount(flat_indices, minlength=n_experts).to(flat_probs.dtype)
+    load_fraction = assignment_counts / float(assignment_count)
+    mean_router_prob = flat_probs.mean(dim=0)
+    loss = n_experts * torch.sum(load_fraction * mean_router_prob)
+    return {
+        "loss": loss,
+        "load_fraction": load_fraction,
+        "mean_router_prob": mean_router_prob,
+        "assignment_counts": assignment_counts,
+        "token_count": token_count,
+        "assignment_count": assignment_count,
+    }
+
+
 class MoERouter(nn.Module):
     def __init__(self, d_model, n_experts=256, top_k=8):
         super().__init__()

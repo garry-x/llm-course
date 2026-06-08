@@ -106,6 +106,7 @@
 <li>按 embedding、position embedding、12 个 block、final LayerNorm 和 tied LM head 逐项计算 GPT-2 small 的参数量。</li>
 <li>解释 weight tying 为什么既减少参数又可能改善输入/输出词向量的一致性；给定 <code>logits = H E^T</code>、target ids 和 CE mean reduction，推导 <code>dH = G E</code> 与 <code>dE = G^T H</code>，并说明 <code>ignore_index</code> 如何改变有效分母。</li>
 <li>给定 bias-free SwiGLU expert 的 <code>d_model=16</code>、<code>expert_hidden=32</code>、<code>256</code> 个路由专家、<code>top_k=8</code> 和 1 个 shared expert，计算单个 expert 参数量、router 参数量、total expert parameters、每 token activated expert parameters 和 capacity-to-compute ratio；再给定某个 batch 的 expert token counts 和每 expert capacity，计算 overflow 与 drop rate，并解释负载不均衡为什么会导致吞吐下降或 token drop。</li>
+<li>给定 4 个 token 对 3 个 experts 的 router probabilities <code>[[0.7,0.2,0.1],[0.6,0.3,0.1],[0.1,0.8,0.1],[0.2,0.2,0.6]]</code>，top-1 expert ids <code>[0,0,1,2]</code>，计算每个 expert 的 load fraction、mean router probability 和 <code>3 * sum_i load_i * prob_i</code> load-balancing loss；说明为什么只看 router probability 或只看 top-k counts 都不够。</li>
 <li>给定 token 序列 <code>[BOS, a, b, c, EOS]</code>，写出 GPT 训练时的 <code>inputs</code>、<code>labels</code> 和每个 <code>logits[:, t, :]</code> 对应的预测目标；给定一组小 vocab logits，按 <code>logits[:, :-1, :]</code> 与 <code>input_ids[:, 1:]</code> 手算 next-token cross entropy，并说明 causal leakage 会如何让训练 loss 虚高地好看。</li>
 </ol>
 <h3 id="ch07-training-loop">Ch07 Training Loop</h3>

@@ -242,6 +242,37 @@ class TestMoERouter(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     submission.moe_parameter_budget(**kwargs)
 
+    def test_moe_load_balance_loss_reports_prob_and_assignment_balance(self):
+        router_probs = torch.tensor(
+            [
+                [[0.7, 0.2, 0.1], [0.6, 0.3, 0.1]],
+                [[0.1, 0.8, 0.1], [0.2, 0.2, 0.6]],
+            ]
+        )
+        expert_indices = torch.tensor([[[0], [0]], [[1], [2]]])
+        report = submission.moe_load_balance_loss(router_probs, expert_indices)
+
+        expected_load = torch.tensor([0.5, 0.25, 0.25])
+        expected_prob = torch.tensor([0.4, 0.375, 0.225])
+        expected_loss = 3 * torch.sum(expected_load * expected_prob)
+        self.assertTrue(torch.allclose(report["load_fraction"], expected_load))
+        self.assertTrue(torch.allclose(report["mean_router_prob"], expected_prob))
+        self.assertTrue(torch.allclose(report["loss"], expected_loss))
+        self.assertEqual(report["assignment_counts"].tolist(), [2.0, 1.0, 1.0])
+        self.assertEqual(report["token_count"], 4)
+        self.assertEqual(report["assignment_count"], 4)
+
+    def test_moe_load_balance_loss_rejects_bad_inputs(self):
+        probs = torch.tensor([[[0.5, 0.5]]])
+        with self.assertRaises(ValueError):
+            submission.moe_load_balance_loss(torch.tensor([0.5, 0.5]), torch.tensor([[0]]))
+        with self.assertRaises(ValueError):
+            submission.moe_load_balance_loss(probs, torch.tensor([[0]]))
+        with self.assertRaises(ValueError):
+            submission.moe_load_balance_loss(probs, torch.tensor([[[2]]]))
+        with self.assertRaises(ValueError):
+            submission.moe_load_balance_loss(torch.tensor([[[0.8, 0.3]]]), torch.tensor([[[0]]]))
+
     def test_router_topk_shapes_and_normalization(self):
         torch.manual_seed(4)
         router = submission.MoERouter(d_model=10, n_experts=7, top_k=3)

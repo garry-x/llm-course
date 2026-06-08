@@ -723,6 +723,10 @@ def load_hf_weights_to_model(hf_model, our_model):
   </div>
   <p>这一步解释了作业为什么检查 <code>top_weights.sum(dim=-1) == 1</code>。没有重新归一化时，不同 token 的 expert 输出会被不同的残余概率质量缩放，模型的残差流尺度会随 router 分布变化，训练更不稳定。</p>
 
+  <h4>Worked Example：MoE load-balancing loss 同时看概率和分配</h4>
+  <p>设 4 个 token 对 3 个 experts 的 router probabilities 分别为 <code>[0.7,0.2,0.1]</code>、<code>[0.6,0.3,0.1]</code>、<code>[0.1,0.8,0.1]</code>、<code>[0.2,0.2,0.6]</code>，top-1 选择的 expert ids 是 <code>[0,0,1,2]</code>。实际分配比例 <code>load</code> 是 <code>[0.5,0.25,0.25]</code>；平均 router probability 是 <code>[0.4,0.375,0.225]</code>。Switch-style auxiliary loss 可写成 <code>n_experts * sum_i load_i * prob_i</code>，所以该例为 <code>3 * (0.5*0.4 + 0.25*0.375 + 0.25*0.225) = 1.05</code>。</p>
+  <p>这个 loss 的作用不是让每个 token 平均激活所有专家，而是惩罚 batch 级别的 router collapse。只看 top-k counts 会忽略 router softmax 是否已经偏向少数专家；只看平均概率又会忽略实际 top-k 分配是否已经拥塞。Ch06 作业中的 <code>moe_load_balance_loss</code> 因此同时返回 <code>load_fraction</code>、<code>mean_router_prob</code> 和 loss。</p>
+
   <h4>Capacity、token dispatch 与负载不均衡</h4>
   <p>参数预算只回答“一个 token 理论上激活多少专家”，还没有回答“一个 batch 能否顺利执行”。实际 MoE 层需要把 token 分发到专家上。若每个 expert 的容量为 <span class="katex-inline" data-expr="C" aria-label="C" role="img"></span> 个 token，expert <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 收到 <span class="katex-inline" data-expr="n_i" aria-label="n_i" role="img"></span> 个 token，则：</p>
   <div class="math-box"><div class="label">Expert overflow</div>

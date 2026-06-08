@@ -89,6 +89,11 @@ def moe_parameter_budget(
     raise NotImplementedError
 
 
+def moe_load_balance_loss(router_probs, expert_indices, n_experts=None):
+    """Return Switch-style MoE load-balancing loss and per-expert routing statistics."""
+    raise NotImplementedError
+
+
 class MoERouter(nn.Module):
     def __init__(self, d_model, n_experts=256, top_k=8):
         super().__init__()

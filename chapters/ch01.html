@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第1章 BPE 分词器</h2>
   <p class="subtitle">从零实现 Byte Pair Encoding——LLM 的"第一道门"</p>
-  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 14 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 15 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -594,6 +594,55 @@ def encode(text, merges):
   </div>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tokenizer 是模型架构的一部分。它决定“文本长度”在模型眼里是多少，也决定 embedding、attention 和 KV Cache 的实际成本。</div></div>
+</section>
+
+<section class="card" id="s1-12b">
+  <h3>1.12B Tokenizer 是模型接口契约：特殊 token、模板与 checkpoint</h3>
+  <p>很多训练事故不是 Transformer 代码写错，而是 tokenizer 协议不一致：训练时的 role token 和推理时不同，新增特殊 token 后没有扩展 embedding，padding token 被当成普通文本学习，或评测集用另一个 tokenizer 计算上下文长度。对 LLM 训练和推理工程师来说，tokenizer 不只是预处理工具，而是模型 checkpoint 的一部分。</p>
+
+  <h4>1. 特殊 token 必须有稳定语义</h4>
+  <p>现代 LLM 通常至少需要以下特殊 token 或等价协议：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>类型</th><th>作用</th><th>出错后果</th></tr>
+      <tr><td>BOS/EOS</td><td>标记序列开始和结束，控制生成停止</td><td>模型不停止、过早停止，或把结束符当正文输出</td></tr>
+      <tr><td>PAD</td><td>batch padding，通常不参与 loss</td><td>padding 被训练成可预测文本，loss 分母和 attention mask 错</td></tr>
+      <tr><td>role token</td><td>区分 system/user/assistant/tool</td><td>模型混淆说话人，SFT mask 无法可靠定位回答 span</td></tr>
+      <tr><td>tool/function token</td><td>标记工具调用、参数 JSON 或返回值</td><td>结构化调用边界不稳定，推理服务难以解析</td></tr>
+      <tr><td>reserved token</td><td>为未来扩展保留 id</td><td>后续扩展需要重训或迁移 embedding</td></tr>
+    </table>
+  </div>
+  <p>特殊 token 不应通过普通 BPE merge “碰巧”切出来，而应作为不可拆分的原子 token 处理。否则字符串 <code>&lt;|assistant|&gt;</code> 可能被切成多个普通片段，模型难以学到稳定边界，安全过滤和工具解析也会变脆弱。</p>
+
+  <h4>2. Chat template 决定 SFT 的监督边界</h4>
+  <p>同一段对话在 tokenizer 层通常先被序列化为模板文本，再转成 token id。SFT 时 label mask 要依赖这个模板定位 assistant response：</p>
+  <div class="code-block" data-lang="text">
+<bos><system>...</system>
+<user>请解释梯度裁剪。</user>
+<assistant>梯度裁剪会限制梯度范数...</assistant><eos></div>
+  <p>如果训练管线使用 <code>&lt;assistant&gt;</code>，推理服务却使用 <code>Assistant:</code>，模型看到的角色边界就变了。短期现象可能只是格式漂移；长期看会影响多轮对话、拒答边界、工具调用和 DPO/GRPO 中的序列 log probability 对齐。Ch09 的 SFT 数据管线会继续使用这里的原则：模板、tokenizer、label mask 必须共同定义训练目标。</p>
+
+  <h4>3. 修改词表等于修改模型形状</h4>
+  <p>词表大小 <code>V</code> 决定 token embedding 和 LM head 的形状。若一个已经训练好的模型使用 <code>V=50,257</code>，后来新增 100 个特殊 token，embedding 需要从 <code>[50257, d_model]</code> 变成 <code>[50357, d_model]</code>。这不是配置文件里的小改动，而是 checkpoint 兼容性问题：</p>
+  <ul>
+    <li><strong>输入 embedding：</strong>新增行需要初始化，常见做法是随机初始化或用相近 token 的均值初始化。</li>
+    <li><strong>LM head：</strong>若使用 weight tying，LM head 会随 embedding 扩展；若不共享，也要同步扩展输出投影。</li>
+    <li><strong>旧 checkpoint：</strong>加载时会出现 shape mismatch，必须显式处理新增行，而不是忽略报错。</li>
+    <li><strong>旧数据：</strong>旧 token id 的语义必须保持不变；重新排列 token id 会破坏所有已有权重。</li>
+  </ul>
+  <p>因此生产模型通常会冻结已有 token id，只在词表末尾追加新 token。若需要彻底更换 tokenizer，通常意味着需要继续预训练或至少做较长的适配训练，因为整个 embedding 空间的几何结构已经改变。</p>
+
+  <h4>4. Tokenizer 版本要和模型一起发布</h4>
+  <p>一个可复现的模型包至少要同时包含 <code>tokenizer.json</code> 或 SentencePiece 模型、特殊 token 映射、chat template、normalization 规则和模型配置。只发布 <code>model.safetensors</code> 不足以复现同一模型行为。推理服务加载模型时也应检查：</p>
+  <div class="code-block" data-lang="text">
+config.vocab_size == tokenizer.vocab_size
+special token ids match model config
+chat template version matches SFT/DPO training
+pad/eos/bos ids are explicit
+round-trip tests pass for multilingual and tool-call samples</div>
+  <p>这些检查不是形式主义。若 tokenizer 把中文、代码缩进、JSON 引号或 emoji 切分方式变了，模型的上下文长度、生成概率和停止行为都会变化；这会一路传导到第 6 章的 weight loading、第 9 章的序列 log probability 和第 10 章的 token 成本。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>Tokenizer 定义了模型能读写的离散接口。BPE merge 规则、特殊 token、chat template 和 vocab size 必须随模型一起版本化；否则训练 loss、对齐数据、checkpoint 加载和推理服务看到的就不是同一个任务。</div></div>
 </section>
 
 <!-- ================================================================ -->

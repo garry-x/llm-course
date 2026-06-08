@@ -634,6 +634,62 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 2.9A 位置编码工程选型 -->
+<!-- ================================================================ -->
+<section class="card" id="s2-9a">
+  <h3>2.9A 位置编码工程选型：训练长度、外推和服务成本</h3>
+  <p>学会实现 Sinusoidal 和 RoPE 之后，还需要回答一个工程问题：给定一个模型、训练长度和服务场景，应该如何选择位置机制？位置编码不是装饰项。它决定模型如何区分顺序、如何处理超出训练长度的 token、KV cache 中的位置编号如何延续，以及长上下文服务的质量和成本边界。</p>
+
+  <h4>位置机制比较</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>方法</th><th>进入模型的位置</th><th>优点</th><th>主要边界</th></tr>
+      <tr><td>Learned absolute PE</td><td>输入 embedding 相加</td><td>实现简单，训练长度内表达力强</td><td>位置表只学到固定长度，外推到更长位置通常不可靠</td></tr>
+      <tr><td>Sinusoidal PE</td><td>输入 embedding 相加</td><td>无训练参数，任意位置都有定义，频率结构清晰</td><td>“可定义”不等于模型训练后一定能稳定外推</td></tr>
+      <tr><td>RoPE</td><td>Attention 的 Q/K 旋转</td><td>点积天然携带相对位移，已被大量 decoder-only LLM 采用</td><td>长上下文需要处理频率外推、base/scale 和训练分布差异</td></tr>
+      <tr><td>ALiBi</td><td>Attention logits 加距离 bias</td><td>显式鼓励近距离，长序列外推直觉强，缓存简单</td><td>表达形式较受限，和 RoPE/现有 checkpoint 不一定可互换</td></tr>
+      <tr><td>YaRN / NTK-aware scaling</td><td>调整 RoPE 频率或位置尺度</td><td>常用于扩展 RoPE 模型上下文窗口</td><td>需要重新评估质量，不能只改配置就宣称长上下文能力成立</td></tr>
+    </table>
+  </div>
+
+  <h4>长上下文外推的三个层次</h4>
+  <p>很多模型配置里写着 <code>max_position_embeddings=32768</code> 或更大，但工程师需要区分三个层次：</p>
+  <ol>
+    <li><strong>数学可计算：</strong>位置函数可以生成更长位置的 sin/cos 或 bias，forward 不报错。</li>
+    <li><strong>数值稳定：</strong>角度、dtype、cache、softmax 和 attention kernel 在长序列下仍稳定。</li>
+    <li><strong>任务有效：</strong>模型能在长文档、跨段引用、needle retrieval、长代码或多轮对话中真正使用远处信息。</li>
+  </ol>
+  <p>第一层最容易满足，第三层最难。Sinusoidal 与 RoPE 都能为更长位置生成数值，但模型是否会正确利用这些位置，取决于预训练长度分布、数据中远距离依赖的密度、attention 训练信号、后训练数据和推理时 prompt 组织。</p>
+
+  <h4>RoPE 工程账本</h4>
+  <p>使用 RoPE 时，至少要记录以下配置，否则不同实现很难复现同一个 checkpoint 的行为：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>配置项</th><th>含义</th><th>为什么影响结果</th></tr>
+      <tr><td><code>head_dim</code></td><td>每个 attention head 的旋转维度</td><td>必须成对旋转；奇数维或 partial rotary 会改变实现约定</td></tr>
+      <tr><td><code>base / theta</code></td><td>频率基底，例如 10000 或模型特定值</td><td>决定不同维度的相位变化速度</td></tr>
+      <tr><td><code>max_position</code></td><td>预计算 cos/sin cache 长度</td><td>服务时超出 cache 需要扩展或重新生成</td></tr>
+      <tr><td><code>position_ids</code></td><td>实际传入每个 token 的位置编号</td><td>packed sequence、prefix cache 和增量解码都依赖它正确连续</td></tr>
+      <tr><td><code>scaling</code></td><td>线性、dynamic NTK、YaRN 等缩放策略</td><td>改变长距离相位，可能改善长上下文，也可能损伤短上下文</td></tr>
+      <tr><td><code>dtype/device</code></td><td>cos/sin cache 的精度和设备</td><td>低精度下长位置三角函数误差、CPU/GPU 搬运都会影响速度和稳定性</td></tr>
+    </table>
+  </div>
+
+  <h4>Worked Example：RoPE cache 与增量解码位置</h4>
+  <p>假设 prompt 长度为 5，prefill 阶段对 token 位置 <code>0..4</code> 计算并缓存 K/V。生成第一个新 token 时，它的位置应为 <code>5</code>，第二个新 token 是 <code>6</code>。如果增量解码时错误地每一步都把新 token 的 <code>position_id</code> 设为 0，那么 Q/K 旋转会把所有生成 token 当成同一个位置，attention score 的相对位移结构被破坏；模型看似仍能运行，但长生成质量和重复行为会明显异常。</p>
+  <p>这也是 prefix cache 必须同时管理“内容前缀”和“位置前缀”的原因。复用同一段 system prompt 的 KV cache 时，新请求后续 token 的位置编号要接在共享前缀之后；如果插入了不同长度的检索片段或工具结果，就不能盲目复用旧位置。</p>
+
+  <h4>位置机制怎么评估</h4>
+  <p>位置编码改动不能只看一个短文本 PPL。建议至少分三组评估：</p>
+  <ul>
+    <li><strong>短上下文保留：</strong>训练长度内的 PPL、常规 QA/代码/数学指标是否退化。</li>
+    <li><strong>长上下文检索：</strong>needle-in-a-haystack、跨段引用、长文档问答，按答案位置分桶报告。</li>
+    <li><strong>服务指标：</strong>长 prompt 的 TTFT、KV cache 显存、cos/sin cache 大小、batching 下的吞吐变化。</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>位置编码的学习目标不是“让模型知道第几个 token”，而是让 attention 在训练和推理中稳定区分顺序与距离。长上下文能力必须由位置机制、训练分布、attention 实现和任务评估共同证明。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 2.10 总结 -->
 <!-- ================================================================ -->
 <section class="card" id="s2-10">

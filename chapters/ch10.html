@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / 稀疏注意力 / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 130 分钟 · 21 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 135 分钟 · 21 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -1318,6 +1318,23 @@ def forward(image, text_prompt):
 
   <h4>多模态的成本与失败模式</h4>
   <p>图像不是“免费附加信息”。一张图像会变成几十到数千个视觉 token，分辨率越高、patch 越细、裁剪越多，LLM 看到的序列越长，prefill 延迟和 KV Cache 成本也越高。多图、多页 PDF 或视频帧会把这个问题进一步放大。</p>
+  <p>工程上应把多模态输入统一放进 token budget，而不是只记录文本 prompt 长度。若视觉 token 已经投影进 decoder 的输入序列，一个请求的 prefill 序列长度可近似写成：</p>
+  <div class="math-box"><div class="label">公式 10.9 多模态 prefill token budget</div>
+    <span class="katex-block" data-expr="T_{\text{prefill}} = T_{\text{text}} + N_{\text{image}}T_{\text{vision}} + N_{\text{page}}T_{\text{page}} + N_{\text{frame}}T_{\text{frame}} + T_{\text{retrieved}} + T_{\text{tool}}" aria-label="T_prefill = T_text + N_image T_vision + N_page T_page + N_frame T_frame + T_retrieved + T_tool" role="img"></span>
+  </div>
+  <p>这里的 <code>T_vision</code> 不是原始像素数，而是图像经 vision encoder、resampler 或 projection 后交给 LLM 的视觉 token 数。不同模型会用固定网格、动态分块、crop、OCR-first 或 query resampler 等策略，因此课程报告不要假设“一张图等于固定成本”，而要记录实际配置下的视觉 token 数、页数、帧数和文本上下文。</p>
+  <p>用 10.2 节同一个 GQA 示例估算：32 层、8 个 KV heads、head dim 128、FP16 时，每个序列 token 的 KV Cache 约为 <code>2 × 32 × 8 × 128 × 2 = 131072 bytes</code>，也就是约 128 KiB。若一个请求含 800 个文本 token 和一张 576-token 图像，prefill 后序列长度约 1376，单请求 KV Cache 约 172 MiB；若是 800 个文本 token 加 10 页文档、每页 576 个视觉 token，长度约 6560，KV Cache 约 820 MiB。这个数量级说明：文档视觉理解和视频理解的瓶颈常常不是“模型是否会看图”，而是 active KV tokens、prefill 排队和高分辨率输入策略。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>输入设计</th><th>工程收益</th><th>主要风险</th><th>报告中应记录</th></tr>
+      <tr><td>缩略图或低分辨率单图</td><td>降低 vision encoder 与 prefill 成本</td><td>小字、表格、局部目标丢失</td><td>分辨率、视觉 token 数、失败样例类型</td></tr>
+      <tr><td>高分辨率裁剪 / 动态分块</td><td>保留细节，适合 OCR、图表和定位</td><td>视觉 token 暴涨，TTFT 和 KV Cache 增大</td><td>crop 数、每 crop token 数、P95 TTFT</td></tr>
+      <tr><td>OCR-first 文档理解</td><td>把可读文字转为便宜文本 token，便于引用</td><td>版面、图表和手写内容可能丢失</td><td>OCR 字段准确率、引用页码、文本/图像 token 比例</td></tr>
+      <tr><td>视频抽帧</td><td>避免逐帧输入，把任务压成关键帧问题</td><td>漏掉短时事件和动作顺序</td><td>采样 FPS、帧数、事件召回率、平均 token 成本</td></tr>
+      <tr><td>视觉 embedding / prefix cache</td><td>重复图片或固定文档可复用前缀计算</td><td>缓存失效、权限隔离和内容更新问题</td><td>cache hit rate、节省 prefill token、租户隔离策略</td></tr>
+    </table>
+  </div>
+  <p>把多模态请求接入线上服务时，调度器不应只按“请求数” admission control。更稳妥的做法是按 active text tokens、active vision tokens、预计输出 token 和租户预算共同限流；图像预处理、vision encoder、LLM prefill 和 decode 的延迟也要拆开计时。否则一个短文本问题配十页 PDF 可能看起来只是“一次请求”，实际却占用接近长上下文 batch 的显存和 prefill 时间。</p>
   <div class="table-wrap">
     <table>
       <tr><th>任务</th><th>关键能力</th><th>常见失败</th><th>评价方式</th></tr>

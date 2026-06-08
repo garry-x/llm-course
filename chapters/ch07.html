@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第7章 训练循环</h2>
   <p class="subtitle">从 MLE 到 AdamW/Muon + FP8/FP4 + DualPipe——极致的训练效率</p>
-  <div class="reading-time">⏱ 预计阅读: 125 分钟 · 19 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 140 分钟 · 20 小节 · 6 道编程练习 · 7 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -38,12 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>训练的主线只有四步：取一段 token、让模型预测下一个 token、用交叉熵计算错误、反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练是大规模优化专题，第一遍可作为“知道为什么需要它们”。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 6 章 GPTModel、交叉熵、optimizer 的基本概念。</li>
-    <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释 perplexity、calibration/ECE、AdamW、warmup、gradient clipping 与混合精度的作用。</li>
+    <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释 perplexity、calibration/ECE、AdamW、warmup、gradient clipping、混合精度与训练异常诊断。</li>
     <li><strong>课前阅读：</strong>阅读 cross-entropy/MLE 复习材料、AdamW 论文摘要和 Chinchilla scaling law 摘要。</li>
     <li><strong>课后阅读：</strong>阅读 DeepSpeed/ZeRO、FSDP、DeepSeek-V3 FP8 训练段落，区分单机教学实现与大规模训练系统。</li>
     <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity/calibration 变化的训练循环。</li>
     <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
-    <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
+    <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
 </section>
 
@@ -825,6 +825,73 @@ scheduler.step()</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 7.11C 训练异常 runbook -->
+<!-- ================================================================ -->
+<section class="card" id="s7-11c">
+  <h3>7.11C 训练异常 Runbook：从 loss spike 到可恢复决策</h3>
+  <p>真实 LLM 训练不会一直平滑下降。工程师的价值在于异常出现后能快速判断：继续训练、回退 checkpoint、降低学习率、过滤数据、切换精度，还是暂停作业修系统。一个高校级训练课程应让学生掌握<strong>异常分类、信号记录、根因假设、最小修复实验和恢复决策</strong>，而不是看到 NaN 就重启。</p>
+
+  <h4>1. 先把异常定位到时间和 token 坐标</h4>
+  <p>训练日志应同时记录 <code>step</code>、<code>consumed_tokens</code>、<code>epoch_or_shard</code>、<code>lr</code>、<code>train_loss</code>、<code>val_loss</code>、<code>grad_norm</code>、<code>tokens/s</code>、<code>loss_scale</code>、<code>checkpoint_id</code> 和数据 batch 摘要。只记录 wall-clock 时间不够，因为扩卡、gradient accumulation 或数据并行数变化后，同一 wall-clock 不对应同一训练进度。</p>
+  <div class="math-box"><div class="label">异常定位坐标</div>
+    <div class="katex" data-expr="\text{tokens at incident}=s\cdot B_{\text{micro}}\cdot T_{\text{seq}}\cdot A_{\text{grad}}\cdot N_{\text{dp}}" aria-label="tokens_at_incident = s * B_micro * T_seq * A_grad * N_dp" role="img"></div>
+  </div>
+  <p>例如 step <code>12,500</code>、global batch <code>2M</code> tokens 时发生 spike，对应约 <code>25B</code> consumed tokens。若 resume 后同一 consumed-token 附近再次出现 spike，优先怀疑数据 shard 或 lr schedule；若位置漂移很大，优先看随机性、精度或系统资源。</p>
+
+  <h4>2. 把 loss spike 分成三类</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>类别</th><th>典型现象</th><th>优先检查</th><th>推荐动作</th></tr>
+      <tr><td>Recoverable spike</td><td>单点或少量 step 升高，随后回到原趋势</td><td>异常 batch 长度、重复率、grad_norm、lr</td><td>记录样本，保留训练；必要时加强 clipping 或数据过滤</td></tr>
+      <tr><td>Regime change</td><td>spike 后 loss 平台整体抬高或 val loss 恶化</td><td>数据 mixture 切换、lr decay 边界、batch size 变化</td><td>跑短 ablation：固定数据、降低 lr、回退前一 checkpoint 对照</td></tr>
+      <tr><td>Divergence</td><td>loss 变 NaN/Inf，grad_norm 爆炸，无法自动恢复</td><td>logits 有限性、FP16 loss scale、输入 token 越界、mask 全空</td><td>回退最近健康 checkpoint，降低 lr 或改 BF16，隔离坏 batch</td></tr>
+    </table>
+  </div>
+
+  <p>判断一个 spike 是否“可恢复”，不能只看下一步 loss。至少看接下来几个 eval window 的 train/val 趋势、grad_norm 分布和任务指标。如果开放式生成或安全指标明显退化，即使 PPL 恢复，也应继续定位。</p>
+
+  <h4>3. NaN/Inf 的最短排查路径</h4>
+  <ol>
+    <li><strong>输入合法性：</strong><code>input_ids</code> 是否在 <code>[0,V)</code>，labels 是否全是 <code>ignore_index</code>，attention mask 是否把有效 token 全屏蔽。</li>
+    <li><strong>前向有限性：</strong>逐层检查 activation、logits 和 loss 是否 finite；若 logits 已爆，优先看初始化、norm、残差缩放和 lr。</li>
+    <li><strong>反向有限性：</strong>检查梯度是否 finite，是否在 <code>unscale_</code> 后再 clipping，是否有自定义 kernel 返回 NaN。</li>
+    <li><strong>优化器状态：</strong>AdamW moment 是否 finite，resume 是否加载了损坏状态，weight decay 是否错误作用到 norm/bias。</li>
+    <li><strong>精度策略：</strong>FP16 scaler 是否频繁 overflow；能用 BF16 时优先做 BF16 对照短跑。</li>
+  </ol>
+
+  <h4>4. Resume 后曲线不连续，要先查状态完整性</h4>
+  <p>恢复训练后的 loss 突然跳变，并不总是模型坏了。常见原因是 checkpoint 只恢复了 model weights，没有恢复 optimizer moments、scheduler step、RNG 和 dataloader position。一个可恢复 checkpoint 的验证方式是：在同一 checkpoint 上跑“连续训练 20 steps”和“训练 10 steps、保存、恢复、再训练 10 steps”，比较 step、lr、loss 序列、consumed tokens 和 eval 结果是否在允许随机误差内一致。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>缺失状态</th><th>恢复后表现</th><th>验证信号</th></tr>
+      <tr><td>optimizer moments</td><td>短期 loss 震荡，更新方向改变</td><td>AdamW <code>exp_avg</code>/<code>exp_avg_sq</code> 为空或 step 归零</td></tr>
+      <tr><td>scheduler state</td><td>lr 跳回 warmup 或错误 decay 位置</td><td>resume 前后 <code>lr</code> 不连续</td></tr>
+      <tr><td>RNG state</td><td>dropout、shuffle、augmentation 路径变化</td><td>固定 seed 下 loss 序列不能复现</td></tr>
+      <tr><td>dataloader position</td><td>重复或跳过数据 shard</td><td>consumed tokens 与样本 offset 不一致</td></tr>
+      <tr><td>grad scaler</td><td>FP16 overflow 行为突变</td><td><code>loss_scale</code> resume 后重置</td></tr>
+    </table>
+  </div>
+
+  <h4>5. 吞吐下降不等于模型变慢</h4>
+  <p><code>tokens/s</code> 下降时，要拆成 dataloader、H2D copy、forward、backward、optimizer、communication、eval 和 checkpoint 写盘。若 GPU utilization 低但 dataloader queue 空，优先优化数据读取；若 backward 后等待很久，优先看 DDP/FSDP communication；若每到 eval 或 checkpoint 周期就掉速，应把慢评估移到独立 worker 或降低 checkpoint 频率。</p>
+
+  <h4>6. 最小修复实验</h4>
+  <p>修复训练异常时，避免一次改很多配置。推荐按以下顺序做短跑：</p>
+  <ol>
+    <li><strong>坏 batch replay：</strong>只用异常 step 附近 batch，在单卡上复现 forward/backward。</li>
+    <li><strong>precision ablation：</strong>FP32/BF16/FP16 短跑对比，判断是否是动态范围问题。</li>
+    <li><strong>lr ablation：</strong>保持数据和 seed 不变，只降 max_lr 或延长 warmup。</li>
+    <li><strong>data ablation：</strong>去掉可疑数据源或极端长度样本，看 spike 是否消失。</li>
+    <li><strong>resume parity：</strong>验证连续训练与保存恢复训练是否同轨。</li>
+  </ol>
+
+  <p>最终报告应写出“我观察到什么、排除了什么、改变了什么、为什么这个改变足以支持结论”。这与 CS224N 式作业强调的实现和分析能力是一致的：学生不只是交代码，还要能解释模型训练行为。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>训练异常处理不是经验玄学。把异常绑定到 token 坐标，分离数据、数值、优化器、状态恢复和系统吞吐，再用最小 ablation 验证假设，才能决定继续、回退还是重跑。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 编程练习 6: Shakespeare Training -->
 <!-- ================================================================ -->
 <section class="card" id="s7-12">
@@ -1282,6 +1349,19 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
       <label><input type="radio" name="q76" value="3"> D. 只提高 MFU，因为 MFU 越高显存占用越低</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q76')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="2" data-explain="resume 后曲线不连续时，首先要检查 checkpoint 是否恢复了 optimizer moments、scheduler step、RNG、dataloader position 和 grad scaler。只恢复 model weights 适合推理导出，不足以证明训练可恢复。">
+    <h4>练习 7：恢复训练后 loss 曲线突然跳变，最应该先检查什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q77" value="0"> A. 直接把模型参数量加倍，因为小模型一定不稳定</label>
+      <label><input type="radio" name="q77" value="1"> B. 只看最终 benchmark 分数，不需要看训练状态</label>
+      <label><input type="radio" name="q77" value="2"> C. checkpoint 是否完整恢复 optimizer、scheduler、RNG、dataloader position 和 grad scaler</label>
+      <label><input type="radio" name="q77" value="3"> D. 删除所有 checkpoint 并从头训练，因为恢复一定不可比</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q77')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>

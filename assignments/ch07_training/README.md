@@ -1,6 +1,6 @@
 # Chapter 7 Assignment: Training Loop
 
-本作业对应第 7 章训练循环。目标是把 next-token 数据切片、数据重复/泄漏诊断、训练 token budget 估算、稳定交叉熵、logits 梯度、label smoothing、校准指标、global grad norm clipping、gradient accumulation step accounting、AdamW、warmup+cosine 调度轨迹和一个可复现的小训练循环串起来。
+本作业对应第 7 章训练循环。目标是把 next-token 数据切片、数据重复/泄漏诊断、训练 token budget 估算、稳定交叉熵、logits 梯度、label smoothing、校准指标、global grad norm clipping、gradient accumulation step accounting、AdamW、warmup+cosine 调度轨迹、训练异常 runbook 和一个可复现的小训练循环串起来。
 
 ## Files
 
@@ -35,11 +35,12 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 - `AdamW` 必须实现一阶/二阶动量、偏置修正和解耦权重衰减。
 - 调度器必须先 warmup 到 1，再 cosine decay 到 `min_lr_ratio`；`lr_schedule_trace` 必须能按 optimizer step 返回 lr multiplier、实际 lr 和累计 consumed tokens。
 - `train` 必须执行 `zero_grad -> forward -> loss -> backward -> clip -> step -> scheduler.step`，并记录 loss history。
+- 训练异常分析题必须能把 loss spike、NaN/Inf、resume 不连续和 tokens/s 下降分别归因到数据、数值精度、优化器状态、checkpoint 完整性或系统吞吐瓶颈。
 
 ## 评分 Rubric
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、gradient accumulation loss scaling、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、AdamW 偏置修正、warmup+cosine 边界与 token 进度、n-gram 泄漏诊断和 grad clipping 的诊断意义 |
+| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、gradient accumulation loss scaling、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、AdamW 偏置修正、warmup+cosine 边界与 token 进度、n-gram 泄漏诊断、grad clipping 的诊断意义和异常 runbook |
 | Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、optimizer state 显存估算、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、gradient accumulation step accounting、AdamW、scheduler、lr schedule trace 和训练循环 |
-| Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、tokens/s 和 resume 行为 |
+| Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、tokens/s、resume 行为和最小修复实验 |

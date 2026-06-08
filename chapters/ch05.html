@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第5章 Transformer Block</h2>
   <p class="subtitle">RMSNorm + FFN + SwiGLU + mHC 超连接——构建 LLM 的核心单元</p>
-  <div class="reading-time">⏱ 预计阅读: 115 分钟 · 14 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 125 分钟 · 15 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -378,6 +378,53 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
   <p>如果 probe 准确率很高，只能说明 hidden state 中有可线性读出的信息；如果 patching 能恢复输出，说明该激活对这组 prompt 的行为有因果作用；如果 ablation 让性能下降，说明组件在当前任务中重要。但这些结论都依赖 prompt 分布、层位置、替换方式和度量口径，不能直接推广为“模型所有语法能力都在这个 head 里”。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>可解释性不是画一张热力图。严谨做法是先定义行为指标，例如目标 logit difference，再通过对照样本、patching 和 ablation 判断哪些内部状态对该行为有作用。</div></div>
+</section>
+
+<section class="card" id="s5-5b">
+  <h3>5.5B Interpretability 方法谱系：从读出表示到干预行为</h3>
+  <p>机制可解释性不是单一技术，而是一组按证据强度递进的方法。高校课程中最重要的不是背术语，而是能说清每种方法回答什么问题、需要什么对照、结论能推到哪里。一个有用的排序是：先观察表示，再做归因，再做因果干预，最后才讨论 steering 或模型编辑。</p>
+
+  <h4>1. 方法层级与结论强度</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>层级</th><th>代表方法</th><th>需要的输入</th><th>能支持的结论</th><th>主要风险</th></tr>
+      <tr><td>表示读出</td><td>Probing、logit lens、tuned lens</td><td>hidden states、标签或目标 token</td><td>某层表示中是否能读出语法、事实或下一个 token 倾向</td><td>可读出不等于模型实际使用</td></tr>
+      <tr><td>局部归因</td><td>logit attribution、path attribution、activation norm</td><td>组件输出、unembedding、目标 logit difference</td><td>哪些组件直接推高/压低目标 token</td><td>忽略后续层重写和非线性交互</td></tr>
+      <tr><td>因果干预</td><td>activation patching、causal tracing、head/neuron ablation</td><td>clean/corrupted prompt、替换位置、行为指标</td><td>某激活是否足以恢复或破坏目标行为</td><td>干预分布外，替换方式可能产生伪影响</td></tr>
+      <tr><td>特征分解</td><td>sparse autoencoder、dictionary features</td><td>大量激活样本、稀疏重构目标</td><td>把 superposition 中的混合方向拆成较可解释特征</td><td>特征命名主观，稀疏特征不自动等于真实机制</td></tr>
+      <tr><td>行为干预</td><td>activation steering、model editing、adapter steering</td><td>方向向量、编辑位置、前后行为评估</td><td>某方向或权重改动能稳定改变一类输出</td><td>副作用、泛化失败、事实更新与安全边界冲突</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Logit lens 看的是“中间层已经像什么答案”</h4>
+  <p>Logit lens 的做法是把某一层的 residual stream 直接乘以最终 unembedding 矩阵，观察中间表示已经偏向哪些 token。若第 8 层在国家首都问题上已经把 <code>Paris</code> 排到前几位，说明中间表示已经包含某种答案倾向；若后续层把它改成别的 token，则说明后续层仍在重写或整合信息。</p>
+  <div class="math-box"><div class="label">Logit lens</div>
+    <span class="katex-block" data-expr="\ell^{(l)} = h^{(l)} W_U,\qquad \Delta^{(l)} = \ell^{(l)}_{\text{target}} - \ell^{(l)}_{\text{foil}}" aria-label="ell l equals h l W_U, Delta l equals target logit minus foil logit" role="img"></span>
+  </div>
+  <p>这里的 <code>target</code> 可以是正确 token，<code>foil</code> 是对照 token。例如主语-动词一致性中用 <code>are</code> 和 <code>is</code> 的 logit difference。这个指标比“看 top-1 token”稳定，因为它直接对应研究问题。</p>
+
+  <h4>3. Causal tracing 需要 clean/corrupted 对照</h4>
+  <p>可解释性实验要避免只看单个 prompt。更稳妥的设置是构造一对输入：clean prompt 触发正确行为，corrupted prompt 破坏某个关键信息，然后把 clean 的某层某位置激活 patch 到 corrupted 运行中，看目标行为是否恢复。</p>
+  <ol>
+    <li><strong>定义行为指标：</strong>例如 <code>logit(Paris) - logit(Rome)</code>，或 <code>logit(are) - logit(is)</code>。</li>
+    <li><strong>构造最小扰动：</strong>只改变国家名、主语数、实体名或事实槽位，其他 token 尽量不变。</li>
+    <li><strong>扫描层和位置：</strong>对 residual stream、attention output、MLP output 分别 patch。</li>
+    <li><strong>报告恢复量：</strong>不是只写“有影响”，而是写恢复了 clean-corrupted 差距的多少比例。</li>
+  </ol>
+  <p>如果 patch 某层 MLP output 恢复了目标 logit difference，说明这处激活在该 prompt 对上对行为有因果作用；它仍不证明所有同类事实都存储在同一位置，也不证明编辑该位置没有副作用。</p>
+
+  <h4>Worked Example：从 attribution 到 patching 的结论升级</h4>
+  <p>假设模型看到 <code>The capital of France is</code> 时目标 token 是 <code>Paris</code>，对照 token 是 <code>Rome</code>。你发现第 10 层 MLP 对 <code>Paris</code> 的 logit attribution 很高。这只能说明它直接向 <code>Paris</code> 方向写入 residual stream。若进一步把 clean prompt 中第 10 层 MLP 输出 patch 到 corrupted prompt <code>The capital of Italy is</code>，并观察到 <code>Paris</code> 相对 <code>Rome</code> 大幅上升，才可以说该激活足以携带 France→Paris 相关信息。若 ablate 同一 MLP 后 France prompt 仍能答对，则说明模型可能还有冗余路径。</p>
+
+  <h4>4. 从解释到干预必须评估副作用</h4>
+  <p>Activation steering 和模型编辑很诱人，因为它们似乎能直接改变模型行为。但工程上必须同时评估目标成功率和副作用：</p>
+  <ul>
+    <li><strong>局部性：</strong>编辑 France→Paris 是否错误影响 Italy、Germany 或其他事实。</li>
+    <li><strong>泛化：</strong>不同措辞、语言、上下文长度下是否仍生效。</li>
+    <li><strong>能力保留：</strong>数学、代码、长上下文、拒答边界是否退化。</li>
+    <li><strong>可回滚性：</strong>是否能版本化、比较和撤销干预。</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Interpretability 的最终价值不是“给神经元起名字”，而是把模型行为拆成可检验假设。越接近干预和编辑，越要报告副作用、泛化和回滚边界。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -837,6 +884,7 @@ def sinkhorn_knopp(M, num_iter=10):
     <li>✅ <strong>RMSNorm</strong> — 去掉均值中心化，只保留 RMS 缩放，理解其参数和计算差异</li>
     <li>✅ <strong>Pre-Norm vs Post-Norm</strong> — 用局部梯度路径解释归一化位置如何影响深层训练稳定性</li>
     <li>✅ <strong>机制可解释性</strong> — 区分 probing、logit attribution、activation patching 和 ablation 的适用边界</li>
+    <li>✅ <strong>Interpretability 方法谱系</strong> — 理解 logit lens、causal tracing、SAE、steering 和模型编辑的结论边界</li>
     <li>✅ <strong>SwiGLU 门控 FFN</strong> — 三个权重矩阵 + SiLU 门控，信息选择性通过</li>
     <li>✅ <strong>SwiGLU 参数预算</strong> — 用 8/3 宽度在接近 4x FFN 参数量下引入门控乘法</li>
     <li>✅ <strong>TransformerBlock 组装</strong> — RMSNorm + MHA + SwiGLU + 残差，~25 行核心代码</li>

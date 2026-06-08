@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / 稀疏注意力 / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 145 分钟 · 22 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 155 分钟 · 22 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -1364,9 +1364,39 @@ def forward(image, text_prompt):
     </table>
   </div>
 
+  <h4>架构家族：视觉信息什么时候进入语言模型</h4>
+  <p>多模态 LLM 的核心差异不只是“用哪个 vision encoder”，而是视觉信息在序列建模中以什么形式进入 LLM。这个选择会改变训练目标、推理成本和可扩展性。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>架构</th><th>信息流</th><th>优点</th><th>代价与边界</th></tr>
+      <tr><td>Encoder + projector</td><td>图像经 ViT/SigLIP 编码后投影成若干视觉 token，与文本 token 拼接</td><td>实现简单，可复用强 LLM，适合教学和快速适配</td><td>视觉 token 直接占用 context，细节能力受 encoder 和分辨率限制</td></tr>
+      <tr><td>Query resampler / Q-Former</td><td>用固定数量 query 从视觉特征中抽取压缩表示</td><td>控制视觉 token 数，适合多图或高分辨率输入</td><td>压缩会丢细节，OCR、图表和定位任务可能受损</td></tr>
+      <tr><td>Cross-attention adapter</td><td>LLM 某些层通过 cross-attention 读取视觉 K/V</td><td>文本序列长度不必直接塞入全部视觉 token</td><td>改动模型结构，serving kernel 和 cache 管理更复杂</td></tr>
+      <tr><td>Early-fusion unified token</td><td>图像 patch、文本 token 或其他模态 token 进入同一自回归序列</td><td>统一建模，适合混合模态生成和跨模态上下文</td><td>训练成本高，数据配比、tokenizer 和输出空间更难设计</td></tr>
+      <tr><td>Tool/OCR-first hybrid</td><td>先用 OCR、layout parser 或检测器把视觉内容转成结构化文本，再交给 LLM</td><td>便宜、可解释，适合文档抽取和引用</td><td>依赖外部工具，图像关系、版面和非文字视觉信息可能丢失</td></tr>
+    </table>
+  </div>
+  <p>如果任务是“看一张自然图片并回答主体关系”，encoder + projector 往往足够；如果任务是“读十页合同扫描件并抽取金额”，OCR-first 或 query resampler 更容易控制成本；如果任务是“图文交错生成”或“图像也作为生成目标”，则需要更统一的模态 token 设计。</p>
+
   <h4>两阶段训练</h4>
   <p><strong>阶段 1：</strong>冻结 LLM 和 Vision Encoder，只训练 Projection 层——使用图文对数据，教会 Projection 将视觉特征"翻译"为 LLM 能理解的语言。</p>
   <p><strong>阶段 2：</strong>解冻 LLM，使用多模态指令数据（图文问答、OCR、图表理解）微调——教会模型根据指令关注图像的特定区域。</p>
+
+  <h4>训练目标：对齐、指令跟随和任务能力不是一回事</h4>
+  <p>多模态训练常被概括成“图文对齐”，但工程上至少有三类目标，不能混在一个指标里解释：</p>
+  <ul>
+    <li><strong>表征对齐：</strong>图文对或 caption 数据让视觉特征落到 LLM 可读的表示空间，通常用于训练 projector 或 resampler。</li>
+    <li><strong>指令跟随：</strong>VQA、对话、OCR、图表问答等样本让模型学会按用户问题选择视觉信息。</li>
+    <li><strong>偏好与安全：</strong>多模态拒答、隐私、人脸、医疗图像和不确定性表达需要单独数据和评价，不应从普通 VQA 分数外推。</li>
+  </ul>
+  <p>冻结策略也要和数据规模匹配：只训 projector 成本低、保留 LLM 语言能力，但视觉任务上限受限；解冻 LLM 或 vision encoder 能提升跨模态能力，却更容易遗忘原有语言能力，也需要更谨慎的学习率、混合数据和任务采样。</p>
+
+  <h4>Worked Example：从图像分辨率推视觉 token 数</h4>
+  <p>设 ViT patch size 为 <code>14</code>，输入图像被缩放到 <code>336 × 336</code>。patch 网格约为 <code>24 × 24</code>，即 <code>576</code> 个视觉 patch token；若再加一个全局 CLS token，则 vision encoder 输出约 <code>577</code> 个向量。若使用 <code>4</code> 个高分辨率 crop，每个 crop 都产生 <code>576</code> 个 patch token，未经 resampler 时视觉 token 会接近 <code>2304</code>。</p>
+  <div class="math-box"><div class="label">视觉 token 粗略估算</div>
+    <span class="katex-block" data-expr="T_{\text{vision}} \approx N_{\text{crop}}\cdot \left\lceil \frac{H}{P} \right\rceil \cdot \left\lceil \frac{W}{P} \right\rceil" aria-label="T_vision approx N_crop ceil(H/P) ceil(W/P)" role="img"></span>
+  </div>
+  <p>这就是为什么高分辨率对 OCR 和图表有帮助，却会显著抬高 TTFT：视觉 token 在 decoder-only 服务里通常进入 prefill 序列，和文本 token 一样参与注意力、占用 KV Cache。若模型使用 query resampler 把每张图压到 <code>64</code> 个视觉 token，成本下降明显，但小字、表格单元格和局部目标可能被压掉。</p>
 
   <h4>音频与视频</h4>
   <p>同样的 "Encoder + Projection + LLM" 范式也适用于音频（如语音编码器 → LLM）和视频（帧采样 → 视觉编码器 → 时序 pooling → LLM）。实时语音系统的端到端延迟取决于音频分块、编码器、LLM 解码、网络和播放缓冲；课程报告应记录实测环境，而不是引用一个脱离配置的固定毫秒数。</p>

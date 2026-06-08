@@ -4,7 +4,7 @@
 
 ## 目标画像
 
-完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，提出 baseline/ablation，并能解释显存、吞吐、GPU 小时和训练成本之间的关系。
+完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，提出 baseline/ablation，并能解释显存、吞吐、分布式策略、MFU、GPU 小时和训练成本之间的关系。
 
 ## 学习路径
 
@@ -24,6 +24,7 @@
 - 能区分 raw text、tokenized dataset、packed sequence、train/val split。
 - 能计算 token budget、batch size、sequence length、gradient accumulation 对总 step 的影响。
 - 能发现空样本、重复样本、过长样本、编码异常和数据泄漏风险。
+- 能报告 n-gram repetition 和 train/eval overlap，避免把数据泄漏误判为泛化能力提升。
 
 **对应内容：**Ch01、Ch07 7.3，Training Capstone `data_profile.py`。
 
@@ -32,6 +33,7 @@
 - 能实现 forward、loss、backward、gradient clipping、optimizer step、scheduler step。
 - 能解释 AdamW、warmup+cosine、weight decay、grad norm、loss scale。
 - 能判断 loss spike、nan、梯度爆炸、学习率过高、batch 太小等常见问题。
+- 能区分 micro-batch loss、accumulated backward loss、optimizer step、scheduler step 和 consumed tokens。
 
 **对应内容：**Ch07 7.1-7.12，Training Capstone `train.py`。
 
@@ -56,6 +58,8 @@
 - 能解释 DP、DDP、FSDP/ZeRO、TP、PP、gradient accumulation 的适用场景。
 - 能解释 BF16/FP16/FP8/FP4 的收益、风险和常见数值问题。
 - 能用 MFU、tokens/s/GPU、通信开销判断集群训练效率。
+- 能估算 parameters、gradients、AdamW moments、activations、temporary buffers 和 checkpoint 对单卡显存的影响。
+- 能说明 ZeRO/FSDP 分别切分哪些训练状态，TP/PP 如何改变通信路径和 pipeline bubble。
 
 **对应内容：**Ch07 7.10、7.15，Ch10 10.15。
 
@@ -84,6 +88,8 @@
 | Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复 | `acceptance.py` resume 检查 |
 | 开发集 | 能记录 val_loss / perplexity / ECE | `metrics.jsonl` |
 | 监控指标 | 至少记录 loss、lr、grad_norm、tokens/s | `metrics.jsonl` |
+| 显存规划 | 能拆分参数、梯度、optimizer state、activation 和 checkpoint 存储 | 显存估算表 |
+| 分布式规划 | 能解释 ZeRO/FSDP/TP/PP 选择、per-rank memory、tokens/s/GPU 和 MFU | 训练规划说明 |
 | 训练规划 | 能估算 steps、GPU hours、成本、checkpoint 存储 | `plan_training.py` 输出 |
 | 实验结论 | 项目有研究问题、baseline、ablation 和结论边界 | proposal / milestone / final report |
 | 异常处理 | 能说明 nan/loss spike/吞吐下降时的排查顺序 | 复盘文档 |
@@ -116,6 +122,8 @@ global batch tokens：
 总 step：
 优化器 / scheduler：
 精度：
+分布式策略 / MFU：
+optimizer state / activation memory：
 checkpoint 策略：
 resume 是否验证：
 train loss：

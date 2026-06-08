@@ -51,7 +51,7 @@
 <h2 id="llm-训练工程师课程路线与学习成果">LLM 训练工程师课程路线与学习成果</h2>
 <p>这份文档把课程中的模型实现、训练循环、微调对齐、实验设计和大规模训练优化整理成“LLM 训练工程师”岗位路线。训练工程师的核心产出不是一个 notebook，而是一套可复现、可恢复、可观测、成本可解释的训练系统。</p>
 <h3 id="目标画像">目标画像</h3>
-<p>完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，提出 baseline/ablation，并能解释显存、吞吐、GPU 小时和训练成本之间的关系。</p>
+<p>完成路线后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，提出 baseline/ablation，并能解释显存、吞吐、分布式策略、MFU、GPU 小时和训练成本之间的关系。</p>
 <h3 id="学习路径">学习路径</h3>
 <div class="table-wrap"><table><thead><tr><th>阶段</th><th>章节与项目</th><th>主要问题</th><th>学习产出</th></tr></thead><tbody><tr><td>1. 模型可训练性</td><td>Ch01-Ch06</td><td>数据如何变成 logits，梯度如何穿过模型</td><td>能解释 token、shape、参数量、梯度路径</td></tr><tr><td>2. 单机训练循环</td><td>Ch07</td><td>如何让 loss 稳定下降</td><td>DataLoader、loss、optimizer、scheduler、AMP、checkpoint</td></tr><tr><td>3. 微调与对齐</td><td>Ch09</td><td>如何把预训练模型变成可用助手</td><td>SFT/LoRA/DPO/GRPO 训练数据、loss masking、偏好优化</td></tr><tr><td>4. 实验设计与评估</td><td>Ch08-Ch09、Capstone</td><td>如何证明训练或对齐方法真的更好</td><td>research question、baseline、ablation、对齐评估和结论边界</td></tr><tr><td>5. 大规模训练效率</td><td>Ch07、Ch10</td><td>如何解决显存、通信、吞吐、精度和成本问题</td><td>ZeRO/FSDP/TP/PP、FP8/FP4、MFU、tokens/s 解释</td></tr><tr><td>6. 工程实践</td><td>Training Capstone</td><td>如何证明训练任务可复现、可恢复、可观测</td><td>acceptance 输出、metrics.jsonl、checkpoint、训练规划报告</td></tr></tbody></table></div>
 <h3 id="能力目标">能力目标</h3>
@@ -60,6 +60,7 @@
 <li>能区分 raw text、tokenized dataset、packed sequence、train/val split。</li>
 <li>能计算 token budget、batch size、sequence length、gradient accumulation 对总 step 的影响。</li>
 <li>能发现空样本、重复样本、过长样本、编码异常和数据泄漏风险。</li>
+<li>能报告 n-gram repetition 和 train/eval overlap，避免把数据泄漏误判为泛化能力提升。</li>
 </ul>
 <p><strong>对应内容：</strong>Ch01、Ch07 7.3，Training Capstone <code>data_profile.py</code>。</p>
 <h4 id="b-训练循环与优化">B. 训练循环与优化</h4>
@@ -67,6 +68,7 @@
 <li>能实现 forward、loss、backward、gradient clipping、optimizer step、scheduler step。</li>
 <li>能解释 AdamW、warmup+cosine、weight decay、grad norm、loss scale。</li>
 <li>能判断 loss spike、nan、梯度爆炸、学习率过高、batch 太小等常见问题。</li>
+<li>能区分 micro-batch loss、accumulated backward loss、optimizer step、scheduler step 和 consumed tokens。</li>
 </ul>
 <p><strong>对应内容：</strong>Ch07 7.1-7.12，Training Capstone <code>train.py</code>。</p>
 <h4 id="c-checkpoint-与可恢复性">C. Checkpoint 与可恢复性</h4>
@@ -88,6 +90,8 @@
 <li>能解释 DP、DDP、FSDP/ZeRO、TP、PP、gradient accumulation 的适用场景。</li>
 <li>能解释 BF16/FP16/FP8/FP4 的收益、风险和常见数值问题。</li>
 <li>能用 MFU、tokens/s/GPU、通信开销判断集群训练效率。</li>
+<li>能估算 parameters、gradients、AdamW moments、activations、temporary buffers 和 checkpoint 对单卡显存的影响。</li>
+<li>能说明 ZeRO/FSDP 分别切分哪些训练状态，TP/PP 如何改变通信路径和 pipeline bubble。</li>
 </ul>
 <p><strong>对应内容：</strong>Ch07 7.10、7.15，Ch10 10.15。</p>
 <h4 id="f-成本与训练规划">F. 成本与训练规划</h4>
@@ -105,7 +109,7 @@
 </ul>
 <p><strong>对应内容：</strong>Ch08 8.7B、Ch09 9.10A、Training Capstone README。</p>
 <h3 id="学习成果">学习成果</h3>
-<div class="table-wrap"><table><thead><tr><th>项目项</th><th>合格标准</th><th>产出</th></tr></thead><tbody><tr><td>数据分析</td><td>能输出样本数、空样本、重复率、长度分布</td><td><code>data_profile.py</code> 输出</td></tr><tr><td>训练运行</td><td>能跑完整训练并持续记录 metrics</td><td><code>train.py</code> + <code>metrics.jsonl</code></td></tr><tr><td>Checkpoint</td><td>能保存 latest checkpoint，并从中断 step 恢复</td><td><code>acceptance.py</code> resume 检查</td></tr><tr><td>开发集</td><td>能记录 val_loss / perplexity / ECE</td><td><code>metrics.jsonl</code></td></tr><tr><td>监控指标</td><td>至少记录 loss、lr、grad_norm、tokens/s</td><td><code>metrics.jsonl</code></td></tr><tr><td>训练规划</td><td>能估算 steps、GPU hours、成本、checkpoint 存储</td><td><code>plan_training.py</code> 输出</td></tr><tr><td>实验结论</td><td>项目有研究问题、baseline、ablation 和结论边界</td><td>proposal / milestone / final report</td></tr><tr><td>异常处理</td><td>能说明 nan/loss spike/吞吐下降时的排查顺序</td><td>复盘文档</td></tr><tr><td>最终运行</td><td>一条命令跑通训练工程闭环</td><td><code>python acceptance.py</code> 输出 <code>ACCEPTANCE: PASS</code></td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>项目项</th><th>合格标准</th><th>产出</th></tr></thead><tbody><tr><td>数据分析</td><td>能输出样本数、空样本、重复率、长度分布</td><td><code>data_profile.py</code> 输出</td></tr><tr><td>训练运行</td><td>能跑完整训练并持续记录 metrics</td><td><code>train.py</code> + <code>metrics.jsonl</code></td></tr><tr><td>Checkpoint</td><td>能保存 latest checkpoint，并从中断 step 恢复</td><td><code>acceptance.py</code> resume 检查</td></tr><tr><td>开发集</td><td>能记录 val_loss / perplexity / ECE</td><td><code>metrics.jsonl</code></td></tr><tr><td>监控指标</td><td>至少记录 loss、lr、grad_norm、tokens/s</td><td><code>metrics.jsonl</code></td></tr><tr><td>显存规划</td><td>能拆分参数、梯度、optimizer state、activation 和 checkpoint 存储</td><td>显存估算表</td></tr><tr><td>分布式规划</td><td>能解释 ZeRO/FSDP/TP/PP 选择、per-rank memory、tokens/s/GPU 和 MFU</td><td>训练规划说明</td></tr><tr><td>训练规划</td><td>能估算 steps、GPU hours、成本、checkpoint 存储</td><td><code>plan_training.py</code> 输出</td></tr><tr><td>实验结论</td><td>项目有研究问题、baseline、ablation 和结论边界</td><td>proposal / milestone / final report</td></tr><tr><td>异常处理</td><td>能说明 nan/loss spike/吞吐下降时的排查顺序</td><td>复盘文档</td></tr><tr><td>最终运行</td><td>一条命令跑通训练工程闭环</td><td><code>python acceptance.py</code> 输出 <code>ACCEPTANCE: PASS</code></td></tr></tbody></table></div>
 <h3 id="推荐-8-周节奏">推荐 8 周节奏</h3>
 <div class="table-wrap"><table><thead><tr><th>周次</th><th>学习内容</th><th>工程任务</th></tr></thead><tbody><tr><td>1</td><td>Ch01-Ch02</td><td>做 tokenization 和 packing 练习，记录数据 shape</td></tr><tr><td>2</td><td>Ch03-Ch06</td><td>跑通可训练 GPT，检查梯度和参数量</td></tr><tr><td>3</td><td>Ch07 前半</td><td>实现 DataLoader、cross entropy、AdamW、scheduler</td></tr><tr><td>4</td><td>Ch07 后半</td><td>实现 AMP、gradient clipping、训练日志和 loss 曲线</td></tr><tr><td>5</td><td>Ch09</td><td>跑 SFT/LoRA/DPO/GRPO 练习，理解不同 loss</td></tr><tr><td>6</td><td>Ch07 分布式专题</td><td>学 ZeRO/FSDP/TP/PP、FP8/FP4、MFU</td></tr><tr><td>7</td><td>Training Capstone</td><td>跑数据分析、训练、checkpoint/resume、规划脚本</td></tr><tr><td>8</td><td>复盘</td><td>写训练报告：配置、曲线、成本、失败排查、下一步</td></tr></tbody></table></div>
 <h3 id="最终交付模板">最终交付模板</h3>
@@ -120,6 +124,8 @@ global batch tokens：
 总 step：
 优化器 / scheduler：
 精度：
+分布式策略 / MFU：
+optimizer state / activation memory：
 checkpoint 策略：
 resume 是否验证：
 train loss：

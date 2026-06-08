@@ -924,6 +924,39 @@ summary = build_benchmark_summary(
   </div>
   <p>这条请求的 <code>TTFT = 180 ms</code>，<code>TPOT = (35 + 40 + 45) / 3 = 40 ms/token</code>，总生成时间为 <code>300 ms</code>，单请求平均吞吐为 <code>4 / 0.300 ≈ 13.3 tokens/s</code>。但线上 SLO 不能只看这一条样本：如果 100 条请求的 TTFT 排序后第 95 条是 <code>920 ms</code>，即使平均 TTFT 只有 <code>260 ms</code>，也没有满足 <code>P95 &lt; 800 ms</code> 的目标。课程项目应同时报告 P50/P95/P99，并按 prompt tokens、completion tokens 和是否命中 prefix cache 分层。</p>
 
+  <h4>容量规划：从 workload 推到 admission control</h4>
+  <p>真实服务的容量不是“GPU 能跑多少 tokens/s”一个数字。请求进入系统后会经历排队、prefill、decode、流式传输和后处理；只要 arrival rate 超过稳定服务率，队列就会快速增长，P95/P99 先坏掉，平均延迟往往最后才暴露问题。</p>
+  <p>推理工程师通常先把 workload 写成四组分布：每秒到达请求数、prompt tokens、completion tokens 和并发持续时间。然后把负载拆成 prefill work 和 decode work：</p>
+  <div class="math-box"><div class="label">Workload token rate</div>
+    <div class="katex" data-expr="\lambda_{\text{prefill}} = \text{QPS}\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = \text{QPS}\cdot E[T_{\text{output}}]" aria-label="\lambda_{\text{prefill}} = \text{QPS}\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = \text{QPS}\cdot E[T_{\text{output}}]" role="img"></div>
+  </div>
+  <p>如果单卡在当前模型、batching 和 context 分布下实测 prefill capacity 为 <code>120k prompt tokens/s</code>，decode capacity 为 <code>2.5k output tokens/s</code>，一条典型请求平均输入 <code>800</code> tokens、输出 <code>200</code> tokens，那么 <code>10 QPS</code> 的负载约为 <code>8k prompt tokens/s</code> 和 <code>2k output tokens/s</code>。decode 已经接近瓶颈，继续提升 QPS 会先让 TPOT 和排队时长恶化，而不是让 TTFT 均匀上升。</p>
+
+  <h4>Worked Example：为什么 admission control 必须看 KV Cache</h4>
+  <p>设一个 32 层 GQA 模型，<code>n_kv_heads=8</code>、<code>head_dim=128</code>、fp16 KV Cache。单个 token 的 KV Cache 为：</p>
+  <div class="math-box"><div class="label">Per-token KV cache</div>
+    <div class="katex" data-expr="2 \cdot 32 \cdot 8 \cdot 128 \cdot 2 = 131072\text{ bytes} \approx 128\text{ KiB/token}" aria-label="2 \cdot 32 \cdot 8 \cdot 128 \cdot 2 = 131072\text{ bytes} \approx 128\text{ KiB/token}" role="img"></div>
+  </div>
+  <p>若每条请求平均活跃上下文长度是 <code>6,000</code> tokens，则每条请求的 KV Cache 约为 <code>768 MiB</code>。服务节点可用于 KV 的显存若只有 <code>48 GiB</code>，理论上最多容纳约 <code>64</code> 条这样的活跃请求；考虑碎片、prefill 峰值、临时 buffer 和安全余量后，admission limit 可能要降到 <code>40-50</code>。这就是为什么高 QPS 服务不能只按 tokens/s 限流，还要按活跃 KV tokens 限制：</p>
+  <ul>
+    <li><strong>按请求数限流：</strong>简单，但无法区分 256-token 短请求和 128K 长上下文请求。</li>
+    <li><strong>按活跃 token 限流：</strong>更接近 KV Cache 显存压力，适合长上下文服务。</li>
+    <li><strong>按租户预算限流：</strong>防止单个租户用长 prompt 或高 max_tokens 挤占全部 batch。</li>
+    <li><strong>按 SLO 分队列：</strong>低延迟交互请求和离线批处理请求应进入不同队列。</li>
+  </ul>
+
+  <h4>调度策略：prefill 与 decode 不应互相饿死</h4>
+  <p>Prefill 长 prompt 更像大矩阵乘，decode 则每步处理大量活跃序列的下一个 token。若调度器一次塞入太多长 prefill，新来的对话请求 TTFT 会变差；若调度器只偏向 decode，长 prompt 请求会一直排队。生产引擎常用 chunked prefill、priority queue、max batched tokens 和 waiting-served ratio 这类参数平衡两者。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>症状</th><th>可能原因</th><th>优先检查</th><th>常见动作</th></tr>
+      <tr><td>P95 TTFT 高，TPOT 正常</td><td>排队或 prefill 阻塞</td><td>queue time、prompt tokens、chunked prefill</td><td>限制长 prompt、启用 prefix cache、提高 prefill 优先级</td></tr>
+      <tr><td>TTFT 正常，TPOT 高</td><td>decode 带宽或 batch occupancy 问题</td><td>active sequences、KV bandwidth、tokens/s/GPU</td><td>调 batch、量化、GQA/MLA、更换引擎配置</td></tr>
+      <tr><td>P99 偶发极高</td><td>长尾请求、GC、checkpoint/日志阻塞、检索超时</td><td>trace、request length、RAG latency</td><td>超时、隔离队列、异步日志、检索降级</td></tr>
+      <tr><td>显存 OOM</td><td>活跃 KV tokens 过多或长 prompt 峰值</td><td>KV tokens、max_model_len、max_num_batched_tokens</td><td>admission limit、缩短上下文、KV quantization</td></tr>
+    </table>
+  </div>
+
   <h4>上线方案</h4>
   <ul>
     <li><strong>容量：</strong>测过目标 prompt 长度、输出长度、并发数下的 P50/P95/P99。</li>
@@ -1292,6 +1325,19 @@ def forward(image, text_prompt):
       <label><input type="radio" name="q5" value="3"> D. 检索错误 → FlashAttention；量化误差 → RAG；KV Cache → BLEU</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="1" data-explain="长上下文服务的 admission control 不能只按请求数或平均 tokens/s。活跃 KV tokens 直接对应显存压力；TTFT/TPOT/P95 则反映排队、prefill 和 decode 是否已经失衡。短请求和长请求应按 token 预算、租户预算或 SLO 队列区别处理。">
+    <h4>练习 6：为什么 LLM serving 不能只按“并发请求数”限流？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q6" value="0"> A. 因为并发请求数和显存没有任何关系</label>
+      <label><input type="radio" name="q6" value="1"> B. 因为不同请求的 prompt/output 长度差异会造成完全不同的 prefill、decode 和 KV Cache 压力</label>
+      <label><input type="radio" name="q6" value="2"> C. 因为只要 tokens/s 足够高，P95 延迟一定达标</label>
+      <label><input type="radio" name="q6" value="3"> D. 因为 prefix cache 会让所有请求都不占显存</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>

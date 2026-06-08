@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第4章 多头注意力与MLA</h2>
   <p class="subtitle">从MHA到GQA到DeepSeek MLA——KV Cache压缩之路</p>
-  <div class="reading-time">⏱ 预计阅读: 80 分钟 · 10 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 11 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -390,6 +390,45 @@ compute heads:    [A, A, A, B, B, B]  # 与 6 个 Q heads 对齐</div>
     <div class="katex" data-expr="4 \times 1024 \times 24 \times (2 \times 2 \times 4) \times 2 = 3{,}145{,}728\text{ bytes}\approx3.0\text{ MiB}" aria-label="4 * 1024 * 24 * (2 * 2 * 4) * 2 = 3,145,728 bytes approx 3.0 MiB" role="img"></div>
   </div>
   <p>同配置 MHA 约为 12.0 MiB。这个 toy 例子数值很小，但公式完全相同；把 <code>H</code>、<code>D</code>、<code>L</code>、<code>B</code> 和 <code>n_layers</code> 换成真实模型后，就得到推理服务的 KV cache 预算。</p>
+</section>
+
+<section class="card" id="s4-5b">
+  <h3>4.5B 训练 attention 与推理 KV Cache 不是同一个 layout 问题</h3>
+  <p>学生第一次实现 MHA/GQA 时，通常只关心 <code>[B, H, T, D]</code> 的张量能否算出正确输出。但训练工程和推理工程会用同一组权重解决两个不同问题：训练阶段要高吞吐地处理整段序列，推理阶段要在每一步把新增 token 接到历史 cache 上。理解这一区别，才能解释为什么 GQA/MLA 对 decode 阶段尤其重要。</p>
+
+  <h4>1. 训练阶段：整段序列并行计算</h4>
+  <p>训练或 prefill 阶段一次处理长度为 <code>T</code> 的完整序列。标准实现会把 Q/K/V 投影成：</p>
+  <div class="code-block" data-lang="text">
+q: [B, H_q,  T, D]
+k: [B, H_kv, T, D]
+v: [B, H_kv, T, D]</div>
+  <p>此时所有位置的 Q/K/V 都来自当前 batch 的 hidden states。MHA 中 <code>H_q = H_kv</code>；GQA 中 <code>H_q > H_kv</code>，计算 attention 前把 K/V 按组扩展到 query head 数；MLA 中则先保存低维 latent，再在计算分数时用解压矩阵或矩阵吸收恢复等价的 K/V 作用。训练阶段的主要压力来自大矩阵乘、attention score 的 <code>T x T</code> 计算和激活显存。</p>
+
+  <h4>2. Decode 阶段：每步只新增一个 token</h4>
+  <p>自回归 decode 的第 <code>t</code> 步只输入最新 token，query 长度通常是 1：</p>
+  <div class="code-block" data-lang="text">
+new_q:      [B, H_q,  1, D]
+new_k/new_v:[B, H_kv, 1, D]
+cache_k/v:  [B, H_kv, t, D]
+attn score: [B, H_q,  1, t]</div>
+  <p>这时 attention score 不是 <code>T x T</code> 的大方阵，而是每个请求对历史 cache 做一次读。decode 的瓶颈常在 HBM 带宽和 cache 读写，而不是单步 FLOPs。GQA/MLA 的直接收益是减少 <code>cache_k/v</code> 的体积和读取带宽；它们不神奇地减少模型所有权重，也不自动提高 prefill 的全部吞吐。</p>
+
+  <h4>3. Cache layout 决定系统能否高效调度</h4>
+  <p>真实推理服务中，一个 batch 里的请求长度通常不同。若每个请求都把 KV cache 存成一整块连续张量，短请求会浪费空间，长请求会造成碎片，释放和复用都很困难。推理引擎通常会把 cache 拆成 block/page，并维护“逻辑 token 位置 → 物理 cache block”的映射。Ch10 的 PagedAttention 会专门讲调度；这里先记住：GQA/MLA 决定每个 token 要存多少 KV 内容，PagedAttention 决定这些内容如何被放进显存并被不同请求复用。</p>
+
+  <h4>4. 常见实现错误</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>错误</th><th>表面现象</th><th>正确理解</th></tr>
+      <tr><td>把 GQA 的 repeat 后 K/V 写入 cache</td><td>输出 shape 对了，但显存没有节省</td><td>cache 只保存 <code>H_kv</code> 份，repeat 是计算时视图语义</td></tr>
+      <tr><td>把 prefill mask 直接用于单 token decode</td><td>最后一步 logits 正常，增量生成时位置错乱</td><td>decode query 长度为 1，但 key 长度是历史总长度，需要按 cache position 构造 mask/position id</td></tr>
+      <tr><td>把 KV cache 当成训练激活保存</td><td>混淆 activation checkpointing 与 inference cache</td><td>训练激活用于反向传播；推理 cache 用于避免重复计算历史 K/V</td></tr>
+      <tr><td>只报 per-token cache ratio</td><td>忽略 batch、层数、dtype 和并发</td><td>服务显存必须乘以 <code>B * layers * seq_len * dtype_bytes</code></td></tr>
+      <tr><td>认为 FlashAttention 替代 KV cache</td><td>优化方向混乱</td><td>FlashAttention 优化 attention 计算的 IO；KV cache 保存历史 K/V，二者解决不同瓶颈</td></tr>
+    </table>
+  </div>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>MHA/GQA/MLA 的数学差异要落到两个工程问题上：训练或 prefill 时如何并行计算整段序列，decode 时如何最小化历史 K/V 的存储和读取。能把这两种 layout 分开解释，才算真正理解了 KV cache 压缩为什么重要。</div></div>
 </section>
 
 <!-- ================================================================ -->

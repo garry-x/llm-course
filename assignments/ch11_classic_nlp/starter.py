@@ -93,3 +93,29 @@ def linear_chain_crf_nll(emissions, transitions, gold_tags, start_scores=None, e
 def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=30, cls_index=0):
     """Select the best BERT-style extractive QA answer span from start/end logits."""
     raise NotImplementedError
+
+
+def summarize_pairwise_judgments(judgments):
+    """Summarize blind pairwise LLM-as-judge results.
+
+    Each judgment is a dict with a required ``winner`` field. The winner must be
+    "A", "B", or "tie". Optional fields such as task, reason, latency, or cost
+    should be preserved by the caller for error analysis, but this function only
+    computes aggregate comparison statistics.
+    """
+    raise NotImplementedError
+
+
+def safety_evaluation_metrics(buckets):
+    """Compute safety and usefulness rates from stratified evaluation buckets.
+
+    Expected bucket names are ``harmful``, ``benign_sensitive``, and
+    ``ordinary``. Each bucket contains integer counts for outcomes such as
+    unsafe, refused, correct, incorrect, or passed.
+    """
+    raise NotImplementedError
+
+
+def benchmark_result_summary(task, sample_size, metrics, inference_settings, failure_counts=None):
+    """Build a structured benchmark conclusion with scope and uncertainty fields."""
+    raise NotImplementedError

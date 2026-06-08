@@ -607,3 +607,147 @@ def select_extractive_qa_span(tokens, start_logits, end_logits, max_answer_len=3
             "no_answer": True,
         }
     return best
+
+
+def summarize_pairwise_judgments(judgments):
+    """Summarize blind pairwise LLM-as-judge results."""
+    if not judgments:
+        raise ValueError("at least one judgment is required")
+
+    wins = losses = ties = 0
+    by_task = {}
+    valid_winners = {"A", "B", "tie"}
+    for judgment in judgments:
+        if not isinstance(judgment, dict) or "winner" not in judgment:
+            raise ValueError("each judgment must be a dict with a winner field")
+        winner = judgment["winner"]
+        if isinstance(winner, str):
+            winner = winner.strip()
+        if winner not in valid_winners:
+            raise ValueError("winner must be A, B, or tie")
+
+        if winner == "A":
+            wins += 1
+        elif winner == "B":
+            losses += 1
+        else:
+            ties += 1
+
+        task = judgment.get("task")
+        if task is not None:
+            task = str(task)
+            task_stats = by_task.setdefault(task, {"wins": 0, "losses": 0, "ties": 0, "total": 0})
+            task_stats["total"] += 1
+            if winner == "A":
+                task_stats["wins"] += 1
+            elif winner == "B":
+                task_stats["losses"] += 1
+            else:
+                task_stats["ties"] += 1
+
+    total = wins + losses + ties
+    tie_adjusted_win_rate = (wins + 0.5 * ties) / total
+    for task_stats in by_task.values():
+        task_total = task_stats["total"]
+        task_stats["tie_adjusted_win_rate"] = (
+            task_stats["wins"] + 0.5 * task_stats["ties"]
+        ) / task_total
+
+    return {
+        "wins": wins,
+        "losses": losses,
+        "ties": ties,
+        "total": total,
+        "win_rate": wins / total,
+        "tie_adjusted_win_rate": tie_adjusted_win_rate,
+        "by_task": by_task,
+    }
+
+
+def safety_evaluation_metrics(buckets):
+    """Compute safety and usefulness rates from stratified evaluation buckets."""
+    required = {"harmful", "benign_sensitive", "ordinary"}
+    if not required.issubset(buckets):
+        missing = ", ".join(sorted(required - set(buckets)))
+        raise ValueError(f"missing required bucket(s): {missing}")
+
+    def validate_counts(bucket_name):
+        counts = buckets[bucket_name]
+        if not isinstance(counts, dict):
+            raise ValueError("bucket counts must be dictionaries")
+        normalized = {}
+        for key, value in counts.items():
+            if int(value) != value or value < 0:
+                raise ValueError("bucket counts must be non-negative integers")
+            normalized[str(key)] = int(value)
+        total = sum(normalized.values())
+        if total == 0:
+            raise ValueError("bucket total must be positive")
+        normalized["total"] = total
+        return normalized
+
+    harmful = validate_counts("harmful")
+    benign = validate_counts("benign_sensitive")
+    ordinary = validate_counts("ordinary")
+
+    harmful_unsafe = harmful.get("unsafe", 0)
+    harmful_refused = harmful.get("refused", 0)
+    benign_refused = benign.get("refused", 0)
+    ordinary_correct = ordinary.get("correct", 0)
+    ordinary_passed = ordinary.get("passed", 0)
+
+    task_success = ordinary_correct if "correct" in ordinary else ordinary_passed
+    return {
+        "harmful_total": harmful["total"],
+        "benign_sensitive_total": benign["total"],
+        "ordinary_total": ordinary["total"],
+        "attack_success_rate": harmful_unsafe / harmful["total"],
+        "harmful_refusal_rate": harmful_refused / harmful["total"],
+        "over_refusal_rate": benign_refused / benign["total"],
+        "task_utility": task_success / ordinary["total"],
+    }
+
+
+def benchmark_result_summary(task, sample_size, metrics, inference_settings, failure_counts=None):
+    """Build a structured benchmark conclusion with scope and uncertainty fields."""
+    if not task:
+        raise ValueError("task must be non-empty")
+    if int(sample_size) != sample_size or sample_size <= 0:
+        raise ValueError("sample_size must be a positive integer")
+    if not isinstance(metrics, dict) or not metrics:
+        raise ValueError("metrics must be a non-empty dictionary")
+    if not isinstance(inference_settings, dict) or not inference_settings:
+        raise ValueError("inference_settings must be a non-empty dictionary")
+    failures = {} if failure_counts is None else dict(failure_counts)
+    if any(int(value) != value or value < 0 for value in failures.values()):
+        raise ValueError("failure counts must be non-negative integers")
+
+    required_settings = ["model", "prompt", "temperature"]
+    missing_settings = [key for key in required_settings if key not in inference_settings]
+    if missing_settings:
+        raise ValueError("inference_settings must include model, prompt, and temperature")
+
+    sorted_failures = sorted(failures.items(), key=lambda item: (-item[1], item[0]))
+    largest_failure = None if not sorted_failures else sorted_failures[0][0]
+    uncertainty = "high" if sample_size < 30 else "medium" if sample_size < 100 else "lower"
+    scope = (
+        f"Results apply to {task} with n={sample_size}, model={inference_settings['model']}, "
+        f"prompt={inference_settings['prompt']}, temperature={inference_settings['temperature']}."
+    )
+    limits = [
+        "Does not prove general model quality outside this task distribution.",
+        "Does not replace latency, cost, safety, and human review when those matter.",
+        "May change with prompt, decoding settings, judge rubric, data version, or cache state.",
+    ]
+
+    return {
+        "task": str(task),
+        "sample_size": int(sample_size),
+        "metrics": dict(metrics),
+        "inference_settings": dict(inference_settings),
+        "failure_counts": failures,
+        "largest_failure_type": largest_failure,
+        "uncertainty": uncertainty,
+        "scope": scope,
+        "limits": limits,
+    }

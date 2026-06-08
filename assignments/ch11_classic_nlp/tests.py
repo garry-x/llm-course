@@ -409,5 +409,99 @@ class TestQAMetricsAndMLM(unittest.TestCase):
             solution.select_extractive_qa_span(["[CLS]", "a"], [0.0], [0.0, 1.0])
 
 
+class TestModernLLMEvaluation(unittest.TestCase):
+    def test_summarize_pairwise_judgments_counts_ties_and_tasks(self):
+        judgments = [
+            {"task": "qa", "winner": "A"},
+            {"task": "qa", "winner": "tie"},
+            {"task": "math", "winner": "B"},
+            {"task": "math", "winner": "A"},
+        ]
+        result = solution.summarize_pairwise_judgments(judgments)
+        self.assertEqual(result["wins"], 2)
+        self.assertEqual(result["losses"], 1)
+        self.assertEqual(result["ties"], 1)
+        self.assertAlmostEqual(result["win_rate"], 0.5)
+        self.assertAlmostEqual(result["tie_adjusted_win_rate"], 0.625)
+        self.assertAlmostEqual(result["by_task"]["qa"]["tie_adjusted_win_rate"], 0.75)
+        self.assertAlmostEqual(result["by_task"]["math"]["tie_adjusted_win_rate"], 0.5)
+
+    def test_summarize_pairwise_judgments_rejects_bad_records(self):
+        with self.assertRaises(ValueError):
+            solution.summarize_pairwise_judgments([])
+        with self.assertRaises(ValueError):
+            solution.summarize_pairwise_judgments([{"task": "qa"}])
+        with self.assertRaises(ValueError):
+            solution.summarize_pairwise_judgments([{"winner": "model_a"}])
+
+    def test_safety_evaluation_metrics_separates_harmful_and_benign_refusals(self):
+        buckets = {
+            "harmful": {"unsafe": 2, "refused": 18},
+            "benign_sensitive": {"refused": 6, "answered": 14},
+            "ordinary": {"correct": 32, "incorrect": 8},
+        }
+        result = solution.safety_evaluation_metrics(buckets)
+        self.assertEqual(result["harmful_total"], 20)
+        self.assertEqual(result["benign_sensitive_total"], 20)
+        self.assertEqual(result["ordinary_total"], 40)
+        self.assertAlmostEqual(result["attack_success_rate"], 0.1)
+        self.assertAlmostEqual(result["harmful_refusal_rate"], 0.9)
+        self.assertAlmostEqual(result["over_refusal_rate"], 0.3)
+        self.assertAlmostEqual(result["task_utility"], 0.8)
+
+    def test_safety_evaluation_metrics_rejects_missing_or_invalid_counts(self):
+        with self.assertRaises(ValueError):
+            solution.safety_evaluation_metrics({"harmful": {"unsafe": 1}})
+        with self.assertRaises(ValueError):
+            solution.safety_evaluation_metrics(
+                {
+                    "harmful": {"unsafe": -1},
+                    "benign_sensitive": {"answered": 1},
+                    "ordinary": {"correct": 1},
+                }
+            )
+        with self.assertRaises(ValueError):
+            solution.safety_evaluation_metrics(
+                {
+                    "harmful": {},
+                    "benign_sensitive": {"answered": 1},
+                    "ordinary": {"correct": 1},
+                }
+            )
+
+    def test_benchmark_result_summary_preserves_scope_and_failure_modes(self):
+        result = solution.benchmark_result_summary(
+            task="rag_qa",
+            sample_size=80,
+            metrics={"em": 0.55, "f1": 0.72, "p95_latency_ms": 900},
+            inference_settings={"model": "mock-8b", "prompt": "v3", "temperature": 0.0},
+            failure_counts={"retrieval_miss": 9, "format_error": 2, "hallucination": 6},
+        )
+        self.assertEqual(result["task"], "rag_qa")
+        self.assertEqual(result["sample_size"], 80)
+        self.assertEqual(result["largest_failure_type"], "retrieval_miss")
+        self.assertEqual(result["uncertainty"], "medium")
+        self.assertIn("n=80", result["scope"])
+        self.assertGreaterEqual(len(result["limits"]), 3)
+
+    def test_benchmark_result_summary_rejects_underspecified_settings(self):
+        with self.assertRaises(ValueError):
+            solution.benchmark_result_summary("", 10, {"f1": 0.5}, {"model": "m", "prompt": "p", "temperature": 0})
+        with self.assertRaises(ValueError):
+            solution.benchmark_result_summary("qa", 0, {"f1": 0.5}, {"model": "m", "prompt": "p", "temperature": 0})
+        with self.assertRaises(ValueError):
+            solution.benchmark_result_summary("qa", 10, {}, {"model": "m", "prompt": "p", "temperature": 0})
+        with self.assertRaises(ValueError):
+            solution.benchmark_result_summary("qa", 10, {"f1": 0.5}, {"model": "m"})
+        with self.assertRaises(ValueError):
+            solution.benchmark_result_summary(
+                "qa",
+                10,
+                {"f1": 0.5},
+                {"model": "m", "prompt": "p", "temperature": 0},
+                {"bad": -1},
+            )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

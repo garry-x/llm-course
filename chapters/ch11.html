@@ -310,6 +310,10 @@ labels:       None  None cat    sat    None</div>
   </ul>
   <p>例如模型 X 在 harmful set 上拒答率 95%，但在 benign medical-summary set 上也拒答 60%，这不是单纯“更安全”，而是出现了严重 over-refusal。Ch09 的对齐评估和 Ch10 的上线 SLO 应与这里合并解读：安全、质量、延迟和成本必须同时过关。</p>
 
+  <h4>把现代评测写成可运行函数</h4>
+  <p>Ch11 作业把这一节落到三个函数上。<code>summarize_pairwise_judgments</code> 接收 blind pairwise 记录，计算 raw win rate、tie-adjusted win rate 和按任务分组的胜率，帮助学生看到同一个模型可能在 QA 胜出、在 math 持平或落后。<code>safety_evaluation_metrics</code> 要求把样本分成 harmful、benign sensitive 和 ordinary 三组，分别计算 attack success、harmful refusal、over-refusal 和 task utility。<code>benchmark_result_summary</code> 则把 task、sample size、metrics、model、prompt、temperature、失败类型和不可外推范围组织成结构化结论。</p>
+  <p>这三个函数的共同目的，是防止把“一个平均分”误读成完整工程结论。训练工程师需要用它判断对齐是否损害能力；推理工程师需要用它判断上线后质量、安全、延迟和成本是否同时满足要求。</p>
+
   <h4>Worked Example：同一个结果如何写成合格结论</h4>
   <p>不严谨写法：<code>模型 A 比模型 B 好 8%。</code></p>
   <p>更严谨写法：在 <code>n=300</code> 个中文客服问答样本上，固定 system prompt、temperature=0、max output=512，模型 A 相对模型 B 的 pairwise win rate 为 <code>58%</code>，主要提升来自格式遵循和引用完整性；事实错误率从 <code>11%</code> 降到 <code>8%</code>，但 P95 TTFT 从 <code>720ms</code> 升到 <code>980ms</code>，并且该结果没有覆盖英文、代码、多轮工具调用或高并发负载。因此它支持“在这个中文客服 RAG workload 下，A 值得进入灰度实验”，不支持“A 是通用更强模型”。</p>
@@ -344,6 +348,9 @@ labels:       None  None cat    sat    None</div>
     <tr><td><code>linear_chain_crf_nll</code></td><td>CRF training objective</td><td>为什么结构化训练目标是 logZ 减 gold path score</td></tr>
     <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>如何选择合法 answer span 与 no-answer</td></tr>
     <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>为什么指标选择会改变结论</td></tr>
+    <tr><td><code>summarize_pairwise_judgments</code></td><td>LLM-as-judge</td><td>如何计算 tie-adjusted win rate，并按任务拆解胜负</td></tr>
+    <tr><td><code>safety_evaluation_metrics</code></td><td>Safety evaluation</td><td>为什么 attack success、拒答、过度拒答和 task utility 必须同时报告</td></tr>
+    <tr><td><code>benchmark_result_summary</code></td><td>Benchmark reporting</td><td>如何把指标写成包含样本、推理设置、失败类型和边界的工程结论</td></tr>
   </table>
 </section>
 

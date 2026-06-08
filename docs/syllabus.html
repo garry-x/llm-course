@@ -88,6 +88,8 @@
 <div class="table-wrap"><table><thead><tr><th>层级</th><th>要求</th><th>示例</th></tr></thead><tbody><tr><td>Level 1: Definition / Shape</td><td>写清输入输出、mask、标签、有效 token、batch/head/sequence 维度</td><td>attention score shape、SFT label mask、KV cache bytes</td></tr><tr><td>Level 2: Derivation / Calculation</td><td>展开公式并完成小数值例子，说明每一步分母、归一化或动态规划状态</td><td>softmax CE gradient、top-p nucleus、CRF log-partition、pass@k</td></tr><tr><td>Level 3: Experiment / Critique</td><td>设计实验、选择指标、列出失败模式，并说明结果不能推出哪些更强结论</td><td>RAG ablation、DPO vs SFT evaluation、benchmark summary</td></tr></tbody></table></div>
 <h3 id="capstone-学术要求">Capstone 学术要求</h3>
 <p>两个 capstone 分别训练学生做“受约束的建模实验”和“受约束的系统实验”。最终报告应像课程 project paper，而不是产品介绍。</p>
+<p>最终报告建议按课程论文结构组织：</p>
+<div class="table-wrap"><table><thead><tr><th>部分</th><th>必须回答的问题</th></tr></thead><tbody><tr><td>Abstract</td><td>一句话说明问题、方法、最重要结果和结论边界</td></tr><tr><td>Introduction</td><td>为什么这个训练或推理问题值得研究，目标 workload 是什么</td></tr><tr><td>Related work</td><td>至少连接 2 篇论文、技术报告或官方文档，说明项目继承和简化了什么</td></tr><tr><td>Method / System</td><td>数据、模型、训练目标、服务架构、RAG/工具/评测流程或容量假设</td></tr><tr><td>Experiments</td><td>baseline、ablation、固定评测集、系统指标、硬件、随机种子或负载设置</td></tr><tr><td>Analysis</td><td>错误类型、失败案例、资源瓶颈、安全/过度拒答或成本变化</td></tr><tr><td>Limitations</td><td>哪些结论不能外推到更大模型、真实 GPU、真实用户流量或其他领域</td></tr><tr><td>Reproducibility</td><td>运行命令、配置、数据版本、checkpoint 或服务启动方式</td></tr></tbody></table></div>
 <p>训练工程 Capstone 必须回答：</p>
 <ul>
 <li>数据：训练/验证拆分、去重或泄漏风险、token 统计、样本质量问题。</li>

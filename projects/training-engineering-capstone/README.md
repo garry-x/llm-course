@@ -106,13 +106,14 @@ python plan_training.py \
 
 1. **Research question.** 用一句话提出可回答的问题，例如“在固定 token budget 下，较长 `seq_len` 是否降低 validation PPL，并以多少 tokens/s 为代价？”
 2. **Hypothesis.** 写出预期机制：更长上下文可能改善依赖建模，但会降低 batch occupancy 或增加 step time。
-3. **Experimental setup.** 固定数据版本、seed、模型配置、训练步数、batch tokens、optimizer、scheduler、precision 和硬件环境。
-4. **Baseline.** 至少有一个清晰 baseline，例如默认 `seq_len=64`、`lr=3e-4`、`dropout=0.1`。
-5. **Ablation.** 一次只改一个主要因素；若同时改多个因素，要说明为什么无法归因。
-6. **Results.** 用表格报告 train loss、val loss/PPL、grad norm、tokens/s、step time、是否出现 NaN/loss spike。
-7. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
-8. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
-9. **Conclusion boundary.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模。
+3. **Related work.** 连接至少 2 篇论文、技术报告或官方文档，例如 AdamW、Chinchilla、ZeRO/FSDP、LoRA 或数据质量相关材料，说明你的项目采用了什么、简化了什么。
+4. **Experimental setup.** 固定数据版本、seed、模型配置、训练步数、batch tokens、optimizer、scheduler、precision 和硬件环境。
+5. **Baseline.** 至少有一个清晰 baseline，例如默认 `seq_len=64`、`lr=3e-4`、`dropout=0.1`。
+6. **Ablation.** 一次只改一个主要因素；若同时改多个因素，要说明为什么无法归因。
+7. **Results.** 用表格报告 train loss、val loss/PPL、grad norm、tokens/s、step time、是否出现 NaN/loss spike。
+8. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
+9. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
+10. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
 
 ### 结果表模板
 

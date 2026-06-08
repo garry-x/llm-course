@@ -161,13 +161,14 @@ python capacity_plan.py \
 
 1. **Service scenario.** 描述目标场景：客服 RAG、结构化抽取、工具调用、长文档问答、多模态文档理解等。
 2. **Research question.** 提出可测问题，例如“RAG top-k 从 3 增到 8 是否提高 pass rate，代价是多少 TTFT 和 prompt tokens？”
-3. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON。
-4. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
-5. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
-6. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema 问题和安全拒答/过度拒答。
-7. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
-8. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、max batch、每 1M tokens 成本和安全余量。
-9. **Decision.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分。
+3. **Related work.** 连接至少 2 篇论文、技术报告或官方文档，例如 vLLM/PagedAttention、FlashAttention、RAG、Orca、SGLang、TensorRT-LLM、structured output 或 model card，说明项目采用和简化了什么。
+4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON。
+5. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
+6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
+7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema 问题和安全拒答/过度拒答。
+8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
+9. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
+10. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 
 ### 结果表模板
 

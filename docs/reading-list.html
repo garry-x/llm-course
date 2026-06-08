@@ -322,6 +322,10 @@
 <li>近一年同主题论文的 related work 和 evaluation section。</li>
 <li>interpretability、多模态、agent、reasoning 或安全治理方向的官方论文、课程讲义或模型卡。</li>
 </ul>
+<p>项目论文阅读任务：</p>
+<p>每个 capstone 小组需要选 2 篇最接近自己项目问题的材料：一篇方法论文或系统论文，一篇模型卡、benchmark paper 或官方技术报告。阅读目标不是堆引用，而是把自己的项目放进一个明确技术坐标中：</p>
+<div class="table-wrap"><table><thead><tr><th>论文部分</th><th>你需要抽取什么</th><th>如何映射到 capstone</th></tr></thead><tbody><tr><td>Problem setup</td><td>输入、输出、约束、目标用户或系统 workload</td><td>写清你的 research question 和不研究什么</td></tr><tr><td>Method</td><td>核心算法、模型结构、训练目标或系统机制</td><td>对应你的 baseline、改动点和实现边界</td></tr><tr><td>Experiments</td><td>数据集、样本量、指标、baseline、消融和硬件</td><td>对应你的评测集、压测、ablation 和成本估算</td></tr><tr><td>Analysis</td><td>失败样例、误差分类、资源瓶颈或安全边界</td><td>对应你的 error analysis 和上线风险</td></tr><tr><td>Limitations</td><td>作者承认的限制和未覆盖场景</td><td>对应你的 conclusion boundary</td></tr></tbody></table></div>
+<p>最终报告应包含一个短的 related work 段落，说明你的项目继承了什么思路、简化了什么条件、没有覆盖哪些论文中的实验范围。对于训练 capstone，这通常是 optimizer、scaling、LoRA/对齐或数据质量相关工作；对于推理 capstone，这通常是 serving、RAG、quantization、structured output 或 evaluation 相关工作。</p>
 <p>复盘问题：</p>
 <ul>
 <li>目标方向的 benchmark 衡量什么能力？没有衡量什么能力？</li>
@@ -329,6 +333,7 @@
 <li>如果把该方法接入本课程的训练或推理系统，最先受影响的是显存、延迟、质量、安全性还是成本？</li>
 <li>一个新方法如果只在单一 benchmark、单一模型规模或单一 prompt 模板上有效，结论应如何表述？</li>
 <li>如何把 interpretability、multimodality、agents、reasoning 或 safety 的论文 claim 映射到本课程已有的公式、代码和系统指标？</li>
+<li>final project report 中的 abstract、method、experiments、analysis 和 limitations 应分别回答什么问题？</li>
 </ul>
     </section>
   </article>

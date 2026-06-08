@@ -80,7 +80,7 @@ def inline_markdown(text: str) -> str:
 def is_table_start(lines: list[str], index: int) -> bool:
     if index + 1 >= len(lines):
         return False
-    return lines[index].strip().startswith("|") and re.match(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$", lines[index + 1])
+    return lines[index].strip().startswith("|") and re.match(r"^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)+\|?\s*$", lines[index + 1])
 
 
 def split_table_row(line: str) -> list[str]:

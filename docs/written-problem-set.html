@@ -51,13 +51,7 @@
 <h2 id="书面推导与概念题题库">书面推导与概念题题库</h2>
 <p>本题库对应 README 中 20% 的“书面推导与概念题”。它补充自动编程测试无法覆盖的数学、复杂度、实验解释和工程判断。每章建议选 2-3 题作为正式作业，剩余题作为讨论课或期末复习；逐章可复算小例子见 <a href="worked-example-pack.html">Worked Example Pack</a>。</p>
 <h3 id="评分规则">评分规则</h3>
-<p>| 维度 | 分值 | 标准 |</p>
-<p>|------|:--:|------|</p>
-<p>| 数学正确性 | 35 | 符号、条件概率、矩阵维度、梯度或复杂度推导正确 |</p>
-<p>| Shape 与边界 | 20 | 写清 batch、sequence、head、vocab、mask 等 shape，并覆盖边界条件 |</p>
-<p>| 工程解释 | 20 | 能把公式和 PyTorch 实现、显存、延迟、稳定性联系起来 |</p>
-<p>| 实验判断 | 15 | 能解释测试输出、失败案例、ablation 或指标局限 |</p>
-<p>| 表达与引用 | 10 | 答案结构清晰，必要时引用论文/官方文档/模型卡 |</p>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>分值</th><th>标准</th></tr></thead><tbody><tr><td>数学正确性</td><td>35</td><td>符号、条件概率、矩阵维度、梯度或复杂度推导正确</td></tr><tr><td>Shape 与边界</td><td>20</td><td>写清 batch、sequence、head、vocab、mask 等 shape，并覆盖边界条件</td></tr><tr><td>工程解释</td><td>20</td><td>能把公式和 PyTorch 实现、显存、延迟、稳定性联系起来</td></tr><tr><td>实验判断</td><td>15</td><td>能解释测试输出、失败案例、ablation 或指标局限</td></tr><tr><td>表达与引用</td><td>10</td><td>答案结构清晰，必要时引用论文/官方文档/模型卡</td></tr></tbody></table></div>
 <h3 id="ch01-tokenization-bpe">Ch01 Tokenization / BPE</h3>
 <ol>
 <li>设语料 token 序列长度为 <code>N</code>，词表大小从 <code>V0</code> 增加到 <code>V</code>。说明 BPE 每次合并如何改变序列长度；对字符串 <code>abababa</code> 手算前两次 merge 的 pair、count、new id、before/after length、tokens saved、final ids 和 compression ratio，并给出贪心合并不能保证全局最优压缩的反例思路。</li>

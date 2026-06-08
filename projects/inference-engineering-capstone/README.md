@@ -154,3 +154,36 @@ python capacity_plan.py \
 - RAG、JSON structured output、tool calling 的回归用例。
 - 超时、限流、降级、格式错误和安全拒答策略。
 - 明确说明你的研究问题、baseline、workload、结论适用条件，以及哪些结果只在 MockEngine / 本地 CPU 下成立。
+
+### Final report 结构
+
+推理项目的报告应回答“这个服务在什么 workload 下是否值得上线或灰度”，而不是只说明 API 能启动：
+
+1. **Service scenario.** 描述目标场景：客服 RAG、结构化抽取、工具调用、长文档问答、多模态文档理解等。
+2. **Research question.** 提出可测问题，例如“RAG top-k 从 3 增到 8 是否提高 pass rate，代价是多少 TTFT 和 prompt tokens？”
+3. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON。
+4. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
+5. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
+6. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema 问题和安全拒答/过度拒答。
+7. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
+8. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、max batch、每 1M tokens 成本和安全余量。
+9. **Decision.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分。
+
+### 结果表模板
+
+| Run | 改动 | pass rate | P95 TTFT | P95 TPOT | P99 latency | tokens/s | error rate | 成本/风险结论 |
+|-----|------|-----------|----------|----------|-------------|----------|------------|----------------|
+| baseline | 默认配置 | | | | | | | |
+| ablation | 例如 RAG top-k=8 | | | | | | | |
+
+### 失败分类模板
+
+| 类别 | 判定方式 | 例子 | 下一步动作 |
+|------|----------|------|------------|
+| Retrieval miss | relevant doc 未进入 top-k | 知识库有答案但未召回 | 改 chunk、embedding、hybrid/RRF |
+| Context packing miss | relevant doc 召回但未进入最终 prompt | token budget 被重复 chunk 占满 | MMR、rerank、压缩上下文 |
+| Generation error | evidence 在 prompt 中但答案错误 | 引用正确但结论错 | 调 prompt、模型、decode、评测集 |
+| Format/tool error | JSON 不可解析或 tool schema 错 | `tool_calls` 缺参数 | schema 校验、约束解码、重试 |
+| Serving error | 超时、429、5xx 或 P95/P99 超 SLO | 并发升高后尾延迟爆炸 | 限流、队列隔离、capacity 扩容 |
+
+一个合格结论应同时包含质量和系统代价。例如“top-k=8 pass rate 从 72% 到 78%，但 P95 TTFT 从 650ms 到 1250ms，且 context packing miss 未下降，因此只建议在离线问答或更宽松 SLO 下使用”，比“top-k=8 更好”更严谨。

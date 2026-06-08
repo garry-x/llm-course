@@ -99,3 +99,26 @@ python plan_training.py \
 - 至少一个 ablation，例如学习率、batch size、seq_len 或 dropout。
 - loss spike、NaN、过拟合或吞吐下降的排查记录。
 - 明确说明你的研究问题、baseline、结论适用条件，以及哪些结果只在 tiny corpus / CPU baseline 下成立。
+
+### Final report 结构
+
+报告不是运行日志拼接。建议按下面结构写，让读者能判断你的训练结论是否成立：
+
+1. **Research question.** 用一句话提出可回答的问题，例如“在固定 token budget 下，较长 `seq_len` 是否降低 validation PPL，并以多少 tokens/s 为代价？”
+2. **Hypothesis.** 写出预期机制：更长上下文可能改善依赖建模，但会降低 batch occupancy 或增加 step time。
+3. **Experimental setup.** 固定数据版本、seed、模型配置、训练步数、batch tokens、optimizer、scheduler、precision 和硬件环境。
+4. **Baseline.** 至少有一个清晰 baseline，例如默认 `seq_len=64`、`lr=3e-4`、`dropout=0.1`。
+5. **Ablation.** 一次只改一个主要因素；若同时改多个因素，要说明为什么无法归因。
+6. **Results.** 用表格报告 train loss、val loss/PPL、grad norm、tokens/s、step time、是否出现 NaN/loss spike。
+7. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
+8. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
+9. **Conclusion boundary.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模。
+
+### 结果表模板
+
+| Run | 变化因素 | train loss | val loss | PPL | grad_norm | tokens/s | 异常 | 结论 |
+|-----|----------|------------|----------|-----|-----------|----------|------|------|
+| baseline | 默认配置 | | | | | | | |
+| ablation | 例如 `seq_len=128` | | | | | | | |
+
+如果两个 run 的差异小于随机波动，报告应写“不足以支持改动有效”，而不是强行给出优化结论。一个严谨的负结果仍然是合格的训练工程结论。

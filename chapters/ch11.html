@@ -333,6 +333,35 @@ labels:       None  None cat    sat    None</div>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>常见错误：</strong>把 BERT 和 GPT 说成“只是 mask 不同”。它们的 attention 可见性、训练目标、fine-tuning head、输出空间和服务成本都不同。</div></div>
 </section>
 
+<section class="card" id="s11-7a">
+  <h3>11.7A 工程选型案例：把任务拆成训练目标、输出空间和服务成本</h3>
+  <p>LLM 工程师经常面对的问题不是“哪个模型最大”，而是“这个任务应该被建模成分类、抽取、排序、结构化预测还是开放式生成”。同一个业务目标可以有多种建模方式，训练数据、推理路径、评测指标和上线成本都会随之变化。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>任务</th><th>优先模型族</th><th>训练信号</th><th>推理形态</th><th>主要风险</th></tr>
+      <tr><td>文档是否相关</td><td>bi-encoder / cross-encoder reranker</td><td>query-document 正负样本、点击或人工相关性</td><td>向量召回后重排</td><td>召回漏掉答案、reranker 过慢</td></tr>
+      <tr><td>答案必须来自原文</td><td>encoder-only extractive QA</td><td>start/end span label 或 no-answer label</td><td>选输入中的合法 span</td><td>无法生成归纳总结，span 边界错</td></tr>
+      <tr><td>实体、槽位、字段抽取</td><td>BIO tagger / CRF / constrained decoding</td><td>token-level BIO 或 span label</td><td>输出结构化 span</td><td>token accuracy 高但实体边界错</td></tr>
+      <tr><td>客服回答、解释、代码</td><td>decoder-only LLM / RAG + LLM</td><td>SFT、偏好数据、检索上下文和任务反馈</td><td>自回归生成</td><td>幻觉、格式漂移、延迟和成本</td></tr>
+      <tr><td>翻译、摘要</td><td>encoder-decoder 或 decoder-only instruction model</td><td>source-target paired data</td><td>条件生成，可用 beam 或 sampling</td><td>长度偏置、事实遗漏、指标与人工偏好不一致</td></tr>
+    </table>
+  </div>
+
+  <h4>案例 1：客服知识库问答</h4>
+  <p>如果业务要求“答案必须引用知识库原文”，直接让 decoder-only LLM 自由回答风险较高。更稳的方案通常是三段式：bi-encoder 召回候选文档，cross-encoder reranker 精排，extractive QA 或受约束生成给出答案 span 与引用。只有当问题需要跨段综合、改写或解释时，再让 decoder-only LLM 基于检索上下文生成自然语言回答。</p>
+  <p>这类系统的训练目标也分层：retriever 用对比学习或点击数据，reranker 用相关性排序标签，QA head 用 span label，生成器用 SFT/偏好优化。把所有错误都归因于“LLM 不够强”会掩盖真正瓶颈：可能是召回没命中、重排错序、chunk 切分破坏答案、prompt 没约束引用，或生成阶段没有忠实使用上下文。</p>
+
+  <h4>案例 2：合同字段抽取</h4>
+  <p>合同中抽取甲方、乙方、金额、日期等字段，输出空间是有限结构。若用开放式生成，模型可能改写金额格式、补全不存在字段或把多个日期混在一起。更合适的 baseline 是 encoder-only token classification 或 span classification，再用规则校验金额、日期和实体类型。</p>
+  <p>训练工程上要关注 span-level F1，而不是 token accuracy。一个日期实体 <code>2026 年 6 月 8 日</code> 少预测一天，token accuracy 可能仍然很高，但字段抽取是错的。推理工程上要关注批量吞吐和长文档切片：如果每份合同几十页，cross-encoder 全文处理成本可能不可接受，需要先分块召回候选段落，再做精抽取。</p>
+
+  <h4>案例 3：开放式推理回答</h4>
+  <p>数学题、代码修复和复杂规划通常不能被固定标签或 span 覆盖，需要 decoder-only LLM 生成中间推理和最终答案。此时 Classic NLP 指标不再充分，BLEU/ROUGE 可能惩罚合理改写，也可能奖励错误但词面相似的答案。更合适的是任务成功率、unit test/pass@k、self-consistency、人工或 LLM-as-judge 分层评测，以及第 10 章的延迟/成本指标。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>模型族选择要从输出约束倒推。固定标签优先分类，输入原文答案优先抽取，结构化字段优先 span/CRF/约束解码，开放式解释和推理才优先 decoder-only 生成。这样训练目标、评测指标和推理成本才能彼此一致。</div></div>
+</section>
+
 <section class="card" id="s11-8">
   <h3>11.8 编程作业对应关系</h3>
   <p>Ch11 作业把本章概念落实到可运行函数：</p>

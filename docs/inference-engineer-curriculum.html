@@ -50,11 +50,11 @@
 <li class="doc-toc-level-2"><a href="#最终交付模板">最终交付模板</a></li></ol></nav>
     <section class="card doc-content">
 <h2 id="llm-推理工程师课程路线与学习成果">LLM 推理工程师课程路线与学习成果</h2>
-<p>这份文档把课程从“学完 10 章”转换为“达到 LLM 推理工程师入门岗位能力”。它不是额外章节，而是学习、复盘和检查用的路线图。</p>
+<p>这份文档把课程从“学完 11 章”转换为“达到 LLM 推理工程师入门岗位能力”。它不是额外章节，而是学习、复盘和检查用的路线图。</p>
 <h3 id="目标画像">目标画像</h3>
 <p>完成课程后，你应该能独立完成一个小型 LLM 推理服务的设计、实现、压测、评估和上线复盘。最低能力不是“背熟名词”，而是面对一个慢、贵、不稳定、质量波动或多模态输入成本失控的 LLM 服务时，能拆解问题、定位瓶颈并给出可验证的改进方案。</p>
 <h3 id="学习路径">学习路径</h3>
-<div class="table-wrap"><table><thead><tr><th>阶段</th><th>章节与项目</th><th>主要问题</th><th>学习产出</th></tr></thead><tbody><tr><td>1. 模型内部结构</td><td>Ch01-Ch06</td><td>Token 如何进入模型，attention/FFN/MoE 如何产生 logits</td><td>能从 shape 和参数量解释一次前向传播</td></tr><tr><td>2. 生成链路</td><td>Ch08</td><td>Prefill、decode、采样、reasoning 和推测解码如何影响用户体验</td><td>能解释 TTFT、TPOT、TPS、质量、随机性和 test-time compute 的 trade-off</td></tr><tr><td>3. 显存与吞吐</td><td>Ch03-Ch04、Ch10</td><td>KV Cache、FlashAttention、GQA/MLA、量化如何降低成本</td><td>能手算 KV Cache 显存，并说明瓶颈在算力、带宽还是显存</td></tr><tr><td>4. 服务化工程</td><td>Ch10、Capstone</td><td>如何把模型包装成可观测、可压测、可回归的 API</td><td>跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark</td></tr><tr><td>5. 多模态与质量评估</td><td>Ch09-Ch11、Capstone</td><td>如何评测文本、RAG、结构化输出、多模态任务、安全和成本</td><td>有固定评测集、上线方案和压测报告</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>阶段</th><th>章节与项目</th><th>主要问题</th><th>学习产出</th></tr></thead><tbody><tr><td>1. 模型内部结构</td><td>Ch01-Ch06</td><td>Token 如何进入模型，attention/FFN/MoE 如何产生 logits</td><td>能从 shape 和参数量解释一次前向传播</td></tr><tr><td>2. 生成链路</td><td>Ch08</td><td>Prefill、decode、采样、reasoning 和推测解码如何影响用户体验</td><td>能解释 TTFT、TPOT、TPS、质量、随机性和 test-time compute 的 trade-off</td></tr><tr><td>3. 显存与吞吐</td><td>Ch03-Ch04、Ch10</td><td>KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本</td><td>能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存</td></tr><tr><td>4. 服务化工程</td><td>Ch10、Capstone</td><td>如何把模型包装成可观测、可压测、可回归的 API</td><td>跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark</td></tr><tr><td>5. 多模态与质量评估</td><td>Ch09-Ch11、Capstone</td><td>如何评测文本、RAG、结构化输出、多模态任务、安全和成本</td><td>有固定评测集、上线方案和压测报告</td></tr></tbody></table></div>
 <h3 id="能力目标">能力目标</h3>
 <h4 id="a-模型结构读懂">A. 模型结构读懂</h4>
 <ul>
@@ -68,6 +68,7 @@
 <li>能区分 prefill 与 decode 的瓶颈：prefill 更偏计算密集，decode 更偏带宽密集。</li>
 <li>能定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率。</li>
 <li>能解释 batch size、continuous batching、prefix cache、speculative decoding 对吞吐和延迟的影响。</li>
+<li>能用 active KV tokens 和 admission limit 描述容量，而不是只用并发请求数。</li>
 </ul>
 <p><strong>对应内容：</strong>Ch08，Ch10 10.1、10.10、10.12、10.13，Capstone <code>benchmark.py</code> 与 <code>slo_check.py</code>。</p>
 <h4 id="c-显存与成本预算">C. 显存与成本预算</h4>
@@ -75,6 +76,7 @@
 <li>能估算权重显存、KV Cache 显存、激活峰值和安全余量。</li>
 <li>能比较 FP16、INT8、INT4、FP8/FP4 的收益与风险。</li>
 <li>能把 tokens/s、GPU 小时成本、输入/输出 token 单价转换为容量规划指标。</li>
+<li>能说明长上下文下为什么 KV Cache、prefix cache hit rate 和上下文长度分布会共同决定可服务请求数。</li>
 </ul>
 <p><strong>对应内容：</strong>Ch04 4.9，Ch07，Ch10 10.4、10.6、10.15，Capstone <code>capacity_plan.py</code>。</p>
 <h4 id="d-推理服务实现">D. 推理服务实现</h4>
@@ -95,6 +97,7 @@
 <h4 id="f-评测与上线">F. 评测与上线</h4>
 <ul>
 <li>能维护固定评测集，覆盖事实、格式、安全、拒答、工具调用和回归问题。</li>
+<li>能区分自动指标、LLM-as-judge、人审抽检、安全拒答、过度拒答和任务可用性。</li>
 <li>能用压测报告和 SLO 目标回答“最大并发多少、P95 是否达标、成本是否可接受”。</li>
 <li>能写上线方案：限流、超时、降级、监控、日志、告警、回滚。</li>
 </ul>
@@ -108,7 +111,7 @@
 <p><strong>对应内容：</strong>Ch10 10.20，Inference Capstone research question。</p>
 <h3 id="学习成果">学习成果</h3>
 <p>完成以下项目后，可以认为你已经达到“初级 LLM 推理工程师”课程目标。</p>
-<div class="table-wrap"><table><thead><tr><th>项目项</th><th>合格标准</th><th>产出</th></tr></thead><tbody><tr><td>章节主线</td><td>Ch01-Ch10 每章至少完成一个编程练习和全部概念练习</td><td>页面进度或个人笔记</td></tr><tr><td>结构理解</td><td>能画出从 prompt 到 logits 再到 token 的完整数据流</td><td>一页架构图或文字说明</td></tr><tr><td>显存预算</td><td>能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本</td><td>表格或 <code>capacity_plan.py</code> 输出</td></tr><tr><td>服务运行</td><td>Capstone API 能启动，<code>/health</code>、非流式、流式、<code>/metrics</code> 可用</td><td><code>curl</code> 输出或 <code>acceptance.py</code></td></tr><tr><td>压测报告</td><td>至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标</td><td><code>benchmark.py</code> JSON + <code>slo_check.py</code> 输出</td></tr><tr><td>回归评测</td><td>固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性和工具调用，失败样例有记录</td><td><code>evaluate.py</code> 输出</td></tr><tr><td>实验结论</td><td>项目有 research question、baseline、workload、ablation 和结论边界</td><td>proposal / milestone / final report</td></tr><tr><td>优化复盘</td><td>选择一个瓶颈，提出优化前后指标对比</td><td>简短复盘文档</td></tr><tr><td>引擎替换</td><td>至少说明如何把 <code>MockEngine</code> 替换为一个真实推理引擎</td><td>代码 diff 或设计说明</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>项目项</th><th>合格标准</th><th>产出</th></tr></thead><tbody><tr><td>章节主线</td><td>Ch01-Ch11 每章至少完成一个编程练习和全部概念练习</td><td>页面进度或个人笔记</td></tr><tr><td>结构理解</td><td>能画出从 prompt 到 logits 再到 token 的完整数据流</td><td>一页架构图或文字说明</td></tr><tr><td>显存预算</td><td>能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本</td><td>表格或 <code>capacity_plan.py</code> 输出</td></tr><tr><td>准入控制</td><td>能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit</td><td>容量规划说明</td></tr><tr><td>服务运行</td><td>Capstone API 能启动，<code>/health</code>、非流式、流式、<code>/metrics</code> 可用</td><td><code>curl</code> 输出或 <code>acceptance.py</code></td></tr><tr><td>压测报告</td><td>至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标</td><td><code>benchmark.py</code> JSON + <code>slo_check.py</code> 输出</td></tr><tr><td>回归评测</td><td>固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性、工具调用、LLM-as-judge 和安全/过度拒答，失败样例有记录</td><td><code>evaluate.py</code> 输出</td></tr><tr><td>实验结论</td><td>项目有 research question、baseline、workload、ablation 和结论边界</td><td>proposal / milestone / final report</td></tr><tr><td>优化复盘</td><td>选择一个瓶颈，提出优化前后指标对比</td><td>简短复盘文档</td></tr><tr><td>引擎替换</td><td>至少说明如何把 <code>MockEngine</code> 替换为一个真实推理引擎</td><td>代码 diff 或设计说明</td></tr></tbody></table></div>
 <h3 id="推荐-8-周节奏">推荐 8 周节奏</h3>
 <div class="table-wrap"><table><thead><tr><th>周次</th><th>学习内容</th><th>工程任务</th></tr></thead><tbody><tr><td>1</td><td>Ch01-Ch02</td><td>跑通 tokenizer、embedding、RoPE，记录 shape</td></tr><tr><td>2</td><td>Ch03-Ch04</td><td>实现 attention，比较 MHA/GQA/MLA KV Cache</td></tr><tr><td>3</td><td>Ch05-Ch06</td><td>组装 GPT，完成参数量和显存估算</td></tr><tr><td>4</td><td>Ch07</td><td>跑微型训练循环，理解优化器和混合精度</td></tr><tr><td>5</td><td>Ch08</td><td>实现生成、采样、TTFT/TPS 分析</td></tr><tr><td>6</td><td>Ch09</td><td>跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测</td></tr><tr><td>7</td><td>Ch10</td><td>完成 KV Cache、量化、RAG、benchmark、服务蓝图</td></tr><tr><td>8</td><td>Ch11 + Capstone</td><td>补齐结构化任务与评测指标，跑通 <code>acceptance.py</code>，完成服务、压测、评测、容量估算和上线复盘</td></tr></tbody></table></div>
 <h3 id="常见误区">常见误区</h3>
@@ -139,6 +142,8 @@ P95 TPOT：
 SLO 是否通过：
 tokens/s：
 显存峰值：
+active KV tokens / admission limit：
+LLM-as-judge / safety 指标：
 主要瓶颈：
 已做优化：
 ablation：

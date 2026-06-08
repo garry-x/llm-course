@@ -1,6 +1,6 @@
 # LLM 推理工程师课程路线与学习成果
 
-这份文档把课程从“学完 10 章”转换为“达到 LLM 推理工程师入门岗位能力”。它不是额外章节，而是学习、复盘和检查用的路线图。
+这份文档把课程从“学完 11 章”转换为“达到 LLM 推理工程师入门岗位能力”。它不是额外章节，而是学习、复盘和检查用的路线图。
 
 ## 目标画像
 
@@ -12,7 +12,7 @@
 |------|------------|----------|----------|
 | 1. 模型内部结构 | Ch01-Ch06 | Token 如何进入模型，attention/FFN/MoE 如何产生 logits | 能从 shape 和参数量解释一次前向传播 |
 | 2. 生成链路 | Ch08 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性和 test-time compute 的 trade-off |
-| 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化如何降低成本 | 能手算 KV Cache 显存，并说明瓶颈在算力、带宽还是显存 |
+| 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本 | 能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存 |
 | 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark |
 | 5. 多模态与质量评估 | Ch09-Ch11、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、上线方案和压测报告 |
 
@@ -31,6 +31,7 @@
 - 能区分 prefill 与 decode 的瓶颈：prefill 更偏计算密集，decode 更偏带宽密集。
 - 能定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率。
 - 能解释 batch size、continuous batching、prefix cache、speculative decoding 对吞吐和延迟的影响。
+- 能用 active KV tokens 和 admission limit 描述容量，而不是只用并发请求数。
 
 **对应内容：**Ch08，Ch10 10.1、10.10、10.12、10.13，Capstone `benchmark.py` 与 `slo_check.py`。
 
@@ -39,6 +40,7 @@
 - 能估算权重显存、KV Cache 显存、激活峰值和安全余量。
 - 能比较 FP16、INT8、INT4、FP8/FP4 的收益与风险。
 - 能把 tokens/s、GPU 小时成本、输入/输出 token 单价转换为容量规划指标。
+- 能说明长上下文下为什么 KV Cache、prefix cache hit rate 和上下文长度分布会共同决定可服务请求数。
 
 **对应内容：**Ch04 4.9，Ch07，Ch10 10.4、10.6、10.15，Capstone `capacity_plan.py`。
 
@@ -62,6 +64,7 @@
 ### F. 评测与上线
 
 - 能维护固定评测集，覆盖事实、格式、安全、拒答、工具调用和回归问题。
+- 能区分自动指标、LLM-as-judge、人审抽检、安全拒答、过度拒答和任务可用性。
 - 能用压测报告和 SLO 目标回答“最大并发多少、P95 是否达标、成本是否可接受”。
 - 能写上线方案：限流、超时、降级、监控、日志、告警、回滚。
 
@@ -81,12 +84,13 @@
 
 | 项目项 | 合格标准 | 产出 |
 |--------|----------|------|
-| 章节主线 | Ch01-Ch10 每章至少完成一个编程练习和全部概念练习 | 页面进度或个人笔记 |
+| 章节主线 | Ch01-Ch11 每章至少完成一个编程练习和全部概念练习 | 页面进度或个人笔记 |
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
+| 准入控制 | 能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit | 容量规划说明 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
-| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性和工具调用，失败样例有记录 | `evaluate.py` 输出 |
+| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性、工具调用、LLM-as-judge 和安全/过度拒答，失败样例有记录 | `evaluate.py` 输出 |
 | 实验结论 | 项目有 research question、baseline、workload、ablation 和结论边界 | proposal / milestone / final report |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |
 | 引擎替换 | 至少说明如何把 `MockEngine` 替换为一个真实推理引擎 | 代码 diff 或设计说明 |
@@ -134,6 +138,8 @@ P95 TPOT：
 SLO 是否通过：
 tokens/s：
 显存峰值：
+active KV tokens / admission limit：
+LLM-as-judge / safety 指标：
 主要瓶颈：
 已做优化：
 ablation：

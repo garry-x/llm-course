@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第9章 微调与对齐</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO——从预训练到有用助手的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 16 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 115 分钟 · 17 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -229,6 +229,59 @@ valid mask:       0    0      0      0      0     1          1        1        1
   \log p(\text{EOS}\mid x_{\le 8})
   \right]</div>
   <p>批处理中还要把 padding token 的 label 设为 <code>-100</code>。这样不同长度样本的平均损失只由真实 assistant response token 决定，不会因为 padding 数量改变。</p>
+</section>
+
+<section class="card" id="s9-3b">
+  <h3>9.3B SFT 数据管线：从样本格式到训练 batch</h3>
+  <p>SFT 的难点不止是把 prompt label 设成 <code>-100</code>。真实指令微调通常失败在数据协议上：chat template 不一致、assistant 起始 token 被截断、多轮对话 mask 错、packing 把两个样本的语义边界打穿，或高质量数据被低质量合成样本淹没。训练工程师需要把 SFT 看成一条数据管线，而不是一个单独的 loss 函数。</p>
+
+  <h4>1. Chat template 是模型接口的一部分</h4>
+  <p>同一条对话在不同模型上的序列化方式可能不同。GPT 风格、Llama 风格、ChatML 风格会使用不同的 role token、换行、BOS/EOS 和停止符。若训练时使用一种模板、推理服务使用另一种模板，模型可能学到错误的角色边界，表现为回答前重复 <code>user</code>、漏掉结束符、或把 system prompt 当作普通文本续写。</p>
+  <div class="code-block" data-lang="text">
+messages:
+  system: You are a careful assistant.
+  user: Explain gradient clipping.
+  assistant: Gradient clipping limits the norm of gradients...
+
+serialized tokens:
+  BOS system_tokens user_tokens assistant_header response_tokens EOS</div>
+  <p>课程实现可以用简化 ChatML，但实验报告必须写清模板、特殊 token、是否添加 BOS/EOS、response 起点如何定位。否则两个同学即使用相同数据和模型，也可能训练出不同的行为。</p>
+
+  <h4>2. 多轮对话的 label mask</h4>
+  <p>单轮 SFT 只需屏蔽 user prompt；多轮对话要更精确：所有 system/user token 都不作为目标，assistant 的历史回答是否参与 loss 取决于训练目标。常见做法是对每个 assistant span 计算损失，让模型学习多轮对话中的每次回答：</p>
+  <div class="code-block" data-lang="text">
+token span:  [system][user_1][assistant_1][user_2][assistant_2]
+labels:      -100    -100    keep         -100    keep</div>
+  <p>如果只保留最后一轮 assistant loss，模型主要学“如何回答当前问题”；如果保留所有 assistant span，模型也会学习历史回答风格和上下文延续。两种选择都合理，但必须和数据构造、batch 统计和评估目标一致。</p>
+
+  <h4>3. Packing、truncation 与有效 token 利用率</h4>
+  <p>指令样本长度差异很大。若每条样本单独 padding 到 <code>max_seq_len</code>，大量计算会浪费在 padding 上；packing 会把多条短样本拼进同一个上下文窗口，提高有效 token 利用率。但 packing 必须保护样本边界：</p>
+  <ul>
+    <li><strong>边界 token：</strong>每条样本之间要有 EOS 或明确分隔符，避免模型把下一条指令当成上一条回答的延续。</li>
+    <li><strong>attention mask：</strong>如果使用 block-diagonal attention，样本之间不能互相看见；如果允许普通 causal attention，则必须接受“后一条样本可看到前一条样本”的训练分布。</li>
+    <li><strong>truncation：</strong>优先保证 assistant 起始和有效回答 token 没被截掉。只保留 prompt、截掉 response 的样本对 SFT 几乎没有训练价值。</li>
+    <li><strong>loss 分母：</strong>记录 effective response tokens，而不是只记录 batch size。一个 batch 的样本数相同，并不代表监督 token 数相同。</li>
+  </ul>
+  <p>一个实用指标是 <code>supervised_token_ratio = valid_label_tokens / total_tokens</code>。比例过低说明训练在大量 prompt、padding 或无效 token 上做前向计算；比例过高也可能说明 prompt 太短、任务过于模板化，模型没有学到复杂指令条件。</p>
+
+  <h4>4. 数据混合决定模型行为</h4>
+  <p>SFT 数据常来自多种来源：人工高质量指令、任务型数据、代码问答、数学解题、多轮客服、拒答样本、工具调用样本和合成数据。混合比例会直接改变模型行为：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>数据类型</th><th>主要作用</th><th>比例失衡的风险</th></tr>
+      <tr><td>通用指令</td><td>学习助手格式、解释和任务跟随</td><td>回答变得泛泛而谈，专业任务能力不足</td></tr>
+      <tr><td>数学/代码</td><td>保留推理和程序合成能力</td><td>自然语言任务可能变得过度步骤化或冗长</td></tr>
+      <tr><td>领域问答</td><td>适配业务术语和输出规范</td><td>小数据过拟合，遇到分布外问题时自信错误</td></tr>
+      <tr><td>安全拒答</td><td>学习危险请求边界</td><td>过多会导致正常请求也被拒绝</td></tr>
+      <tr><td>工具调用</td><td>学习结构化 action 和参数格式</td><td>普通问答中也可能误触发工具格式</td></tr>
+    </table>
+  </div>
+  <p>因此 SFT 数据配比不是“越多越好”。一个严谨的训练计划会先定义目标行为，再决定每类数据的采样权重，并在验证集上按任务切片观察变化。</p>
+
+  <h4>5. SFT 与评测污染</h4>
+  <p>指令微调数据经常包含公开 benchmark 的题目、解答或近似改写。若污染进入训练集，模型在验证集上看似提升，实际只是记住了题面或答案格式。预训练阶段的污染很难彻底排除，但 SFT 阶段的数据量较小、来源更可控，更应该做基本去重和切分隔离：同一 prompt、同一题库、同一文档派生的样本不要同时出现在训练和验证中。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>SFT 的核心工程能力是让“模板、mask、packing、截断、数据混合和验证切片”共同服务于目标行为。只要其中一个环节错位，loss 仍然可能下降，但模型学到的就不是你以为的指令跟随能力。</div></div>
 </section>
 
 <!-- ================================================================ -->

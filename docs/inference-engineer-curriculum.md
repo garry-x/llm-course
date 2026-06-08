@@ -14,7 +14,7 @@
 | 2. 生成链路 | Ch08 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性和 test-time compute 的 trade-off |
 | 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化如何降低成本 | 能手算 KV Cache 显存，并说明瓶颈在算力、带宽还是显存 |
 | 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark |
-| 5. 多模态与质量评估 | Ch09-Ch10、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、上线方案和压测报告 |
+| 5. 多模态与质量评估 | Ch09-Ch11、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、上线方案和压测报告 |
 
 ## 能力目标
 
@@ -65,7 +65,7 @@
 - 能用压测报告和 SLO 目标回答“最大并发多少、P95 是否达标、成本是否可接受”。
 - 能写上线方案：限流、超时、降级、监控、日志、告警、回滚。
 
-**对应内容：**Ch09，Ch10 10.13，Capstone `evaluate.py` 与 README 上线方案。
+**对应内容：**Ch09，Ch10 10.13，Ch11 评测专题，Capstone `evaluate.py` 与 README 上线方案。
 
 ### G. 多模态输入评估
 
@@ -102,7 +102,7 @@
 | 5 | Ch08 | 实现生成、采样、TTFT/TPS 分析 |
 | 6 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测 |
 | 7 | Ch10 | 完成 KV Cache、量化、RAG、benchmark、服务蓝图 |
-| 8 | Capstone | 跑通 `acceptance.py`，完成服务、压测、评测、容量估算和上线复盘 |
+| 8 | Ch11 + Capstone | 补齐结构化任务与评测指标，跑通 `acceptance.py`，完成服务、压测、评测、容量估算和上线复盘 |
 
 ## 常见误区
 

@@ -44,8 +44,8 @@
 <li class="doc-toc-level-2"><a href="#week-5-training-loop-scaling-与-distributed-training">Week 5: Training Loop、Scaling 与 Distributed Training</a></li>
 <li class="doc-toc-level-2"><a href="#week-6-generation-search-与-speculative-decoding">Week 6: Generation、Search 与 Speculative Decoding</a></li>
 <li class="doc-toc-level-2"><a href="#week-7-sft-lora-dpo-与-grpo">Week 7: SFT、LoRA、DPO 与 GRPO</a></li>
-<li class="doc-toc-level-2"><a href="#week-8-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 8: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</a></li>
-<li class="doc-toc-level-2"><a href="#week-9-inference-engineering-rag-quantization-与-serving">Week 9: Inference Engineering、RAG、Quantization 与 Serving</a></li>
+<li class="doc-toc-level-2"><a href="#week-8-inference-engineering-rag-quantization-与-serving">Week 8: Inference Engineering、RAG、Quantization 与 Serving</a></li>
+<li class="doc-toc-level-2"><a href="#week-9-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</a></li>
 <li class="doc-toc-level-2"><a href="#week-10-前沿方法-benchmark-边界与课程综合">Week 10: 前沿方法、Benchmark 边界与课程综合</a></li></ol></nav>
     <section class="card doc-content">
 <h2 id="逐周阅读材料与复盘-handout">逐周阅读材料与复盘 Handout</h2>
@@ -245,7 +245,33 @@
 <li>LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？</li>
 <li>对齐后模型质量上升但能力回退时，应如何区分数据分布、KL 约束和评测指标的问题？</li>
 </ul>
-<h3 id="week-8-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 8: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</h3>
+<h3 id="week-8-inference-engineering-rag-quantization-与-serving">Week 8: Inference Engineering、RAG、Quantization 与 Serving</h3>
+<p>对应章节：Ch10 与推理工程 capstone。</p>
+<p>本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG 和多模态输入如何共同影响延迟、吞吐、成本和质量。</p>
+<p>必读：</p>
+<ul>
+<li>Kwon et al. <a href="https://arxiv.org/abs/2309.06180">Efficient Memory Management for Large Language Model Serving with PagedAttention</a>. 重点看 KV cache 分页。</li>
+<li>Dao et al. <a href="https://arxiv.org/abs/2205.14135">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</a>. 重点看 IO-aware attention。</li>
+<li>Lewis et al. <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. 重点看 retriever/generator 组合。</li>
+<li>Dettmers et al. <a href="https://arxiv.org/abs/2305.14314">QLoRA: Efficient Finetuning of Quantized LLMs</a>. 重点看 4-bit quantization 与 LoRA 结合。</li>
+</ul>
+<p>选读：</p>
+<ul>
+<li>vLLM documentation on PagedAttention and continuous batching。</li>
+<li>SGLang, TensorRT-LLM, llama.cpp 官方文档中 serving、quantization 或 batching 部分。</li>
+<li>Liu et al. <a href="https://arxiv.org/abs/2304.08485">Visual Instruction Tuning</a>. 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。</li>
+<li>OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。</li>
+</ul>
+<p>复盘问题：</p>
+<ul>
+<li>TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？</li>
+<li>RAG 评测为什么必须同时看检索质量和生成质量？</li>
+<li>多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？</li>
+<li>一个 benchmark summary 应怎样限制结论的适用范围？</li>
+<li>prefill 和 decode 阶段的计算/访存瓶颈为什么不同？</li>
+<li>quantization 的误差会优先影响哪些任务、层或 token 分布？</li>
+</ul>
+<h3 id="week-9-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</h3>
 <p>对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。</p>
 <p>本周阅读目标：把现代 LLM 放回 NLP 课程脉络中，理解 RNN/LSTM、dependency parsing、seq2seq、BERT 和传统指标为什么仍然是理解结构预测、表示学习和评测局限的基础。</p>
 <p>必读：</p>
@@ -271,32 +297,6 @@
 <li>BLEU/ROUGE/F1/EM 为什么不能单独作为 LLM 质量指标？</li>
 <li>什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？</li>
 <li>transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？</li>
-</ul>
-<h3 id="week-9-inference-engineering-rag-quantization-与-serving">Week 9: Inference Engineering、RAG、Quantization 与 Serving</h3>
-<p>对应章节：Ch10 与推理工程 capstone。</p>
-<p>本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG 和多模态输入如何共同影响延迟、吞吐、成本和质量。</p>
-<p>必读：</p>
-<ul>
-<li>Kwon et al. <a href="https://arxiv.org/abs/2309.06180">Efficient Memory Management for Large Language Model Serving with PagedAttention</a>. 重点看 KV cache 分页。</li>
-<li>Dao et al. <a href="https://arxiv.org/abs/2205.14135">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</a>. 重点看 IO-aware attention。</li>
-<li>Lewis et al. <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. 重点看 retriever/generator 组合。</li>
-<li>Dettmers et al. <a href="https://arxiv.org/abs/2305.14314">QLoRA: Efficient Finetuning of Quantized LLMs</a>. 重点看 4-bit quantization 与 LoRA 结合。</li>
-</ul>
-<p>选读：</p>
-<ul>
-<li>vLLM documentation on PagedAttention and continuous batching。</li>
-<li>SGLang, TensorRT-LLM, llama.cpp 官方文档中 serving、quantization 或 batching 部分。</li>
-<li>Liu et al. <a href="https://arxiv.org/abs/2304.08485">Visual Instruction Tuning</a>. 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。</li>
-<li>OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。</li>
-</ul>
-<p>复盘问题：</p>
-<ul>
-<li>TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？</li>
-<li>RAG 评测为什么必须同时看检索质量和生成质量？</li>
-<li>多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？</li>
-<li>一个 benchmark summary 应怎样限制结论的适用范围？</li>
-<li>prefill 和 decode 阶段的计算/访存瓶颈为什么不同？</li>
-<li>quantization 的误差会优先影响哪些任务、层或 token 分布？</li>
 </ul>
 <h3 id="week-10-前沿方法-benchmark-边界与课程综合">Week 10: 前沿方法、Benchmark 边界与课程综合</h3>
 <p>对应材料：两个 capstone 方向、Ch10 前沿推理部分和前沿主题阅读。</p>

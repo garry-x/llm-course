@@ -2,7 +2,7 @@
 
 本计划把 syllabus 的周安排展开为每周两讲。每讲包含目标、核心推导、课堂 demo、quick check 和课后产出，供教师备课、助教带讨论课和学生复盘使用。讲后产出可以转成下一讲 recap、worksheet、FAQ、handout 或 source patch。
 
-默认节奏：每讲 80-90 分钟。若采用 12 周版本，可把 Week 8 的经典 NLP 与 Week 10 的项目展示拆成更多讲次。
+默认节奏：每讲 80-90 分钟。若采用 12 周版本，可把 Week 9 的经典 NLP/评测专题与 Week 10 的项目展示拆成更多讲次。
 
 ## 授课结构
 
@@ -509,90 +509,9 @@ Quick check：
 - A7 RM/DPO/PPO/GRPO 测试通过。
 - 阅读复盘：R1/GRPO 的方法边界。
 
-## Week 8 Lecture 15: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT
+## Week 8 Lecture 15: KV Cache、FlashAttention 与 Serving Metrics
 
-对应材料：Ch11、classic NLP handout、Classic NLP Deep-Dive Teaching Module、reading-list Week 8。
-
-目标：
-
-- 补齐 CS224N 式经典神经 NLP 主线：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。
-- 比较 structured prediction、encoder-decoder 和 encoder-only 表示。
-- 说明这些主题与 decoder-only LLM 的关系和边界。
-
-核心推导：
-
-- 标量 RNN recurrence 与 BPTT 梯度连乘。
-- LSTM gate 如何改变长期信息路径。
-- UAS/LAS 指标。
-- seq2seq teacher forcing 与 exposure bias。
-- MLM 与 causal LM 的 mask 方向差异；MLM cross entropy 只在 masked positions 上求平均。
-- BIO tagging 如何把 token classification 转成 entity spans。
-- NER span-level F1 要求 entity type 和边界同时匹配，不能用 token accuracy 替代。
-- 抽取式 QA 的 normalized EM/F1：多 gold answer、token overlap 和 exact match 的区别。
-- Viterbi DP：emission + transition scores 下的最优 tag path。
-- CRF forward algorithm：用 logsumexp 计算所有 tag paths 的 log-partition。
-- CRF NLL：`logZ - gold_path_score`，训练目标不是 Viterbi 最优路径分数。
-- encoder-decoder cross-attention 与 decoder-only causal self-attention 的信息流差异。
-
-课堂 demo：
-
-- 手写一个 transition parsing 状态序列。
-- 手算 3 步标量 RNN hidden state 和 recurrent gradient factors。
-- 给定 BIO tags，解码 NER spans；给定 gold/pred spans，手算 TP/FP/FN、precision、recall 和 F1，并讨论非法 `I-` 标签的处理策略。
-- 给定小型 emission/transition table，手算 Viterbi scores、backpointers、CRF forward alpha 和 gold path NLL。
-- 对比 BERT MLM 输入和 GPT causal LM 输入，并手算一个 masked-token cross entropy。
-- 给定预测答案和多个 gold answers，手算 normalized EM 与 token F1。
-- 用 beam candidate table 展示 length-normalized score 如何改变排序。
-
-Quick check：
-
-- RNN 为什么难以直接学习很远的依赖？LSTM 缓解了什么但没有解决什么？
-- BERT 是 decoder-only 模型吗？
-- 为什么 NER 里的 token accuracy 可能很高但 span-level F1 很低？
-- BLEU 高是否代表事实正确？
-
-课后产出：
-
-- 经典 NLP 专题书面题。
-- 阅读复盘：RNN/LSTM、BERT 或 seq2seq 的一个 inductive bias。
-- Deep-dive in-class check：RNN-1、DP-1、S2S-2 或 BERT-1 至少完成一项。
-
-## Week 8 Lecture 16: Evaluation、Ethics 与 Safety
-
-对应材料：Ch11、classic NLP handout、reading-list Week 8。
-
-目标：
-
-- 比较 perplexity、BLEU、ROUGE、F1、EM、LLM-as-judge。
-- 讨论隐私、偏见、幻觉、评测污染和安全拒答。
-- 区分自动指标、人工评测、系统指标和安全评估的适用边界。
-
-核心推导：
-
-- precision/recall/F1 与 exact match。
-- benchmark contamination 与 data leakage 的区别。
-- safety evaluation 中的 attack success rate、refusal rate、over-refusal rate 和 task utility 不是同一个指标。
-
-课堂 demo：
-
-- 对同一输出分别用 ROUGE、EM 和人工判断打分。
-- 构造一个“高 ROUGE 但事实错误”的摘要例子，并解释为什么需要事实性检查。
-- 对一个安全拒答案例同时判断 helpfulness、harmlessness 和 over-refusal。
-
-Quick check：
-
-- 为什么单一指标不能覆盖 LLM 质量？
-- 为什么高拒答率不等于高安全性？
-- LLM-as-judge 可能有哪些位置偏置或模型偏置？
-
-课后产出：
-
-- 经典 NLP/evaluation 书面题。
-- 阅读复盘：一个 automatic metric failure case。
-
-## Week 9 Lecture 17: KV Cache、FlashAttention 与 Serving Metrics
-
-对应材料：Ch10、reading-list Week 9。
+对应材料：Ch10、reading-list Week 8。
 
 目标：
 
@@ -625,7 +544,7 @@ Quick check：
 - Ch10 KV cache 与 benchmark summary 测试通过。
 - 推理项目提案。
 
-## Week 9 Lecture 18: RAG、Quantization、多模态输入与 Production Readiness
+## Week 8 Lecture 16: RAG、Quantization、多模态输入与 Production Readiness
 
 对应材料：Ch10、inference capstone。
 
@@ -671,8 +590,89 @@ Quick check：
 
 课后产出：
 
-- A9 RAG/context packing/quantization/benchmark 测试通过。
+- A8 RAG/context packing/quantization/benchmark 测试通过。
 - 推理 capstone 初版，包含 RAG 或多模态输入的失败模式分析。
+
+## Week 9 Lecture 17: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT
+
+对应材料：Ch11、classic NLP handout、Classic NLP Deep-Dive Teaching Module、reading-list Week 9。
+
+目标：
+
+- 补齐 CS224N 式经典神经 NLP 主线：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。
+- 比较 structured prediction、encoder-decoder 和 encoder-only 表示。
+- 说明这些主题与 decoder-only LLM 的关系和边界。
+
+核心推导：
+
+- 标量 RNN recurrence 与 BPTT 梯度连乘。
+- LSTM gate 如何改变长期信息路径。
+- UAS/LAS 指标。
+- seq2seq teacher forcing 与 exposure bias。
+- MLM 与 causal LM 的 mask 方向差异；MLM cross entropy 只在 masked positions 上求平均。
+- BIO tagging 如何把 token classification 转成 entity spans。
+- NER span-level F1 要求 entity type 和边界同时匹配，不能用 token accuracy 替代。
+- 抽取式 QA 的 normalized EM/F1：多 gold answer、token overlap 和 exact match 的区别。
+- Viterbi DP：emission + transition scores 下的最优 tag path。
+- CRF forward algorithm：用 logsumexp 计算所有 tag paths 的 log-partition。
+- CRF NLL：`logZ - gold_path_score`，训练目标不是 Viterbi 最优路径分数。
+- encoder-decoder cross-attention 与 decoder-only causal self-attention 的信息流差异。
+
+课堂 demo：
+
+- 手写一个 transition parsing 状态序列。
+- 手算 3 步标量 RNN hidden state 和 recurrent gradient factors。
+- 给定 BIO tags，解码 NER spans；给定 gold/pred spans，手算 TP/FP/FN、precision、recall 和 F1，并讨论非法 `I-` 标签的处理策略。
+- 给定小型 emission/transition table，手算 Viterbi scores、backpointers、CRF forward alpha 和 gold path NLL。
+- 对比 BERT MLM 输入和 GPT causal LM 输入，并手算一个 masked-token cross entropy。
+- 给定预测答案和多个 gold answers，手算 normalized EM 与 token F1。
+- 用 beam candidate table 展示 length-normalized score 如何改变排序。
+
+Quick check：
+
+- RNN 为什么难以直接学习很远的依赖？LSTM 缓解了什么但没有解决什么？
+- BERT 是 decoder-only 模型吗？
+- 为什么 NER 里的 token accuracy 可能很高但 span-level F1 很低？
+- BLEU 高是否代表事实正确？
+
+课后产出：
+
+- 经典 NLP 专题书面题。
+- 阅读复盘：RNN/LSTM、BERT 或 seq2seq 的一个 inductive bias。
+- Deep-dive in-class check：RNN-1、DP-1、S2S-2 或 BERT-1 至少完成一项。
+
+## Week 9 Lecture 18: Evaluation、Ethics 与 Safety
+
+对应材料：Ch11、classic NLP handout、reading-list Week 9。
+
+目标：
+
+- 比较 perplexity、BLEU、ROUGE、F1、EM、LLM-as-judge。
+- 讨论隐私、偏见、幻觉、评测污染和安全拒答。
+- 区分自动指标、人工评测、系统指标和安全评估的适用边界。
+
+核心推导：
+
+- precision/recall/F1 与 exact match。
+- benchmark contamination 与 data leakage 的区别。
+- safety evaluation 中的 attack success rate、refusal rate、over-refusal rate 和 task utility 不是同一个指标。
+
+课堂 demo：
+
+- 对同一输出分别用 ROUGE、EM 和人工判断打分。
+- 构造一个“高 ROUGE 但事实错误”的摘要例子，并解释为什么需要事实性检查。
+- 对一个安全拒答案例同时判断 helpfulness、harmlessness 和 over-refusal。
+
+Quick check：
+
+- 为什么单一指标不能覆盖 LLM 质量？
+- 为什么高拒答率不等于高安全性？
+- LLM-as-judge 可能有哪些位置偏置或模型偏置？
+
+课后产出：
+
+- A9 经典 NLP/evaluation 作业与书面题。
+- 阅读复盘：一个 automatic metric failure case。
 
 ## Week 10 Lecture 19: Frontier Methods、Benchmark 边界与系统取舍
 

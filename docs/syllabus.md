@@ -1,6 +1,6 @@
 # LLM 深度学习课程 Syllabus
 
-本课程面向 10-12 周高校课程或系统自学使用。主线是从代码和数学出发，理解 decoder-only LLM 如何把文本表示为 token，如何通过 Transformer 计算下一个 token 分布，如何训练、生成、微调、对齐，并最终服务到真实应用中。
+本课程面向 10-12 周高校课程或系统自学使用。主线是从代码和数学出发，理解 decoder-only LLM 如何把文本表示为 token，如何通过 Transformer 计算下一个 token 分布，如何训练、生成、微调、对齐，并最终服务到真实应用中。课程定位不是传统 NLP 概论，而是面向 LLM 训练工程师和推理工程师的系统课程；经典 NLP 作为模型范式和评测专题补充主线。
 
 ## 课程目标
 
@@ -38,11 +38,11 @@
 | 训练闭环 | Week 5 | Ch07 | MLE、cross entropy、PPL、AdamW、scheduler、checkpoint、分布式训练概念 |
 | 生成方法 | Week 6 | Ch08 | greedy、temperature、top-k/top-p、speculative decoding、structured decoding |
 | 微调与对齐 | Week 7 | Ch09 | SFT、LoRA、preference model、DPO、GRPO、alignment tax |
-| 经典 NLP 与评测 | Week 8 | Ch11 + Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM |
-| 推理工程 | Week 9 | Ch10 | KV Cache、quantization、FlashAttention、RAG、vLLM/SGLang、Triton |
+| 推理工程 | Week 8 | Ch10 | KV Cache、quantization、FlashAttention、RAG、vLLM/SGLang、Triton、服务指标 |
+| 经典 NLP 与评测专题 | Week 9 | Ch11 + Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM、安全评测 |
 | 项目展示 | Week 10 | Capstone | 训练项目、推理项目、报告、演示和讨论 |
 
-12 周版本建议把 Week 8 拆成两周，把 Week 10 拆成训练项目展示和推理项目展示两次。
+10 周版本优先保证“模型实现 -> 训练 -> 生成/对齐 -> 推理服务 -> 项目”的工程链路完整；经典 NLP 放在 Week 9，用来补齐 encoder-only、seq2seq、结构化预测和评价指标。12 周版本建议把 Week 9 的经典 NLP 与评测拆成两周，把 Week 10 拆成训练项目展示和推理项目展示两次。
 
 ## 作业与评分
 
@@ -79,8 +79,8 @@
 | A5 Ch07 | dataset/dataloader、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory | 训练闭环、优化器、校准、训练成本 | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？ |
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、token constraints、speculative decoding | 解码策略、搜索、多样性、test-time compute、结构化生成 | top-p 为什么是自适应截断？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、LoRA、sequence log-probs、RM/DPO/PPO/GRPO、implicit reward、KL、length bias | 指令微调、偏好优化、reference model、对齐风险 | DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？ |
-| A8 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1 | 经典 NLP、encoder-only、结构化预测、评测指标 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？ |
-| A9 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、benchmark summary、指标结论边界 | 推理工程、RAG、服务指标、容量规划 | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？ |
+| A8 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、benchmark summary、指标结论边界 | 推理工程、RAG、服务指标、容量规划 | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？ |
+| A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1 | 经典 NLP、encoder-only、结构化预测、评测指标 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？ |
 
 ## 书面题能力层级
 
@@ -136,8 +136,8 @@
 | 5 | Training Loop | Ch07；reading-list Week 5 | A5：dataset/CE/AdamW/scheduler/train；训练项目提案 |
 | 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO；训练 capstone 初版 |
-| 8 | 经典 NLP 与评测专题 | Ch11；classic-nlp-handout；reading-list Week 8 | A8：RNN/dependency/seq2seq/BERT/evaluation 作业与书面题 |
-| 9 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 9 | A9：KV cache/RAG/benchmark summary/多模态评估；推理项目提案 |
+| 8 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 8 | A8：KV cache/RAG/benchmark summary/多模态评估；推理项目提案 |
+| 9 | 经典 NLP、结构化预测与评测专题 | Ch11；classic-nlp-handout；reading-list Week 9 | A9：RNN/dependency/seq2seq/BERT/evaluation 作业与书面题；推理 capstone 初版 |
 | 10 | Capstone 综合与前沿 seminar | 两个 capstone 方向；reading-list Week 10 | 训练 capstone + 推理 capstone 总结、前沿方法复盘 |
 
 ## 项目

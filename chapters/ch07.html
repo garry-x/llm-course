@@ -970,16 +970,50 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
   <h3>7.15 分布式训练——从单 GPU 到千卡集群</h3>
   <p>到目前为止，我们假设所有训练都在单个 GPU 上进行。但真实的 LLM 训练（如 Llama 3 405B）需要在<strong>数千个 GPU</strong> 上并行运行数周。分布式训练不是"可选"优化——它是使得大模型训练<strong>成为可能</strong>的前提。</p>
 
-  <h4>三种并行策略</h4>
+  <h4>先问两个问题：装不装得下，跑不跑得快</h4>
+  <p>分布式训练的第一原则不是“GPU 越多越好”，而是把瓶颈拆开：</p>
+  <ul>
+    <li><strong>容量问题：</strong>参数、梯度、优化器状态、激活和通信 buffer 是否能放进单卡显存。</li>
+    <li><strong>吞吐问题：</strong>tokens/s 是否受矩阵乘、显存带宽、通信、数据加载或流水线气泡限制。</li>
+    <li><strong>稳定性问题：</strong>global batch tokens、学习率、loss scale、checkpoint 频率和失败重跑是否匹配。</li>
+  </ul>
+  <p>工程上先用单卡或少卡确认 loss 曲线、数据和 checkpoint，再扩大并行规模。若小规模训练都不稳定，增加 GPU 只会把问题放大。</p>
+
+  <h4>每卡显存账本：参数不是主要全部</h4>
+  <p>以 BF16 参数训练、FP32 AdamW optimizer state 为例，单个参数通常对应：</p>
+  <div class="math-box"><div class="label">模型状态显存粗估</div>
+    <div class="katex" data-expr="2\text{ bytes} + 2\text{ bytes} + 4\text{ bytes} + 4\text{ bytes} = 12\text{ bytes/parameter}" aria-label="2\text{ bytes} + 2\text{ bytes} + 4\text{ bytes} + 4\text{ bytes} = 12\text{ bytes/parameter}" role="img"></div>
+  </div>
+  <p>很多实现还会保留 FP32 master weights，则再增加 4 bytes / parameter。粗略显存账本可以写成：</p>
+  <div class="math-box"><div class="label">训练峰值显存账本</div>
+    <div class="katex" data-expr="\text{memory} \approx \text{model states} + \text{activations} + \text{temporary buffers} + \text{fragmentation}" aria-label="\text{memory} \approx \text{model states} + \text{activations} + \text{temporary buffers} + \text{fragmentation}" role="img"></div>
+  </div>
+  <p>如果一个 7B dense LM 用 BF16 参数、BF16 梯度和 FP32 AdamW states，不考虑激活时模型状态约为 <code>7e9 * 12 = 84GB</code>。这说明“7B 模型参数只有 14GB”并不等于“24GB GPU 可以完整训练”。训练显存的主项通常是 optimizer state 和激活，而不是参数本身。</p>
+
+  <h4>Worked Example：ZeRO 分片怎样改变每卡显存</h4>
+  <p>设参数量 <span class="katex-inline" data-expr="N=7B" aria-label="N=7B" role="img"></span>，BF16 参数/梯度，AdamW 两个 FP32 moments，共 12 bytes/param。用 8 卡数据并行训练：</p>
   <div class="table-wrap">
     <table>
-      <tr><th>策略</th><th>原理</th><th>通信量</th><th>适合场景</th></tr>
-      <tr><td><strong>Data Parallelism</strong></td><td>每 GPU 持完整模型副本，各处理不同 batch 切片</td><td>AllReduce 梯度</td><td>模型能放进单 GPU 时</td></tr>
-      <tr><td><strong>Tensor Parallelism</strong></td><td>将单层权重矩阵切分到多 GPU (如 8 GPUs)</td><td>每层 AllReduce</td><td>单层权重超过单 GPU 显存</td></tr>
-      <tr><td><strong>Pipeline Parallelism</strong></td><td>不同 GPU 负责不同层 (GPU1:层1-4, GPU2:层5-8...)</td><td>层间传递激活值</td><td>模型深度超过单 GPU</td></tr>
+      <tr><th>方案</th><th>每卡模型状态近似</th><th>说明</th></tr>
+      <tr><td>DDP</td><td><code>7B * 12 = 84GB</code></td><td>每卡都有完整参数、梯度和 optimizer states</td></tr>
+      <tr><td>ZeRO-1</td><td><code>7B * (2 + 2 + 8/8) = 35GB</code></td><td>只分片 AdamW states，参数和梯度仍完整</td></tr>
+      <tr><td>ZeRO-2</td><td><code>7B * (2 + 2/8 + 8/8) = 22.75GB</code></td><td>分片梯度和 optimizer states</td></tr>
+      <tr><td>ZeRO-3 / FSDP</td><td><code>7B * (2 + 2 + 8) / 8 = 10.5GB</code></td><td>参数、梯度和 optimizer states 都分片</td></tr>
     </table>
   </div>
-  <p>实际训练中三者<strong>组合使用</strong>。Llama 3 405B: TP=8 × PP=16 × DP=64 = <strong>8192 GPU</strong>。</p>
+  <p>这个表只计算模型状态，不含激活、KV-style attention 中间张量、通信 buffer、CUDA workspace 和碎片。真实预算应再加上 activation memory，并通过 profiler 校验峰值。</p>
+
+  <h4>四类并行策略</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>策略</th><th>原理</th><th>主要通信</th><th>适合场景</th><th>常见风险</th></tr>
+      <tr><td><strong>DDP / Data Parallel</strong></td><td>每 GPU 持完整模型副本，各处理不同 batch 切片</td><td>梯度 AllReduce</td><td>模型状态能放进单 GPU，主要想扩大 batch</td><td>global batch 过大导致泛化或优化变差</td></tr>
+      <tr><td><strong>FSDP / ZeRO</strong></td><td>分片参数、梯度和 optimizer state</td><td>参数 AllGather、梯度 ReduceScatter</td><td>模型状态装不下，但每层计算仍适合单卡/少卡</td><td>通信频繁，wrap 粒度和重算策略影响峰值</td></tr>
+      <tr><td><strong>Tensor Parallel</strong></td><td>将单层权重矩阵切到多 GPU</td><td>每层 AllReduce 或 AllGather</td><td>单层矩阵太大或单卡算力不足</td><td>跨节点 TP 通信代价高，通常限制在同节点 NVLink 内</td></tr>
+      <tr><td><strong>Pipeline Parallel</strong></td><td>不同 GPU 负责不同层</td><td>层间激活传递</td><td>模型深度大，想把层切到不同设备</td><td>micro-batch 不足会产生 pipeline bubble</td></tr>
+    </table>
+  </div>
+  <p>实际训练通常组合使用这些策略。一个并行 mesh 可以写成 <code>DP * TP * PP</code>，总 GPU 数等于三者乘积。例如 <code>DP=64, TP=8, PP=16</code> 对应 8192 GPU。工程师需要解释每一维解决的是容量、计算还是吞吐问题，而不是只记住乘法。</p>
 
   <h4>ZeRO (DeepSpeed)</h4>
   <p>ZeRO 将优化器状态、梯度和模型参数<strong>分片</strong>到多个 GPU 上：</p>
@@ -997,9 +1031,45 @@ from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   <p>前向传播前收集分片参数 (all-gather)，计算完成后<strong>立即释放</strong>，将显存峰值降低到 1/N。</p>
 
+  <h4>通信模式：AllReduce、ReduceScatter 与 AllGather</h4>
+  <p>分布式训练不是把单卡代码复制 N 份这么简单。不同并行策略会把计算变成不同通信算子：</p>
+  <ul>
+    <li><strong>AllReduce：</strong>每卡拿到所有 GPU 梯度的总和或平均值。DDP 主要使用它同步梯度。</li>
+    <li><strong>ReduceScatter：</strong>先规约，再把结果分片发给不同 GPU。ZeRO-2/3 常用它保存分片梯度。</li>
+    <li><strong>AllGather：</strong>把各卡分片收集成完整张量。FSDP/ZeRO-3 在层计算前需要临时收集参数。</li>
+    <li><strong>All-to-All：</strong>MoE router 把 token 发给不同 expert 时常用，负载不均会直接造成 straggler。</li>
+  </ul>
+  <p>当模型规模变大，tokens/s 不只由 FLOPs 决定。若 profiler 显示 GPU kernel 之间有大量空洞，常见原因是通信等待、CPU dataloader 慢、checkpoint 写盘阻塞或 pipeline bubble。</p>
+
+  <h4>Activation Checkpointing 与梯度累积</h4>
+  <p>FSDP/ZeRO 主要降低模型状态显存；activation checkpointing 主要降低前向激活显存。它的做法是只保存一部分激活，反向传播时重算前向，因此用额外 FLOPs 换显存。</p>
+  <div class="math-box"><div class="label">Global batch tokens</div>
+    <div class="katex" data-expr="B_{\text{tokens}} = B_{\text{micro}} \cdot T_{\text{seq}} \cdot A_{\text{grad}} \cdot N_{\text{dp}}" aria-label="B_{\text{tokens}} = B_{\text{micro}} \cdot T_{\text{seq}} \cdot A_{\text{grad}} \cdot N_{\text{dp}}" role="img"></div>
+  </div>
+  <p>梯度累积不改变每个 micro-batch 的激活峰值，但会改变一次 optimizer step 消耗的 token 数。训练工程师调 batch 时要同时看三件事：单步显存是否装得下、global batch 是否适合优化、tokens/s 是否随并行度增长。</p>
+
+  <h4>MFU：衡量训练系统有没有吃满硬件</h4>
+  <p><strong>Model FLOPs Utilization (MFU)</strong> 用来比较有效训练 FLOPs 与硬件理论峰值：</p>
+  <div class="math-box"><div class="label">Model FLOPs Utilization</div>
+    <div class="katex" data-expr="\text{MFU} = \frac{\text{model flops per token} \cdot \text{tokens/s}}{\text{num gpus} \cdot \text{peak flops per gpu}}" aria-label="\text{MFU} = \frac{\text{model flops per token} \cdot \text{tokens/s}}{\text{num gpus} \cdot \text{peak flops per gpu}}" role="img"></div>
+  </div>
+  <p>dense decoder-only LM 常用近似 <span class="katex-inline" data-expr="6ND" aria-label="6ND" role="img"></span> 估算训练 FLOPs，其中 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> 是参数量，<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 是训练 token 数。若 7B 模型在 8 张 GPU 上达到 20k tokens/s，单卡 BF16 峰值 300 TFLOP/s，则：</p>
+  <div class="math-box"><div class="label">MFU worked example</div>
+    <div class="katex" data-expr="\text{MFU} \approx \frac{6 \cdot 7\times10^9 \cdot 20000}{8 \cdot 300\times10^{12}} = 0.35" aria-label="\text{MFU} \approx \frac{6 \cdot 7\times10^9 \cdot 20000}{8 \cdot 300\times10^{12}} = 0.35" role="img"></div>
+  </div>
+  <p>MFU 低不一定代表模型代码错。短 sequence、batch 太小、通信跨节点、数据加载不足、频繁 eval/checkpoint、kernel 未融合、padding 浪费都会降低 MFU。诊断时应同时报告 tokens/s/GPU、GPU utilization、network utilization、dataloader wait time 和 checkpoint duration。</p>
+
   <h4>DeepSeek DualPipe</h4>
   <p>传统流水线并行有<strong>气泡（bubble）</strong>——GPU 在等待上游时闲置。DeepSeek-V3 技术报告中的 DualPipe 通过<strong>双向流水线调度</strong>重叠前向、反向和 MoE 通信，目标是显著降低 bubble；具体重叠程度取决于模型切分、通信拓扑、micro-batch 和实现细节。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>选型：</strong>单 GPU 够 → DP。装不下 → ZeRO-3/FSDP。超大规模 → TP+PP+ZeRO-3。一行 FSDP 封装即可入门。</div></div>
+
+  <h4>训练工程排查顺序</h4>
+  <ol>
+    <li><strong>先小后大：</strong>单卡小 batch 过拟合一个小数据片，确认 loss 能快速下降。</li>
+    <li><strong>再看数值：</strong>检查 NaN、grad norm、loss scale、学习率、label mask 和 ignore index。</li>
+    <li><strong>再扩吞吐：</strong>调 seq_len、micro_batch、grad_accum、FSDP wrap、checkpointing 和 dataloader。</li>
+    <li><strong>最后看集群：</strong>用 profiler 区分计算、通信、I/O、checkpoint 写盘和 pipeline bubble。</li>
+  </ol>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>选型：</strong>单 GPU 够放模型状态和激活 → DDP。模型状态装不下 → ZeRO/FSDP。单层矩阵或带宽成为瓶颈 → TP。层数太深或超大模型需要跨设备切层 → PP。MoE 还要额外关注 expert all-to-all 和 router 负载均衡。</div></div>
 </section>
 
 
@@ -1067,6 +1137,19 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
       <label><input type="radio" name="q75" value="3"> D. E4M3 用于注意力计算，E5M2 用于 FFN 计算</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q75')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="1" data-explain="DDP 会在每张 GPU 上保留完整参数、梯度和优化器状态，主要扩大数据并行 batch；当模型状态本身装不下时，应优先考虑 ZeRO/FSDP 分片。Tensor parallel 切单层矩阵，pipeline parallel 切层；MFU 低则需要继续区分计算、通信、I/O、checkpoint 和流水线气泡。">
+    <h4>练习 6：模型参数、梯度和 AdamW 状态在单卡上装不下时，最直接的并行策略是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q76" value="0"> A. 只使用 DDP，因为数据并行会自动减少每卡模型状态显存</label>
+      <label><input type="radio" name="q76" value="1"> B. 使用 ZeRO/FSDP 分片参数、梯度和优化器状态</label>
+      <label><input type="radio" name="q76" value="2"> C. 只增大 gradient accumulation，因为它会降低模型状态显存</label>
+      <label><input type="radio" name="q76" value="3"> D. 只提高 MFU，因为 MFU 越高显存占用越低</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q76')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>

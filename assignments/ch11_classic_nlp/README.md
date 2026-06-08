@@ -1,6 +1,6 @@
 # Supplemental Assignment: Classic NLP and Evaluation
 
-本补充作业对应经典 NLP 专题 handout 和第 8 周讨论课。目标是把 RNN 长程依赖、dependency parsing transition system、seq2seq cross-attention、BERT/MLM mask 与 loss、BIO sequence labeling 与 span-level F1、Viterbi structured decoding、linear-chain CRF forward algorithm 与 CRF NLL、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
+本补充作业对应经典 NLP 专题 handout 和第 9 周讨论课。目标是把 RNN 长程依赖、dependency parsing transition system、seq2seq cross-attention、BERT/MLM mask 与 loss、BIO sequence labeling 与 span-level F1、Viterbi structured decoding、linear-chain CRF forward algorithm 与 CRF NLL、BLEU、ROUGE、Exact Match/F1 从概念题推进到可运行实现。
 
 ## Files
 

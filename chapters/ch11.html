@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第11章 经典神经 NLP 与评测</h2>
   <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT——把 CS224N 主线接回现代 LLM</p>
-  <div class="reading-time">预计阅读: 90 分钟 · 10 小节 · 5 类可运行练习 · 4 道概念练习</div>
+  <div class="reading-time">预计阅读: 100 分钟 · 11 小节 · 5 类可运行练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -277,6 +277,45 @@ labels:       None  None cat    sat    None</div>
   <p>因此评测报告不能只写“BLEU 高”或“ROUGE 高”。必须说明任务结构、候选输出、参考答案集合和指标局限，否则一个分数很容易被误读成完整的语言质量判断。</p>
 </section>
 
+<section class="card" id="s11-6a">
+  <h3>11.6A 现代 LLM 评测协议：从单一分数到可复现结论</h3>
+  <p>BLEU、ROUGE、EM/F1 和 UAS/LAS 适合定义清楚的传统任务；现代 LLM 还要评估开放式回答、长上下文、工具调用、RAG、拒答、安全和多轮对话。这里最常见的错误，是把一个 benchmark 分数、一次 LLM-as-judge 胜率或一组人工偏好直接解释成“模型更好”。课程级评测应先定义任务、样本、推理设置和判定标准，再谈结论。</p>
+
+  <h4>评测协议的最小组成</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>组成</th><th>要写清楚的问题</th><th>常见失败模式</th></tr>
+      <tr><td>数据</td><td>样本来源、train/dev/test 划分、是否去重、是否可能出现在训练语料或 prompt 示例中</td><td>数据污染让分数虚高，dev set 被反复调参后不再代表泛化</td></tr>
+      <tr><td>推理设置</td><td>模型版本、prompt 模板、system prompt、temperature、top-p、max tokens、工具/RAG 配置</td><td>两个模型使用不同 prompt 或采样参数，比较不公平</td></tr>
+      <tr><td>指标</td><td>自动指标、人工评分、LLM-as-judge、系统指标和安全指标分别衡量什么</td><td>用一个平均分掩盖事实性、格式、延迟或拒答问题</td></tr>
+      <tr><td>统计</td><td>样本量、重复运行、置信区间、pairwise test、错误类别分布</td><td>小样本 win rate 波动大，却被当成稳定结论</td></tr>
+      <tr><td>边界</td><td>这组结果能推出什么，不能推出什么；是否只适用于某个领域、语言、长度或负载</td><td>把单一任务结果推广到通用能力或生产可靠性</td></tr>
+    </table>
+  </div>
+
+  <h4>LLM-as-judge 不是免费人工评审</h4>
+  <p>LLM-as-judge 可以降低开放式输出评测成本，但它有位置偏置、长度偏置、风格偏置和模型同源偏置。一个更稳妥的设置是 pairwise blind comparison：隐藏模型名，随机交换 A/B 顺序，让 judge 只根据 rubric 判断哪个回答更符合要求，并记录 tie。</p>
+  <div class="math-box"><div class="label">Pairwise win rate with ties</div>
+    <div class="katex" data-expr="\text{win rate}=\frac{W+0.5T}{W+L+T}" aria-label="\text{win rate}=\frac{W+0.5T}{W+L+T}" role="img"></div>
+  </div>
+  <p>若模型 A 对模型 B 的结果是 <code>W=42</code>、<code>L=35</code>、<code>T=23</code>，win rate 是 <code>(42+11.5)/100=53.5%</code>。这个数字不能单独证明 A 在生产中更好；还要看样本量是否足够、题目分布是否代表目标场景、失败类别是什么、延迟和成本是否变差。</p>
+
+  <h4>安全评测要区分拒答和过度拒答</h4>
+  <p>安全不是“拒答越多越好”。应至少把样本分成 harmful requests、benign sensitive requests 和普通任务，并分别统计：</p>
+  <ul>
+    <li><strong>Attack success rate：</strong>有害请求中模型给出不安全帮助的比例，越低越好。</li>
+    <li><strong>Refusal rate：</strong>模型拒答的比例，需要按 harmful/benign 分开看。</li>
+    <li><strong>Over-refusal rate：</strong>本应帮助的 benign 请求被错误拒答的比例。</li>
+    <li><strong>Task utility：</strong>普通任务上的正确率、helpfulness 或 completion quality，防止安全优化牺牲可用性。</li>
+  </ul>
+  <p>例如模型 X 在 harmful set 上拒答率 95%，但在 benign medical-summary set 上也拒答 60%，这不是单纯“更安全”，而是出现了严重 over-refusal。Ch09 的对齐评估和 Ch10 的上线 SLO 应与这里合并解读：安全、质量、延迟和成本必须同时过关。</p>
+
+  <h4>Worked Example：同一个结果如何写成合格结论</h4>
+  <p>不严谨写法：<code>模型 A 比模型 B 好 8%。</code></p>
+  <p>更严谨写法：在 <code>n=300</code> 个中文客服问答样本上，固定 system prompt、temperature=0、max output=512，模型 A 相对模型 B 的 pairwise win rate 为 <code>58%</code>，主要提升来自格式遵循和引用完整性；事实错误率从 <code>11%</code> 降到 <code>8%</code>，但 P95 TTFT 从 <code>720ms</code> 升到 <code>980ms</code>，并且该结果没有覆盖英文、代码、多轮工具调用或高并发负载。因此它支持“在这个中文客服 RAG workload 下，A 值得进入灰度实验”，不支持“A 是通用更强模型”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>课程标准：</strong>评测答案不是分数列表，而是一个受条件约束的工程结论。你必须说明任务、样本、推理设置、指标、失败类型、统计不确定性和不可外推范围。</div></div>
+</section>
+
 <section class="card" id="s11-7">
   <h3>11.7 任务选型：什么时候不用 Decoder-only LLM</h3>
   <p>选择模型族时先看输出空间和错误成本：</p>
@@ -315,7 +354,7 @@ labels:       None  None cat    sat    None</div>
     <li>Dependency parsing 是离散结构预测，不等于 attention heatmap。</li>
     <li>Seq2Seq attention 把源序列和目标前缀分开建模，是 encoder-decoder 的基本形式。</li>
     <li>BERT/encoder-only 适合分类、reranking、embedding、token classification 和抽取式 QA。</li>
-    <li>BLEU、ROUGE、EM/F1、span F1、UAS/LAS 各自衡量不同任务结构；现代 LLM 评测应说明指标边界。</li>
+    <li>BLEU、ROUGE、EM/F1、span F1、UAS/LAS 各自衡量不同任务结构；现代 LLM 评测还要说明数据、推理设置、judge 偏置、安全拒答、统计不确定性和结论边界。</li>
   </ul>
 </section>
 
@@ -369,6 +408,19 @@ labels:       None  None cat    sat    None</div>
       <label><input type="radio" name="q4" value="3"> D. Encoder-only extractive QA 或受约束抽取系统</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="1" data-explain="LLM-as-judge 和 benchmark 分数必须和任务、样本量、prompt、采样参数、judge 规则、失败类型和统计不确定性一起报告。单一 win rate 可能受位置偏置、长度偏置、样本分布和小样本波动影响，也不能自动推出生产延迟、成本或安全性达标。">
+    <h4>练习 5：为什么不能只用一次 LLM-as-judge win rate 宣称模型全面更好？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q5" value="0"> A. 因为 LLM-as-judge 永远不能使用</label>
+      <label><input type="radio" name="q5" value="1"> B. 因为 win rate 受样本、prompt、judge 偏置和统计波动影响，还不能覆盖延迟、成本和安全</label>
+      <label><input type="radio" name="q5" value="2"> C. 因为 win rate 只能用于 dependency parsing</label>
+      <label><input type="radio" name="q5" value="3"> D. 因为只要样本量超过 10，win rate 就没有不确定性</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>

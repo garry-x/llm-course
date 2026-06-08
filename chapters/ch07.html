@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第7章 训练循环</h2>
   <p class="subtitle">从 MLE 到 AdamW/Muon + FP8/FP4 + DualPipe——极致的训练效率</p>
-  <div class="reading-time">⏱ 预计阅读: 115 分钟 · 18 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 125 分钟 · 19 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -267,6 +267,54 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   </div>
   <p>因此，给定算力预算 <span class="katex-inline" data-expr="C" aria-label="C" role="img"></span> 时，课程中应比较的是 <strong>参数量、token 数、数据质量和训练时长</strong> 的组合，而不是孤立比较“模型有多少 B 参数”。小模型训练项目也遵循同一思想：如果只增大模型而数据很少，训练 loss 可能下降，但开发集 PPL 和生成质量可能变差；如果数据很多但模型太小，模型容量可能成为瓶颈。</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>不要过度外推：</strong>Chinchilla 给的是特定实验设定下的 scaling 规律，不是任意 tokenizer、数据质量、架构、训练目标和后训练流程的精确公式。课程里用它建立“数据-参数-算力必须配平”的判断，而不是背固定常数。</div></div>
+</section>
+
+<section class="card" id="s7-3b">
+  <h3>7.3B 预训练数据管线：质量、去重、隐私与采样配比</h3>
+  <p>Token budget 说明“训练多少”，data mixture 说明“从哪里采样”，但训练工程师还必须回答“哪些 token 不应该进入训练”。预训练数据管线不是简单把网页、书籍、代码和对话拼起来；它要在质量、覆盖、合规、隐私、偏见、污染和成本之间做取舍。许多训练失败不是优化器问题，而是数据管线把错误信号稳定地送进了模型。</p>
+
+  <h4>1. 从 raw corpus 到 training tokens 的流水线</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>阶段</th><th>核心问题</th><th>工程动作</th><th>常见失败</th></tr>
+      <tr><td>Source inventory</td><td>数据从哪里来，能否用于训练</td><td>记录来源、时间、语言、领域、许可证或使用限制</td><td>混入不可用数据，后续无法解释模型记忆来源</td></tr>
+      <tr><td>Normalization</td><td>同一文本是否被稳定表示</td><td>Unicode 规范化、HTML 清洗、代码块保留、空白和换行策略</td><td>破坏代码缩进、表格结构或多语言字符</td></tr>
+      <tr><td>Quality filtering</td><td>样本是否有训练价值</td><td>去空文档、低信息密度文本、乱码、模板页、重复导航栏</td><td>过度过滤损失长尾语言和领域术语</td></tr>
+      <tr><td>Safety / privacy filtering</td><td>是否包含敏感或高风险内容</td><td>PII 检测、密钥/凭据模式、极端有害内容标记、领域黑名单</td><td>模型记住个人信息、API key 或危险操作细节</td></tr>
+      <tr><td>Deduplication</td><td>重复内容是否扭曲训练分布</td><td>文档级哈希、URL 归一化、MinHash/SimHash、n-gram overlap</td><td>重复样本导致记忆化、val loss 虚低、长尾被热门副本淹没</td></tr>
+      <tr><td>Split and packing</td><td>train/val/test 是否隔离，token 是否高效装箱</td><td>按文档或来源切分，保留边界 token，记录 packing 策略</td><td>同一文档片段跨 split 泄漏，packing 打穿样本边界</td></tr>
+      <tr><td>Mixture sampling</td><td>各来源 token 比例如何进入 batch</td><td>设置 mixture weights、温度采样或分阶段课程</td><td>高质量小源被淹没，低质量大源主导梯度</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 去重不是越强越好</h4>
+  <p>去重的目标是降低记忆化和污染，而不是把语料压成最小集合。Exact duplicate 去掉完全相同文档；near-duplicate 处理模板页、镜像站、转载和轻微改写；benchmark contamination 还要查公开题目和答案是否以近似形式出现在训练语料里。粒度不同，风险也不同：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>粒度</th><th>适合发现</th><th>可能误伤</th><th>报告中应写清</th></tr>
+      <tr><td>URL / 文档哈希</td><td>完全重复网页、镜像文件、重复 dump</td><td>同源但更新后的有效版本</td><td>canonicalization 规则、保留哪个版本</td></tr>
+      <tr><td>MinHash / SimHash</td><td>近重复文章、模板正文、轻微改写</td><td>法律条文、代码 boilerplate、引用格式</td><td>相似度阈值、按语言/领域的误删抽样</td></tr>
+      <tr><td>n-gram overlap</td><td>train/eval 泄漏、公开 benchmark 题面重叠</td><td>常见短语、固定 API 用法</td><td>n 的大小、overlap 阈值、命中样例处理</td></tr>
+      <tr><td>embedding nearest neighbor</td><td>语义近似改写和 paraphrase</td><td>主题相近但答案不同的样本</td><td>模型、阈值、人工抽样结果</td></tr>
+    </table>
+  </div>
+  <p>例如代码语料里，<code>import</code>、许可证头、常见函数签名和框架样板会产生大量重复。如果阈值过严，模型会失去真实代码风格；如果阈值过松，模型又会记住热门仓库和训练集答案。合理做法是按数据源和任务风险分层处理，而不是全库统一一个相似度阈值。</p>
+
+  <h4>3. PII、凭据和版权风险要进入训练账本</h4>
+  <p>课程不把法律判断简化成一个自动分类器，但工程上必须知道风险从哪里进入。PII 可能以邮箱、电话、地址、身份证号、病历、聊天记录形式出现；代码语料可能包含 API key、private token、密码或内部 URL；网页和书籍还涉及来源授权、引用、再分发和下游生成风险。数据报告至少要写出：过滤规则、命中比例、保留/删除策略、人工抽样结果，以及哪些风险无法由当前规则覆盖。</p>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>工程边界：</strong>PII 或许可证过滤不能只在训练后靠安全对齐弥补。模型一旦在预训练中记住敏感字符串，后训练拒答只能降低触发概率，不能证明信息没有进入参数。</div></div>
+
+  <h4>4. Mixture weight 是优化信号，不是数据占比</h4>
+  <p>如果网页有 10T tokens、代码有 1T tokens，并不意味着 batch 中必须 10:1 采样。训练工程师可以提高高质量或目标能力相关数据的采样权重，也可以对不同数据源使用 temperature sampling：</p>
+  <div class="math-box"><div class="label">Mixture temperature sampling</div>
+    <span class="katex-block" data-expr="p_i=\frac{n_i^\alpha}{\sum_j n_j^\alpha},\qquad 0<\alpha\le 1" aria-label="p_i = n_i alpha over sum n_j alpha" role="img"></span>
+  </div>
+  <p>其中 <code>n_i</code> 是第 i 个数据源的 token 数。<code>alpha=1</code> 接近按原始体量采样；<code>alpha&lt;1</code> 会抬高小数据源的相对权重。这样可以避免低资源语言、数学、代码或领域文档完全被网页数据淹没，但也可能导致小源被重复采样过多，带来过拟合和风格偏移。</p>
+
+  <h4>Worked Example：同样 20B tokens，不同数据管线会训练出不同模型</h4>
+  <p>假设两个训练 run 都使用 <code>20B</code> token、同一模型和同一优化器。Run A 直接按原始体量混合网页、代码和百科；Run B 先做文档级去重、PII/凭据过滤，再用 <code>alpha=0.7</code> 的 temperature sampling 抬高代码和数学小源。即使 token budget 相同，两个 run 的梯度分布也不同：Run B 可能在代码和数学验证集上更好，网页风格更少重复，训练吞吐略降，因为过滤和分层采样增加了数据准备成本。报告中应把这种差异写成数据管线差异，而不是简单归因于“模型训练更久”或“学习率更好”。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级训练工程不只会跑 DataLoader，还要能说明训练 token 的来源、过滤、去重、风险、采样权重和 split 隔离。数据管线定义了模型学到什么，也定义了评测分数能被怎样解释。</div></div>
 </section>
 
 <!-- ================================================================ -->

@@ -780,6 +780,54 @@ def speculative_decoding(target_model, draft_model,
 </section>
 
 <!-- ================================================================ -->
+<!-- 8.10A 生成策略上线决策 -->
+<!-- ================================================================ -->
+<section class="card" id="s8-10a">
+  <h3>8.10A 生成策略上线决策：把质量、格式、延迟和成本放在同一张表里</h3>
+  <p>课程中的 greedy、top-p、beam、self-consistency、推测解码和约束解码不是互相替代的一组按钮。真实服务通常把它们组合成一条 generation policy：先根据任务决定输出空间，再选择采样/搜索方式，最后用格式约束、停止条件和成本预算保护系统。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>场景</th><th>推荐起点</th><th>质量指标</th><th>系统指标</th><th>主要风险</th></tr>
+      <tr><td>代码补全</td><td>低温 top-p 或 pass@k</td><td>unit tests、compile rate、pass@k</td><td>平均输出 token、每题成本</td><td>生成看似合理但无法运行的代码</td></tr>
+      <tr><td>数学/推理</td><td>temperature + self-consistency</td><td>final answer accuracy、majority vote accuracy</td><td>samples per question、reasoning tokens、P95 延迟</td><td>成本用多倍 token 换来，投票可能聚合错误答案</td></tr>
+      <tr><td>客服/RAG</td><td>低温、引用约束、stop 条件</td><td>answer correctness、faithfulness、引用覆盖</td><td>TTFT、TPOT、检索延迟、重试率</td><td>事实性错误、引用不存在、输出过长</td></tr>
+      <tr><td>结构化 API 输出</td><td>schema constrained decoding</td><td>schema pass rate、字段准确率</td><td>解码开销、失败重试次数</td><td>JSON 合法但语义字段错</td></tr>
+      <tr><td>创意写作</td><td>较高 temperature/top-p</td><td>人工偏好、多样性、连贯性</td><td>输出长度、用户编辑率</td><td>跑题、重复、风格漂移</td></tr>
+    </table>
+  </div>
+
+  <h4>1. 先确定输出空间</h4>
+  <p>如果输出必须是 JSON、SQL、函数调用或固定枚举，应该优先使用约束解码或结构化输出，而不是靠 prompt 提醒模型“请只输出 JSON”。如果输出是开放式解释，才需要重点调 temperature、top-p 和重复惩罚。若任务有可验证答案，例如代码和数学，采样多样性本身不是目标；多样本生成必须通过 pass@k、unit tests 或 verifier 转化为正确率。</p>
+
+  <h4>2. 再确定风险边界</h4>
+  <p>每个 generation policy 都应写清失败边界。例如客服 RAG 中，低温能降低随机性，但不能保证忠实引用；beam search 能搜索高概率候选，但不能修复检索漏召回；self-consistency 能降低单次推理偶然错误，但对系统性误解会多数投错；结构化解码能保证语法合法，却不能保证字段语义正确。</p>
+
+  <h4>3. 成本要按完整请求计算</h4>
+  <p>上线报告不能只写模型 tokens/s。一个请求的端到端成本包括 prompt tokens、generated tokens、reasoning samples、RAG 检索/重排、工具调用、结构化解码开销、重试和排队。可以用一个简化账本描述：</p>
+  <div class="code-block" data-lang="text">
+request_cost ~= prompt_tokens
+             + generated_tokens * samples
+             + reranker_calls * reranker_cost
+             + tool_calls * tool_cost
+             + retries * retry_cost</div>
+  <p>如果把 <code>samples</code> 从 1 提到 16，pass@k 可能提高，但 P95 延迟和 token 成本也会接近线性上升，除非系统做并行采样并有足够 batch/硬件余量。推测解码能降低目标模型验证次数，但也引入草稿模型计算和调度复杂度。</p>
+
+  <h4>4. 一个合格策略说明的格式</h4>
+  <p>课程项目中的 generation policy 应能写成下面这种形式：</p>
+  <div class="code-block" data-lang="text">
+Task: Chinese customer-service RAG
+Output: natural-language answer with cited document ids
+Decoding: temperature=0.2, top_p=0.9, max_new_tokens=512, stop=["\n\n用户:"]
+Constraints: answer must include at least one retrieved doc id; JSON only for tool calls
+Evaluation: faithfulness, answer F1, citation precision/recall, unsafe completion rate
+System: TTFT/P95 TPOT, generated tokens/request, retry rate, cost/request
+Known boundary: low temperature reduces variance but does not prove faithfulness</div>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>生成策略不是单个超参数，而是任务目标、输出约束、采样/搜索、评估指标和服务 SLO 的组合。课程报告应说明为什么选择这组策略，以及它在哪些任务、负载和风险边界内成立。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 8.11 总结 -->
 <!-- ================================================================ -->
 <section class="card" id="s8-11">

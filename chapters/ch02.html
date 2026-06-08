@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第2章 嵌入层与位置编码</h2>
   <p class="subtitle">实现 TokenEmbedding + Sinusoidal + RoPE——让模型理解语义与顺序</p>
-  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 13 小节 · 4 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 120 分钟 · 19 小节 · 4 道编程练习 · 6 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -38,7 +38,7 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先把 <code>nn.Embedding</code> 理解成“用 token id 查一行向量”，再理解为什么 Transformer 不知道顺序，所以必须加入位置编码。RoPE 的矩阵推导可以第二遍再细看。</div></div>
   <ul>
     <li><strong>前置知识：</strong>张量形状、矩阵查表、sin/cos 的基本概念。</li>
-    <li><strong>学习目标：</strong>从 One-Hot 推导到可训练嵌入，解释分布假说、位置编码必要性，并证明 RoPE 点积只依赖相对位置。</li>
+    <li><strong>学习目标：</strong>从 One-Hot 推导到可训练嵌入，解释分布假说、静态词向量与上下文化表示的区别、位置编码必要性，并证明 RoPE 点积只依赖相对位置。</li>
     <li><strong>课前阅读：</strong>阅读 word2vec/GloVe 的核心动机、Vaswani et al. (2017) 位置编码段落，以及 RoFormer 的 RoPE 定义。</li>
     <li><strong>课后阅读：</strong>比较 Sinusoidal、Learned PE、RoPE、ALiBi、NTK-aware scaling 的外推能力和工程取舍。</li>
     <li><strong>本章产出：</strong>TokenEmbedding、Sinusoidal 位置编码和 RoPE。</li>
@@ -222,6 +222,47 @@ cosine matrix excluding diagonal:
   </ul>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>Embedding 不是静态语义词典，而是训练目标、tokenizer、频率和输出层共同塑造的参数矩阵。诊断 embedding 空间的价值在于发现系统性问题，而不是用单个最近邻或类比例子证明模型“理解语言”。</div></div>
+</section>
+
+<section class="card" id="s2-1d">
+  <h3>2.1D 静态词向量到上下文化表示：同一个 token 为什么会有不同语义</h3>
+  <p>word2vec 和 GloVe 学到的是静态向量：词表中每个词或子词通常对应一个固定向量。现代 Transformer 的输入 embedding 也是一个固定查表矩阵，但模型真正用于预测、分类或生成的不是这行初始向量，而是经过多层 attention 和 FFN 后的 hidden state。这个区别是理解 BERT、GPT、RAG reranker 和上下文学习的关键。</p>
+
+  <h4>1. 输入 embedding 只是第 0 层表示</h4>
+  <p>给定 token 序列 <code>x_1,...,x_T</code>，第 0 层表示通常写成：</p>
+  <div class="math-box"><div class="label">Layer-0 representation</div>
+    <div class="katex" data-expr="h_i^{(0)} = E[x_i] + p_i" aria-label="h_i^0 = E[x_i] + p_i" role="img"></div>
+  </div>
+  <p>其中 <code>E[x_i]</code> 是 token embedding，<code>p_i</code> 是位置表示或位置机制带来的信息。经过第 <code>l</code> 层 Transformer 后：</p>
+  <div class="math-box"><div class="label">Contextual representation</div>
+    <div class="katex" data-expr="h_i^{(l)} = \mathrm{TransformerBlock}^{(l)}(h_1^{(l-1)},\ldots,h_T^{(l-1)})_i" aria-label="h_i^l = TransformerBlock(h_1 ... h_T)_i" role="img"></div>
+  </div>
+  <p>因此同一个 token 的 <code>E[token]</code> 在所有上下文中相同，但 <code>h_i^{(l)}</code> 会随着左右上下文、位置、attention pattern 和前面层的计算而变化。静态 embedding 负责给模型一个可训练起点；上下文化表示才是模型在当前句子里对这个位置的解释。</p>
+
+  <h4>2. Worked Example：bank 的两种语境</h4>
+  <p>考虑两个句子：</p>
+  <div class="code-block" data-lang="text">
+S1: I deposited money at the bank.
+S2: I sat near the river bank.</div>
+  <p>如果 tokenizer 都把 <code>bank</code> 映射为同一个 token id，那么输入查表得到的 <code>E[bank]</code> 完全相同。差异来自上下文：S1 中 <code>money</code>、<code>deposited</code> 等 token 会通过 attention 把金融语义写入 <code>bank</code> 位置的 hidden state；S2 中 <code>river</code>、<code>near</code> 会把地理/河岸语义写入同一位置。到高层后，两个 <code>bank</code> 的 hidden state 可能相距很远，即使它们的输入 embedding 是同一行。</p>
+
+  <h4>3. 为什么这会改变评测方式</h4>
+  <p>静态词向量常用最近邻、类比和词相似度数据集评测，因为模型输出就是一个词向量空间。上下文化模型则要按任务和层来评测：分类看 <code>[CLS]</code> 或 pooled representation，抽取式 QA 看 span logits，decoder-only LM 看每个位置 hidden state 经过 LM head 后的 next-token distribution。不能只拿输入 embedding 的最近邻来判断整个 LLM 是否理解多义词、指代或推理关系。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>对象</th><th>计算位置</th><th>适合回答的问题</th><th>不适合回答的问题</th></tr>
+      <tr><td>Input embedding row</td><td><code>E[token]</code></td><td>token 初始化、频率、特殊 token、词表几何</td><td>当前句子中的实际语义</td></tr>
+      <tr><td>Layer hidden state</td><td><code>h_i^{(l)}</code></td><td>上下文语义、句法角色、任务相关特征</td><td>不能脱离层和任务直接解释模型能力</td></tr>
+      <tr><td>Output logits</td><td><code>h_i W_{out}</code></td><td>下一 token 分布、生成行为、CE loss</td><td>不能单独说明中间机制因果</td></tr>
+      <tr><td>Attention weights</td><td><code>softmax(QK^T)</code></td><td>信息路由诊断、长程依赖候选路径</td><td>不能单独证明解释或因果贡献</td></tr>
+    </table>
+  </div>
+
+  <h4>4. 工程含义：不要把 embedding 相似当成最终语义</h4>
+  <p>在微调、RAG reranking 或安全评估中，如果某个 token 的输入 embedding 最近邻看起来合理，只能说明初始表示没有明显异常。真正要看模型行为，必须检查上下文 hidden state、logits、任务输出和失败样例。例如领域术语可能在 embedding 空间里离通用词很近，但经过上下文后仍能正确抽取；也可能新增特殊 token 的 embedding 范数正常，却因为 chat template 或 loss mask 错误导致模型完全不会按预期使用它。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>静态词向量回答“这个词在语料统计中像谁”；上下文化表示回答“这个位置在当前上下文中扮演什么角色”。LLM 工程师需要同时理解两者，否则很容易把 embedding 诊断、attention 诊断和最终任务质量混为一谈。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -750,6 +791,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
     <li>✅ <strong>TokenEmbedding</strong> —— 从 token ID 到稠密向量的可训练查表</li>
     <li>✅ 理解了 One-Hot 的<strong>维度灾难</strong>和<strong>分布式表示</strong>的语义优势</li>
     <li>✅ 区分了 <strong>word2vec/GloVe 静态词向量</strong>与 LLM 的端到端 token embedding</li>
+    <li>✅ 理解了<strong>静态 embedding 行向量</strong>与多层 Transformer <strong>上下文化 hidden state</strong> 的区别</li>
     <li>✅ 掌握了<strong>置换等变性</strong>——为什么位置编码是必需的</li>
     <li>✅ <strong>SinusoidalEncoding</strong> —— 多尺度频率的固定位置编码</li>
     <li>✅ <strong>RoPE</strong> —— 旋转位置编码，点积仅依赖相对位置</li>
@@ -851,15 +893,28 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="从推导看：q'_m^T k'_n = (R_m q)^T (R_n k) = q^T R_m^T R_n k = q^T R_{n-m} k。其中 R_m^T R_n = R_{n-m} 利用了旋转矩阵的群性质（先逆旋转 m，再正旋转 n，等于旋转 n-m）。结果只与 n-m 有关。">
-    <h4>练习 5：从数学上证明 RoPE 的点积只依赖于相对位置 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>，关键步骤是什么？</h4>
+  <div class="exercise" data-answer="1" data-explain="同一个 token 的输入 embedding 行向量是固定的；经过 attention 和 FFN 后得到的 hidden state 会随上下文和层数改变。多义词、指代和任务语义主要体现在上下文化表示和最终 logits 中，而不是只体现在输入 embedding 最近邻中。">
+    <h4>练习 5：为什么不能只看输入 embedding 最近邻来判断 LLM 是否理解一词多义？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q5" value="0"> A. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span></label>
-      <label><input type="radio" name="q5" value="1"> B. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" role="img"></span></label>
-      <label><input type="radio" name="q5" value="2"> C. <span class="katex-inline" data-expr="R_{\Theta,m} R_{\Theta,n}^\top = I" aria-label="R_{\Theta,m} R_{\Theta,n}^\top = I" role="img"></span></label>
-      <label><input type="radio" name="q5" value="3"> D. <span class="katex-inline" data-expr="\cos(m-n) = \cos m \cos n + \sin m \sin n" aria-label="\cos(m-n) = \cos m \cos n + \sin m \sin n" role="img"></span></label>
+      <label><input type="radio" name="q5" value="0"> A. 因为输入 embedding 没有任何训练参数</label>
+      <label><input type="radio" name="q5" value="1"> B. 因为同一 token 的输入向量固定，但高层 hidden state 会随上下文改变</label>
+      <label><input type="radio" name="q5" value="2"> C. 因为 RoPE 会删除所有语义信息</label>
+      <label><input type="radio" name="q5" value="3"> D. 因为 cosine similarity 只能用于图像模型</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="0" data-explain="从推导看：q'_m^T k'_n = (R_m q)^T (R_n k) = q^T R_m^T R_n k = q^T R_{n-m} k。其中 R_m^T R_n = R_{n-m} 利用了旋转矩阵的群性质（先逆旋转 m，再正旋转 n，等于旋转 n-m）。结果只与 n-m 有关。">
+    <h4>练习 6：从数学上证明 RoPE 的点积只依赖于相对位置 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>，关键步骤是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q6" value="0"> A. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span></label>
+      <label><input type="radio" name="q6" value="1"> B. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" role="img"></span></label>
+      <label><input type="radio" name="q6" value="2"> C. <span class="katex-inline" data-expr="R_{\Theta,m} R_{\Theta,n}^\top = I" aria-label="R_{\Theta,m} R_{\Theta,n}^\top = I" role="img"></span></label>
+      <label><input type="radio" name="q6" value="3"> D. <span class="katex-inline" data-expr="\cos(m-n) = \cos m \cos n + \sin m \sin n" aria-label="\cos(m-n) = \cos m \cos n + \sin m \sin n" role="img"></span></label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>

@@ -6,7 +6,7 @@
 
   var CHAPTERS = [
     {id:1, file:'ch01.html', title:'环境搭建与分词', desc:'BPE、多语 tokenizer、特殊 token 与模型接口契约', sections:16},
-    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding、word vectors、RoPE、长上下文与 prompt 表示', sections:13},
+    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding、word vectors、上下文化表示、RoPE、长上下文与 prompt 表示', sections:19},
     {id:3, file:'ch03.html', title:'单头自注意力', desc:'Scaled Dot-Product Attention、mask、诊断账本与复杂度边界', sections:14},
     {id:4, file:'ch04.html', title:'多头注意力与 MLA', desc:'MHA、GQA、MLA、KV Cache 预算与 checkpoint 转换', sections:12},
     {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm、SwiGLU、资源估算、稳定性与 interpretability', sections:15},

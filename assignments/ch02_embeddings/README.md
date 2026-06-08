@@ -34,6 +34,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch02_embeddings/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 embedding 参数量，解释 one-hot 与 lookup 等价性，比较 word2vec/GloVe 的统计目标，推导 SGNS 正负样本对中心向量的梯度、PMI/shifted PMI，计算 cosine similarity 与 3CosAdd 类比，证明 self-attention 的置换等变性，推导 RoPE 点积依赖相对位置 |
+| Written questions | 35 | 推导 embedding 参数量，解释 one-hot 与 lookup 等价性，比较 word2vec/GloVe 的统计目标，推导 SGNS 正负样本对中心向量的梯度、PMI/shifted PMI，计算 cosine similarity 与 3CosAdd 类比，区分输入 embedding、上下文化 hidden state 与 output logits，证明 self-attention 的置换等变性，推导 RoPE 点积依赖相对位置 |
 | Programming parts | 55 | 实现 `TokenEmbedding`、`embedding_lookup_as_matmul`、共现矩阵、SGNS loss、SGNS center gradient、shifted PMI、GloVe weighted loss、cosine similarity、3CosAdd、`SinusoidalEncoding`、`RoPE` 和相对位置数值验证 |
-| Analysis / style | 10 | 说明 RoPE 外推失败模式、odd head dimension 拒绝策略和 dtype/device 迁移 |
+| Analysis / style | 10 | 说明输入 embedding 最近邻的解释边界、RoPE 外推失败模式、odd head dimension 拒绝策略和 dtype/device 迁移 |

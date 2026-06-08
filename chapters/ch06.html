@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第6章 组装完整 GPT 模型</h2>
   <p class="subtitle">GPT-2 124M 从头实现 + DeepSeekMoE 稀疏激活架构</p>
-  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 11 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 110 分钟 · 12 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -595,6 +595,68 @@ capacity_to_compute_ratio = total_expert_params / activated_expert_params_per_to
   <p>这说明“模型总参数量”和“每 token 激活计算量”不是同一个指标。推理工程中，MoE 还会引入 dispatch/combine、跨设备通信、expert load skew 和 tail latency。因此 top-k 越小不必然越快，专家越多也不必然更好。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>完整 GPT 组装的核心能力是把 <code>forward shape</code>、next-token objective、参数量、梯度路径、因果约束和稀疏激活资源账本放在同一个系统里理解。只有这样，后续第 7 章的训练循环和第 10 章的推理服务才有可靠的模型基础。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 6.6B Checkpoint 兼容性 -->
+<!-- ================================================================ -->
+<section class="card" id="s6-6b">
+  <h3>6.6B Checkpoint 兼容性：state_dict 不是一袋张量</h3>
+  <p>完成 <code>GPTModel.forward()</code> 之后，下一步不是只把 <code>model.state_dict()</code> 保存下来，而是让这个 checkpoint 能被另一个进程、另一个框架或推理服务准确恢复。对训练和推理工程师来说，checkpoint 是架构契约：它同时绑定配置、参数命名、张量 shape、tokenizer、数值精度和前向传播语义。</p>
+
+  <h4>1. 一个可交付 checkpoint 至少包含什么</h4>
+  <p>最小可用包通常不只是一份权重文件。以 decoder-only LM 为例，工程上需要同时保存：</p>
+  <div class="code-block" data-lang="text">
+config.json              # vocab_size, n_layers, n_heads, d_model, max_seq_len, norm/rope/mlp 类型
+model.safetensors        # 或 pytorch_model.bin；参数名、shape 和 dtype
+tokenizer.json           # 或 tokenizer.model/merges.txt/vocab.json；词表和 special tokens
+generation_config.json   # 可选；默认 max_new_tokens、temperature、top_p、eos_token_id 等
+training_args.json       # 可选；继续训练时需要 optimizer/scheduler/数据切分信息</div>
+  <p>如果只保存权重、不保存 tokenizer，同一段文本可能被切成不同 token id，logits 对比就没有意义。如果只保存权重、不保存配置，加载端可能用错层数、hidden size、RoPE/absolute position embedding 或 LayerNorm/RMSNorm，错误有时会在 shape 阶段暴露，有时会以质量下降的方式延迟暴露。</p>
+
+  <h4>2. state_dict 对齐的主要维度</h4>
+  <table>
+    <thead><tr><th>维度</th><th>常见问题</th><th>工程处理</th></tr></thead>
+    <tbody>
+      <tr><td>参数命名</td><td>自研模型用 <code>blocks.0.attn.c_attn.weight</code>，HF GPT-2 用 <code>transformer.h.0.attn.c_attn.weight</code></td><td>写显式映射表，不依赖模糊字符串替换</td></tr>
+      <tr><td>张量方向</td><td>GPT-2 的 HF <code>Conv1D</code> 权重布局和 <code>nn.Linear</code> 常见布局相反</td><td>加载 <code>c_attn/c_proj/mlp</code> 等权重时逐项确认是否需要 <code>.t()</code></td></tr>
+      <tr><td>融合权重</td><td>Q/K/V 可能合并成一个 <code>[d, 3d]</code> 或拆成三个矩阵</td><td>按实现选择 split 或 concat，并保持 head 切分顺序一致</td></tr>
+      <tr><td>共享权重</td><td><code>wte.weight</code> 与 <code>lm_head.weight</code> 可能是同一参数，也可能在文件中出现两份</td><td>加载后重新绑定对象身份，确认 <code>lm_head.weight is token_embedding.weight</code></td></tr>
+      <tr><td>buffer</td><td>causal mask、position ids、RoPE cache 可能被保存，也可能运行时生成</td><td>区分持久化参数和可再生 buffer，避免把不同序列长度的缓存当成模型错误</td></tr>
+      <tr><td>精度</td><td>训练权重可能是 fp32，推理权重可能是 bf16/fp16/int8</td><td>明确加载 dtype 和容忍误差；fp32 logit parity 不应套用到量化模型</td></tr>
+      <tr><td>模式</td><td>dropout 未关闭会导致同一输入 logits 不一致</td><td>比较输出前调用 <code>model.eval()</code>，并使用 <code>torch.no_grad()</code></td></tr>
+      <tr><td>tokenizer</td><td>词表大小相同不代表 special token 和 merge 规则相同</td><td>用同一个 tokenizer 产生 input ids，再比较模型输出</td></tr>
+    </tbody>
+  </table>
+
+  <h4>3. GPT-2 权重转置为什么容易写错</h4>
+  <p>PyTorch <code>nn.Linear(in_features, out_features)</code> 的参数 shape 是 <code>[out_features, in_features]</code>，前向传播等价于 <code>x @ W.T + b</code>。GPT-2 的 HuggingFace 实现早期沿用了 OpenAI 的 <code>Conv1D</code> 命名，内部权重常以 <code>[in_features, out_features]</code> 形式存放。因此把 HF GPT-2 权重加载到自研 <code>nn.Linear</code> 时，很多投影矩阵需要转置。</p>
+  <div class="code-block" data-lang="python">
+def copy_linear_from_hf(linear, hf_weight, hf_bias=None, transpose=True):
+    src = hf_weight.t() if transpose else hf_weight
+    assert linear.weight.shape == src.shape
+    linear.weight.data.copy_(src)
+    if hf_bias is not None:
+        assert linear.bias.shape == hf_bias.shape
+        linear.bias.data.copy_(hf_bias)
+
+# 例：HF GPT-2 c_attn 是 fused QKV projection
+# 自研实现若也是 nn.Linear(d_model, 3 * d_model)，通常需要 transpose=True</div>
+  <p>转置判断不能只看名字，要看两端 shape 和前向公式。若你的自研实现把 Q、K、V 拆成三个线性层，则还要先把 HF 的 fused QKV 权重沿输出维切成三段，再分别复制到 <code>q_proj/k_proj/v_proj</code>。</p>
+
+  <h4>4. logit parity 的定位顺序</h4>
+  <p>加载预训练权重后，最实用的等价性检查是同一批 <code>input_ids</code> 下比较 logits。定位顺序建议从最不会被训练随机性影响的项开始：</p>
+  <ol>
+    <li>确认两边使用同一个 tokenizer，且 <code>input_ids</code> 完全相同。</li>
+    <li>确认 <code>config</code> 完全一致：层数、hidden size、head 数、上下文长度、LayerNorm eps、是否使用 bias、位置编码类型。</li>
+    <li>确认两边都处于 <code>eval()</code>，dropout 已关闭。</li>
+    <li>确认所有加载参数的 <code>missing_keys</code> 和 <code>unexpected_keys</code> 都能解释；不能把关键投影层的缺失当成无害 warning。</li>
+    <li>逐层比较 hidden states：embedding 后、每个 block 后、final norm 后、lm head 后，找出第一个产生大误差的位置。</li>
+    <li>若 embedding 后已不一致，优先检查 token embedding、position embedding 和 position ids；若 attention 后开始不一致，优先检查 QKV 顺序、mask 方向、head reshape 和投影转置。</li>
+  </ol>
+  <p>在 fp32、同 tokenizer、同架构、无 dropout 的条件下，GPT-2 small 的 logits 最大绝对误差通常应接近浮点舍入误差量级。若误差达到 <code>1e-2</code> 甚至更大，通常不是“预训练模型本来就有差异”，而是加载映射或前向实现仍有语义不一致。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>模型实现的成熟度体现在能否跨越“随机初始化能跑”和“预训练权重能等价加载”之间的差距。前者验证 shape 和基本梯度，后者验证命名、布局、位置编码、归一化、mask、tokenizer 与数值模式共同构成的完整模型契约。</div></div>
 </section>
 
 <!-- ================================================================ -->

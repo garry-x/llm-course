@@ -345,6 +345,9 @@ Quick check：
 - global batch tokens、steps、tokens/s、GPU hours 的关系。
 - dense LM 近似训练 FLOPs：`6 * params * train_tokens`。
 - AdamW training memory：参数、梯度和两个 moment states；optimizer state sharding 只分摊 optimizer states。
+- ZeRO/FSDP 每卡模型状态显存：DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的参数、梯度和 optimizer states 分摊差异。
+- DDP、tensor parallel、pipeline parallel 分别改变的通信模式：AllReduce、AllGather/ReduceScatter、层间 activation transfer。
+- MFU：`model_flops_per_token * tokens/s / (num_gpus * peak_flops_per_gpu)`，以及低 MFU 的常见系统原因。
 - checkpoint storage 与保存频率的成本。
 
 课堂 demo：
@@ -352,6 +355,8 @@ Quick check：
 - 跑 training capstone 的 tiny train + resume。
 - 手算 20B token 预算下的 step count 与 dense LM FLOPs。
 - 给定 1B 参数、bf16 参数/梯度、fp32 AdamW moments，计算训练显存和 optimizer-state sharding 后的单卡估算。
+- 给定 7B 模型、8 卡、bf16 参数/梯度和 fp32 AdamW states，比较 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存。
+- 给定 `tokens/s`、GPU 峰值算力和参数量，手算 MFU，并列出 batch 太小、通信等待、dataloader 慢和 checkpoint 写盘四类诊断信号。
 - 修改 learning rate 观察 loss 异常。
 
 Quick check：
@@ -359,6 +364,8 @@ Quick check：
 - resume 时只恢复 model 权重够不够？
 - token budget 翻倍时，step count、FLOPs 和 GPU hours 分别怎样变化？
 - tokens/s 下降可能来自哪些非模型原因？
+- 为什么 DDP 不会降低每卡模型状态显存？
+- MFU 低一定说明模型实现错误吗？
 
 课后产出：
 
@@ -523,6 +530,8 @@ Quick check：
 
 - KV cache bytes `2 * batch * layers * seq_len * kv_heads * head_dim * dtype_bytes`。
 - Prefix cache effective prefill tokens：总 prompt tokens 减去每条请求可复用的最长历史前缀 tokens。
+- Workload token rate：`QPS * E[prompt_tokens]` 和 `QPS * E[output_tokens]` 分别约束 prefill/decode。
+- active KV tokens 与 admission control：按请求数限流、按活跃 token 限流和按 SLO 队列隔离的差异。
 - tail latency 与并发队列的关系。
 
 课堂 demo：
@@ -530,6 +539,8 @@ Quick check：
 - 用 Ch10 代码验证 incremental attention 与 full causal attention 等价。
 - 对一组共享 system prompt 的 tokenized requests 手算 prefix cache hit rate 和 effective prefill tokens。
 - 运行 inference capstone benchmark，读 P95 和 tokens/s。
+- 给定 QPS、平均 prompt/output tokens、prefill/decode capacity，判断瓶颈在 prefill 还是 decode。
+- 给定每 token KV bytes、平均活跃上下文长度和 KV 显存预算，估算 admission limit，并说明为什么长请求不能和短请求只按请求数统一限流。
 - 把一次 benchmark 结果改写成结构化结论摘要，区分任务、baseline、指标和结论边界。
 
 Quick check：
@@ -537,6 +548,8 @@ Quick check：
 - KV cache 公式里的 2 表示什么？
 - prefix cache 为什么主要降低 TTFT/prefill 成本，而不是单个 decode step 的 KV 读取量？
 - 平均延迟为什么不能替代 P95？
+- 为什么 high QPS 下 TPOT 可能先坏，而 TTFT 仍暂时正常？
+- admission control 为什么要看 active KV tokens？
 - 为什么固定开发集上的 pass rate 不能证明开放域能力？
 
 课后产出：
@@ -655,12 +668,15 @@ Quick check：
 
 - precision/recall/F1 与 exact match。
 - benchmark contamination 与 data leakage 的区别。
+- LLM-as-judge pairwise win rate：`(W + 0.5T) / (W + L + T)`，以及位置偏置、长度偏置和同源模型偏置。
 - safety evaluation 中的 attack success rate、refusal rate、over-refusal rate 和 task utility 不是同一个指标。
 
 课堂 demo：
 
 - 对同一输出分别用 ROUGE、EM 和人工判断打分。
 - 构造一个“高 ROUGE 但事实错误”的摘要例子，并解释为什么需要事实性检查。
+- 给定 `W/L/T = 42/35/23` 的 pairwise judge 结果，手算 win rate，并讨论为什么它不能单独推出生产更优。
+- 把一个 benchmark 结论改写成包含样本量、prompt、temperature、失败类型、延迟和不可外推范围的合格结论。
 - 对一个安全拒答案例同时判断 helpfulness、harmlessness 和 over-refusal。
 
 Quick check：
@@ -668,6 +684,7 @@ Quick check：
 - 为什么单一指标不能覆盖 LLM 质量？
 - 为什么高拒答率不等于高安全性？
 - LLM-as-judge 可能有哪些位置偏置或模型偏置？
+- win rate 高是否一定说明事实性、安全性和延迟都更好？
 
 课后产出：
 

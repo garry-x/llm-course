@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第11章 经典神经 NLP 与评测</h2>
   <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT——把 CS224N 主线接回现代 LLM</p>
-  <div class="reading-time">预计阅读: 120 分钟 · 13 小节 · 5 类可运行练习 · 5 道概念练习</div>
+  <div class="reading-time">预计阅读: 135 分钟 · 14 小节 · 5 类可运行练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -450,7 +450,45 @@ labels:       None  None cat    sat    None</div>
 </section>
 
 <section class="card" id="s11-8">
-  <h3>11.8 编程作业对应关系</h3>
+  <h3>11.8 Capstone 项目报告：从实验结果到可判定结论</h3>
+  <p>CS224N 这样的高校课程会把 final project 看成一次小型研究或工程论文训练：学生不仅要实现系统，还要说明问题、方法、实验、失败和边界。本课程的训练工程与推理工程 capstone 也应达到同样标准。最终项目报告的核心不是“我跑通了脚本”，而是回答一个明确问题，并让读者能判断这个结论在什么条件下成立。</p>
+
+  <h4>1. 把项目问题写成可检验命题</h4>
+  <p>好的项目问题应该能被数据和实验反驳。例如：</p>
+  <ul>
+    <li><strong>训练工程：</strong>在固定 token budget 下，<code>seq_len=128</code> 是否比 <code>seq_len=64</code> 降低 validation PPL？代价是多少 tokens/s 和 step time？</li>
+    <li><strong>对齐工程：</strong>DPO 是否提高偏好胜率，同时保持基础任务正确率和拒答边界？KL、输出长度和失败类型如何变化？</li>
+    <li><strong>推理工程：</strong>RAG top-k 从 3 增到 8 是否提高 pass rate？它对 P95 TTFT、prompt tokens、context packing miss 和成本有什么影响？</li>
+    <li><strong>服务工程：</strong>concurrency 从 1 到 8 时，P95/P99 是否仍满足 SLO？瓶颈是排队、prefill、decode、检索还是后处理？</li>
+  </ul>
+  <p>这些问题都有 baseline、改动项、指标和结论边界。相比之下，“做一个聊天机器人”或“训练一个小模型”不是合格的课程项目问题，因为它无法说明什么改变带来了什么效果。</p>
+
+  <h4>2. 报告结构应覆盖建模、系统和评测</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>部分</th><th>训练 capstone 应回答</th><th>推理 capstone 应回答</th></tr>
+      <tr><td>Problem</td><td>训练或对齐改动想改善什么现象</td><td>服务想满足什么 workload 和 SLO</td></tr>
+      <tr><td>Baseline</td><td>默认数据、模型、lr、batch tokens、seed</td><td>默认 API、no-RAG 或默认 concurrency</td></tr>
+      <tr><td>Method</td><td>数据处理、optimizer、scheduler、checkpoint 策略</td><td>RAG/tool/JSON、batching、capacity、降级策略</td></tr>
+      <tr><td>Metrics</td><td>train/val loss、PPL、grad_norm、tokens/s、resume parity</td><td>pass rate、P50/P95/P99、TTFT、TPOT、error rate、成本</td></tr>
+      <tr><td>Ablation</td><td>一次只改 lr、seq_len、batch、dropout 或数据源</td><td>一次只改 top-k、concurrency、context、JSON/retry 或容量假设</td></tr>
+      <tr><td>Failure analysis</td><td>loss spike、NaN、train/val 分叉、吞吐下降、resume 不连续</td><td>retrieval miss、format/tool error、安全拒答、尾延迟、429/5xx</td></tr>
+      <tr><td>Decision</td><td>是否继续训练、回退、扩容、换数据或调整目标</td><td>是否上线、灰度、降级、限流或继续优化</td></tr>
+    </table>
+  </div>
+
+  <h4>3. 负结果也可以是强结论</h4>
+  <p>高校课程项目不要求每个方法都“提升”。如果一个 ablation 没有带来显著改善，只要实验设计清楚，它仍然是有价值的结论。例如：<code>seq_len=128</code> 的 validation PPL 只降低 <code>0.03</code>，但 tokens/s 下降 <code>35%</code>，且三次 seed 波动约 <code>0.05</code>，那么合理结论是“当前设置不足以支持更长序列值得采用”。这比只挑一个最好数字更严谨。</p>
+
+  <h4>4. 把结论绑定到复现命令和限制条件</h4>
+  <p>报告最后必须说明复现路径：数据版本、commit、运行命令、seed、硬件、模型配置、checkpoint 或服务 URL、评测集和压测参数。也必须说明不能外推的地方：tiny corpus 不能代表万亿 token 训练，本地 MockEngine 不能代表真实 GPU serving，小知识库 RAG 不能代表企业知识库，单一安全集合不能代表所有用户风险。</p>
+
+  <p>最终报告的读者应该能回答三件事：第一，项目提出的问题是否清楚；第二，实验是否足以支持结论；第三，如果把系统推向更大模型、更大数据或真实服务，哪些假设会最先失效。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Capstone 是课程能力的收束点。训练项目要证明训练过程可复现、可恢复、可解释；推理项目要证明服务质量、延迟、成本和风险在目标 workload 下可判断。没有 baseline、ablation、失败分析和结论边界的项目，只是 demo，不是高校课程级项目。</div></div>
+</section>
+
+<section class="card" id="s11-9">
+  <h3>11.9 编程作业对应关系</h3>
   <p>Ch11 作业把本章概念落实到可运行函数：</p>
   <table>
     <tr><th>函数</th><th>对应概念</th><th>应能解释的问题</th></tr>
@@ -470,8 +508,8 @@ labels:       None  None cat    sat    None</div>
   </table>
 </section>
 
-<section class="card" id="s11-9">
-  <h3>11.9 小结</h3>
+<section class="card" id="s11-10">
+  <h3>11.10 小结</h3>
   <ul>
     <li>RNN/LSTM 解释了顺序递归、BPTT 和长距离依赖问题。</li>
     <li>Dependency parsing 是离散结构预测，不等于 attention heatmap。</li>
@@ -481,8 +519,8 @@ labels:       None  None cat    sat    None</div>
   </ul>
 </section>
 
-<section class="card" id="s11-10">
-  <h3>11.10 概念检查</h3>
+<section class="card" id="s11-11">
+  <h3>11.11 概念检查</h3>
   <div class="exercise" data-answer="2" data-explain="Dependency parsing 输出满足树约束的离散 head/label 结构；attention heatmap 是模型内部的连续权重，不能自动解释为句法树。">
     <h4>练习 1：为什么不能把 attention heatmap 直接当作 dependency tree？</h4>
     <div class="opts" role="radiogroup">

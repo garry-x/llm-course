@@ -530,6 +530,74 @@ total_params = count_parameters(model)</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 6.6A 工程视角串联 -->
+<!-- ================================================================ -->
+<section class="card" id="s6-6a">
+  <h3>6.6A 工程视角：一个完整 GPT 实现必须同时满足什么</h3>
+  <p>把 GPT 组件接起来之后，工程上还要回答三个问题：训练目标是否和数据对齐，参数和显存账本是否解释得清，推理时是否遵守自回归约束。下面把本章的关键实现点串成一张工程检查表，它对应的是模型设计能力，不是单纯的单元测试。</p>
+
+  <h4>1. 张量契约：从 token id 到 next-token loss</h4>
+  <p>完整 decoder-only LM 的 forward contract 是：</p>
+  <div class="code-block" data-lang="text">
+input_ids:       [B, T]
+token + pos emb: [B, T, d_model]
+blocks output:   [B, T, d_model]
+logits:          [B, T, vocab_size]</div>
+  <p>这里的 <code>logits[:, t, :]</code> 预测的是 <code>input_ids[:, t+1]</code>，不是当前位置 token。因此训练 loss 的核心对齐是：</p>
+  <div class="code-block" data-lang="python">
+shift_logits = logits[:, :-1, :]
+shift_labels = input_ids[:, 1:]
+loss = F.cross_entropy(
+    shift_logits.reshape(-1, vocab_size),
+    shift_labels.reshape(-1),
+    ignore_index=-100,
+)</div>
+  <p>最后一个输入位置没有 next-token label；padding 或不参与训练的位置必须用 <code>ignore_index</code> 排除。这个对齐错误通常不会导致 shape 报错，却会把语言建模目标变成“复述当前位置 token”，是初学实现里最隐蔽的错误之一。</p>
+
+  <h4>2. 参数账本：为什么 GPT-2 small 是 124,439,808</h4>
+  <p>GPT-2 small 的参数量不是一个需要背诵的数字，而是架构账本的结果。默认配置为 <code>V=50257, T_max=1024, d=768, L=12, d_ff=3072</code>。主要参数项为：</p>
+  <div class="code-block" data-lang="text">
+token embedding:     V * d
+position embedding:  T_max * d
+per block attention: d * 3d + 3d bias + d * d + d bias
+per block MLP:       d * 4d + 4d bias + 4d * d + d bias
+per block LayerNorm: 4d
+final LayerNorm:     2d
+LM head:             0 if tied, V * d if untied</div>
+  <p>在 weight tying 下，LM head 和 token embedding 是同一个参数对象，只计一次。训练工程师需要能把总参数拆成 embedding、position embedding、blocks、final norm 和 LM head，因为优化器状态、checkpoint 大小、张量并行切分和显存预算都依赖这个分解。</p>
+
+  <h4>3. Weight tying：共享参数不等于只更新目标 token</h4>
+  <p>共享权重时，输出层 logits 写成 <span class="katex-inline" data-expr="Z=HE^\top" aria-label="Z=HE^\top" role="img"></span>。交叉熵梯度会先作用到所有 vocab logits，再回传到 hidden states 和 embedding 矩阵：</p>
+  <div class="math-box"><div class="label">tied LM Head 梯度路径</div>
+    <div class="katex" data-expr="G=\frac{\partial L}{\partial Z},\qquad \frac{\partial L}{\partial H}=GE,\qquad \frac{\partial L}{\partial E}=G^\top H" aria-label="G=\frac{\partial L}{\partial Z},\qquad \frac{\partial L}{\partial H}=GE,\qquad \frac{\partial L}{\partial E}=G^\top H" role="img"></div>
+  </div>
+  <p>因此非目标词表行也会通过 softmax 概率得到输出端梯度。被输入序列索引到的 token 行还会从 embedding lookup 路径得到梯度。理解这点之后，weight tying 就不只是“省参数”，而是输入 token 空间和输出分类器共享几何结构的建模约束。</p>
+
+  <h4>4. Causal mask：推理约束必须在训练中成立</h4>
+  <p>训练时使用 teacher forcing，可以一次性看到整段序列；但模型内部的每个位置仍然只能关注过去和当前位置。dense attention 的因果约束是：</p>
+  <div class="code-block" data-lang="text">
+allowed[i, j] = j <= i
+scores[~allowed] = -inf
+weights = softmax(scores)</div>
+  <p>若 mask 方向写反或广播维度错误，训练 loss 可能异常顺利下降，因为模型偷看了未来 token；但推理时未来 token 不存在，质量会崩。一个小型 sanity check 是固定前缀、替换未来 token，过去位置 logits 不应变化。</p>
+
+  <h4>5. 初始化和位置编码：GPT-2 公式不能和现代 Llama 公式混用</h4>
+  <p>GPT-2 风格实现使用 learned absolute position embedding、LayerNorm、GELU MLP、带 bias 的线性层和常见的 <code>N(0, 0.02)</code> 初始化。Llama/DeepSeek 风格模型常用 RoPE、RMSNorm、SwiGLU 和 bias-free projection。两类模型都属于 decoder-only Transformer，但参数量公式、权重加载方式和训练稳定性细节不同。</p>
+  <p>如果输入长度超过 <code>max_seq_len</code>，learned position embedding 没有对应行，模型必须报错或显式扩展位置表。这里和 RoPE 的长上下文外推问题不同，不能用同一套解释。</p>
+
+  <h4>6. MoE：总容量和每 token 计算必须分开说</h4>
+  <p>MoE 把 FFN 替换成多个 experts，router 为每个 token 选择少数专家。对 bias-free SwiGLU expert：</p>
+  <div class="code-block" data-lang="text">
+expert_params = 3 * d_model * expert_hidden
+total_expert_params = (n_routed_experts + shared_experts) * expert_params
+activated_expert_params_per_token = (top_k + shared_experts) * expert_params
+capacity_to_compute_ratio = total_expert_params / activated_expert_params_per_token</div>
+  <p>这说明“模型总参数量”和“每 token 激活计算量”不是同一个指标。推理工程中，MoE 还会引入 dispatch/combine、跨设备通信、expert load skew 和 tail latency。因此 top-k 越小不必然越快，专家越多也不必然更好。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>完整 GPT 组装的核心能力是把 <code>forward shape</code>、next-token objective、参数量、梯度路径、因果约束和稀疏激活资源账本放在同一个系统里理解。只有这样，后续第 7 章的训练循环和第 10 章的推理服务才有可靠的模型基础。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 编程练习 4: HF 权重加载 -->
 <!-- ================================================================ -->
 <section class="card" id="s6-7">

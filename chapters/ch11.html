@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第11章 经典神经 NLP 与评测</h2>
   <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT——把 CS224N 主线接回现代 LLM</p>
-  <div class="reading-time">预计阅读: 110 分钟 · 12 小节 · 5 类可运行练习 · 5 道概念练习</div>
+  <div class="reading-time">预计阅读: 120 分钟 · 13 小节 · 5 类可运行练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -359,6 +359,52 @@ labels:       None  None cat    sat    None</div>
   <p>不充分写法：<code>加入 reranker 后 benchmark 从 72% 提升到 75%，效果更好。</code></p>
   <p>更严谨写法：在同一组 <code>n=500</code> 中文法规 QA 样本上，固定生成模型、prompt、temperature=0、max output=384 和 context budget=1800 tokens，只把 top-8 dense retrieval 改为 dense retrieval + cross-encoder rerank。端到端 accuracy 从 <code>72.0%</code> 到 <code>75.0%</code>，bootstrap 95% CI 的差值约为 <code>[0.4%, 5.8%]</code>；retrieval Recall@8 不变，但 citation precision 从 <code>68%</code> 到 <code>79%</code>；P95 latency 增加 <code>140ms</code>，平均输入 token 不变。这个结论支持“reranker 改善了该法规 QA workload 的上下文排序，值得灰度”，不支持“所有 RAG 任务都应加入 reranker”。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>可信 benchmark 结论至少要同时经受四个问题：数据是否干净，比较是否公平，差异是否稳定，消融是否能解释提升来源。少一个环节，分数都只能作为线索。</div></div>
+</section>
+
+<section class="card" id="s11-6c">
+  <h3>11.6C Safety &amp; Social Impact：风险分类、触发条件与工程缓解</h3>
+  <p>高校级 NLP/LLM 课程不能把 safety 当成上线前的附录。模型风险来自数据、训练目标、推理接口、应用场景和用户群体的组合；同一个模型在闲聊、医疗摘要、金融建议、教育辅导和代码执行中的错误成本完全不同。工程师需要能把“模型可能有害”拆成可讨论、可测量、可缓解的风险类别。</p>
+
+  <h4>1. 风险不是一个维度</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>风险类别</th><th>典型触发条件</th><th>工程上先看什么</th><th>常见缓解</th></tr>
+      <tr><td>幻觉与误导</td><td>开放式问答、RAG 召回不足、模型被要求给确定答案</td><td>事实错误率、引用覆盖、无法回答时的表达</td><td>检索引用、答案不确定性、抽取式约束、高风险场景人工复核</td></tr>
+      <tr><td>隐私与个人信息</td><td>训练数据含 PII、日志保存用户输入、RAG 索引含敏感文档</td><td>数据来源、日志保留、访问权限、输出是否泄露个人信息</td><td>PII 过滤、最小化日志、租户隔离、权限感知检索</td></tr>
+      <tr><td>偏见与代表性不足</td><td>语料语言/地区/群体不均衡，标注者偏好单一</td><td>按语言、地区、群体和任务切片的错误率</td><td>数据再平衡、切片评测、标注指南多样化、失败案例复盘</td></tr>
+      <tr><td>滥用与越狱</td><td>危险操作请求、多轮绕过、工具调用或代码执行权限</td><td>有害完成率、越狱成功率、工具权限边界</td><td>能力分级、工具沙箱、拒答策略、敏感操作二次确认</td></tr>
+      <tr><td>过度拒答</td><td>安全数据比例过高，策略把良性敏感请求当危险请求</td><td>benign sensitive set 上的错误拒答率</td><td>加入安全但应回答的样本，分开训练拒答和帮助性</td></tr>
+      <tr><td>版权与来源</td><td>训练语料或 RAG 语料来源不清，输出长段近似复述</td><td>数据许可、引用链路、输出相似度和来源标注</td><td>授权数据、引用来源、避免长段复述、保留可追踪文档 id</td></tr>
+      <tr><td>自动化依赖</td><td>用户把模型输出直接用于决策，系统没有人类确认环节</td><td>错误成本、用户是否知道模型限制、是否有申诉或回退路径</td><td>明确适用范围、人机协作、保守默认值、关键决策人工确认</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 安全评估要按场景写，而不是按口号写</h4>
+  <p>“模型安全”不能脱离应用场景。医疗问答的核心风险是误导性建议、隐私和不确定性表达；代码 Agent 的核心风险是执行权限、供应链和数据外传；教育辅导的核心风险是错误反馈、过度代写和学习依赖。课程项目中应先写清目标场景、用户、模型权限和错误成本，再选择样本和指标。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>场景</th><th>必须覆盖的样本切片</th><th>不充分的评估方式</th></tr>
+      <tr><td>医疗科普问答</td><td>普通科普、紧急症状、用药、隐私信息、应建议就医的问题</td><td>只看回答是否流畅或是否拒答</td></tr>
+      <tr><td>企业 RAG</td><td>权限内文档、权限外文档、过期文档、冲突文档、引用缺失</td><td>只看最终答案正确率，不看权限和引用</td></tr>
+      <tr><td>代码 Agent</td><td>只读任务、写文件任务、联网任务、危险命令、依赖安装</td><td>只看 pass rate，不看工具调用边界</td></tr>
+      <tr><td>多模态文档理解</td><td>小字、表格、签名、人脸、身份证件、图表数值</td><td>用普通 VQA 分数代表文档安全性</td></tr>
+    </table>
+  </div>
+
+  <h4>Worked Example：RAG 医疗问答的风险分解</h4>
+  <p>假设团队要上线一个面向患者的医疗科普 RAG。一个不充分的方案是只测“回答是否看起来专业”。更合理的工程分解是：</p>
+  <ol>
+    <li><strong>检索风险：</strong>相关指南是否被召回，过期文档是否进入 context，引用是否指向正确段落。</li>
+    <li><strong>生成风险：</strong>模型是否把检索内容外推成诊断结论，是否编造药量，是否在缺少信息时给确定建议。</li>
+    <li><strong>隐私风险：</strong>用户输入和日志是否包含姓名、电话、病历号或可识别信息。</li>
+    <li><strong>拒答边界：</strong>普通科普应回答，急症、自我伤害、处方调整等请求应转向专业帮助。</li>
+    <li><strong>可用性：</strong>安全策略不能把所有医学问题都拒掉，否则系统在真实用户任务中不可用。</li>
+  </ol>
+  <p>因此该系统至少应报告 retrieval recall、引用准确率、事实错误率、有害建议率、普通医学科普完成率、急症转介率、PII 日志处理方式和用户界面中的限制说明。这里的重点不是制造更多表格，而是让模型行为、数据来源、用户风险和部署边界能被同一套工程语言描述。</p>
+
+  <h4>3. Safety 与 alignment、evaluation、serving 是同一条链路</h4>
+  <p>第 9 章讨论的是如何用 SFT/DPO/GRPO 改变模型行为，第 10 章讨论的是如何把模型变成可服务系统，本节讨论的是这些行为在真实场景中的风险边界。一个模型可以在 harmlessness 上提升，同时在良性敏感问题上过度拒答；也可以在离线 safety set 上表现好，却因为工具权限过大而在 Agent 场景中失败。课程项目应把安全切片放进与质量、延迟、成本并列的结果表，而不是在结论里只写一句“已考虑安全”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>社会影响不是抽象道德讨论，也不是单一安全分数。LLM 工程师要能把风险映射到数据、目标函数、接口权限、用户场景和评测切片，并说明每个缓解动作会牺牲什么能力、延迟或成本。</div></div>
 </section>
 
 <section class="card" id="s11-7">

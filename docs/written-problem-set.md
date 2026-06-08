@@ -78,6 +78,8 @@
 11. 给定 `grad_accum_steps=4`、四个 micro-batch mean losses、每个 micro-batch 的 token 数和 warmup scheduler，计算每次 backward 使用的 scaled loss、一次 optimizer step 消耗的 token 数、scheduler 应推进几次，以及如果忘记除以 `grad_accum_steps` 会等价于怎样改变学习率。
 12. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
 13. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
+14. 给定 7B 参数模型、8 张 GPU、bf16 参数/梯度、fp32 AdamW `m/v` states，分别计算 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存；再说明这些估算没有包含 activation、通信 buffer、临时张量和 allocator fragmentation，因此不能单独证明训练可行。
+15. 给定模型参数量 `N=7B`、吞吐 `tokens/s=20000`、GPU 数 `8`、单卡峰值 `300 TFLOP/s`，按 `6N` FLOPs/token 粗估 MFU；若 MFU 只有 18%，列出至少 4 个可能原因，并说明如何用 profiler 或日志区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合。
 
 ## Ch08 Generation / Decoding
 
@@ -117,6 +119,8 @@
 8. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank、hybrid+MMR 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。
 9. 设计一个多模态 LLM 评估：分别覆盖图像问答、OCR/文档理解、图表数值推理和视觉定位，说明输入分辨率、视觉 token 数、延迟、KV Cache 成本和每类任务的失败模式。
 10. 为一个 LLM benchmark 写结构化结论摘要：包括 task、sample_size、baseline、metrics、risks、uncertainty 和 conclusion，并说明哪些结论不能从这组数据推出。
+11. 给定服务 workload：`QPS=10`、平均 prompt tokens `800`、平均 output tokens `200`、单卡 prefill capacity `120k prompt tokens/s`、decode capacity `2.5k output tokens/s`，计算 prefill/decode token rate，并判断主要瓶颈；说明为什么 QPS 继续上升时 TPOT、排队时长和 TTFT 可能以不同顺序恶化。
+12. 给定 32 层 GQA 模型、`n_kv_heads=8`、`head_dim=128`、fp16 KV Cache、平均活跃上下文 `6000` tokens、可用于 KV 的显存 `48 GiB`，计算每 token KV bytes、每请求 KV Cache 和理论最大活跃请求数；再考虑 20% 安全余量，给出 admission limit，并解释为什么只按并发请求数限流会误伤短请求或放过长请求。
 
 ## 经典 NLP 专题题
 
@@ -126,6 +130,8 @@
 4. BERT/Encoder-only：比较 MLM 与 causal LM 的 mask 方式、训练目标和下游 fine-tuning 输入格式；给定 masked positions、vocab logits 和 labels，计算只在 mask 位置上的 MLM cross entropy 与 accuracy；给定 BIO tags 解码 NER/entity spans；给定 gold/pred spans，计算 span-level precision、recall、F1、TP、FP 和 FN；给定 emission/transition scores 手算 Viterbi 最优 tag path、CRF forward log-partition、gold path score 与 CRF NLL；给定 `[CLS] question [SEP] passage [SEP]` 的 start/end logits，选择抽取式 QA 的最佳 span，并说明 `[CLS]` no-answer 的含义。
 5. Evaluation：比较 perplexity、BLEU、ROUGE、F1、exact match 和 LLM-as-judge 的适用范围与失效模式。
 6. Ethics/Safety：列出一个 RAG 医疗问答系统的隐私、幻觉、偏见和评测污染风险，并给出缓解方案。
+7. 现代 LLM 评测协议：给定 pairwise judge 结果 `W=42, L=35, T=23`，计算 tie-adjusted win rate；说明位置偏置、长度偏置、judge 模型同源偏置和小样本方差如何影响结论。再把“模型 A 比模型 B 好 8%”改写成包含样本量、任务、prompt、temperature、失败类别、延迟/成本和不可外推范围的严谨结论。
+8. Safety evaluation：给定 harmful set、benign sensitive set 和普通任务集上的拒答/通过/错误计数，分别计算 attack success rate、refusal rate、over-refusal rate 和 task utility；解释为什么高拒答率不等于高安全性，以及如何同时报告 helpfulness、harmlessness 和能力保留。
 
 ## 跨章节综合题
 

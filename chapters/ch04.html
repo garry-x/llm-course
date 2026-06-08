@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第4章 多头注意力与MLA</h2>
   <p class="subtitle">从MHA到GQA到DeepSeek MLA——KV Cache压缩之路</p>
-  <div class="reading-time">⏱ 预计阅读: 90 分钟 · 11 小节 · 5 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 12 小节 · 5 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -429,6 +429,51 @@ attn score: [B, H_q,  1, t]</div>
   </div>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>MHA/GQA/MLA 的数学差异要落到两个工程问题上：训练或 prefill 时如何并行计算整段序列，decode 时如何最小化历史 K/V 的存储和读取。能把这两种 layout 分开解释，才算真正理解了 KV cache 压缩为什么重要。</div></div>
+</section>
+
+<section class="card" id="s4-5c">
+  <h3>4.5C 从 MHA checkpoint 转成 GQA：压缩不是简单改配置</h3>
+  <p>实际工程里经常遇到这种需求：已有一个 MHA checkpoint，推理服务的瓶颈却在 KV Cache，于是希望把 <code>H_q=H_kv</code> 的模型改成 <code>H_q &gt; H_kv</code> 的 GQA。这个过程不能只把配置里的 <code>n_kv_heads</code> 改小。K/V 投影权重、optimizer 状态、cache layout 和质量评估都要重新对齐。</p>
+
+  <h4>1. 权重如何折叠</h4>
+  <p>设原模型有 <code>H_q=8</code> 个 K/V heads，希望转换成 <code>H_kv=2</code>。每 4 个原始 K/V heads 会变成 1 个共享 KV head。最常见的初始化方式是按组平均原始 K/V 投影：</p>
+  <div class="code-block" data-lang="text">
+old K heads: [K0, K1, K2, K3, K4, K5, K6, K7]
+new K heads: [mean(K0..K3), mean(K4..K7)]
+old V heads: [V0, V1, V2, V3, V4, V5, V6, V7]
+new V heads: [mean(V0..V3), mean(V4..V7)]</div>
+  <p>Q 投影和输出投影 <code>W_o</code> 通常保持原 head 数，因为 GQA 的目标是减少 K/V 表示，而不是减少 query head 的多样性。转换后，forward 会先得到 <code>[B,H_kv,T,D]</code> 的 K/V，再通过 <code>repeat_kv_heads</code> 对齐到 <code>[B,H_q,T,D]</code> 做 attention。</p>
+
+  <h4>2. 为什么需要 uptraining</h4>
+  <p>按组平均只是一个初始化。原本每个 query head 可以访问独立 K/V 空间；转换后多个 query head 共享同一 K/V，信息路由能力下降。继续训练一小段通常用于让 Q、K、V 和后续层重新适应共享 K/V 的约束。这个阶段常被称为 uptraining 或 conversion fine-tuning。</p>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>检查项</th><th>应该观察什么</th><th>异常含义</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>转换前后 logit parity</td><td>同一输入下 logits 有变化，但不应完全失控</td><td>head reshape、平均维度或 RoPE 位置维度错</td></tr>
+      <tr><td>短程 validation loss</td><td>转换后 loss 上升，uptraining 后部分恢复</td><td>若无法恢复，<code>H_kv</code> 可能太小或数据不匹配</td></tr>
+      <tr><td>长上下文任务</td><td>检查检索、引用、代码和多轮对话</td><td>K/V 多样性下降可能先伤害复杂长程依赖</td></tr>
+      <tr><td>decode KV bytes</td><td>按 <code>H_q/H_kv</code> 下降</td><td>若没下降，可能把 repeat 后 K/V 写进 cache</td></tr>
+      <tr><td>TPOT / tokens/s</td><td>decode 阶段改善更明显，prefill 未必同幅改善</td><td>瓶颈可能在权重带宽、调度、采样或网络</td></tr>
+    </tbody>
+  </table>
+
+  <h4>3. optimizer 与 checkpoint 不能直接复用</h4>
+  <p>转换后 K/V 投影的 shape 变了，原始 optimizer state 中对应的 AdamW <code>m/v</code> 也不再同形。稳妥做法是把转换后的模型作为新 checkpoint：保留可映射的权重，重新初始化 shape 改变部分的 optimizer state，并在配置中写清 <code>n_heads</code>、<code>n_kv_heads</code>、head grouping、RoPE 设置和 cache layout。否则 resume 训练或推理加载时会出现 state_dict key 对得上但语义不一致的问题。</p>
+
+  <h4>4. 报告结论要同时包含质量和系统收益</h4>
+  <p>一个严谨的 MHA→GQA 转换报告至少应包含：</p>
+  <div class="code-block" data-lang="text">
+conversion: MHA H_q=32,H_kv=32 -> GQA H_q=32,H_kv=8
+init: group-mean K/V projection, Q/O unchanged
+training: uptraining tokens, lr schedule, data mixture, validation loss
+quality: short-context PPL, long-context retrieval, code/math/chat slices
+serving: KV cache GB/request, P50/P95 TPOT, throughput at target concurrency
+boundary: tasks where quality regressed or cache was not the bottleneck</div>
+  <p>这也是本章和第 10 章的连接点：GQA 的架构压缩只有在推理 workload 中被测到，才算完成工程闭环。若质量下降大于服务收益，或者瓶颈其实在 prefill、网络、RAG 检索、sampling 后处理，那么减少 KV head 并不一定是正确优化。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>GQA 是一种把 K/V 表示容量换成 decode cache 和带宽收益的架构选择。训练工程师要能把 MHA checkpoint 转换成可继续训练的 GQA 初始化；推理工程师要能证明 cache、TPOT 和并发收益真的抵消了质量风险。</div></div>
 </section>
 
 <!-- ================================================================ -->

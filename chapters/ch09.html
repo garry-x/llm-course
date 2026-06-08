@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第9章 微调与对齐</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO——从预训练到有用助手的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 115 分钟 · 17 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 125 分钟 · 18 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -980,6 +980,58 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
   </ol>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>对齐评估不是问“模型更像偏好数据了吗”，而是问“模型是否更可靠地帮助用户，同时在危险场景中保持边界，并且没有显著牺牲已有能力”。</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 9.10B Preference optimization run log -->
+<!-- ================================================================ -->
+<section class="card" id="s9-10b">
+  <h3>9.10B 偏好优化训练记录：把 log-ratio、KL 和行为变化连起来</h3>
+  <p>偏好优化训练最容易出现的误读，是把 <code>preference_accuracy</code> 上升当成最终成功。DPO、PPO 和 GRPO 的训练日志应当同时回答三个问题：模型是否按偏好对改变了 chosen/rejected 的相对概率；策略是否已经偏离 reference 太远；输出行为是否真的改善，而不是只变长、变模板化或更爱拒答。</p>
+
+  <h4>DPO 至少记录哪些量</h4>
+  <p>DPO 的核心不是比较 <code>log pi(chosen)</code> 和 <code>log pi(rejected)</code> 的绝对大小，而是比较 policy 相对 reference 的提升。一个训练 step 的日志至少应包含：</p>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>字段</th><th>定义</th><th>如何解释</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>chosen_log_ratio</code></td><td><code>log pi_theta(y_w|x) - log pi_ref(y_w|x)</code></td><td>chosen 相对 reference 被提高了多少</td></tr>
+      <tr><td><code>rejected_log_ratio</code></td><td><code>log pi_theta(y_l|x) - log pi_ref(y_l|x)</code></td><td>rejected 相对 reference 被提高或压低了多少</td></tr>
+      <tr><td><code>reward_margin</code></td><td><code>beta * (chosen_log_ratio - rejected_log_ratio)</code></td><td>DPO 的隐式 reward 边际；大于 0 才表示当前偏好方向正确</td></tr>
+      <tr><td><code>preference_prob</code></td><td><code>sigmoid(reward_margin)</code></td><td>模型按当前隐式 reward 判断 chosen 胜出的概率</td></tr>
+      <tr><td><code>sequence_length_delta</code></td><td><code>len(chosen) - len(rejected)</code></td><td>判断偏好提升是否可能来自长度偏差</td></tr>
+      <tr><td><code>heldout_preference_acc</code></td><td>未见过偏好对上的边际准确率</td><td>训练集 accuracy 上升但 held-out 不升，通常是过拟合或数据偏差</td></tr>
+    </tbody>
+  </table>
+  <p>作业中的 <code>dpo_implicit_rewards</code> 正是把这些量显式返回。训练工程师要看分布，而不是只看均值：如果少数长回答贡献了大部分正边际，模型可能正在学习“回答更长更容易赢”；如果 chosen 和 rejected 都被 policy 相对 reference 大幅提高，说明 KL 锚点可能太弱，模型没有真正压低低质量回答。</p>
+
+  <h4>PPO/GRPO 还要看 ratio 与 clipping</h4>
+  <p>GRPO 使用组内白化的 advantage，但策略更新仍然通过 PPO-style clipped surrogate 控制步长。日志中的 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code> 是判断训练是否稳定的关键。</p>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>现象</th><th>可能含义</th><th>优先处理</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>clip_fraction</code> 长期接近 0</td><td>更新很保守，可能 reward 信号弱、lr 太小或 advantage 尺度太小</td><td>检查 reward 分布、组内标准差、学习率和有效 completion token 数</td></tr>
+      <tr><td><code>clip_fraction</code> 长期很高</td><td>策略步长经常越界，PPO clipping 在强行限制更新</td><td>降低 lr、减小 reward scale、增大 batch 或提高 KL 惩罚</td></tr>
+      <tr><td><code>approx_kl</code> 快速上升</td><td>policy 正在远离 reference，可能损伤基础能力或安全边界</td><td>提高 <code>kl_beta</code>、降低 lr、检查 reward hacking</td></tr>
+      <tr><td><code>mean_advantage</code> 不接近 0</td><td>组内白化、mask 或 batch 维度可能实现错</td><td>确认按同一 prompt 的 G 个 completion 归一化，而不是跨 prompt 混合</td></tr>
+      <tr><td>reward 上升但人工质量下降</td><td>奖励漏洞、长度偏差或 judge 风格偏差</td><td>加入失败切片，分开报告正确性、长度、拒答和格式</td></tr>
+    </tbody>
+  </table>
+
+  <h4>从训练日志到行为回归</h4>
+  <p>偏好优化后的模型至少要和 base/SFT checkpoint 做同条件比较。下面这类记录比“DPO loss 下降”更能说明问题：</p>
+  <div class="code-block" data-lang="text">
+checkpoint: sft_step_20000 -> dpo_step_3000
+decoding: temperature=0.2, top_p=0.9, max_new_tokens=512
+optimization: preference_acc, reward_margin_p50/p95, approx_kl, length_delta
+behavior: task_success, hallucination_rate, unsafe_completion_rate, over_refusal_rate
+retention: math/code/readcomp slices compared against SFT baseline</div>
+  <p>如果 <code>approx_kl</code> 很低但行为没有变化，说明偏好训练可能太弱；如果 <code>approx_kl</code> 很高且数学/代码能力下降，说明对齐税已经出现；如果安全拒答率上升但良性敏感请求完成率下降，说明模型可能学到了过度拒答。课程项目应把这些行为切片和优化日志放在同一张结果表中，才能判断对齐方法是否值得继续扩大训练。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>偏好优化的训练记录必须同时包含目标函数内部量和外部行为量。内部量说明优化是否按公式发生，外部行为量说明它是否真的让模型更有用、更诚实、更安全，并且没有过度牺牲原有能力。</div></div>
 </section>
 
 <!-- ================================================================ -->

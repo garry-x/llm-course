@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / 稀疏注意力 / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 135 分钟 · 21 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 145 分钟 · 22 小节 · 6 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -1042,6 +1042,61 @@ summary = build_benchmark_summary(
     <li><strong>工程动作：</strong>列出一次调参或架构修改，并说明它改善了哪个指标、牺牲了什么。</li>
   </ol>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级推理工程训练不应停留在“我会调用推理 API”。你需要能把一个真实服务拆成 workload、显存、调度、cache、质量和成本，并用实验结果支撑容量决策。</div></div>
+</section>
+
+<section class="card" id="s10-13b">
+  <h3>10.13B 模型发布包：从训练 checkpoint 到可回滚服务</h3>
+  <p>训练完成的 checkpoint 还不是线上模型。训练 checkpoint 关注能否继续优化，推理发布包关注能否被服务稳定加载、以固定模板生成、在质量和延迟上达到目标，并且出现问题时可以快速回滚。训练工程师和推理工程师交接时，必须把模型产物、数据协议和服务配置放进同一个版本化包。</p>
+
+  <h4>1. 发布包里至少包含什么</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>产物</th><th>为什么必要</th><th>常见遗漏后果</th></tr>
+      <tr><td>模型权重</td><td>基础模型、SFT/DPO checkpoint、MoE expert 或 FSDP 合并后的权重</td><td>加载成功但层名、shape 或专家路由语义不一致</td></tr>
+      <tr><td>模型配置</td><td>层数、hidden size、head/GQA、RoPE、context length、norm/MLP 类型</td><td>同名权重被错误结构解释，质量异常但不一定报错</td></tr>
+      <tr><td>Tokenizer 与 chat template</td><td>特殊 token、BOS/EOS、role 边界、tool schema 和 stop 规则</td><td>模型重复角色名、无法停止、SFT mask 与推理模板不一致</td></tr>
+      <tr><td>Adapter / LoRA 策略</td><td>是否已 merge、每个 adapter 适用租户或任务、rank/alpha 记录</td><td>服务端重复叠加 adapter，或忘记加载目标 adapter</td></tr>
+      <tr><td>量化配置</td><td>weight-only、KV quant、FP8/INT8/INT4、校准集和 scale metadata</td><td>显存下降但困惑度、logit 排序或格式输出退化</td></tr>
+      <tr><td>固定回归集</td><td>质量、安全、格式、工具调用和长上下文的固定样本</td><td>发布后只看线上投诉，无法定位改动来源</td></tr>
+      <tr><td>服务配置</td><td>max_model_len、batch 参数、prefix cache、限流、采样默认值</td><td>同一模型在不同服务参数下延迟和输出行为不可比</td></tr>
+      <tr><td>模型卡 / 发布说明</td><td>训练数据范围、适用任务、风险边界、已知失败和回滚版本</td><td>调用方把局部提升外推成通用能力</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 推理导出和训练恢复是两种 checkpoint</h4>
+  <p>第 7 章的训练 checkpoint 应包含 optimizer、scheduler、RNG、dataloader position 和 global step；推理发布包通常只需要模型权重、配置、tokenizer、模板和服务参数。把训练 checkpoint 直接塞进推理引擎会带来多余状态、格式不兼容和加载速度问题；只保存推理权重又不能用于中断后继续训练。工程上应明确区分：</p>
+  <ul>
+    <li><strong>resume checkpoint：</strong>用于继续训练，包含 optimizer state、sampler state 和 run config。</li>
+    <li><strong>serving artifact：</strong>用于推理部署，强调加载速度、权重格式、tokenizer/template 和服务参数。</li>
+    <li><strong>analysis snapshot：</strong>用于研究复盘，保留训练曲线、评测结果和样本输出。</li>
+  </ul>
+
+  <h4>3. 发布前要做哪些一致性检查</h4>
+  <p>模型发布不是等线上流量来发现问题。最小检查应覆盖“能否加载、输出是否对齐、行为是否保持、系统是否承受得住”四类问题：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>检查</th><th>输入</th><th>通过标准</th><th>失败时优先怀疑</th></tr>
+      <tr><td>Load smoke</td><td>冷启动加载模型与 tokenizer</td><td>无 missing/unexpected key，特殊 token id 与配置一致</td><td>权重格式、vocab size、adapter 合并、FSDP shard</td></tr>
+      <tr><td>Logit parity</td><td>固定短 prompt，比较导出前后 logits 或 top-k token</td><td>未量化时接近一致；量化时 top-k 排序和 PPL 退化可解释</td><td>转置、RoPE、dtype、LayerNorm eps、量化 scale</td></tr>
+      <tr><td>Template parity</td><td>固定 chat messages 和 tool schema</td><td>训练模板与服务模板 token 序列一致或差异有记录</td><td>role token、BOS/EOS、换行、stop 规则</td></tr>
+      <tr><td>Behavior regression</td><td>固定质量/安全/格式样本集</td><td>目标切片提升，关键旧能力不显著退化</td><td>SFT/DPO 数据偏移、长度偏差、拒答边界</td></tr>
+      <tr><td>Serving smoke</td><td>短 prompt、长 prompt、流式、JSON/tool 调用</td><td>finish_reason、usage、错误码和流式事件稳定</td><td>API wrapper、schema 约束、max_tokens、stop</td></tr>
+      <tr><td>Rollback drill</td><td>切回上一版本或备用模型</td><td>配置和缓存能恢复，调用方路由不混乱</td><td>版本命名、缓存污染、灰度路由策略</td></tr>
+    </table>
+  </div>
+
+  <h4>Worked Example：LoRA + 量化模型如何交接</h4>
+  <p>假设团队训练了一个 LoRA 适配器，用于中文客服 RAG。训练侧报告 DPO 后偏好胜率提升，但推理侧想用 INT4 权重量化降低成本。一个合格发布流程不应只写“merge LoRA 后部署”。更严谨的顺序是：</p>
+  <ol>
+    <li>固定基础模型、tokenizer、chat template 和 SFT/DPO adapter 版本。</li>
+    <li>决定 adapter 是离线 merge 成单一权重，还是服务端按租户动态加载。</li>
+    <li>若 merge，先在 FP16/BF16 下做 logit parity 和行为回归，再做量化。</li>
+    <li>量化后重新跑 PPL、格式正确率、引用一致性和 P95 TTFT/TPOT，不把未量化结果外推到量化版本。</li>
+    <li>发布时保留上一个稳定版本，并保证路由、cache key 和监控标签能区分两个模型。</li>
+  </ol>
+  <p>这个例子说明：训练方法、权重格式、tokenizer、量化和服务参数共同定义最终模型。任何一项改变都可能影响质量、延迟、显存和安全行为，因此发布包必须把它们一起版本化。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>LLM 工程的交付物不是“一个 checkpoint 文件”，而是一套可加载、可复现、可压测、可灰度、可回滚的模型发布包。训练指标只有在这个发布包内复现，才真正能转化为线上能力。</div></div>
 </section>
 
 <!-- ================================================================ -->

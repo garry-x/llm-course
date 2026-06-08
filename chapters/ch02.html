@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第2章 嵌入层与位置编码</h2>
   <p class="subtitle">实现 TokenEmbedding + Sinusoidal + RoPE——让模型理解语义与顺序</p>
-  <div class="reading-time">⏱ 预计阅读: 95 分钟 · 12 小节 · 4 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 13 小节 · 4 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -170,6 +170,58 @@
   <h4>类比推理是空间结构的诊断，不是目标函数保证</h4>
   <p>3CosAdd 查询 <span class="katex-inline" data-expr="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" aria-label="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" role="img"></span> 的含义是：从 <code>king</code> 的向量中减去与 <code>man</code> 相关的方向，再加上与 <code>woman</code> 相关的方向，然后找余弦相似度最高的候选。这个过程通常还要排除输入词 <code>king</code>、<code>man</code>、<code>woman</code>，否则最近邻可能只是原词本身。</p>
   <p>类比成功依赖很多条件：语料中相关关系足够系统，向量经过合适训练，频率和多义性没有主导距离，评价集也接受单一词答案。因此本课程把类比题作为“向量空间是否学到某类线性规律”的检查，而不是把它作为语义理解的充分证明。</p>
+</section>
+
+<section class="card" id="s2-1c">
+  <h3>2.1C Embedding 空间诊断：相似、各向异性与频率效应</h3>
+  <p>训练出一个 embedding 矩阵之后，不能只看 loss 下降就认为表示已经“学好”。高校 NLP 课程会反复强调：向量空间的几何结构来自训练目标和数据分布，也会带来偏差与失败模式。对 LLM 工程师来说，embedding 诊断是发现 tokenizer、数据配比、初始化和 weight tying 问题的早期信号。</p>
+
+  <h4>1. 行范数不是语义强度</h4>
+  <p>embedding 矩阵 <code>E[V, d]</code> 中每一行对应一个 token。训练后常见现象是高频 token 的行范数更大，因为它们被更新次数更多；特殊 token、空格、标点和常见子词也可能形成明显簇。范数大不等于语义更重要，它往往混合了频率、优化历史和输出层梯度。</p>
+  <div class="code-block" data-lang="text">
+diagnostics:
+  row_norm_mean / row_norm_p95
+  top_norm_tokens
+  low_norm_tokens
+  norm_by_frequency_bucket
+  special_token_norms</div>
+  <p>如果新加的特殊 token 范数远低于普通 token，可能是它们初始化后训练不足；如果 padding token 范数被大量更新，通常说明 loss mask 或 attention mask 有问题。</p>
+
+  <h4>2. Cosine similarity 要先处理尺度</h4>
+  <p>余弦相似度把向量方向和长度分开，是观察语义邻居、类比和聚类的常用工具。Ch02 作业中的 <code>cosine_similarity_matrix</code> 先把每行归一化，再计算 <code>normalized @ normalized.T</code>。这一步很重要：若直接用 dot product，高范数高频 token 会主导最近邻结果。</p>
+  <p>但 cosine 也不是万能解释。LLM 的输入 embedding 只是第一层表示，同一个 token 在不同上下文中的最终 hidden state 可以完全不同。因此“embedding 中相近”只说明初始 token 表示相近，不等于模型最终会把两个词当成同义词处理。</p>
+
+  <h4>3. 各向异性会让最近邻退化</h4>
+  <p>高维 embedding 空间常出现<strong>各向异性</strong>：大量向量朝向某些共同方向，导致任意两个 token 的 cosine 都偏高，最近邻被频率、格式或公共方向支配。一个简单诊断是统计 off-diagonal cosine 的分布：</p>
+  <div class="code-block" data-lang="text">
+cosine matrix excluding diagonal:
+  mean close to 0      -> 空间较均衡
+  mean high positive   -> 可能存在公共方向或频率主导
+  p95 very high        -> 局部簇或重复 token 过强</div>
+  <p>研究中常用去均值、去主成分或 whitening 来分析静态词向量，但工程上不要随意把这些变换应用到正在训练的 LLM embedding。诊断的目标是理解问题来源，而不是在没有验证的情况下修改模型参数。</p>
+
+  <h4>4. 类比成功需要系统关系，而不是单个例子</h4>
+  <p>3CosAdd 的形式 <code>v_b - v_a + v_c</code> 假设某种关系可以近似表示为线性方向。例如 gender、capital-country 或词形变化在某些语料中可能形成方向。但一个成功例子不说明模型理解了关系；一个失败例子也不说明 embedding 毫无语义。严谨做法是按关系类型构造一组 query，报告 top-k accuracy，并检查错误是否来自频率、子词切分、多义词或评价集歧义。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>诊断项</th><th>能说明什么</th><th>不能说明什么</th></tr>
+      <tr><td>最近邻</td><td>局部方向是否聚出相关 token</td><td>不能证明上下文语义等价</td></tr>
+      <tr><td>类比 top-k</td><td>某类线性关系是否系统存在</td><td>不能覆盖推理、事实性或多义性</td></tr>
+      <tr><td>范数分布</td><td>频率、mask、特殊 token 更新是否异常</td><td>不能单独解释 token 重要性</td></tr>
+      <tr><td>off-diagonal cosine</td><td>空间是否被公共方向主导</td><td>不能直接给出修复方案</td></tr>
+    </table>
+  </div>
+
+  <h4>5. LLM embedding 的工程检查点</h4>
+  <p>在训练或微调模型时，建议至少在以下时刻看一次 embedding 诊断：tokenizer 变更后、添加特殊 token 后、weight tying 打开/关闭后、SFT 开始前后、训练 loss 异常时。特别关注：</p>
+  <ul>
+    <li><strong>新增 token 是否被训练：</strong>特殊 token 和领域术语是否有非零梯度和合理范数。</li>
+    <li><strong>padding 是否泄漏：</strong>PAD 行是否被 loss 更新，attention mask 是否让模型关注 padding。</li>
+    <li><strong>语言/领域是否失衡：</strong>少数语言或代码 token 是否长期被切碎且范数偏低。</li>
+    <li><strong>weight tying 是否一致：</strong>输入 embedding 和 LM head 共享时，输出端梯度会更新所有 softmax 行；未共享时两套空间可能逐渐分离。</li>
+  </ul>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>Embedding 不是静态语义词典，而是训练目标、tokenizer、频率和输出层共同塑造的参数矩阵。诊断 embedding 空间的价值在于发现系统性问题，而不是用单个最近邻或类比例子证明模型“理解语言”。</div></div>
 </section>
 
 <!-- ================================================================ -->

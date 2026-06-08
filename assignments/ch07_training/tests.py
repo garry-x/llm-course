@@ -299,6 +299,42 @@ class TestLossOptimizerScheduler(unittest.TestCase):
         self.assertAlmostEqual(factors[6], 0.25)
         self.assertTrue(all(0.25 <= value <= 1.0 for value in factors[2:]))
 
+    def test_lr_schedule_trace_reports_lr_and_consumed_tokens(self):
+        trace = submission.lr_schedule_trace(
+            base_lr=0.2,
+            num_warmup_steps=2,
+            num_training_steps=6,
+            min_lr_ratio=0.25,
+            tokens_per_step=1000,
+        )
+        rows = trace["steps"]
+        self.assertEqual(len(rows), 7)
+        self.assertEqual(rows[0]["phase"], "warmup")
+        self.assertAlmostEqual(rows[0]["lr_multiplier"], 0.0)
+        self.assertAlmostEqual(rows[0]["lr"], 0.0)
+        self.assertEqual(rows[0]["consumed_tokens"], 0)
+        self.assertAlmostEqual(rows[1]["lr_multiplier"], 0.5)
+        self.assertAlmostEqual(rows[1]["lr"], 0.1)
+        self.assertEqual(rows[1]["consumed_tokens"], 1000)
+        self.assertEqual(rows[2]["phase"], "cosine")
+        self.assertAlmostEqual(rows[2]["lr_multiplier"], 1.0)
+        self.assertAlmostEqual(rows[2]["lr"], 0.2)
+        self.assertAlmostEqual(rows[6]["lr_multiplier"], 0.25)
+        self.assertAlmostEqual(rows[6]["lr"], 0.05)
+        self.assertEqual(rows[6]["consumed_tokens"], 6000)
+
+    def test_lr_schedule_trace_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.lr_schedule_trace(0.0, 2, 6)
+        with self.assertRaises(ValueError):
+            submission.lr_schedule_trace(0.2, -1, 6)
+        with self.assertRaises(ValueError):
+            submission.lr_schedule_trace(0.2, 7, 6)
+        with self.assertRaises(ValueError):
+            submission.lr_schedule_trace(0.2, 2, 6, min_lr_ratio=1.5)
+        with self.assertRaises(ValueError):
+            submission.lr_schedule_trace(0.2, 2, 6, tokens_per_step=0)
+
 
 class TinyLanguageModel(nn.Module):
     def __init__(self, vocab_size=8, d_model=12):

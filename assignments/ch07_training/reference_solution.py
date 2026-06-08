@@ -292,6 +292,53 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
+def lr_schedule_trace(base_lr, num_warmup_steps, num_training_steps, min_lr_ratio=0.1, tokens_per_step=None):
+    if base_lr <= 0:
+        raise ValueError("base_lr must be positive")
+    if num_warmup_steps < 0:
+        raise ValueError("num_warmup_steps must be non-negative")
+    if num_training_steps <= 0:
+        raise ValueError("num_training_steps must be positive")
+    if num_warmup_steps > num_training_steps:
+        raise ValueError("num_warmup_steps cannot exceed num_training_steps")
+    if not 0 <= min_lr_ratio <= 1:
+        raise ValueError("min_lr_ratio must be in [0, 1]")
+    if tokens_per_step is not None and tokens_per_step <= 0:
+        raise ValueError("tokens_per_step must be positive when provided")
+
+    steps = []
+    for step in range(num_training_steps + 1):
+        if num_warmup_steps > 0 and step < num_warmup_steps:
+            multiplier = step / num_warmup_steps
+            phase = "warmup"
+        else:
+            denom = max(1, num_training_steps - num_warmup_steps)
+            progress = (step - num_warmup_steps) / denom
+            progress = min(1.0, max(0.0, progress))
+            cosine_decay = 0.5 * (1.0 + math.cos(math.pi * progress))
+            multiplier = cosine_decay * (1.0 - min_lr_ratio) + min_lr_ratio
+            phase = "cosine"
+
+        row = {
+            "step": step,
+            "phase": phase,
+            "lr_multiplier": float(multiplier),
+            "lr": float(base_lr * multiplier),
+        }
+        if tokens_per_step is not None:
+            row["consumed_tokens"] = int(step * tokens_per_step)
+        steps.append(row)
+
+    return {
+        "base_lr": float(base_lr),
+        "num_warmup_steps": int(num_warmup_steps),
+        "num_training_steps": int(num_training_steps),
+        "min_lr_ratio": float(min_lr_ratio),
+        "tokens_per_step": None if tokens_per_step is None else int(tokens_per_step),
+        "steps": steps,
+    }
+
+
 @dataclass
 class TrainConfig:
     num_epochs: int = 1

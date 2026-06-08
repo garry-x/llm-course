@@ -434,6 +434,10 @@ def cross_entropy_manual(logits, targets):
 
   <h4>典型的调度曲线形状</h4>
   <p>Cosine Decay 在早期保持较高的学习率（快速探索参数空间），在中期快速下降（找到好的局部区域），在后期缓慢趋近于 0（精细收敛）。这种"快-快-慢"的模式在大规模训练中很常见；具体效果仍依赖 batch size、模型规模、优化器、训练 token 预算和是否需要持续预训练。</p>
+
+  <h4>Worked Example：按 optimizer step 复算 lr 与 consumed tokens</h4>
+  <p>设 <code>base_lr=0.2</code>、<code>num_warmup_steps=2</code>、<code>num_training_steps=6</code>、<code>min_lr_ratio=0.25</code>，每个 optimizer step 消耗 <code>1000</code> tokens。step 0 还在 warmup 起点，lr multiplier 为 <code>0</code>，实际 lr 为 <code>0</code>，累计 token 为 <code>0</code>；step 1 的 multiplier 为 <code>1/2</code>，lr 为 <code>0.1</code>，累计 token 为 <code>1000</code>；step 2 进入 cosine 阶段起点，multiplier 回到 <code>1.0</code>，lr 为 <code>0.2</code>；step 6 到达训练终点，multiplier 为 <code>0.25</code>，lr 为 <code>0.05</code>，累计 token 为 <code>6000</code>。</p>
+  <p>这个例子强调 scheduler 应该按<strong>成功的 optimizer step</strong>推进，而不是按 micro-batch backward 次数推进。如果 <code>grad_accum_steps=4</code> 却每个 micro-batch 都调用一次 scheduler，warmup 和 cosine decay 会比 token 进度快 4 倍走完。Ch07 作业中的 <code>lr_schedule_trace</code> 要求把每个 step 的 phase、lr multiplier、实际 lr 和 consumed tokens 显式列出来。</p>
 </section>
 
 <!-- ================================================================ -->

@@ -95,6 +95,11 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
     raise NotImplementedError
 
 
+def lr_schedule_trace(base_lr, num_warmup_steps, num_training_steps, min_lr_ratio=0.1, tokens_per_step=None):
+    """Return warmup+cosine LR multipliers, absolute LR, and optional consumed-token trace."""
+    raise NotImplementedError
+
+
 @dataclass
 class TrainConfig:
     num_epochs: int = 1

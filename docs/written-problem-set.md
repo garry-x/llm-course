@@ -68,7 +68,7 @@
 2. 推导单样本 cross entropy 对 logits 的梯度 `p_i - 1[i=y]`；若 batch 中有 `ignore_index` 位置，说明 mean reduction 的分母为什么应是有效 token 数，且被忽略位置的 logits 梯度应为 0。
 3. 给定 vocab size、目标 token、`epsilon` 和 logits，构造 label-smoothed target distribution，计算 label-smoothed cross entropy，并说明它和 hard one-hot CE、蒸馏 soft targets 的关系。
 4. 设 tied LM head 为 `z_t = h_t E^T`，说明 CE 梯度如何更新正确 token、错误 token 的 output embedding 行，以及它如何继续传回 Transformer hidden state。
-5. 解释 AdamW 中“解耦权重衰减”和 L2 regularization 的区别，并说明 warmup + cosine decay 的作用。
+5. 解释 AdamW 中“解耦权重衰减”和 L2 regularization 的区别，并说明 warmup + cosine decay 的作用；给定 `base_lr=0.2`、`num_warmup_steps=2`、`num_training_steps=6`、`min_lr_ratio=0.25`、每个 optimizer step 消耗 `1000` tokens，手算 step `0,1,2,6` 的 lr multiplier、实际 lr、phase 和累计 consumed tokens。
 6. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16`、训练预算 `D=20B tokens` 和 dense LM 参数量 `N=1B`，计算 global batch tokens、训练 step 数和近似训练 FLOPs；再按 bf16 参数/梯度、fp32 AdamW 两个 moment states 计算训练显存，并说明 optimizer-state sharding 会改变哪些项。
 7. 给定 train token 序列和 eval token 序列，计算 n-gram repetition rate 与 train/eval overlap rate，并说明它们如何影响 val loss 和泛化判断。
 8. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。

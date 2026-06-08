@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第11章 经典神经 NLP 与评测</h2>
   <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT——把 CS224N 主线接回现代 LLM</p>
-  <div class="reading-time">预计阅读: 100 分钟 · 11 小节 · 5 类可运行练习 · 5 道概念练习</div>
+  <div class="reading-time">预计阅读: 110 分钟 · 12 小节 · 5 类可运行练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -318,6 +318,47 @@ labels:       None  None cat    sat    None</div>
   <p>不严谨写法：<code>模型 A 比模型 B 好 8%。</code></p>
   <p>更严谨写法：在 <code>n=300</code> 个中文客服问答样本上，固定 system prompt、temperature=0、max output=512，模型 A 相对模型 B 的 pairwise win rate 为 <code>58%</code>，主要提升来自格式遵循和引用完整性；事实错误率从 <code>11%</code> 降到 <code>8%</code>，但 P95 TTFT 从 <code>720ms</code> 升到 <code>980ms</code>，并且该结果没有覆盖英文、代码、多轮工具调用或高并发负载。因此它支持“在这个中文客服 RAG workload 下，A 值得进入灰度实验”，不支持“A 是通用更强模型”。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>课程标准：</strong>评测答案不是分数列表，而是一个受条件约束的工程结论。你必须说明任务、样本、推理设置、指标、失败类型、统计不确定性和不可外推范围。</div></div>
+</section>
+
+<section class="card" id="s11-6b">
+  <h3>11.6B Benchmark Validity：污染、置信区间与消融</h3>
+  <p>现代 LLM 评测的难点不只是“选哪个 benchmark”，而是判断这次分数能否支持工程决策。一个模型可能因为训练数据见过题目、prompt 更适配、输出更长、采样次数更多或 judge 偏好它的风格而获胜。课程级报告需要把这些因素拆开，否则 benchmark 会变成排行榜截图，而不是科学比较。</p>
+
+  <h4>1. 数据污染和切分泄漏不是同一个问题</h4>
+  <p><strong>切分泄漏</strong>通常发生在自己的数据管线里：同一文档、同一用户会话、同一题库或近似改写同时进入 train/dev/test。它可以通过文档级切分、URL/题目 ID 去重、n-gram overlap、embedding 近邻检索和人工抽查降低风险。<strong>Benchmark contamination</strong>更广：公开测试题、答案解析、讨论帖或代码仓库可能已经进入预训练或 SFT 数据。它不一定能被完全排除，因此报告中要说明数据来源、公开时间、去重方法和高相似样本处理方式。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>现象</th><th>可能原因</th><th>应做的检查</th><th>结论边界</th></tr>
+      <tr><td>测试集分数远高于新题集</td><td>benchmark 题目被训练见过，或 prompt 针对旧题优化</td><td>按发布日期切分，查 exact/near duplicate，构造 held-out 新题</td><td>旧 benchmark 只能作为回归测试，不能证明泛化</td></tr>
+      <tr><td>dev set 每次调参都提升，test 不升</td><td>dev 被反复优化，逐渐变成训练信号</td><td>冻结 final test，保留 shadow eval，只在里程碑运行</td><td>dev 分数只代表开发进度，不代表最终能力</td></tr>
+      <tr><td>RAG 问答引用正确但答案错误</td><td>检索命中不等于生成忠实，或 gold answer 过窄</td><td>分开统计 retrieval recall、citation precision 和 answer accuracy</td><td>不能用端到端 accuracy 直接定位瓶颈</td></tr>
+      <tr><td>LLM judge 偏好新模型但人工不认可</td><td>长度、语气、格式或同源模型偏置</td><td>随机 A/B 顺序，控制输出长度，抽样人工复核</td><td>judge 胜率只是辅助信号</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 小样本提升要给不确定性</h4>
+  <p>如果模型 A 在 100 道题上答对 61 道，模型 B 答对 56 道，不能直接写“A 提升 5%”。这 5 个样本的差异可能来自题目抽样波动。最简单的近似是把 accuracy 当成二项比例，用标准误差估算置信区间：</p>
+  <div class="math-box"><div class="label">Accuracy standard error</div>
+    <span class="katex-block" data-expr="\text{SE}(\hat p)=\sqrt{\frac{\hat p(1-\hat p)}{n}},\qquad \text{CI}_{95}\approx \hat p \pm 1.96\cdot \text{SE}" aria-label="SE(p hat)=sqrt(p hat(1-p hat)/n), CI95 approx p hat plus/minus 1.96 SE" role="img"></span>
+  </div>
+  <p>当 <code>n=100</code>、<code>p=0.61</code> 时，标准误差约 <code>0.049</code>，95% 区间大约是 <code>61% ± 9.6%</code>。这说明 61% 和 56% 在这个样本量下很难支撑强结论。若同一批题目同时评测两个模型，还应优先看 paired comparison：哪些题 A 对 B 错，哪些题 B 对 A 错，因为题目难度是共享的。开放式生成或 RAG 任务常用 bootstrap 对样本重采样，估计 win rate、accuracy 或 error rate 的区间。</p>
+
+  <h4>3. 消融实验一次只回答一个问题</h4>
+  <p>消融不是“多跑几个配置”。它要让一个设计变量的作用可解释。若同时把 base model、prompt、retriever、reranker、temperature 和 context length 都换掉，即使分数提升，也无法知道是谁贡献了提升。一个严谨的 LLM 系统消融通常按下面顺序组织：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>问题</th><th>保留不变</th><th>只改变</th><th>要同时报告</th></tr>
+      <tr><td>RAG 是否有用</td><td>模型、prompt、解码参数、样本集</td><td>是否注入检索上下文</td><td>accuracy、citation precision、输入 token、P95 latency</td></tr>
+      <tr><td>reranker 是否有用</td><td>retriever 候选、LLM、context budget</td><td>候选排序策略</td><td>Recall@k、nDCG、最终答案正确率、rerank 延迟</td></tr>
+      <tr><td>DPO 是否改善对齐</td><td>SFT base、eval set、prompt、temperature</td><td>DPO checkpoint</td><td>helpfulness、安全拒答、长度分布、KL 或行为漂移</td></tr>
+      <tr><td>更长推理是否值得</td><td>模型、题目、评分规则</td><td>max tokens、采样次数或 reasoning budget</td><td>pass@k、平均输出 token、成本、TTFT/TPOT</td></tr>
+    </table>
+  </div>
+
+  <h4>Worked Example：把 3% 提升改写成可判断结论</h4>
+  <p>不充分写法：<code>加入 reranker 后 benchmark 从 72% 提升到 75%，效果更好。</code></p>
+  <p>更严谨写法：在同一组 <code>n=500</code> 中文法规 QA 样本上，固定生成模型、prompt、temperature=0、max output=384 和 context budget=1800 tokens，只把 top-8 dense retrieval 改为 dense retrieval + cross-encoder rerank。端到端 accuracy 从 <code>72.0%</code> 到 <code>75.0%</code>，bootstrap 95% CI 的差值约为 <code>[0.4%, 5.8%]</code>；retrieval Recall@8 不变，但 citation precision 从 <code>68%</code> 到 <code>79%</code>；P95 latency 增加 <code>140ms</code>，平均输入 token 不变。这个结论支持“reranker 改善了该法规 QA workload 的上下文排序，值得灰度”，不支持“所有 RAG 任务都应加入 reranker”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>可信 benchmark 结论至少要同时经受四个问题：数据是否干净，比较是否公平，差异是否稳定，消融是否能解释提升来源。少一个环节，分数都只能作为线索。</div></div>
 </section>
 
 <section class="card" id="s11-7">

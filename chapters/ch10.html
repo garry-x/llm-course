@@ -971,6 +971,80 @@ summary = build_benchmark_summary(
 </section>
 
 <!-- ================================================================ -->
+<!-- 10.13A 推理压测报告 -->
+<!-- ================================================================ -->
+<section class="card" id="s10-13a">
+  <h3>10.13A 推理压测报告——从 workload 到瓶颈归因</h3>
+  <p>推理服务压测不是单纯跑出一个 <code>tokens/s</code> 数字。工程师需要回答的是：在目标业务负载下，服务能否稳定满足 SLO；如果不能，是 prefill、decode、KV Cache、检索、排队还是网络流式输出出了问题。一个合格的推理压测报告应把<strong>负载假设、实验矩阵、分层指标、容量计算和调参动作</strong>连成闭环。</p>
+
+  <h4>第一步：把 workload 写成可测分布</h4>
+  <p>不要用“平均 1,000 tokens”概括所有请求。LLM 服务的性能高度依赖长度分布：短 prompt 的瓶颈通常在调度和首 token；长上下文请求会放大 prefill 与 KV Cache；长输出请求会占用 decode batch 很久。课程项目中建议至少按下表分层：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>分层维度</th><th>推荐取值</th><th>为什么重要</th></tr>
+      <tr><td>Prompt tokens</td><td>256 / 1k / 8k / 32k</td><td>决定 prefill 计算量、prefix cache 命中收益和 KV 初始占用</td></tr>
+      <tr><td>Output tokens</td><td>64 / 256 / 1k</td><td>决定 decode 持续时间和 active sequence 数量</td></tr>
+      <tr><td>Concurrency</td><td>1 / 8 / 32 / 128</td><td>暴露 batch occupancy、排队时间和尾延迟</td></tr>
+      <tr><td>Prefix cache</td><td>关闭 / 低命中 / 高命中</td><td>区分真实 prefill 能力和模板复用收益</td></tr>
+      <tr><td>RAG path</td><td>关闭 / 检索 / 检索+rerank</td><td>拆分模型延迟和外部服务延迟</td></tr>
+      <tr><td>Serving config</td><td>fp16 / int8 / int4，batch 参数</td><td>比较显存、吞吐、质量和稳定性的取舍</td></tr>
+    </table>
+  </div>
+
+  <h4>第二步：每个实验单元记录同一组指标</h4>
+  <p>同一个压测矩阵里的每个单元都应使用一致的指标口径。平均值可以保留，但不能替代分位数；总体曲线可以保留，但不能替代按长度分层后的结果。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>指标</th><th>定义</th><th>诊断意义</th></tr>
+      <tr><td>TTFT P50/P95/P99</td><td>请求发出到第一个 token 返回</td><td>排队、prefill、prefix cache、路由和首步 decode</td></tr>
+      <tr><td>TPOT P50/P95/P99</td><td>相邻输出 token 的时间间隔</td><td>decode 带宽、batch occupancy、KV 读写和量化 kernel</td></tr>
+      <tr><td>tokens/s/GPU</td><td>每张 GPU 的输出 token 吞吐</td><td>容量规划和成本估算的核心输入</td></tr>
+      <tr><td>active KV tokens</td><td>当前所有请求仍保留的上下文 token 数</td><td>比并发请求数更接近显存压力</td></tr>
+      <tr><td>peak memory</td><td>权重、KV、临时 buffer 的峰值显存</td><td>判断 OOM 余量和 max_model_len 设置</td></tr>
+      <tr><td>cache hit rate</td><td>prefix/RAG/embedding cache 的命中比例</td><td>解释 prefill 下降或质量波动是否来自缓存</td></tr>
+      <tr><td>error/timeout rate</td><td>非成功响应、超时、截断比例</td><td>判断系统是否已经进入不稳定区间</td></tr>
+      <tr><td>cost/request</td><td>单请求 GPU 秒或 API token 成本</td><td>连接工程调参和业务预算</td></tr>
+    </table>
+  </div>
+
+  <h4>第三步：用容量公式解释曲线，而不是只贴图</h4>
+  <p>压测曲线要能被 workload 公式解释。若请求到达率为 <code>QPS</code>，平均输入和输出长度分别为 <code>E[T_prompt]</code> 与 <code>E[T_output]</code>，则：</p>
+  <div class="math-box"><div class="label">Workload decomposition</div>
+    <div class="katex" data-expr="\lambda_{\text{prefill}} = QPS\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = QPS\cdot E[T_{\text{output}}]" aria-label="\lambda_{\text{prefill}} = QPS\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = QPS\cdot E[T_{\text{output}}]" role="img"></div>
+  </div>
+  <div class="math-box"><div class="label">Active KV pressure</div>
+    <div class="katex" data-expr="T_{\text{active-kv}} \approx N_{\text{active}}\cdot E[T_{\text{prompt}} + T_{\text{generated-so-far}}]" aria-label="T_{\text{active-kv}} \approx N_{\text{active}}\cdot E[T_{\text{prompt}} + T_{\text{generated-so-far}}]" role="img"></div>
+  </div>
+  <p>例如 <code>20 QPS</code>、平均 <code>2,000</code> prompt tokens、平均 <code>200</code> output tokens 的服务，每秒约产生 <code>40k</code> prefill tokens 和 <code>4k</code> decode tokens。若单卡实测 decode 只有 <code>2.5k output tokens/s</code>，即使 prefill 还有余量，TPOT 和排队时间也会先恶化。若长上下文请求把 active KV tokens 推到显存上限附近，服务会表现为吞吐曲线突然塌陷、尾延迟升高和 OOM 交替出现。</p>
+
+  <h4>第四步：把症状映射到工程动作</h4>
+  <p>推理压测报告最有价值的部分是归因表：同样是“慢”，不同指标组合对应完全不同的处理方式。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>观测到的症状</th><th>更可能的瓶颈</th><th>下一步动作</th></tr>
+      <tr><td>TTFT 高，TPOT 正常</td><td>排队、长 prompt prefill、prefix cache 未命中</td><td>按 prompt 长度分队列，启用 chunked prefill，稳定 prompt 模板</td></tr>
+      <tr><td>TTFT 正常，TPOT 高</td><td>decode 带宽、batch occupancy、KV 读写</td><td>调整 max_num_seqs/max_num_batched_tokens，尝试量化或更换引擎配置</td></tr>
+      <tr><td>高并发时 P99 突然变差</td><td>系统进入饱和区，队列开始累积</td><td>降低 admission limit，增加副本，按 SLO 分流交互请求和离线请求</td></tr>
+      <tr><td>长上下文请求触发 OOM</td><td>active KV tokens 超过显存预算</td><td>限制 max_model_len，按 token 而非请求数限流，启用 KV quantization</td></tr>
+      <tr><td>RAG 开启后 TTFT 大幅增加</td><td>检索、rerank 或上下文拼接路径太慢</td><td>记录 retrieval/rerank/generation 分段耗时，缓存 embedding 与热门查询</td></tr>
+      <tr><td>检索命中但回答质量差</td><td>prompt assembly、生成策略或引用约束问题</td><td>检查上下文排序、截断位置、temperature、结构化引用格式</td></tr>
+    </table>
+  </div>
+
+  <h4>课程项目中的报告结构</h4>
+  <p>最终报告不需要堆很多截图，重点是让读者能复现实验和理解结论。推荐结构如下：</p>
+  <ol>
+    <li><strong>模型与硬件：</strong>模型版本、量化方式、GPU、显存、推理引擎和关键参数。</li>
+    <li><strong>Workload：</strong>请求到达率、prompt/output 长度分布、RAG 是否开启、缓存命中假设。</li>
+    <li><strong>实验矩阵：</strong>并发、长度、量化、batch 参数和 cache 配置。</li>
+    <li><strong>指标结果：</strong>TTFT/TPOT 分位数、tokens/s/GPU、active KV tokens、peak memory、错误率。</li>
+    <li><strong>瓶颈归因：</strong>用上面的容量公式解释哪条曲线先坏、为什么坏。</li>
+    <li><strong>工程动作：</strong>列出一次调参或架构修改，并说明它改善了哪个指标、牺牲了什么。</li>
+  </ol>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级推理工程训练不应停留在“我会调用推理 API”。你需要能把一个真实服务拆成 workload、显存、调度、cache、质量和成本，并用实验结果支撑容量决策。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 10.14 Triton -->
 <!-- ================================================================ -->
 <section class="card" id="s10-14">

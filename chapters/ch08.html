@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第8章 文本生成</h2>
   <p class="subtitle">采样策略 + DeepSeek MTP 推测解码——从概率到文本的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 100 分钟 · 14 小节 · 7 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 110 分钟 · 15 小节 · 7 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -255,6 +255,63 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
   </div>
   <p><code>top-k=3</code> 会固定保留 <code>A,B,C</code>，然后把三者重新归一化，得到约 <code>[0.718, 0.264, 0.097]</code>。<code>top-p=0.9</code> 会从最高概率开始累加，直到累积概率超过 0.9；这里 <code>A+B=0.867</code> 还不够，加入 <code>C</code> 后达到 <code>0.953</code>，所以候选集同样是 <code>A,B,C</code>。如果改成 <code>top-p=0.8</code>，候选集只需要 <code>A,B</code>。</p>
   <p>关键区别不在这个单例，而在分布形状变化时的行为。若分布非常尖锐，例如 <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>，<code>top-p=0.9</code> 只保留最高概率 token；若分布平缓，例如 <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>，<code>top-p=0.9</code> 需要保留前 5 个 token。固定 <code>top-k</code> 不会根据上下文不确定性自动改变候选集大小。</p>
+</section>
+
+<section class="card" id="s8-5a">
+  <h3>8.5A 采样分布账本：从 raw logits 到最终 token</h3>
+  <p>实际生成系统不会直接对 raw logits 做 softmax。一个生成步骤通常会先叠加多种变换：重复惩罚、合法 token 约束、temperature、top-k/top-p 截断，然后才重新归一化并采样。顺序写错会改变最终分布，也会让 logprob、entropy 和调参结论失去意义。</p>
+
+  <h4>1. 推荐的处理顺序</h4>
+  <p>课程作业中的 <code>decoding_distribution_report</code> 使用下面的顺序。真实系统可以有更多 processors，但每一步都应明确写进 generation policy：</p>
+  <div class="code-block" data-lang="text">
+raw logits
+  -> repetition penalty / frequency penalty
+  -> token constraints or grammar mask
+  -> temperature scaling
+  -> top-k or top-p filtering
+  -> softmax over remaining tokens
+  -> sample or argmax</div>
+  <p>重复惩罚要在截断前应用，否则已经出现过的 token 可能先进入 top-k/top-p 候选集，惩罚来不及生效。约束 mask 要在归一化前应用，把非法 token 的 logit 设为 <code>-inf</code>；后续 softmax 只在合法候选中分配概率。temperature 改变分布锐度，top-k/top-p 改变候选集合，二者不是同一类操作。</p>
+
+  <h4>2. Worked Example：同一步 logits 的处理轨迹</h4>
+  <p>设当前 vocab 只有 5 个 token，raw logits 为：</p>
+  <div class="code-block" data-lang="text">
+token:       A     B     C     D     E
+raw logits:  4.0   3.0   2.0   1.0  -1.0</div>
+  <p>历史中已经出现过 <code>A</code>，使用 repetition penalty=2.0；语法当前只允许 <code>A/B/C</code>；temperature=1.0；top-p=0.8。处理轨迹可以写成：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>阶段</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>说明</th></tr>
+      <tr><td>raw logits</td><td>4.0</td><td>3.0</td><td>2.0</td><td>1.0</td><td>-1.0</td><td>模型原始输出</td></tr>
+      <tr><td>repetition penalty</td><td>2.0</td><td>3.0</td><td>2.0</td><td>1.0</td><td>-1.0</td><td>A 为正 logit，除以 penalty</td></tr>
+      <tr><td>constraint mask</td><td>2.0</td><td>3.0</td><td>2.0</td><td>-inf</td><td>-inf</td><td>D/E 当前非法</td></tr>
+      <tr><td>top-p=0.8</td><td>2.0</td><td>3.0</td><td>2.0</td><td>-inf</td><td>-inf</td><td>B 概率最高，加入 A 或 C 后达到阈值</td></tr>
+    </table>
+  </div>
+  <p>最终概率不是 raw logits 的 softmax，而是处理后 logits 在保留候选上的 softmax。若 top-p 在并列概率中保留 <code>B,A</code>，则候选概率约为 <code>B=0.731, A=0.269</code>；若实现保留 <code>B,C</code>，概率同形但候选 token 不同。因此稳定 tie-breaking、token id 顺序和报告候选集合都很重要。</p>
+
+  <h4>3. logprob、entropy 和候选集合要绑定到同一个分布</h4>
+  <p>生成 API 常返回 <code>logprobs</code>、top token 列表或 entropy。必须说明这些量来自哪一个分布：</p>
+  <ul>
+    <li><strong>raw model logprob：</strong>未经过约束和截断，适合比较模型本身对 token 的偏好。</li>
+    <li><strong>processed logprob：</strong>经过 penalty、mask、temperature 和 truncation 后的概率，适合解释本次实际采样。</li>
+    <li><strong>entropy：</strong>如果在截断后计算，只表示候选集合内部的不确定性，不能和 raw full-vocab entropy 直接比较。</li>
+    <li><strong>selected token：</strong>要同时报告 token id、文本片段、处理后概率和是否受约束影响。</li>
+  </ul>
+  <p>如果一个系统声称“模型对这个答案很有信心”，但引用的是经过 top-p 截断和 JSON grammar mask 后的概率，这个说法就不严谨。约束分布中的高概率只说明“在合法集合里它最可能”，不等价于模型在开放词表上也高度确信。</p>
+
+  <h4>4. 调参时看什么</h4>
+  <p>调 temperature、top-p、repetition penalty 时，不应只看几段生成文本。至少要同时记录：</p>
+  <div class="code-block" data-lang="text">
+kept_token_count / vocab_size
+selected_token_probability
+entropy_after_filtering
+repetition rate or distinct-n
+stop reason: eos / stop string / max_new_tokens / constraint failure
+generated tokens and latency</div>
+  <p>这些量能帮助区分几类问题：输出无聊可能是温度太低或候选集过小；输出跑题可能是温度过高或 top-p 过宽；重复可能需要 repetition penalty、stop 条件或训练数据处理；格式错误更适合用约束解码，而不是继续降低 temperature。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>生成不是“softmax 后采样”这么简单。一个严谨的生成实验必须报告 raw logits 到 processed distribution 的变换链路，否则无法复现实验，也无法判断质量变化来自模型、采样策略还是约束系统。</div></div>
 </section>
 
 <!-- ================================================================ -->

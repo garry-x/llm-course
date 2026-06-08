@@ -34,6 +34,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch03_attention/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、self-attention 置换等变性、softmax Jacobian、attention logits 到 Q/K/V 的链式法则、attention entropy、mask 加在 softmax 前的原因、causal mask 与 padding mask 的形状广播、复杂度和 heatmap 解释边界 |
+| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、self-attention 置换等变性、softmax Jacobian、attention logits 到 Q/K/V 的链式法则、attention entropy、mask 加在 softmax 前的原因、causal mask 与 padding mask 的形状广播、all-masked row 的 NaN 风险、复杂度和 heatmap 解释边界 |
 | Programming parts | 55 | 实现 QKV projection、scaled dot-product attention、置换等变性数值验证、softmax/attention backward helpers、Q/K/V gradient helper、attention entropy、attention score 显存估算、causal mask、causal+padding mask 合成和 attention visualization |
-| Analysis / style | 10 | 解释 mask 数值稳定性、attention heatmap 的适用范围和常见 shape bug |
+| Analysis / style | 10 | 解释 mask 数值稳定性、padding key 与 padding query 的区别、attention heatmap 的适用范围和常见 shape bug |

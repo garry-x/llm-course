@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第3章 单头自注意力</h2>
   <p class="subtitle">从零实现 Scaled Dot-Product Attention——LLM 一切魔力的源头</p>
-  <div class="reading-time">⏱ 预计阅读: 105 分钟 · 14 小节 · 5 道编程练习 · 6 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 120 分钟 · 19 小节 · 6 道编程练习 · 6 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -726,6 +726,7 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
     <li>✅ <strong>QKVProjection</strong> —— 将输入投影为查询、键、值三元组</li>
     <li>✅ <strong>Scaled Dot-Product Attention</strong> —— 实现了"查询→匹配→聚合"的完整流程</li>
     <li>✅ <strong>Causal Mask</strong> —— 确保了自回归生成的因果性约束</li>
+    <li>✅ <strong>Masked softmax 合约</strong> —— 理解 padding key、padding query 和 all-masked row 的数值风险</li>
     <li>✅ <strong>注意力可视化</strong> —— 建立了对注意力行为的直观理解</li>
     <li>✅ <strong>Attention Heatmap 的解释边界</strong> —— 知道它适合诊断路由模式，但不能单独当作因果解释</li>
     <li>✅ <strong>深刻理解了 √dₖ</strong> —— 从方差分析和梯度视角掌握了缩放因子</li>
@@ -805,6 +806,19 @@ plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
       <label><input type="radio" name="q5" value="3"> D. ~128GB；无解决方案</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="1" data-explain="如果某个 query 行所有 key 都被 mask，softmax 分母为 0，很多实现会产生 NaN。训练中通常屏蔽 padding key，同时用 loss/output mask 跳过 padding query 的输出；不要简单把 padding query 行全部清零后直接 softmax。">
+    <h4>练习 6：为什么合成 causal mask 和 padding mask 时要特别避免 all-masked row？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q6" value="0"> A. 因为 all-masked row 会让 attention 复杂度从 O(n²) 变成 O(n³)</label>
+      <label><input type="radio" name="q6" value="1"> B. 因为该行 softmax 没有任何可见 key，分母为 0，可能产生 NaN</label>
+      <label><input type="radio" name="q6" value="2"> C. 因为 padding query 必须关注所有未来 token 才能训练</label>
+      <label><input type="radio" name="q6" value="3"> D. 因为 mask 只能在 softmax 后应用</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>

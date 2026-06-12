@@ -656,7 +656,7 @@ td{color:var(--text-secondary)}
   font-family:var(--font-heading);font-size:1.15rem;font-weight:700;
   margin-bottom:12px;color:var(--text)
 }
-.path-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.path-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .path-step{
   background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
   padding:14px 16px;min-height:136px

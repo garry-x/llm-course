@@ -2,7 +2,7 @@
 
 这个项目把课程最后几章落成一个可运行的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线准备说明。
 
-默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目重点覆盖 OpenAI-compatible API、RAG/JSON/tool 回归、speculative decoding gate、TTFT/TPOT/P95/P99、tokens/s、显存估算和容量规划。
+默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目重点覆盖 OpenAI-compatible API、RAG/JSON/tool 回归、continuous batching admission、speculative decoding gate、TTFT/TPOT/P95/P99、tokens/s、显存估算和容量规划。
 
 ## 你要交付什么
 
@@ -15,6 +15,7 @@
 | Tool Calling | 接收 OpenAI 风格 `tools` schema，返回 `tool_calls`，并在执行前做 schema/权限/预算 gate | `evaluate.py` 检查工具名，报告记录 gate |
 | Reasoning Budget | 对 greedy、self-consistency、best-of-N 或 verifier rerank 做 quality/token/latency/cost gate | 报告中的 generation policy 表 |
 | Speculative Decoding | 若采用或讨论 draft/EAGLE/MTP/n-gram/suffix 推测解码，做 acceptance/speedup/draft overhead/quality/workload gate | 报告中的 speculative gate 表 |
+| Admission Control | 若采用 vLLM/SGLang/TensorRT-LLM 或讨论高并发服务，报告 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens、chunked prefill 和 queue wait gate | 报告中的 admission 表 |
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
 | PD Breakdown | 拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens | 报告中的 PD 指标表 |
@@ -35,6 +36,7 @@
 | 并发增加如何影响尾延迟 | concurrency 1/2/5/10 | P50/P95/P99、tokens/s、error rate | 本地 CPU 网络开销与 GPU serving 不同 |
 | 容量规划对上下文长度多敏感 | context 4K/8K/32K | KV Cache GB、max batch、$/1M tokens | 估算公式不包含全部 runtime overhead |
 | prefill/decode 解耦是否值得 | single pool vs P/D pool sizing | required prefill/decode workers、KV transfer utilization、active KV tokens、SLO pass | KV transfer 或 decode KV memory 可能抵消 prefill 分离收益 |
+| continuous batching 参数是否合理 | base config vs tuned `max_num_seqs` / `max_num_batched_tokens` / chunked prefill | admitted/queued、queue wait、active KV tokens、P95 TTFT/TPOT | 更大 batch 可能提高吞吐但破坏尾延迟或 KV 预算 |
 | speculative decoding 是否值得启用 | baseline vs draft/EAGLE/MTP/n-gram/suffix | acceptance rate、speedup、draft overhead、P95 TPOT、quality regression、memory overhead | 高接受率仍可能被 draft 成本、高 QPS batch、额外显存或质量回归抵消 |
 | reasoning/test-time compute 是否值得上线 | greedy vs self-consistency/best-of-N/verifier rerank | pass rate、output tokens、P95 latency、cost/request | 多采样提升可能被延迟、成本或 verifier 偏差抵消 |
 | 多模态输入如何改变服务成本 | 文本请求 vs 图像/文档请求的视觉 token 预算 | prefill tokens、TTFT、KV Cache、任务 pass rate | 视觉 encoder 和裁剪策略会显著改变结果 |
@@ -144,6 +146,7 @@ python capacity_plan.py \
 - P95 TTFT、P95 TPOT、P99 total latency 已测。
 - 若采用或讨论 prefill/decode 解耦，必须单独报告 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，不能只给端到端 P95。
 - 若采用或讨论 speculative decoding，必须单独报告 accepted/draft tokens、target verify steps、draft_ms、speedup、quality regression、memory overhead 和 QPS/workload fit，不能只给引擎支持或 `num_speculative_tokens`。
+- 若采用或讨论 continuous batching，必须单独报告 `max_num_seqs`、`max_num_batched_tokens`、chunked prefill、admitted/queued、queue wait、active KV tokens 和 queued reasons，不能只给平均 tokens/s。
 - SLO 目标可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
 - 最大 prompt 长度、最大输出长度、并发上限已测。
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
@@ -177,10 +180,11 @@ python capacity_plan.py \
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
 7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
-9. **Speculative decoding gate.** 若采用或讨论 speculative decoding，报告 acceptance rate、speedup、draft overhead、tokens per verify step、quality regression、memory overhead 和 QPS/workload fit，并说明是否启用。
-10. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
-11. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
-12. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
+9. **Continuous batching admission.** 若采用或讨论 high-concurrency serving，报告 `max_num_seqs`、`max_num_batched_tokens`、prefix cache、chunked prefill、admitted/queued、queue wait 和 active KV gate。
+10. **Speculative decoding gate.** 若采用或讨论 speculative decoding，报告 acceptance rate、speedup、draft overhead、tokens per verify step、quality regression、memory overhead 和 QPS/workload fit，并说明是否启用。
+11. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
+12. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
+13. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 
 ### 结果表模板
 
@@ -207,6 +211,12 @@ python capacity_plan.py \
 | Run | method | acceptance rate | speedup | draft overhead | tokens/verify step | quality regression | memory overhead | QPS fit | 结论 |
 |-----|--------|-----------------|---------|----------------|--------------------|--------------------|-----------------|---------|------|
 | baseline vs speculative | | | | | | | | | |
+
+### Continuous batching admission 模板
+
+| Config | max_num_seqs | max_num_batched_tokens | chunked prefill | admitted | queued | max queue wait | active KV tokens | action |
+|--------|--------------|------------------------|-----------------|----------|--------|----------------|------------------|--------|
+| baseline | | | | | | | | |
 
 ### P/D capacity 模板
 

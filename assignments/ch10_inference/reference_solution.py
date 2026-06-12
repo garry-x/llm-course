@@ -563,6 +563,179 @@ def prefix_cache_savings(tokenized_prompts):
     }
 
 
+def continuous_batching_admission_report(requests, scheduler_config):
+    """Decide which queued requests can enter one continuous-batching step."""
+    if not requests:
+        raise ValueError("requests must not be empty")
+    if not isinstance(scheduler_config, dict):
+        raise ValueError("scheduler_config must be a dict")
+
+    required = ["max_num_seqs", "max_num_batched_tokens", "max_active_kv_tokens"]
+    missing = [name for name in required if name not in scheduler_config]
+    if missing:
+        raise ValueError(f"scheduler_config missing fields: {', '.join(missing)}")
+
+    max_num_seqs = int(scheduler_config["max_num_seqs"])
+    max_num_batched_tokens = int(scheduler_config["max_num_batched_tokens"])
+    max_active_kv_tokens = int(scheduler_config["max_active_kv_tokens"])
+    running_requests = int(scheduler_config.get("running_requests", 0))
+    running_active_kv_tokens = int(scheduler_config.get("running_active_kv_tokens", 0))
+    target_utilization = float(scheduler_config.get("target_utilization", 1.0))
+    enable_chunked_prefill = bool(scheduler_config.get("enable_chunked_prefill", False))
+    max_prefill_chunk_tokens = scheduler_config.get("max_prefill_chunk_tokens")
+    max_queue_wait_ms = scheduler_config.get("max_queue_wait_ms")
+
+    if min(max_num_seqs, max_num_batched_tokens, max_active_kv_tokens) <= 0:
+        raise ValueError("max_num_seqs, max_num_batched_tokens, and max_active_kv_tokens must be positive")
+    if running_requests < 0 or running_active_kv_tokens < 0:
+        raise ValueError("running_requests and running_active_kv_tokens must be non-negative")
+    if not 0.0 < target_utilization <= 1.0:
+        raise ValueError("target_utilization must be in (0, 1]")
+    if running_requests > max_num_seqs:
+        raise ValueError("running_requests cannot exceed max_num_seqs")
+    if max_prefill_chunk_tokens is not None:
+        max_prefill_chunk_tokens = int(max_prefill_chunk_tokens)
+        if max_prefill_chunk_tokens <= 0:
+            raise ValueError("max_prefill_chunk_tokens must be positive")
+    if max_queue_wait_ms is not None and float(max_queue_wait_ms) < 0:
+        raise ValueError("max_queue_wait_ms must be non-negative")
+
+    rows = []
+    for index, request in enumerate(requests):
+        if not isinstance(request, dict):
+            raise ValueError("each request must be a dict")
+        prompt_tokens = int(request.get("prompt_tokens", 0))
+        max_new_tokens = int(request.get("max_new_tokens", 0))
+        cached_prefix_tokens = int(request.get("cached_prefix_tokens", 0))
+        phase = request.get("phase", "prefill")
+        if phase not in {"prefill", "decode"}:
+            raise ValueError("request phase must be 'prefill' or 'decode'")
+        if prompt_tokens <= 0 or max_new_tokens <= 0:
+            raise ValueError("prompt_tokens and max_new_tokens must be positive")
+        if cached_prefix_tokens < 0 or cached_prefix_tokens > prompt_tokens:
+            raise ValueError("cached_prefix_tokens must be in [0, prompt_tokens]")
+        priority = int(request.get("priority", 0))
+        waiting_ms = float(request.get("waiting_ms", 0.0))
+        if waiting_ms < 0:
+            raise ValueError("waiting_ms must be non-negative")
+
+        effective_prefill_tokens = max(0, prompt_tokens - cached_prefix_tokens)
+        if phase == "decode":
+            scheduled_tokens = 1
+        elif enable_chunked_prefill and max_prefill_chunk_tokens is not None:
+            scheduled_tokens = min(max(1, effective_prefill_tokens), max_prefill_chunk_tokens)
+        else:
+            scheduled_tokens = max(1, effective_prefill_tokens)
+
+        rows.append(
+            {
+                "request_id": request.get("request_id", index),
+                "arrival_index": index,
+                "phase": phase,
+                "priority": priority,
+                "waiting_ms": waiting_ms,
+                "prompt_tokens": prompt_tokens,
+                "max_new_tokens": max_new_tokens,
+                "cached_prefix_tokens": cached_prefix_tokens,
+                "effective_prefill_tokens": effective_prefill_tokens,
+                "scheduled_tokens": scheduled_tokens,
+                "active_kv_tokens": prompt_tokens + max_new_tokens,
+            }
+        )
+
+    rows.sort(key=lambda row: (-row["priority"], -row["waiting_ms"], row["arrival_index"]))
+
+    admitted = []
+    queued = []
+    total_scheduled_tokens = 0
+    admitted_active_kv_tokens = 0
+    seq_slots = max_num_seqs - running_requests
+    active_kv_budget = max_active_kv_tokens * target_utilization
+
+    for row in rows:
+        reasons = []
+        if len(admitted) >= seq_slots:
+            reasons.append("seq_budget")
+        if total_scheduled_tokens + row["scheduled_tokens"] > max_num_batched_tokens:
+            reasons.append("token_budget")
+        if running_active_kv_tokens + admitted_active_kv_tokens + row["active_kv_tokens"] > active_kv_budget:
+            reasons.append("kv_budget")
+
+        if reasons:
+            queued.append({**row, "reasons": reasons})
+        else:
+            admitted.append(row)
+            total_scheduled_tokens += row["scheduled_tokens"]
+            admitted_active_kv_tokens += row["active_kv_tokens"]
+
+    projected_active_kv_tokens = running_active_kv_tokens + admitted_active_kv_tokens
+    max_queued_wait_ms = max((row["waiting_ms"] for row in queued), default=0.0)
+    queue_pass = True if max_queue_wait_ms is None else max_queued_wait_ms <= float(max_queue_wait_ms)
+    capacity_pass = bool(admitted) and total_scheduled_tokens <= max_num_batched_tokens and projected_active_kv_tokens <= active_kv_budget
+
+    reason_set = {reason for row in queued for reason in row["reasons"]}
+    action_items = []
+    if "token_budget" in reason_set:
+        if enable_chunked_prefill:
+            action_items.append("raise_max_num_batched_tokens_or_reduce_prompt_tokens")
+        else:
+            action_items.append("enable_chunked_prefill_or_reduce_prompt_tokens")
+    if "seq_budget" in reason_set:
+        action_items.append("raise_max_num_seqs_or_add_replicas")
+    if "kv_budget" in reason_set:
+        action_items.append("lower_max_new_tokens_or_raise_kv_cache_budget")
+    if not queue_pass:
+        action_items.append("reduce_queue_wait_or_add_serving_capacity")
+
+    gates = {
+        "capacity": {
+            "pass": capacity_pass,
+            "signals": {
+                "admitted_count": len(admitted),
+                "total_scheduled_tokens": total_scheduled_tokens,
+                "max_num_batched_tokens": max_num_batched_tokens,
+                "projected_active_kv_tokens": projected_active_kv_tokens,
+                "active_kv_budget": active_kv_budget,
+            },
+        },
+        "queue": {
+            "pass": queue_pass,
+            "signals": {
+                "queued_count": len(queued),
+                "max_queued_wait_ms": max_queued_wait_ms,
+                "max_queue_wait_ms": max_queue_wait_ms,
+            },
+        },
+    }
+
+    overall_pass = gates["capacity"]["pass"] and gates["queue"]["pass"]
+    if not queued and overall_pass:
+        decision = "admit_all_requests"
+    elif overall_pass:
+        decision = "admit_partial_batch_and_keep_queue"
+    else:
+        decision = "revise_admission_or_scale_capacity"
+
+    return {
+        "admitted": admitted,
+        "queued": queued,
+        "loads": {
+            "running_requests": running_requests,
+            "running_active_kv_tokens": running_active_kv_tokens,
+            "admitted_count": len(admitted),
+            "queued_count": len(queued),
+            "total_scheduled_tokens": total_scheduled_tokens,
+            "projected_active_kv_tokens": projected_active_kv_tokens,
+            "token_budget_utilization": total_scheduled_tokens / max_num_batched_tokens,
+            "kv_budget_utilization": projected_active_kv_tokens / max_active_kv_tokens,
+        },
+        "gates": gates,
+        "action_items": action_items,
+        "overall_pass": overall_pass,
+        "decision": decision,
+    }
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         if overlap >= chunk_size:

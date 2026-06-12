@@ -52,18 +52,20 @@
       <ul>
         <li><strong>模型内部</strong><span>BPE、Embedding、RoPE、Attention、Transformer Block、GPT 组装。</span></li>
         <li><strong>训练闭环</strong><span>数据管线、AdamW、scheduler、checkpoint、分布式、MFU、对齐评估。</span></li>
-        <li><strong>推理上线</strong><span>采样、KV Cache、量化、RAG、压测、容量规划和服务发布。</span></li>
+        <li><strong>推理上线</strong><span>采样、KV Cache、continuous batching、量化、RAG、压测、容量规划和服务发布。</span></li>
       </ul>
     </div>
   </section>
 
   <section class="learning-path">
-    <h3>课程主线</h3>
+    <h3>章节内置基础</h3>
     <div class="path-grid">
-      <div class="path-step"><strong>1. 计算图基础</strong><span>Ch01-Ch06：从 tokenizer、embedding、attention 到 Transformer Block 和 GPT 模型组装。</span></div>
-      <div class="path-step"><strong>2. 训练工程</strong><span>Ch07、Ch09：数据、优化器、checkpoint、分布式、低精度、post-training 数据 gate、SFT/LoRA/DPO/GRPO。</span></div>
-      <div class="path-step"><strong>3. 推理工程</strong><span>Ch08-Ch10：解码策略、KV Cache、量化、RAG、压测、容量估算和发布检查。</span></div>
-      <div class="path-step"><strong>4. 评测与复盘</strong><span>Ch11：经典 NLP 任务、评测指标、LLM-as-judge、误差分析和 Capstone 报告。</span></div>
+      <div class="path-step"><strong>Ch01-Ch02 表示</strong><span>Python 数据结构、矩阵查表、向量点积和位置旋转直接进入 tokenizer、embedding、RoPE 与 token 成本。</span></div>
+      <div class="path-step"><strong>Ch03-Ch05 计算</strong><span>softmax、mask、广播、归一化、残差梯度和资源估算放进 attention、GQA/MLA 与 Transformer Block。</span></div>
+      <div class="path-step"><strong>Ch06-Ch07 训练</strong><span>自回归概率、cross entropy、optimizer state、随机性和统计判断落到 GPT 组装、训练 gate 与 checkpoint。</span></div>
+      <div class="path-step"><strong>Ch08-Ch09 对齐</strong><span>logits 分布、采样方差、KL/reference、偏好数据和 reward 假设融入生成策略与 post-training。</span></div>
+      <div class="path-step"><strong>Ch10 服务</strong><span>KV cache、排队、带宽、RAG 指标、tool 协议和 continuous batching admission 统一进入 SLO/成本账本。</span></div>
+      <div class="path-step"><strong>Ch11 评测</strong><span>RNN/LSTM、encoder-only、结构化预测和传统指标作为现代 LLM 任务建模与评测可靠性的工具。</span></div>
     </div>
   </section>
 

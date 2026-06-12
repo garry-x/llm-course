@@ -90,6 +90,11 @@ def prefix_cache_savings(tokenized_prompts):
     raise NotImplementedError
 
 
+def continuous_batching_admission_report(requests, scheduler_config):
+    """Gate one continuous-batching scheduler step against token, sequence, KV, and queue budgets."""
+    raise NotImplementedError
+
+
 class SimpleRAG:
     def __init__(self, embed_model, llm, chunk_size=512, overlap=64):
         raise NotImplementedError

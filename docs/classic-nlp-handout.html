@@ -60,7 +60,7 @@
 <li class="doc-toc-level-2"><a href="#mini-recitation-activities">Mini-Recitation Activities</a></li></ol></nav>
     <section class="card doc-content">
 <h2 id="经典-nlp-专题-handout">经典 NLP 专题 Handout</h2>
-<p>本 handout 用于补齐经典神经 NLP 中常见但本课程主线没有展开成独立章节的内容。授课时建议安排 1-2 次讨论课，或把它作为期末项目的背景阅读。</p>
+<p>本 handout 用于把经典神经 NLP 中常见但现代 LLM 主线容易压缩的内容接回课程章节。授课时建议安排 1-2 次讨论课，或把它作为 Ch11 与期末项目的背景阅读。</p>
 <h3 id="1-dependency-parsing">1. Dependency Parsing</h3>
 <p>Dependency parsing 的目标是为句子中的词建立有向依存边。例如 <code>I saw her</code> 中，<code>saw</code> 是谓词中心，<code>I</code> 依赖于 <code>saw</code> 作为主语，<code>her</code> 依赖于 <code>saw</code> 作为宾语。</p>
 <h4 id="arc-standard-transition-system">Arc-Standard Transition System</h4>
@@ -155,7 +155,7 @@ p(y_t | y_&lt;t, x) = softmax(W_o [s_t; c_t])</code></pre>
 <p>BERT 使用双向 Transformer encoder，通过 Masked Language Modeling (MLM) 和 Next Sentence Prediction 预训练。与 causal LM 不同，MLM 可以同时看左右上下文，只预测被 mask 的位置。</p>
 <h4 id="与-causal-lm-的区别">与 Causal LM 的区别</h4>
 <div class="table-wrap"><table><thead><tr><th>维度</th><th>BERT / Encoder-only</th><th>GPT / Decoder-only</th></tr></thead><tbody><tr><td>注意力</td><td>双向可见</td><td>causal mask</td></tr><tr><td>预训练</td><td>MLM</td><td>next-token prediction</td></tr><tr><td>输出</td><td>token/CLS 表示</td><td>下一个 token logits</td></tr><tr><td>典型任务</td><td>分类、抽取、序列标注</td><td>生成、对话、代码</td></tr></tbody></table></div>
-<p>课程用途：补齐表示学习和判别式 NLP 的经典路线，让学生理解并非所有 NLP 任务都天然需要自回归生成。</p>
+<p>课程用途：把表示学习和判别式 NLP 的经典方法接入 Ch11 任务建模，让学生理解并非所有 NLP 任务都天然需要自回归生成。</p>
 <h4 id="worked-example-bert-style-mlm-tensor">Worked Example: BERT-style MLM Tensor</h4>
 <p>输入 tokens：</p>
 <pre class="code-block" data-lang="text"><code>[CLS] the cat sat [SEP]</code></pre>

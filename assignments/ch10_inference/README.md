@@ -1,6 +1,6 @@
 # Chapter 10 Assignment: Inference Engineering
 
-本作业对应第 10 章推理优化与工程落地。目标是实现 KV Cache、显存估算、prefix cache 复用估算、INT8 量化、最小 RAG、contrastive retrieval training、pairwise reranker training、检索质量指标、hybrid retrieval / reranking、MMR 多样化选择、RAG context packing、RAG 失败归因、tool use 工程协议校验、基准指标、prefill/decode 解耦 trace 报告、P/D worker pool 容量规划、speculative decoding 服务 gate 和 LSH 检索。
+本作业对应第 10 章推理优化与工程落地。目标是实现 KV Cache、显存估算、prefix cache 复用估算、continuous batching admission gate、INT8 量化、最小 RAG、contrastive retrieval training、pairwise reranker training、检索质量指标、hybrid retrieval / reranking、MMR 多样化选择、RAG context packing、RAG 失败归因、tool use 工程协议校验、基准指标、prefill/decode 解耦 trace 报告、P/D worker pool 容量规划、speculative decoding 服务 gate 和 LSH 检索。
 
 ## Files
 
@@ -35,6 +35,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 - `rag_answer_diagnostics` 必须把端到端 RAG 结果拆成 retrieval recall/MRR、citation precision/recall 和 failure mode，区分 retrieval miss、context/citation miss、generation error 和 success。
 - `validate_tool_call_plan` 必须在执行前校验 tool registry、参数 schema、权限风险、调用次数和重复循环预算；tool use 设计题还必须写清 observation 回填和失败恢复。
 - `prefix_cache_savings` 必须按请求到达顺序计算最长可复用历史前缀、每条请求新增 prefill token、总节省 token 和 prefix cache hit rate。
+- `continuous_batching_admission_report` 必须把一批待调度请求按 priority/waiting 排序，检查 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens、prefix cache、chunked prefill 和 queue wait SLO，输出 admitted/queued、queued reasons、gate 信号和 action items。
 - benchmark summary 应报告 TTFT、TPOT、tokens/s 和显存。
 - benchmark summary 应记录任务、样本量、baseline、指标、风险、不确定性和结论边界。
 - `prefill_decode_disaggregation_report` 必须把请求拆成 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，报告 P95、likely bottleneck、SLO 是否通过和违反项。
@@ -46,6 +47,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 KV cache 显存、prefix cache 节省率、量化误差、InfoNCE/in-batch negatives、pairwise reranker loss、RAG chunk/overlap、Recall@k/MRR/nDCG、MMR、context packing、RAG 失败分解、tool schema/权限/循环预算、多模态 token 成本、TTFT/TPOT/tokens/s、prefill/decode 解耦、KV transfer、P/D pool sizing 和 speculative decoding gate 的上线意义 |
-| Programming parts | 55 | 实现 KV cache、显存估算、prefix cache 复用估算、INT8 量化、contrastive retrieval loss、pairwise reranker loss、RAG/LSH、检索质量指标、RRF/rerank/MMR、context packing、RAG 失败归因、`validate_tool_call_plan`、benchmark 指标汇总、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report` 和结论边界摘要 |
-| Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、tool use 的 schema/权限/预算/失败恢复、prefill/decode/KV transfer/active KV memory/speculative decoding 的瓶颈归因、多模态失败模式和前沿 benchmark 适用范围 |
+| Written questions | 35 | 推导 KV cache 显存、prefix cache 节省率、continuous batching token/seq/KV admission、量化误差、InfoNCE/in-batch negatives、pairwise reranker loss、RAG chunk/overlap、Recall@k/MRR/nDCG、MMR、context packing、RAG 失败分解、tool schema/权限/循环预算、多模态 token 成本、TTFT/TPOT/tokens/s、prefill/decode 解耦、KV transfer、P/D pool sizing 和 speculative decoding gate 的上线意义 |
+| Programming parts | 55 | 实现 KV cache、显存估算、prefix cache 复用估算、`continuous_batching_admission_report`、INT8 量化、contrastive retrieval loss、pairwise reranker loss、RAG/LSH、检索质量指标、RRF/rerank/MMR、context packing、RAG 失败归因、`validate_tool_call_plan`、benchmark 指标汇总、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report` 和结论边界摘要 |
+| Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、tool use 的 schema/权限/预算/失败恢复、continuous batching/prefix cache/chunked prefill/prefill-decode/KV transfer/active KV memory/speculative decoding 的瓶颈归因、多模态失败模式和前沿 benchmark 适用范围 |

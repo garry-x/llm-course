@@ -556,6 +556,7 @@ Quick check：
 
 - KV cache bytes `2 * batch * layers * seq_len * kv_heads * head_dim * dtype_bytes`。
 - Prefix cache effective prefill tokens：总 prompt tokens 减去每条请求可复用的最长历史前缀 tokens。
+- Continuous batching admission：`max_num_seqs` 约束本轮序列数，`max_num_batched_tokens` 约束本轮 token 工作量，active KV tokens 约束显存承诺，queue wait 约束尾延迟。
 - Workload token rate：`QPS * E[prompt_tokens]` 和 `QPS * E[output_tokens]` 分别约束 prefill/decode。
 - active KV tokens 与 admission control：按请求数限流、按活跃 token 限流和按 SLO 队列隔离的差异。
 - Disaggregated serving 指标：`TTFT = queue + prefill + KV transfer + decode admission + first decode token`，`TPOT` 单独约束 decode worker。
@@ -567,6 +568,7 @@ Quick check：
 
 - 用 Ch10 代码验证 incremental attention 与 full causal attention 等价。
 - 对一组共享 system prompt 的 tokenized requests 手算 prefix cache hit rate 和 effective prefill tokens。
+- 给一组待调度请求和 scheduler config，填写 `continuous_batching_admission_report`，判断 admitted/queued、queued reasons 和 action items。
 - 运行 inference capstone benchmark，读 P95 和 tokens/s。
 - 给定 QPS、平均 prompt/output tokens、prefill/decode capacity，判断瓶颈在 prefill 还是 decode。
 - 给定每 token KV bytes、平均活跃上下文长度和 KV 显存预算，估算 admission limit，并说明为什么长请求不能和短请求只按请求数统一限流。
@@ -579,6 +581,7 @@ Quick check：
 
 - KV cache 公式里的 2 表示什么？
 - prefix cache 为什么主要降低 TTFT/prefill 成本，而不是单个 decode step 的 KV 读取量？
+- `max_num_batched_tokens` 调大为什么可能同时提高吞吐和增加 KV/queue 风险？
 - 平均延迟为什么不能替代 P95？
 - 为什么 high QPS 下 TPOT 可能先坏，而 TTFT 仍暂时正常？
 - admission control 为什么要看 active KV tokens？
@@ -651,7 +654,7 @@ Quick check：
 
 目标：
 
-- 补齐本课程经典神经 NLP 主线：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。
+- 把经典神经 NLP 主题接回现代 LLM 任务建模：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。
 - 比较 structured prediction、encoder-decoder 和 encoder-only 表示。
 - 说明这些主题与 decoder-only LLM 的关系和边界。
 

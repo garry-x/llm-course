@@ -22,7 +22,7 @@
 
 ## 关于本课程
 
-这是一门**从代码出发**的 LLM 实战课程。不做概念浏览，而是用 Python 和 PyTorch 逐行实现大语言模型的每一个核心组件。必要的数学、PyTorch、ML 和系统基础不会作为额外路线悬在旁边，而是揉进每章开头的先修能力、章节内实现和验收信号里。
+这是一门**从代码出发**的 LLM 实战课程。不做概念浏览，而是用 Python 和 PyTorch 逐行实现大语言模型的每一个核心组件。必要的数学、PyTorch、ML 和系统基础不会被拆成旁路，而是揉进每章开头的先修能力、章节内实现和验收信号里。
 
 **每章的学习循环：**
 > 深度理论 → 理解"为什么" → 编程练习（你写代码）→ 对照参考解答 → 概念练习巩固
@@ -31,7 +31,7 @@
 
 ## 初学者怎么学
 
-这门课覆盖从基础组件到工业前沿的完整链路。第一次学习时不要把所有高级专题都当成必修，可以按三遍路线推进：
+这门课覆盖从基础组件到工业前沿的完整链路。第一次学习时不要把所有高级专题都当成必修，可以按三遍阅读节奏推进：
 
 | 阶段 | 章节 | 目标 | 建议 |
 |------|------|------|------|
@@ -39,7 +39,7 @@
 | 第二遍：跑起来 | Ch07-Ch08 | 训练小模型，并让模型生成文本 | 重点看 loss、optimizer、sampling 的输入输出形状 |
 | 第三遍：进阶选读 | Ch09-Ch10 | 微调、对齐、RAG、推理优化和前沿架构 | 先掌握概念地图，再回头补公式和工程细节 |
 
-**最低前置要求：**会 Python 函数、列表/字典、基础矩阵乘法，知道 PyTorch 张量的 `shape`。如果数学推导暂时吃力，先抓住每节的“输入是什么、输出是什么、形状怎么变”。
+**最低前置要求：**会 Python 函数、列表/字典、基础矩阵乘法，知道 PyTorch 张量的 `shape`。如果数学推导暂时吃力，先抓住每节的“输入是什么、输出是什么、形状怎么变”。数学、PyTorch、统计和系统知识只在被章节任务用到时展开；附录用于查阅，不要求先单独学完。
 
 ## LLM 知识体系
 
@@ -61,6 +61,19 @@
 - 代码上它怎样落到 PyTorch 张量、shape、mask、dtype 和梯度。
 - 工程上它带来什么成本、速度、质量或稳定性的取舍。
 
+## 章节内置基础
+
+基础知识按章节任务就地出现。每章开头都给出“先修能力、本章内化、验收信号”，作业和书面题再把这些基础落到可运行代码或可复算推导。
+
+| 章节 | 章节内化的基础 | 直接服务的工程判断 |
+|------|----------------|--------------------|
+| Ch01-Ch02 | Python 数据结构、矩阵查表、向量点积、位置旋转和 shape trace | token 成本、embedding 参数、context 利用率和 prefix cache 前提 |
+| Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差路径和资源估算 | attention 正确性、GQA/MLA 显存收益、block 稳定性和 FLOPs 预算 |
+| Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性和实验统计 | GPT 组装、训练曲线解释、checkpoint/resume、数据 gate 和扩容判断 |
+| Ch08-Ch09 | logits 分布、采样方差、KL/reference model、偏好数据和 reward 假设 | 生成策略上线、reasoning 预算、SFT/DPO/GRPO 质量与安全边界 |
+| Ch10 | 排队、显存/带宽、KV cache、压测指标、RAG 检索指标和准入控制 | TTFT/TPOT/P95、continuous batching admission、P/D 解耦、容量规划和回退 |
+| Ch11 | 序列建模、结构化预测、encoder-only、传统指标和 judge 可靠性 | 选择生成/抽取/排序/结构化解码，判断评测结果能否支持上线结论 |
+
 配套学习材料：
 
 - [课程 Syllabus](docs/syllabus.html)：课程目标、周安排、作业节奏和项目安排。
@@ -81,17 +94,17 @@
 | 模型结构读懂 | Ch01-Ch06 | 看懂 tokenizer、attention、KV Cache 来源、logits 输出和参数规模 |
 | 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐、采样质量和 reasoning 预算 |
 | 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、量化、FlashAttention 和显存瓶颈 |
-| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 batching、prefix cache、并发调度、speculative decoding gate 和 tool-call gate |
+| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 continuous batching admission、prefix cache、并发调度、speculative decoding gate 和 tool-call gate |
 | 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链和失败兜底 |
 | 评测与上线 | Ch09-Ch10 | 设计质量/安全/延迟/成本指标，做压测、回归评估和上线检查 |
 
 **课程最终项目：**[LLM Inference Engineering Capstone](projects/inference-engineering-capstone/) 会带你部署一个 OpenAI-compatible Chat API：支持流式输出、结构化 JSON、工具调用、RAG、基础指标、压测报告、P50/P95/P99 延迟和 tokens/s 成本估算。先用 mock engine 跑通服务骨架，再替换为 vLLM / SGLang / TensorRT-LLM / llama.cpp。
 
-**学习路线：**如果你想按岗位能力学习，先看 [LLM 推理工程师课程路线](inference-engineer-curriculum.html)（详细版在 [docs/inference-engineer-curriculum.html](docs/inference-engineer-curriculum.html)）。它把章节、练习、Capstone、压测、评测和上线复盘串成一条实践路径。
+**能力视图：**如果你想按岗位能力检查覆盖面，参考 [LLM 推理工程师能力视图](inference-engineer-curriculum.html)（详细版在 [docs/inference-engineer-curriculum.html](docs/inference-engineer-curriculum.html)）。它只重排章节产出、练习、Capstone、压测、评测和上线复盘，不替代章节学习。
 
 ## 面向 LLM 训练工程师的能力路线
 
-如果你的目标是成为 LLM 训练工程师，学习目标要从“能跑一个 loss”推进到“能交付可复现、可恢复、可观测、成本可解释的训练系统”。课程按以下能力补齐：
+如果你的目标是成为 LLM 训练工程师，学习目标要从“能跑一个 loss”推进到“能交付可复现、可恢复、可观测、成本可解释的训练系统”。课程按以下能力组织：
 
 | 能力 | 对应章节 | 你需要能做什么 |
 |------|----------|----------------|
@@ -104,7 +117,7 @@
 
 **训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、data curation gate、训练、开发集监控、checkpoint、resume、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下数据过滤/去重/混合、DDP/ZeRO/FSDP、低精度、MFU 和 checkpoint state 的工程边界。
 
-**学习路线：**按 [LLM 训练工程师课程路线](training-engineer-curriculum.html)（详细版在 [docs/training-engineer-curriculum.html](docs/training-engineer-curriculum.html)）完成训练报告、指标日志、checkpoint 恢复说明和成本规划。
+**能力视图：**按 [LLM 训练工程师能力视图](training-engineer-curriculum.html)（详细版在 [docs/training-engineer-curriculum.html](docs/training-engineer-curriculum.html)）检查训练报告、指标日志、checkpoint 恢复说明和成本规划是否覆盖完整。
 
 ## 快速开始
 
@@ -147,7 +160,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
 | 9 | **微调与对齐** — SFT/偏好数据 Gate/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + post-training data audit + LoRA + GRPO/RLVR ~240行 | 8+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool Gate + P/D pool plan + speculative gate + LSH + 服务蓝图 | 7+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool Gate + continuous batching admission + P/D pool plan + speculative gate + LSH + 服务蓝图 | 8+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 
 > **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**
@@ -174,8 +187,8 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 ```
 llm-course/
 ├── index.html                # 课程首页：Hero + 仪表板 + 章节目录
-├── inference-engineer-curriculum.html # 推理工程师学习路线
-├── training-engineer-curriculum.html  # 训练工程师学习路线
+├── inference-engineer-curriculum.html # 推理工程师能力视图
+├── training-engineer-curriculum.html  # 训练工程师能力视图
 ├── css/style.css              # 暖色 editorial 风格，暗色/浅色双主题
 ├── js/
 │   ├── db.js                  # IndexedDB 持久化存储层
@@ -190,8 +203,8 @@ llm-course/
 │   ├── worked-example-pack.md   # 可复算小例子
 │   ├── math-prerequisites.md    # 数学先修
 │   ├── classic-nlp-handout.md   # 经典 NLP 专题
-│   ├── inference-engineer-curriculum.md  # 推理工程师学习路线
-│   └── training-engineer-curriculum.md   # 训练工程师学习路线
+│   ├── inference-engineer-curriculum.md  # 推理工程师能力视图
+│   └── training-engineer-curriculum.md   # 训练工程师能力视图
 ├── projects/
 │   ├── inference-engineering-capstone/
 │   │   ├── acceptance.py      # 项目脚本：health + 评测 + 压测 + SLO + 容量估算

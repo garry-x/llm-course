@@ -35,7 +35,7 @@
     <h2>逐周阅读材料与复盘 Handout</h2>
     <nav class="toc"><h4>目录</h4><ol><li class="doc-toc-level-1"><a href="#逐周阅读材料与复盘-handout">逐周阅读材料与复盘 Handout</a></li>
 <li class="doc-toc-level-2"><a href="#阅读方法-从论文到课程能力">阅读方法：从论文到课程能力</a></li>
-<li class="doc-toc-level-2"><a href="#week-0-先修与-ml-foundations-bridge">Week 0: 先修与 ML Foundations Bridge</a></li>
+<li class="doc-toc-level-2"><a href="#week-0-章节内置先修诊断">Week 0: 章节内置先修诊断</a></li>
 <li class="doc-toc-level-2"><a href="#阅读重点">阅读重点</a></li>
 <li class="doc-toc-level-2"><a href="#week-1-tokenization-与-word-vectors">Week 1: Tokenization 与 Word Vectors</a></li>
 <li class="doc-toc-level-2"><a href="#week-2-attention-与-tensor-derivatives">Week 2: Attention 与 Tensor Derivatives</a></li>
@@ -49,7 +49,7 @@
 <li class="doc-toc-level-2"><a href="#week-10-前沿方法-benchmark-边界与课程综合">Week 10: 前沿方法、Benchmark 边界与课程综合</a></li></ol></nav>
     <section class="card doc-content">
 <h2 id="逐周阅读材料与复盘-handout">逐周阅读材料与复盘 Handout</h2>
-<p>本 handout 把 10 周课程的阅读材料组织成一条从基础 NLP 到现代 LLM 系统的学习路径。阅读分为三类：</p>
+<p>本 handout 把 10 周课程的阅读材料按章节任务组织起来。它不是独立补课路径；每篇阅读都必须回到章节代码、书面题或 capstone 决策中。阅读分为三类：</p>
 <ul>
 <li>必读：课堂讨论和作业默认依赖。</li>
 <li>选读：用于项目、报告或加深理解。</li>
@@ -66,14 +66,14 @@
 </ol>
 <p>阅读深度按三层递进：</p>
 <div class="table-wrap"><table><thead><tr><th>层级</th><th>学生应能做到</th><th>例子</th></tr></thead><tbody><tr><td>概念层</td><td>用自己的话复述问题、方法、结果和限制</td><td>BPE 为什么缓解 OOV；DPO 为什么需要 reference model</td></tr><tr><td>数学层</td><td>展开关键公式并完成一个小数值例子</td><td>SGNS loss、attention scaling、next-token CE、DPO log-ratio</td></tr><tr><td>系统层</td><td>把论文方法连接到资源、延迟、质量或安全取舍</td><td>GQA 的 KV cache、PagedAttention 的显存分页、RAG 的检索/生成双指标</td></tr></tbody></table></div>
-<h3 id="week-0-先修与-ml-foundations-bridge">Week 0: 先修与 ML Foundations Bridge</h3>
+<h3 id="week-0-章节内置先修诊断">Week 0: 章节内置先修诊断</h3>
 <p>对应材料：Prerequisite Diagnostic、<a href="math-prerequisites.html">数学与 PyTorch 先修复习</a>、<a href="ml-foundations-prerequisite-bridge.html">ML Foundations Prerequisite Bridge</a>。</p>
-<p>本周阅读目标：确认学生能把基础 ML 语言转成 LLM 课程中反复使用的对象，包括 loss、gradient、generalization、held-out evaluation、tensor shape 和 PyTorch module。</p>
+<p>本周阅读目标：确认学生能把基础 ML 语言转成 LLM 课程中反复使用的对象，包括 loss、gradient、generalization、held-out evaluation、tensor shape 和 PyTorch module。若诊断暴露短板，直接回到相关章节的“先修能力/本章内化/验收信号”补强，而不是另走一条独立课程。</p>
 <p>必读：</p>
 <ul>
-<li>本课程 <a href="ml-foundations-prerequisite-bridge.html">ML Foundations Prerequisite Bridge</a>：重点看 calculus、probability/statistics、ML objectives、generalization 和 evaluation。</li>
+<li>本课程 <a href="ml-foundations-prerequisite-bridge.html">ML Foundations Prerequisite Bridge</a>：重点看 calculus、probability/statistics、ML objectives、generalization 和 evaluation 如何进入 Ch07-Ch11 的训练、评测和上线结论。</li>
 <li>Goodfellow, Bengio, Courville. <a href="https://www.deeplearningbook.org/">Deep Learning</a>, optimization 和 ML basics 相关章节。</li>
-<li>本课程 <a href="math-prerequisites.html">数学与 PyTorch 先修复习</a>：重点确认 Python、PyTorch、calculus、linear algebra、probability/statistics 和 ML foundations 的最低掌握边界。</li>
+<li>本课程 <a href="math-prerequisites.html">数学与 PyTorch 先修复习</a>：重点确认 Python、PyTorch、calculus、linear algebra、probability/statistics 和 ML foundations 在 Ch01-Ch06 的 shape、mask、loss 和梯度实现中如何出现。</li>
 </ul>
 <p>复盘问题：</p>
 <ul>
@@ -282,12 +282,14 @@
 <li>Lewis et al. <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>. 重点看 retriever/generator 组合。</li>
 <li>Dettmers et al. <a href="https://arxiv.org/abs/2305.14314">QLoRA: Efficient Finetuning of Quantized LLMs</a>. 重点看 4-bit quantization 与 LoRA 结合。</li>
 <li>Yu et al. <a href="https://www.usenix.org/conference/osdi22/presentation/yu">Orca: A Distributed Serving System for Transformer-Based Generative Models</a>. 重点看 iteration-level scheduling 和 continuous batching 为什么能减少队列浪费。</li>
+<li>vLLM documentation: <a href="https://docs.vllm.ai/en/stable/configuration/optimization/">Optimization and Tuning</a> 与 <a href="https://docs.vllm.ai/en/stable/cli/serve/">serve scheduler arguments</a>. 重点看 <code>max_num_seqs</code>、<code>max_num_batched_tokens</code>、chunked prefill、KV cache capacity 和 queue/SLO 之间的关系。</li>
 <li>PyTorch and vLLM. <a href="https://pytorch.org/blog/disaggregated-inference-at-scale-with-pytorch-vllm/">Disaggregated Inference at Scale with PyTorch &amp; vLLM</a>. 重点看 prefill/decode 分离如何同时影响 TTFT、TPOT、throughput 和 KV transfer。</li>
 <li>OpenAI. <a href="https://developers.openai.com/api/docs/guides/function-calling">Function calling</a> 与 <a href="https://developers.openai.com/api/docs/guides/structured-outputs">Structured Outputs</a>. 重点看 function tools、JSON schema、strict structured output 和 tool call output 如何构成服务端协议。</li>
 </ul>
 <p>选读：</p>
 <ul>
 <li>vLLM documentation on PagedAttention、continuous batching、prefix caching 和 disaggregated prefilling。</li>
+<li>TensorRT-LLM documentation on <a href="https://nvidia.github.io/TensorRT-LLM/">in-flight batching and request scheduling</a>. 重点看 in-flight batching 如何在 generation loop 中动态加入/退出请求。</li>
 <li>vLLM <a href="https://docs.vllm.ai/en/latest/features/speculative_decoding/">Speculative Decoding</a> documentation。重点看 medium-to-low QPS、memory-bound workload、draft/EAGLE/MTP/n-gram/suffix 方法选择和 lossless validation 边界。</li>
 <li>SGLang <a href="https://docs.sglang.ai/advanced_features/speculative_decoding.html">Speculative Decoding</a> documentation。重点看 EAGLE-2/EAGLE-3、MTP、standalone draft model、NGRAM 和 OOM/benchmark 注意事项。</li>
 <li>SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。</li>

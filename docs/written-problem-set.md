@@ -114,16 +114,17 @@
 1. 推导 KV Cache 显存公式，必须包含 batch size、layers、kv heads、head dim、context length 和 dtype bytes。
 2. 区分 TTFT、TPOT、tokens/s、吞吐、并发和 P95 latency；说明它们分别对应哪个用户体验或成本问题。
 3. 给定 tokenized prompts `[[1,2,3,4],[1,2,3,9,10],[1,2,8],[7,8]]`，按请求顺序计算每条请求可复用的最长历史前缀、new prefill tokens、总 saved prefill tokens、effective prefill tokens 和 prefix cache hit rate；说明为什么随机时间戳会破坏 prefix cache。
-4. 给定 query/document embedding batch，写出 in-batch negatives 的 InfoNCE logits、label 和 loss；给定 chosen/rejected reranker scores，计算 pairwise reranker loss；给定 dense 检索排序、BM25 排序、retrieved document ids、relevant document ids、graded relevance scores、MMR 相似度表和 `k`，计算 RRF 融合排序、Recall@k、reciprocal rank、nDCG@k 与 MMR 选择结果，并说明它们分别衡量 RAG 检索的哪一类问题。
-5. 给定一个 RAG 失败案例：retrieved ids `[doc9,doc2,doc5,doc1]`、relevant ids `{doc1,doc2,doc7}`、cited ids `[doc2,doc9]`、`k=3`、答案错误。计算 retrieval recall@k、MRR@k、citation precision、citation recall、missing relevant ids，并判断 failure mode 是 retrieval miss、context/citation miss 还是 generation error；若同时给出候选 chunk、citation id、token 数、context budget 和 reserved output budget，写出最终进入 prompt 的 citation 列表、used tokens 和 skipped chunks。
-6. 比较 INT8 weight-only quantization、KV Cache quantization 和 FP8/FP4 mixed precision 的目标、风险和验证指标。
-7. 说明为什么前沿模型 benchmark 数字必须同时给出任务、数据集、推理设置和评测版本。
-8. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank、hybrid+MMR 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。
-9. 设计一个多模态 LLM 评估：分别覆盖图像问答、OCR/文档理解、图表数值推理和视觉定位，说明输入分辨率、视觉 token 数、延迟、KV Cache 成本和每类任务的失败模式。
-10. 为一个 LLM benchmark 写结构化结论摘要：包括 task、sample_size、baseline、metrics、risks、uncertainty 和 conclusion，并说明哪些结论不能从这组数据推出。
-11. 给定服务 workload：`QPS=10`、平均 prompt tokens `800`、平均 output tokens `200`、单卡 prefill capacity `120k prompt tokens/s`、decode capacity `2.5k output tokens/s`，计算 prefill/decode token rate，并判断主要瓶颈；说明为什么 QPS 继续上升时 TPOT、排队时长和 TTFT 可能以不同顺序恶化。
-12. 给定 32 层 GQA 模型、`n_kv_heads=8`、`head_dim=128`、fp16 KV Cache、平均活跃上下文 `6000` tokens、可用于 KV 的显存 `48 GiB`，计算每 token KV bytes、每请求 KV Cache 和理论最大活跃请求数；再考虑 20% 安全余量，给出 admission limit，并解释为什么只按并发请求数限流会误伤短请求或放过长请求。
-13. 给定 speculative decoding 服务 trace：baseline `2000 ms`、speculative `940 ms`、输出 `200` tokens、draft `200` tokens、accepted `152` tokens、target verify steps `50`、draft cost `200 ms`、quality regression `0`、额外显存 `1.5 GiB`、QPS `5`。在 gate `acceptance>=0.7`、`speedup>=1.8`、`draft_overhead<=0.25`、额外显存 `<=2 GiB` 下，计算 acceptance rate、speedup、draft overhead、tokens per verify step，并判断是否启用；再说明为什么 high QPS、compute-bound workload 或质量回归会改变结论。
+4. 给定 3 条待调度请求和 scheduler config：`max_num_seqs`、`max_num_batched_tokens`、`max_active_kv_tokens`、`running_requests`、`running_active_kv_tokens`、`enable_chunked_prefill`、`max_prefill_chunk_tokens`、`max_queue_wait_ms`，按 priority/waiting 排序，计算每条请求 effective prefill tokens、scheduled tokens、active KV reservation，判断 admitted/queued、queued reasons、token/KV utilization 和 action items。
+5. 给定 query/document embedding batch，写出 in-batch negatives 的 InfoNCE logits、label 和 loss；给定 chosen/rejected reranker scores，计算 pairwise reranker loss；给定 dense 检索排序、BM25 排序、retrieved document ids、relevant document ids、graded relevance scores、MMR 相似度表和 `k`，计算 RRF 融合排序、Recall@k、reciprocal rank、nDCG@k 与 MMR 选择结果，并说明它们分别衡量 RAG 检索的哪一类问题。
+6. 给定一个 RAG 失败案例：retrieved ids `[doc9,doc2,doc5,doc1]`、relevant ids `{doc1,doc2,doc7}`、cited ids `[doc2,doc9]`、`k=3`、答案错误。计算 retrieval recall@k、MRR@k、citation precision、citation recall、missing relevant ids，并判断 failure mode 是 retrieval miss、context/citation miss 还是 generation error；若同时给出候选 chunk、citation id、token 数、context budget 和 reserved output budget，写出最终进入 prompt 的 citation 列表、used tokens 和 skipped chunks。
+7. 比较 INT8 weight-only quantization、KV Cache quantization 和 FP8/FP4 mixed precision 的目标、风险和验证指标。
+8. 说明为什么前沿模型 benchmark 数字必须同时给出任务、数据集、推理设置和评测版本。
+9. 设计一个 RAG 消融实验：比较 dense-only、BM25-only、hybrid、hybrid+rerank、hybrid+MMR 和两组 chunk size/overlap，说明应分别报告哪些检索指标、生成质量指标、延迟和 token 成本。
+10. 设计一个多模态 LLM 评估：分别覆盖图像问答、OCR/文档理解、图表数值推理和视觉定位，说明输入分辨率、视觉 token 数、延迟、KV Cache 成本和每类任务的失败模式。
+11. 为一个 LLM benchmark 写结构化结论摘要：包括 task、sample_size、baseline、metrics、risks、uncertainty 和 conclusion，并说明哪些结论不能从这组数据推出。
+12. 给定服务 workload：`QPS=10`、平均 prompt tokens `800`、平均 output tokens `200`、单卡 prefill capacity `120k prompt tokens/s`、decode capacity `2.5k output tokens/s`，计算 prefill/decode token rate，并判断主要瓶颈；说明为什么 QPS 继续上升时 TPOT、排队时长和 TTFT 可能以不同顺序恶化。
+13. 给定 32 层 GQA 模型、`n_kv_heads=8`、`head_dim=128`、fp16 KV Cache、平均活跃上下文 `6000` tokens、可用于 KV 的显存 `48 GiB`，计算每 token KV bytes、每请求 KV Cache 和理论最大活跃请求数；再考虑 20% 安全余量，给出 admission limit，并解释为什么只按并发请求数限流会误伤短请求或放过长请求。
+14. 给定 speculative decoding 服务 trace：baseline `2000 ms`、speculative `940 ms`、输出 `200` tokens、draft `200` tokens、accepted `152` tokens、target verify steps `50`、draft cost `200 ms`、quality regression `0`、额外显存 `1.5 GiB`、QPS `5`。在 gate `acceptance>=0.7`、`speedup>=1.8`、`draft_overhead<=0.25`、额外显存 `<=2 GiB` 下，计算 acceptance rate、speedup、draft overhead、tokens per verify step，并判断是否启用；再说明为什么 high QPS、compute-bound workload 或质量回归会改变结论。
 
 ## 经典 NLP 专题题
 

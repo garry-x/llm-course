@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第10章 推理优化与前沿</h2>
   <p class="subtitle">KV Cache / 稀疏注意力 / 量化 / RAG / Agent——LLM 的工程落地</p>
-  <div class="reading-time">⏱ 预计阅读: 165 分钟 · 23 小节 · 6 道编程练习 · 7 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 170 分钟 · 24 小节 · 7 道编程练习 · 7 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -38,12 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>推理优化不是一堆孤立名词。KV Cache 解决重复计算，量化解决显存/带宽，FlashAttention 解决注意力 IO，RAG 解决知识更新，vLLM 解决服务吞吐。稀疏注意力、外部记忆、Triton 和多模态属于前沿地图，第一次学习先建立分类。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
-    <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、benchmark 与 SLO。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用设计、基准测试、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
+    <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、continuous batching admission、benchmark 与 SLO。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用设计、调度准入 gate、基准测试、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、tool schema 设计、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema 设计、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>先修能力：</strong>前九章计算图、KV cache、生成策略、评测指标，以及 TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。<br><strong>本章内化：</strong>每个服务问题都会拆成 prefill、decode、RAG/tool、网络流式输出、排队和回退策略；KV、量化、prefix cache、RAG、tool gate 与多模态 token 都要进入同一张 SLO/成本账本。<br><strong>验收信号：</strong>你能写出一份上线报告，说明瓶颈在哪、优化改了哪个阶段、质量是否回归、容量边界是什么，以及何时拒绝“只看平均延迟”的结论。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>前九章计算图、KV cache、生成策略、评测指标，以及 TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。<br><strong>本章内化：</strong>每个服务问题都会拆成 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和回退策略；KV、量化、prefix cache、RAG、tool gate 与多模态 token 都要进入同一张 SLO/成本账本。<br><strong>验收信号：</strong>你能写出一份上线报告，说明瓶颈在哪、优化改了哪个阶段、质量是否回归、容量边界是什么，以及何时拒绝“只看平均延迟”的结论。</div>
 </section>
 
 <!-- ================================================================ -->
@@ -872,6 +872,49 @@ summary = build_benchmark_summary(
   <p>Continuous Batching：<strong>每次前向传播后，完成生成的序列立即退出 batch，新请求立即加入</strong>。不需要等待整个 batch 完成。这就像餐厅的"翻台"——吃完的客人马上离座，排队的客人马上入座，而不是等整桌人都吃完。</p>
   <p>实现要点：每个 step 执行 "prefill + decode" 混合调度，kernel 需要支持不同的序列长度和张量形状。</p>
 
+  <h4>调度准入：max_num_seqs、max_num_batched_tokens 和 active KV</h4>
+  <p>Continuous batching 不是“把所有请求都塞进 GPU”。每个调度 step 至少同时受三类预算约束：本轮可处理多少序列、可处理多少 token，以及已经承诺保留多少 KV cache。vLLM 的 <code>max_num_seqs</code>、<code>max_num_batched_tokens</code>，SGLang 的 continuous decode / RadixAttention 配置，TensorRT-LLM 的 in-flight batching，本质上都在回答同一个工程问题：哪些请求现在进 batch，哪些请求继续排队，排队是否已经破坏 SLO。</p>
+
+  <table class="metrics-table">
+    <thead><tr><th>调度预算</th><th>约束什么</th><th>典型失败</th><th>优先动作</th></tr></thead>
+    <tbody>
+      <tr><td><code>max_num_seqs</code></td><td>一个 iteration 中可同时处理的序列数</td><td>短请求很多但进不了 batch，queue wait 升高</td><td>提高序列预算、扩 replica 或按租户隔离队列</td></tr>
+      <tr><td><code>max_num_batched_tokens</code></td><td>一个 iteration 中 prefill/decode token 总量</td><td>长 prompt prefill 阻塞 decode，TTFT 与 TPOT 同时抖动</td><td>启用 chunked prefill、降低 prompt 长度或提高 token budget</td></tr>
+      <tr><td>active KV tokens</td><td>已接收请求未来需要保留的 KV cache</td><td>高并发长输出导致 OOM 或尾延迟塌陷</td><td>降低 max_new_tokens、限流长上下文请求或增加 KV 容量</td></tr>
+      <tr><td>queue wait SLO</td><td>排队请求还能等多久</td><td>吞吐看似正常但 P95/P99 用户延迟超标</td><td>扩容、优先级调度、拒绝/降级低优先级请求</td></tr>
+    </tbody>
+  </table>
+
+  <p>作业中的 <code>continuous_batching_admission_report</code> 把这些预算做成一次调度 step 的 gate。它接收待调度请求，按 priority 和 waiting time 排序，计算 prefix cache 后的有效 prefill、chunked prefill 后本轮 token、请求的 active KV reservation，并输出 <code>admitted</code>、<code>queued</code>、queued reasons 和 action items。这个练习让学生看到：调大 batch 参数可能提高吞吐，也可能把 KV memory、queue wait 或 TPOT 推过 SLO。</p>
+
+  <div class="coding-exercise">
+    <h4>练习：Continuous Batching Admission Gate</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 <code>continuous_batching_admission_report(requests, scheduler_config)</code>，用单步调度账本决定哪些请求进入本轮 batch。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>每条请求包含 <code>prompt_tokens</code>、<code>max_new_tokens</code>、可选 <code>cached_prefix_tokens</code>、<code>priority</code>、<code>waiting_ms</code> 和 <code>phase</code></li>
+        <li>按 priority 高、等待时间长、到达早排序</li>
+        <li>同时检查 <code>max_num_seqs</code>、<code>max_num_batched_tokens</code>、active KV budget 和 queue wait SLO</li>
+        <li>启用 chunked prefill 时，长 prompt 本轮只消耗 <code>max_prefill_chunk_tokens</code>，但 active KV 仍按整条请求估算</li>
+        <li>输出 admitted/queued、queued reasons、budget utilization、gate 结果和 action items</li>
+      </ul>
+      <pre>report = continuous_batching_admission_report(
+    requests=[
+        {"request_id": "r1", "prompt_tokens": 4000, "cached_prefix_tokens": 3000, "max_new_tokens": 256},
+        {"request_id": "r2", "phase": "decode", "prompt_tokens": 1200, "max_new_tokens": 128},
+    ],
+    scheduler_config={
+        "max_num_seqs": 4,
+        "max_num_batched_tokens": 2048,
+        "max_active_kv_tokens": 10000,
+        "enable_chunked_prefill": True,
+        "max_prefill_chunk_tokens": 1024,
+    },
+)</pre>
+    </div>
+  </div>
+
   <h4>vLLM 的性能数据如何阅读</h4>
   <p>下面的数字只用于说明量级和指标口径，不是课程对任意模型/硬件的性能承诺。正式项目必须在自己的硬件、模型、context、batching 和并发设置下重新测量。</p>
   <div class="table-wrap">
@@ -1491,6 +1534,7 @@ assert report["decision"] == "enable_speculative_decoding_for_this_workload"</di
     <table>
       <tr><th>压缩对象</th><th>代表技术</th><th>节省什么</th><th>主要风险</th></tr>
       <tr><td><strong>历史状态</strong></td><td>GQA、MLA、prefix cache、PagedAttention</td><td>KV Cache 显存、重复 prefill</td><td>缓存命中率低、长上下文显存仍随 batch 增长</td></tr>
+      <tr><td><strong>调度队列</strong></td><td>continuous batching、chunked prefill、admission control</td><td>静态 batch 等待、长 prompt 阻塞、KV 超卖</td><td>max token/seq 设置不当会放大尾延迟或 OOM</td></tr>
       <tr><td><strong>参数访问</strong></td><td>MoE、量化、tensor parallel</td><td>每 token 激活参数、权重带宽、单卡显存</td><td>路由不均衡、量化误差、通信开销</td></tr>
       <tr><td><strong>注意力范围</strong></td><td>稀疏注意力、压缩注意力、滑动窗口+全局 token</td><td>长上下文 FLOPs 和中间激活</td><td>远端信息漏召回、精确引用退化</td></tr>
       <tr><td><strong>上下文内容</strong></td><td>RAG、rerank、MMR、context packing</td><td>无关 prompt token、知识更新成本</td><td>检索错误、引用不一致、上下文干扰</td></tr>
@@ -1510,6 +1554,7 @@ assert report["decision"] == "enable_speculative_decoding_for_this_workload"</di
       <tr><th>问题</th><th>优先检查</th><th>应报告</th></tr>
       <tr><td>首 token 慢</td><td>prefill、prompt token、排队、prefix cache</td><td>TTFT、prompt 长度分桶、cache hit rate</td></tr>
       <tr><td>逐 token 慢</td><td>decode batch、KV 读写、kernel、量化配置</td><td>TPOT、tokens/s、GPU 利用率、显存峰值</td></tr>
+      <tr><td>尾延迟塌陷</td><td>continuous batching 准入、长 prompt、KV 预算、队列隔离</td><td>admitted/queued、max queue wait、active KV tokens</td></tr>
       <tr><td>成本过高</td><td>上下文长度、检索冗余、权重量化、batching</td><td>单位请求成本、输入/输出 token、吞吐曲线</td></tr>
       <tr><td>质量不稳</td><td>采样、RAG 召回、tool schema、格式约束</td><td>pass rate、引用准确率、格式错误和失败类型</td></tr>
     </table>

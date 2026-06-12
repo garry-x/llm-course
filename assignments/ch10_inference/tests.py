@@ -398,6 +398,91 @@ class TestRetrievalMetrics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.prefix_cache_savings([[1, 2], []])
 
+    def test_continuous_batching_admission_admits_all_with_prefix_and_chunking(self):
+        report = submission.continuous_batching_admission_report(
+            [
+                {
+                    "request_id": "shared-system",
+                    "phase": "prefill",
+                    "prompt_tokens": 4000,
+                    "cached_prefix_tokens": 3000,
+                    "max_new_tokens": 256,
+                    "priority": 1,
+                    "waiting_ms": 20,
+                },
+                {
+                    "request_id": "decode-active",
+                    "phase": "decode",
+                    "prompt_tokens": 1200,
+                    "max_new_tokens": 128,
+                    "priority": 0,
+                    "waiting_ms": 5,
+                },
+            ],
+            {
+                "max_num_seqs": 4,
+                "max_num_batched_tokens": 2048,
+                "max_active_kv_tokens": 10000,
+                "running_requests": 1,
+                "running_active_kv_tokens": 1000,
+                "enable_chunked_prefill": True,
+                "max_prefill_chunk_tokens": 1024,
+                "max_queue_wait_ms": 200,
+                "target_utilization": 0.9,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "admit_all_requests")
+        self.assertEqual([row["request_id"] for row in report["admitted"]], ["shared-system", "decode-active"])
+        self.assertEqual(report["loads"]["total_scheduled_tokens"], 1001)
+        self.assertEqual(report["loads"]["projected_active_kv_tokens"], 1000 + 4256 + 1328)
+        self.assertEqual(report["queued"], [])
+        self.assertTrue(report["gates"]["capacity"]["pass"])
+
+    def test_continuous_batching_admission_queues_with_action_items(self):
+        report = submission.continuous_batching_admission_report(
+            [
+                {"request_id": "large-prefill", "prompt_tokens": 9000, "max_new_tokens": 512, "waiting_ms": 300},
+                {"request_id": "small", "prompt_tokens": 512, "max_new_tokens": 64, "priority": 1, "waiting_ms": 50},
+                {"request_id": "kv-heavy", "prompt_tokens": 7000, "max_new_tokens": 5000, "waiting_ms": 260},
+            ],
+            {
+                "max_num_seqs": 2,
+                "max_num_batched_tokens": 2048,
+                "max_active_kv_tokens": 10000,
+                "running_requests": 0,
+                "running_active_kv_tokens": 0,
+                "max_queue_wait_ms": 250,
+                "target_utilization": 0.8,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "revise_admission_or_scale_capacity")
+        self.assertEqual([row["request_id"] for row in report["admitted"]], ["small"])
+        queued = {row["request_id"]: set(row["reasons"]) for row in report["queued"]}
+        self.assertIn("token_budget", queued["large-prefill"])
+        self.assertIn("kv_budget", queued["kv-heavy"])
+        self.assertFalse(report["gates"]["queue"]["pass"])
+        self.assertIn("enable_chunked_prefill_or_reduce_prompt_tokens", report["action_items"])
+        self.assertIn("lower_max_new_tokens_or_raise_kv_cache_budget", report["action_items"])
+        self.assertIn("reduce_queue_wait_or_add_serving_capacity", report["action_items"])
+
+    def test_continuous_batching_admission_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.continuous_batching_admission_report([], {"max_num_seqs": 1, "max_num_batched_tokens": 1, "max_active_kv_tokens": 1})
+        with self.assertRaises(ValueError):
+            submission.continuous_batching_admission_report([{"prompt_tokens": 1, "max_new_tokens": 1}], {})
+        with self.assertRaises(ValueError):
+            submission.continuous_batching_admission_report(
+                [{"prompt_tokens": 1, "max_new_tokens": 1, "phase": "bad"}],
+                {"max_num_seqs": 1, "max_num_batched_tokens": 1, "max_active_kv_tokens": 1},
+            )
+        with self.assertRaises(ValueError):
+            submission.continuous_batching_admission_report(
+                [{"prompt_tokens": 1, "max_new_tokens": 1, "cached_prefix_tokens": 2}],
+                {"max_num_seqs": 1, "max_num_batched_tokens": 1, "max_active_kv_tokens": 1},
+            )
+
     def test_reranking_helpers_reject_invalid_inputs(self):
         with self.assertRaises(ValueError):
             submission.reciprocal_rank_fusion([], k=60)

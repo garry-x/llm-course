@@ -27,6 +27,8 @@
 - 跑通 Ch01 BPE 作业，确认本地 Python 环境可用。
 - 若 PyTorch 不熟，先完成 Python/PyTorch 复习 handout 中的 shape tracing 练习。
 
+这些先修不是独立补课路径。课程会在每章开头标出“先修能力、本章内化、验收信号”，并把对应基础揉进代码、推导、测试和报告要求。附录 handout 用于卡住时查阅，不作为脱离章节的前置课程。
+
 ## 课程结构
 
 | 模块 | 周次 | 内容 | 学习重点 |
@@ -38,11 +40,22 @@
 | 训练闭环 | Week 5 | Ch07 | MLE、cross entropy、PPL、AdamW、scheduler、checkpoint、分布式训练概念 |
 | 生成方法 | Week 6 | Ch08 | greedy、temperature、top-k/top-p、speculative decoding、structured decoding |
 | 微调与对齐 | Week 7 | Ch09 | SFT/偏好数据 gate、LoRA、preference model、DPO、GRPO、alignment tax |
-| 推理工程 | Week 8 | Ch10 | KV Cache、quantization、FlashAttention、RAG、vLLM/SGLang、Triton、服务指标 |
+| 推理工程 | Week 8 | Ch10 | KV Cache、continuous batching admission、quantization、FlashAttention、RAG、vLLM/SGLang、Triton、服务指标 |
 | 经典 NLP 与评测专题 | Week 9 | Ch11 + Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM、安全评测 |
 | 项目展示 | Week 10 | Capstone | 训练项目、推理项目、报告、演示和讨论 |
 
-10 周版本优先保证“模型实现 -> 训练 -> 生成/对齐 -> 推理服务 -> 项目”的工程链路完整；经典 NLP 放在 Week 9，用来补齐 encoder-only、seq2seq、结构化预测和评价指标。12 周版本建议把 Week 9 的经典 NLP 与评测拆成两周，把 Week 10 拆成训练项目展示和推理项目展示两次。
+10 周版本优先保证“模型实现 -> 训练 -> 生成/对齐 -> 推理服务 -> 项目”的工程链路完整；经典 NLP 放在 Week 9，用来把 encoder-only、seq2seq、结构化预测和评价指标接回现代 LLM 评测与系统选型。12 周版本建议把 Week 9 的经典 NLP 与评测拆成两周，把 Week 10 拆成训练项目展示和推理项目展示两次。
+
+## 章节内置基础知识
+
+| 章节 | 内化的基础能力 | 验收方式 |
+|------|----------------|----------|
+| Ch01-Ch02 | Python 数据结构、矩阵查表、向量点积、二维旋转、shape trace | tokenizer report、embedding lookup、RoPE 推导和 token 成本说明 |
+| Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差梯度、FLOPs/activation 估算 | attention 测试、MHA/GQA/MLA 实现、block resource report 和 written derivation |
+| Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性、train/val split 和实验统计 | GPT forward/loss、training gate、checkpoint/resume、数据质量与扩容决策 |
+| Ch08-Ch09 | logits 分布、采样方差、KL/reference、偏好数据、reward 和安全切片 | decoding budget、post-training data audit、DPO/GRPO/RLVR 评估与失败分析 |
+| Ch10 | KV cache、排队、显存/带宽、压测统计、RAG 指标、tool 协议和准入控制 | continuous batching admission、benchmark summary、P/D 解耦容量计划和上线报告 |
+| Ch11 | RNN/LSTM、encoder-decoder、encoder-only、结构化预测、传统指标和 judge 可靠性 | parsing/CRF/QA/metrics 作业、LLM-as-judge audit 和任务建模选择说明 |
 
 ## 作业与评分
 
@@ -79,7 +92,7 @@
 | A5 Ch07 | dataset/dataloader、data curation gate、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory、`distributed_training_strategy_report`、`training_system_gate_report` | 训练闭环、数据过滤/去重/混合、优化器、校准、训练成本、DDP/ZeRO/FSDP、MFU、resume parity、工业训练 gate | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？DDP、ZeRO/FSDP 和 TP/PP 分别解决什么瓶颈？数据质量或污染 gate 失败时为什么不能直接扩容？什么时候应该继续扩容，什么时候必须先 debug？ |
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、`test_time_compute_budget_report`、token constraints、speculative decoding | 解码策略、搜索、多样性、reasoning/test-time compute 预算、结构化生成 | top-p 为什么是自适应截断？多样本 reasoning 何时值得上线？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、LoRA、sequence log-probs、post-training data audit、RM/DPO/PPO/GRPO、implicit reward、KL、length bias、`rlvr_grader_report` | 指令微调、偏好优化、reference model、可验证 reward、对齐风险 | DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？偏好数据 gate 失败时为什么不能直接进入 DPO/GRPO？什么时候 RLVR/RFT 的 grader 信号足够可靠？ |
-| A8 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、`validate_tool_call_plan`、benchmark summary、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report`、指标结论边界 | 推理工程、RAG、tool/agent 协议、服务指标、容量规划、prefill/decode 解耦、KV transfer、P/D worker pool sizing、speculative decoding 上线 gate | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？如何在执行前拦截无效或越权 tool call？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？P/D 解耦后如何判断 worker、link 和 KV memory 哪个先饱和？为什么高接受率不必然支持启用推测解码？ |
+| A8 Ch10 | KV cache、prefix cache、`continuous_batching_admission_report`、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、`validate_tool_call_plan`、benchmark summary、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report`、指标结论边界 | 推理工程、RAG、tool/agent 协议、服务指标、容量规划、continuous batching admission、prefill/decode 解耦、KV transfer、P/D worker pool sizing、speculative decoding 上线 gate | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？如何在执行前拦截无效或越权 tool call？如何用 max_num_seqs、max_num_batched_tokens 和 active KV tokens 做调度准入？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？P/D 解耦后如何判断 worker、link 和 KV memory 哪个先饱和？为什么高接受率不必然支持启用推测解码？ |
 | A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1、`judge_reliability_audit` | 经典 NLP、encoder-only、结构化预测、评测指标、LLM-as-judge 可靠性 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？为什么一次 judge win rate 不能直接支持上线结论？ |
 
 ## 书面题能力层级

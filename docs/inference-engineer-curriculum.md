@@ -1,12 +1,12 @@
-# LLM 推理工程师课程路线与学习成果
+# LLM 推理工程师能力视图与学习成果
 
-这份文档把课程从“学完 11 章”转换为“达到 LLM 推理工程师入门岗位能力”。它不是额外章节，而是学习、复盘和检查用的路线图。
+这份文档把课程从“学完 11 章”转换为“达到 LLM 推理工程师入门岗位能力”。它不是额外章节，也不是独立补课路径，而是学习、复盘和检查用的能力视图；所有基础知识仍回到对应章节内完成。
 
 ## 目标画像
 
 完成课程后，你应该能独立完成一个小型 LLM 推理服务的设计、实现、压测、评估和上线复盘。最低能力不是“背熟名词”，而是面对一个慢、贵、不稳定、质量波动或多模态输入成本失控的 LLM 服务时，能拆解问题、定位瓶颈并给出可验证的改进方案。
 
-## 学习路径
+## 章节能力映射
 
 | 阶段 | 章节与项目 | 主要问题 | 学习产出 |
 |------|------------|----------|----------|
@@ -30,11 +30,11 @@
 
 - 能区分 prefill 与 decode 的瓶颈：prefill 更偏计算密集，decode 更偏带宽密集。
 - 能定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率。
-- 能解释 batch size、continuous batching、prefix cache、speculative decoding 对吞吐和延迟的影响。
+- 能解释 batch size、continuous batching admission、chunked prefill、prefix cache、speculative decoding 对吞吐和延迟的影响。
 - 能用 acceptance rate、speedup、draft overhead、quality regression、额外显存和 workload QPS 判断是否启用 speculative decoding。
 - 能用 active KV tokens 和 admission limit 描述容量，而不是只用并发请求数。
 
-**对应内容：**Ch08，Ch10 10.1、10.10、10.12、10.13、10.17A，Capstone `benchmark.py`、`slo_check.py` 与 speculative gate 表。
+**对应内容：**Ch08，Ch10 10.1、10.10-10.13、10.17A，Capstone `benchmark.py`、`slo_check.py` 与 speculative gate 表。
 
 ### C. 显存与成本预算
 
@@ -88,6 +88,7 @@
 | 章节主线 | Ch01-Ch11 每章至少完成一个编程练习和全部概念练习 | 页面进度或个人笔记 |
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
+| 调度准入 | 能用 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens 和 queue wait 判断哪些请求进入 continuous batch | admission gate 表 |
 | 准入控制 | 能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit | 容量规划说明 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
@@ -106,8 +107,8 @@
 | 4 | Ch07 | 跑微型训练循环，理解优化器和混合精度 |
 | 5 | Ch08 | 实现生成、采样、TTFT/TPS 分析 |
 | 6 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测 |
-| 7 | Ch10 | 完成 KV Cache、量化、RAG、speculative gate、benchmark、服务蓝图 |
-| 8 | Ch11 + Capstone | 补齐结构化任务与评测指标，跑通 `acceptance.py`，完成服务、压测、评测、容量估算和上线复盘 |
+| 7 | Ch10 | 完成 KV Cache、continuous batching admission、量化、RAG、speculative gate、benchmark、服务蓝图 |
+| 8 | Ch11 + Capstone | 把结构化任务与评测指标接回服务决策，跑通 `acceptance.py`，完成服务、压测、评测、容量估算和上线复盘 |
 
 ## 常见误区
 
@@ -137,6 +138,7 @@ P50/P95/P99 latency：
 P95 TTFT：
 P95 TPOT：
 speculative decoding gate：
+continuous batching admission：
 SLO 是否通过：
 tokens/s：
 显存峰值：

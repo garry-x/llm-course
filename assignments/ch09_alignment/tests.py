@@ -71,6 +71,85 @@ class TestSFT(unittest.TestCase):
         expected = F.cross_entropy(logits[:, :-1, :].reshape(-1, 3), labels[:, 1:].reshape(-1), ignore_index=-100)
         self.assertTrue(torch.allclose(loss, expected))
 
+    def test_sft_chat_template_mask_report_passes_multiturn_assistant_mask(self):
+        examples = [
+            {
+                "id": "conv1",
+                "messages": [
+                    {"role": "system", "token_ids": [1, 2]},
+                    {"role": "user", "token_ids": [3, 4, 5]},
+                    {"role": "assistant", "token_ids": [6, 7, 8, 9]},
+                    {"role": "user", "token_ids": [10, 11]},
+                    {"role": "assistant", "token_ids": [12, 13], "weight": 0},
+                    {"role": "assistant", "token_ids": [14, 15, 16]},
+                ],
+            }
+        ]
+        report = submission.sft_chat_template_mask_report(
+            examples,
+            {"min_supervised_token_ratio": 0.2, "max_supervised_token_ratio": 0.8, "max_seq_len": 32},
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["supervised_tokens"], 7)
+        self.assertAlmostEqual(report["supervised_token_ratio"], 7 / 16)
+        self.assertEqual(report["rows"][0]["assistant_spans"], [(5, 9), (13, 16)])
+        self.assertEqual(report["action_items"], [])
+
+    def test_sft_chat_template_mask_report_flags_truncation_and_packing_risk(self):
+        examples = [
+            {
+                "id": "bad",
+                "messages": [
+                    {"role": "developer", "token_ids": [1]},
+                    {"role": "user", "token_ids": [2, 3, 4, 5, 6]},
+                    {"role": "assistant", "token_ids": [7, 8, 9, 10]},
+                ],
+            },
+            {
+                "id": "no_assistant",
+                "messages": [{"role": "user", "token_ids": [11, 12]}],
+            },
+        ]
+        report = submission.sft_chat_template_mask_report(
+            examples,
+            {
+                "max_seq_len": 7,
+                "min_supervised_token_ratio": 0.2,
+                "pack_examples": True,
+                "block_diagonal_attention": False,
+                "separator_tokens": 1,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertFalse(report["gates"]["template_roles"]["pass"])
+        self.assertFalse(report["gates"]["assistant_label_mask"]["pass"])
+        self.assertFalse(report["gates"]["truncation"]["pass"])
+        self.assertFalse(report["gates"]["packing"]["pass"])
+        self.assertEqual(report["gates"]["truncation"]["signals"]["assistant_truncated_tokens"], 3)
+        self.assertIn("fix_unknown_or_misaligned_chat_roles", report["action_items"])
+        self.assertIn("use_block_diagonal_attention_or_insert_safe_boundaries_for_packing", report["action_items"])
+
+    def test_sft_chat_template_mask_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.sft_chat_template_mask_report([])
+        with self.assertRaises(ValueError):
+            submission.sft_chat_template_mask_report([{"messages": []}])
+        with self.assertRaises(ValueError):
+            submission.sft_chat_template_mask_report([{"messages": [{"role": "user", "token_ids": []}]}])
+        with self.assertRaises(ValueError):
+            submission.sft_chat_template_mask_report(
+                [{"messages": [{"role": "user", "token_ids": [1]}]}],
+                {"min_supervised_token_ratio": 0.8, "max_supervised_token_ratio": 0.2},
+            )
+
+    def test_sft_chat_template_mask_report_allows_unsupervised_audit_mode(self):
+        report = submission.sft_chat_template_mask_report(
+            [{"messages": [{"role": "user", "token_ids": [1, 2, 3]}]}],
+            {"require_assistant": False, "min_supervised_token_ratio": 0.0},
+        )
+        self.assertTrue(report["gates"]["assistant_label_mask"]["pass"])
+        self.assertTrue(report["overall_pass"])
+
 
 if nn is not None:
     class TinyModule(nn.Module):

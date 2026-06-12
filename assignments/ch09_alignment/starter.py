@@ -23,6 +23,11 @@ def sft_loss_from_logits(logits, labels):
     raise NotImplementedError
 
 
+def sft_chat_template_mask_report(examples, policy=None):
+    """Audit chat-template roles, assistant label masks, truncation, and packing risk."""
+    raise NotImplementedError
+
+
 class LoRALinear(nn.Module):
     def __init__(self, base_layer, r=8, alpha=16.0, dropout=0.0):
         super().__init__()

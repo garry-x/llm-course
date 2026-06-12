@@ -41,7 +41,7 @@
     <li><strong>学习目标：</strong>区分预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO、GRPO 的损失信号。</li>
     <li><strong>本章产出：</strong>SFT/LoRA/DPO/GRPO/RLVR 的最小实现和适用场景地图。</li>
     <li><strong>完成标准：</strong>你能判断一个需求应该用 SFT、LoRA、DPO 还是 RL 类方法。</li>
-    <li><strong>练习产出：</strong>提交 masked SFT、LoRA 参数统计、post-training 数据审计、DPO/GRPO toy 实验、RLVR grader gate、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
+    <li><strong>练习产出：</strong>提交 masked SFT、SFT chat template/mask/packing gate、LoRA 参数统计、post-training 数据审计、DPO/GRPO toy 实验、RLVR grader gate、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>log probability、sequence loss、reference model、KL、偏好数据统计、奖励信号和评测切片。<br><strong>本章内化：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 都会被还原成“数据格式、目标函数、约束项、采样假设和评测切片”五件事；post-training 数据 gate 会在目标函数前检查覆盖、泄漏、长度偏差和安全切片，而不是另开一条补课路径。<br><strong>验收信号：</strong>你能判断一个对齐实验是优化了目标行为、奖励漏洞、格式偏差还是评测泄漏，并把质量变化与 Ch08 生成成本、Ch10 服务安全边界一起报告。</div>
 </section>
@@ -262,6 +262,24 @@ labels:      -100    -100    keep         -100    keep</div>
     <li><strong>loss 分母：</strong>记录 effective response tokens，而不是只记录 batch size。一个 batch 的样本数相同，并不代表监督 token 数相同。</li>
   </ul>
   <p>一个实用指标是 <code>supervised_token_ratio = valid_label_tokens / total_tokens</code>。比例过低说明训练在大量 prompt、padding 或无效 token 上做前向计算；比例过高也可能说明 prompt 太短、任务过于模板化，模型没有学到复杂指令条件。</p>
+
+  <p>作业中的 <code>sft_chat_template_mask_report(examples, policy)</code> 把这一节变成训练前 gate。它接收已经 tokenized 的多轮消息，而不是直接依赖某个 tokenizer：每条 message 必须带 <code>role</code> 和 <code>token_ids</code>，函数再报告 assistant spans、supervised token ratio、被截断的 assistant token、非法 role 和 packing 风险。这样学生可以把 Hugging Face、OpenAI 或自定义数据导出成统一 span 表，再验证“模板是否一致、loss 是否只落在 assistant token 上、截断是否切掉回答、packing 是否需要 block-diagonal attention”。</p>
+
+  <div class="code-block" data-lang="python">
+report = sft_chat_template_mask_report(
+    examples=[{
+        "messages": [
+            {"role": "system", "token_ids": [1, 2]},
+            {"role": "user", "token_ids": [3, 4, 5]},
+            {"role": "assistant", "token_ids": [6, 7, 8, 9]},
+        ]
+    }],
+    policy={"max_seq_len": 32, "pack_examples": False},
+)
+# report["gates"] checks template_roles, assistant_label_mask,
+# supervised_token_ratio, truncation, and packing.</div>
+
+  <p>这个 gate 的重点不是替代 tokenizer，而是把 tokenizer 之后、训练 step 之前最容易出错的协议显式化。若 packing 多条样本但没有 block-diagonal attention，后一条样本会在普通 causal attention 下看到前一条样本；若 <code>max_seq_len</code> 截掉 assistant span，训练 loss 可能仍下降，但有效监督已经偏离目标行为。</p>
 
   <h4>4. 数据混合决定模型行为</h4>
   <p>SFT 数据常来自多种来源：人工高质量指令、任务型数据、代码问答、数学解题、多轮客服、拒答样本、工具调用样本和合成数据。混合比例会直接改变模型行为：</p>

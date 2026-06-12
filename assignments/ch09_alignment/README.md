@@ -1,6 +1,6 @@
 # Chapter 9 Assignment: Fine-tuning and Alignment
 
-本作业对应第 9 章微调与对齐。目标是实现 SFT 的 label mask、LoRA 低秩适配、奖励模型 pairwise loss、DPO 偏好损失与隐式 reward、PPO clipped objective、近似 KL 控制、偏好长度偏差统计、post-training 数据审计、GRPO 组内白化、GRPO policy loss 账本、RLVR/RFT grader 健康报告和 LoRA 合并推理。
+本作业对应第 9 章微调与对齐。目标是实现 SFT 的 label mask、SFT chat template/mask/packing 审计、LoRA 低秩适配、奖励模型 pairwise loss、DPO 偏好损失与隐式 reward、PPO clipped objective、近似 KL 控制、偏好长度偏差统计、post-training 数据审计、GRPO 组内白化、GRPO policy loss 账本、RLVR/RFT grader 健康报告和 LoRA 合并推理。
 
 ## Files
 
@@ -23,6 +23,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch09_alignment/tests.py
 ## Requirements
 
 - SFT labels 中 prompt 和 padding 位置必须为 `-100`，只对 assistant response 计算损失。
+- `sft_chat_template_mask_report` 必须检查多轮 chat roles、assistant-only label mask、supervised token ratio、assistant token truncation，以及 packing 时是否有 block-diagonal attention 或安全样本边界。
 - `sequence_log_probs` 必须先把 `-100` 替换成安全索引再 `gather`，再用 mask 去掉无效位置。
 - LoRA 初始输出应等于原线性层输出；只有 LoRA 的 `A/B` 参数可训练。
 - 奖励模型 pairwise loss 必须实现 Bradley-Terry 的 `-log sigmoid(r_chosen - r_rejected)`。
@@ -41,6 +42,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch09_alignment/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 SFT mask、LoRA 参数量、Bradley-Terry RM loss、DPO log-ratio 与隐式 reward、PPO clipped objective、近似 KL、偏好数据偏差、post-training 数据 gate、GRPO 组内白化、RLVR/RFT grader 适用条件、奖励漏洞边界和对齐评估协议 |
-| Programming parts | 55 | 实现 SFT dataset/loss、sequence log prob、LoRA、pairwise reward loss、DPO loss、DPO implicit rewards、PPO clipped objective、近似 KL、偏好长度偏差统计、`post_training_data_audit`、GRPO advantages、GRPO policy loss 和 `rlvr_grader_report` |
-| Analysis / style | 10 | 区分数据格式、目标函数、reference model、偏好数据偏差、post-training 覆盖/泄漏/安全 gate、可验证 reward、grader 覆盖率、helpfulness/honesty/harmlessness、过度拒答和能力回归 |
+| Written questions | 35 | 推导 SFT mask、chat template 与 assistant span、LoRA 参数量、Bradley-Terry RM loss、DPO log-ratio 与隐式 reward、PPO clipped objective、近似 KL、偏好数据偏差、post-training 数据 gate、GRPO 组内白化、RLVR/RFT grader 适用条件、奖励漏洞边界和对齐评估协议 |
+| Programming parts | 55 | 实现 SFT dataset/loss、`sft_chat_template_mask_report`、sequence log prob、LoRA、pairwise reward loss、DPO loss、DPO implicit rewards、PPO clipped objective、近似 KL、偏好长度偏差统计、`post_training_data_audit`、GRPO advantages、GRPO policy loss 和 `rlvr_grader_report` |
+| Analysis / style | 10 | 区分数据格式、chat template、assistant-only mask、packing 边界、目标函数、reference model、偏好数据偏差、post-training 覆盖/泄漏/安全 gate、可验证 reward、grader 覆盖率、helpfulness/honesty/harmlessness、过度拒答和能力回归 |

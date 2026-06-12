@@ -55,6 +55,166 @@ def sft_loss_from_logits(logits, labels):
     )
 
 
+def sft_chat_template_mask_report(examples, policy=None):
+    """Audit chat-template serialization, assistant-only labels, truncation, and packing risk."""
+    if not examples:
+        raise ValueError("examples must not be empty")
+    policy = dict(policy or {})
+    max_seq_len = policy.get("max_seq_len")
+    min_supervised_token_ratio = float(policy.get("min_supervised_token_ratio", 0.05))
+    max_supervised_token_ratio = float(policy.get("max_supervised_token_ratio", 0.95))
+    require_assistant = bool(policy.get("require_assistant", True))
+    pack_examples = bool(policy.get("pack_examples", False))
+    block_diagonal_attention = bool(policy.get("block_diagonal_attention", False))
+    separator_tokens = int(policy.get("separator_tokens", 0))
+    if max_seq_len is not None and int(max_seq_len) <= 0:
+        raise ValueError("max_seq_len must be positive")
+    if not 0.0 <= min_supervised_token_ratio <= max_supervised_token_ratio <= 1.0:
+        raise ValueError("supervised token ratio bounds must satisfy 0 <= min <= max <= 1")
+    if separator_tokens < 0:
+        raise ValueError("separator_tokens must be non-negative")
+
+    allowed_roles = {"system", "user", "assistant", "tool"}
+    rows = []
+    total_tokens = 0
+    supervised_tokens = 0
+    truncated_tokens = 0
+    assistant_truncated_tokens = 0
+    invalid_role_count = 0
+    empty_assistant_examples = 0
+
+    for index, example in enumerate(examples):
+        if not isinstance(example, dict):
+            raise TypeError("each example must be a dict")
+        messages = example.get("messages")
+        if not isinstance(messages, list) or not messages:
+            raise ValueError("each example must contain non-empty messages")
+
+        cursor = 0
+        example_tokens = 0
+        example_supervised = 0
+        assistant_spans = []
+        invalid_roles = []
+        for message in messages:
+            if not isinstance(message, dict):
+                raise TypeError("messages must be dicts")
+            role = message.get("role")
+            token_ids = message.get("token_ids")
+            if role not in allowed_roles:
+                invalid_roles.append(role)
+                invalid_role_count += 1
+            if not isinstance(token_ids, list) or not token_ids:
+                raise ValueError("each message must contain non-empty token_ids")
+            if any(isinstance(token_id, bool) or not isinstance(token_id, int) or token_id < 0 for token_id in token_ids):
+                raise ValueError("token_ids must be non-negative integers")
+
+            start = cursor
+            end = cursor + len(token_ids)
+            cursor = end
+            example_tokens += len(token_ids)
+            weight = int(message.get("weight", 1))
+            if role == "assistant":
+                assistant_spans.append((start, end, weight))
+
+        visible_tokens = example_tokens
+        if max_seq_len is not None and example_tokens > int(max_seq_len):
+            visible_tokens = int(max_seq_len)
+            truncated_tokens += example_tokens - visible_tokens
+
+        visible_supervised = 0
+        visible_assistant_spans = []
+        for start, end, weight in assistant_spans:
+            clipped_start = min(start, visible_tokens)
+            clipped_end = min(end, visible_tokens)
+            if clipped_end > clipped_start and weight != 0:
+                visible_supervised += clipped_end - clipped_start
+                visible_assistant_spans.append((clipped_start, clipped_end))
+            if end > visible_tokens:
+                assistant_truncated_tokens += end - max(start, visible_tokens)
+
+        if not visible_assistant_spans:
+            empty_assistant_examples += 1
+
+        total_tokens += visible_tokens
+        supervised_tokens += visible_supervised
+        rows.append(
+            {
+                "example_id": example.get("id", index),
+                "tokens": visible_tokens,
+                "original_tokens": example_tokens,
+                "truncated_tokens": max(0, example_tokens - visible_tokens),
+                "assistant_spans": visible_assistant_spans,
+                "supervised_tokens": visible_supervised,
+                "supervised_token_ratio": visible_supervised / visible_tokens if visible_tokens else 0.0,
+                "invalid_roles": invalid_roles,
+            }
+        )
+
+    supervised_ratio = supervised_tokens / total_tokens if total_tokens else 0.0
+    packed_sequence_tokens = total_tokens + separator_tokens * max(0, len(examples) - 1) if pack_examples else total_tokens
+    packing_cross_example_attention_risk = pack_examples and len(examples) > 1 and not block_diagonal_attention
+
+    gates = {
+        "template_roles": {
+            "pass": invalid_role_count == 0,
+            "signals": {"invalid_role_count": invalid_role_count},
+        },
+        "assistant_label_mask": {
+            "pass": (not require_assistant) or (empty_assistant_examples == 0 and supervised_tokens > 0),
+            "signals": {
+                "empty_assistant_examples": empty_assistant_examples,
+                "supervised_tokens": supervised_tokens,
+            },
+        },
+        "supervised_token_ratio": {
+            "pass": min_supervised_token_ratio <= supervised_ratio <= max_supervised_token_ratio,
+            "signals": {
+                "supervised_token_ratio": supervised_ratio,
+                "min_supervised_token_ratio": min_supervised_token_ratio,
+                "max_supervised_token_ratio": max_supervised_token_ratio,
+            },
+        },
+        "truncation": {
+            "pass": assistant_truncated_tokens == 0,
+            "signals": {
+                "truncated_tokens": truncated_tokens,
+                "assistant_truncated_tokens": assistant_truncated_tokens,
+            },
+        },
+        "packing": {
+            "pass": not packing_cross_example_attention_risk,
+            "signals": {
+                "pack_examples": pack_examples,
+                "block_diagonal_attention": block_diagonal_attention,
+                "packed_sequence_tokens": packed_sequence_tokens,
+                "cross_example_attention_risk": packing_cross_example_attention_risk,
+            },
+        },
+    }
+
+    action_items = []
+    if not gates["template_roles"]["pass"]:
+        action_items.append("fix_unknown_or_misaligned_chat_roles")
+    if not gates["assistant_label_mask"]["pass"]:
+        action_items.append("add_or_unmask_assistant_response_tokens")
+    if not gates["supervised_token_ratio"]["pass"]:
+        action_items.append("rebalance_prompt_response_lengths_or_filter_low_signal_samples")
+    if not gates["truncation"]["pass"]:
+        action_items.append("increase_max_seq_len_or_truncate_prompt_before_assistant")
+    if not gates["packing"]["pass"]:
+        action_items.append("use_block_diagonal_attention_or_insert_safe_boundaries_for_packing")
+
+    return {
+        "overall_pass": not action_items,
+        "total_tokens": total_tokens,
+        "supervised_tokens": supervised_tokens,
+        "supervised_token_ratio": supervised_ratio,
+        "rows": rows,
+        "gates": gates,
+        "action_items": action_items,
+    }
+
+
 class LoRALinear(nn.Module):
     def __init__(self, base_layer, r=8, alpha=16.0, dropout=0.0):
         super().__init__()

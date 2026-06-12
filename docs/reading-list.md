@@ -231,6 +231,9 @@
 
 必读：
 
+- Hugging Face. [Chat templates](https://huggingface.co/docs/transformers/chat_templating). 重点看 role/message 如何被序列化成模型真实输入，以及为什么训练和推理必须使用一致模板。
+- Hugging Face TRL. [SFT Trainer](https://huggingface.co/docs/trl/sft_trainer). 重点看 assistant/completion-only loss、packing 和训练数据格式如何影响 SFT label mask。
+- OpenAI. [Fine-tuning guide](https://platform.openai.com/docs/guides/fine-tuning). 重点看 chat 格式训练样本、训练/验证切分和生产微调数据协议。
 - Hu et al. [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685). 重点看低秩增量和可训练参数比例。
 - Bai et al. [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862). 重点看 chosen/rejected 偏好数据、helpful/harmless 目标和在线反馈数据迭代。
 - Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). 重点看从 KL-constrained RL 到分类式 loss 的推导。
@@ -247,6 +250,7 @@
 复盘问题：
 
 - DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
+- SFT 数据从 messages 变成 token 序列后，哪些信息必须保留下来才能检查 assistant-only loss、truncation 和 packing 边界？
 - 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
 - `post_training_data_audit` 的 coverage、label quality、leakage 和 safety gate 分别对应 post-training 的哪类失败结论？
 - 如果 SFT/偏好数据的任务覆盖不足或 eval overlap 不为零，为什么不能用 DPO/GRPO 训练 loss 下降作为上线证据？

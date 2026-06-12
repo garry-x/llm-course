@@ -137,6 +137,7 @@
 <h3 id="ch09-fine-tuning-alignment">Ch09 Fine-tuning / Alignment</h3>
 <ol>
 <li>给定 prompt/response token 序列，标出 SFT labels 中应为 <code>-100</code> 的位置，并解释原因。</li>
+<li>给定 tokenized messages：<code>system</code> 2 tokens、<code>user</code> 3 tokens、<code>assistant</code> 4 tokens、<code>user</code> 2 tokens、<code>assistant</code> 3 tokens，其中第二个 assistant <code>weight=0</code>；再给 <code>max_seq_len=10</code>、<code>pack_examples=True</code>、<code>block_diagonal_attention=False</code>。标出 assistant spans、supervised tokens、supervised_token_ratio、被截断的 assistant tokens，以及 <code>sft_chat_template_mask_report</code> 应失败的 gate 和 action items。</li>
 <li>从 Bradley-Terry 偏好模型写出 DPO loss 中 chosen/rejected log-ratio 的含义。</li>
 <li>给定 policy chosen/rejected log-probs <code>[3,1]</code>、<code>[1,2]</code>，reference chosen/rejected log-probs <code>[1,1]</code>、<code>[1,1]</code>，<code>beta=0.5</code>，计算 DPO 隐式 chosen/rejected reward、reward margin、preference probability 和 preference accuracy。</li>
 <li>给定一组 chosen/rejected reward，计算 Bradley-Terry pairwise reward loss 和 preference accuracy，并解释这个 loss 与奖励模型训练的关系。</li>

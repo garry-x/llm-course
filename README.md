@@ -51,7 +51,7 @@
 | Transformer 核心 | Ch03-Ch06 | 注意力、mask、多头、GQA/MLA、Norm、FFN、MoE 和 GPT 前向传播如何组合 |
 | 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器和 checkpoint 如何工作 |
 | 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG 和推理服务如何取舍 |
-| 微调与对齐 | Ch09 | SFT/偏好数据 gate、LoRA、偏好建模、DPO、GRPO、RLVR/RFT 如何改变模型行为 |
+| 微调与对齐 | Ch09 | SFT chat template/mask/packing gate、偏好数据 gate、LoRA、偏好建模、DPO、GRPO、RLVR/RFT 如何改变模型行为 |
 | 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | RNN/LSTM、dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
 | 前沿工程案例 | Ch04-Ch10 | MLA、MoE、FP8、GRPO、稀疏/压缩注意力等设计解决了哪些工程瓶颈 |
 
@@ -70,7 +70,7 @@
 | Ch01-Ch02 | Python 数据结构、矩阵查表、向量点积、位置旋转和 shape trace | token 成本、embedding 参数、context 利用率和 prefix cache 前提 |
 | Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差路径和资源估算 | attention 正确性、GQA/MLA 显存收益、block 稳定性和 FLOPs 预算 |
 | Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性和实验统计 | GPT 组装、训练曲线解释、checkpoint/resume、数据 gate 和扩容判断 |
-| Ch08-Ch09 | logits 分布、采样方差、KL/reference model、偏好数据和 reward 假设 | 生成策略上线、reasoning 预算、SFT/DPO/GRPO 质量与安全边界 |
+| Ch08-Ch09 | logits 分布、采样方差、KL/reference model、chat template、assistant mask、偏好数据和 reward 假设 | 生成策略上线、reasoning 预算、SFT/DPO/GRPO 质量与安全边界 |
 | Ch10 | 排队、显存/带宽、KV cache、压测指标、RAG 检索指标、准入控制、发布 gate 和过载响应 | TTFT/TPOT/P95、continuous batching admission、P/D 解耦、容量规划、canary/control、load shedding 和回退 |
 | Ch11 | 序列建模、结构化预测、encoder-only、传统指标和 judge 可靠性 | 选择生成/抽取/排序/结构化解码，判断评测结果能否支持上线结论 |
 
@@ -80,7 +80,7 @@
 - [10 周 / 20 讲 Lecture Plan](docs/lecture-plan.html)：每讲目标、推导、课堂 demo 和 quick check。
 - [逐周阅读材料与复盘 Handout](docs/reading-list.html)：论文阅读、关键问题和复盘要求。
 - [书面推导与概念题题库](docs/written-problem-set.html)：公式推导、复杂度分析和概念辨析。
-- [Worked Example Pack](docs/worked-example-pack.html)：BPE、RoPE、attention、GQA、Norm、AdamW、DPO、KV cache 等可复算小例子。
+- [Worked Example Pack](docs/worked-example-pack.html)：BPE、RoPE、attention、GQA、Norm、AdamW、SFT mask/packing、DPO、KV cache 等可复算小例子。
 - [经典 NLP 专题 Handout](docs/classic-nlp-handout.html)：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT、BLEU/ROUGE/F1/EM 与现代 LLM 的关系。
 
 章节作业入口：[assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/) · [assignments/ch11_classic_nlp/](assignments/ch11_classic_nlp/)。

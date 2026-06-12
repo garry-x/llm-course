@@ -465,27 +465,31 @@ Quick check：
 目标：
 
 - 解释 instruction tuning 数据格式和 label mask。
+- 检查 chat template、assistant span、truncation 和 packing 边界是否支持 SFT 结论。
 - 推导 LoRA 的低秩权重增量。
 - 区分 trainable parameters、merged weights 和推理成本。
 
 核心推导：
 
 - prompt/padding labels 为 `-100`，只让 assistant response 贡献 loss。
+- supervised token ratio、assistant span truncation 和 packing attention boundary。
 - LoRA 增量 `Delta W = B A * alpha / r`。
 
 课堂 demo：
 
 - 打印 SFT dataset labels，确认 prompt 被 mask。
+- 跑 `sft_chat_template_mask_report`，检查非法 role、assistant-only mask、截断和 packing gate。
 - 对 Linear 层应用 LoRA，检查初始输出等于 base。
 
 Quick check：
 
 - 为什么不能对 `-100` 直接 gather？
+- 为什么 packing 短样本时只加 EOS 不一定等价于 block-diagonal attention？
 - merge LoRA 后推理还需要 adapter 分支吗？
 
 课后产出：
 
-- Ch09 SFT/LoRA 测试通过。
+- Ch09 SFT template/mask/packing 与 LoRA 测试通过。
 - 训练 capstone 初版。
 
 ## Week 7 Lecture 14: Preference Optimization、DPO 与 GRPO

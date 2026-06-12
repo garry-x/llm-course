@@ -77,7 +77,7 @@
 
 - 能把训练项目写成一个可回答问题，而不是只报告“跑通了”。
 - 能设计 baseline、ablation、开发集和失败案例分类。
-- 能在 SFT/DPO/GRPO 前审计 post-training 数据的任务覆盖、偏好标签冲突、长度偏差、eval overlap 和 unsafe chosen。
+- 能在 SFT 前审计 chat template、assistant-only mask、supervised token ratio、truncation 和 packing 边界；能在 DPO/GRPO 前审计 post-training 数据的任务覆盖、偏好标签冲突、长度偏差、eval overlap 和 unsafe chosen。
 - 能解释 SFT/DPO/GRPO 的训练目标和最终 helpfulness、honesty、harmlessness、能力保留之间的差异。
 
 **对应内容：**Ch08 8.7B、Ch09 9.6A 与 9.10A、Training Capstone README。
@@ -88,6 +88,7 @@
 |--------|----------|------|
 | 数据分析 | 能输出样本数、空样本、重复率、长度分布和 token 预算 | `data_profile.py` 输出 |
 | 数据策展 gate | 能报告数据源、过滤/去重、eval overlap、domain mixture 和 privacy 风险，并给出是否训练的判断 | data curation gate 表 |
+| SFT 数据协议 gate | 能报告 chat template、assistant spans、supervised token ratio、assistant truncation、packing mode 和 block-diagonal attention 使用情况 | `sft_chat_template_mask_report` 表 |
 | Post-training 数据 gate | 能报告 SFT/偏好/RLVR 数据的任务覆盖、安全切片、长度偏差、标签冲突、eval overlap 和 unsafe chosen 风险 | `post_training_data_audit` 表 |
 | 训练运行 | 能跑完整训练并持续记录 metrics | `train.py` + `metrics.jsonl` |
 | Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复 | `acceptance.py` resume 检查 |

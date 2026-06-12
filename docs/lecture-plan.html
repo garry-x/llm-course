@@ -489,27 +489,31 @@
 <p>目标：</p>
 <ul>
 <li>解释 instruction tuning 数据格式和 label mask。</li>
+<li>检查 chat template、assistant span、truncation 和 packing 边界是否支持 SFT 结论。</li>
 <li>推导 LoRA 的低秩权重增量。</li>
 <li>区分 trainable parameters、merged weights 和推理成本。</li>
 </ul>
 <p>核心推导：</p>
 <ul>
 <li>prompt/padding labels 为 <code>-100</code>，只让 assistant response 贡献 loss。</li>
+<li>supervised token ratio、assistant span truncation 和 packing attention boundary。</li>
 <li>LoRA 增量 <code>Delta W = B A * alpha / r</code>。</li>
 </ul>
 <p>课堂 demo：</p>
 <ul>
 <li>打印 SFT dataset labels，确认 prompt 被 mask。</li>
+<li>跑 <code>sft_chat_template_mask_report</code>，检查非法 role、assistant-only mask、截断和 packing gate。</li>
 <li>对 Linear 层应用 LoRA，检查初始输出等于 base。</li>
 </ul>
 <p>Quick check：</p>
 <ul>
 <li>为什么不能对 <code>-100</code> 直接 gather？</li>
+<li>为什么 packing 短样本时只加 EOS 不一定等价于 block-diagonal attention？</li>
 <li>merge LoRA 后推理还需要 adapter 分支吗？</li>
 </ul>
 <p>课后产出：</p>
 <ul>
-<li>Ch09 SFT/LoRA 测试通过。</li>
+<li>Ch09 SFT template/mask/packing 与 LoRA 测试通过。</li>
 <li>训练 capstone 初版。</li>
 </ul>
 <h3 id="week-7-lecture-14-preference-optimization-dpo-与-grpo">Week 7 Lecture 14: Preference Optimization、DPO 与 GRPO</h3>

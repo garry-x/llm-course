@@ -101,12 +101,13 @@
 3. 给定 policy chosen/rejected log-probs `[3,1]`、`[1,2]`，reference chosen/rejected log-probs `[1,1]`、`[1,1]`，`beta=0.5`，计算 DPO 隐式 chosen/rejected reward、reward margin、preference probability 和 preference accuracy。
 4. 给定一组 chosen/rejected reward，计算 Bradley-Terry pairwise reward loss 和 preference accuracy，并解释这个 loss 与奖励模型训练的关系。
 5. 给定一组 chosen/rejected 回答长度，计算 mean length delta、chosen_longer_rate、rejected_longer_rate 和 tie_rate，并说明长度偏差如何影响 DPO 或 RLHF。
-6. 给定一组 chosen/rejected 回答，指出可能的风格偏差或标注者分歧，并说明这些偏差如何影响 DPO 或 RLHF。
-7. 给定 policy/ref 在 sampled tokens 上的 log probability，计算近似 KL `exp(log_ref-log_policy) - (log_ref-log_policy) - 1`，并说明 padding mask 为什么不能进入均值分母。
-8. 给定 old/new policy log-probs、advantages 和 `clip_range=0.2`，计算 PPO unclipped surrogate、clipped surrogate、最终 policy loss、clip fraction 和 approximate KL；说明 PPO clipping 与 KL penalty 分别约束什么。
-9. 给定 GRPO rewards `[[1],[2],[3]]`、old log-probs 全 0、new/old ratios `[[[1.0,1.5]],[[1.0,1.0]],[[0.5,1.0]]]`、completion mask `[[[1,1]],[[1,0]],[[1,1]]]`、reference log-probs 全 0、`clip_range=0.2`、`kl_beta=0.04`，计算组内白化 advantages、PPO clipped surrogate、masked policy loss、masked approximate KL 和总 loss；说明 GRPO 组内白化不能解决哪些 reward hacking 问题。
-10. 比较 LoRA rank、alpha、target modules 对训练参数量、表达能力和合并推理的影响。
-11. 设计一个评估 DPO 模型是否优于 SFT/reference 的方案：至少包含 helpfulness、事实性、安全拒答、过度拒答和数学/代码能力保留，并解释为什么 preference win rate 不能单独作为结论。
+6. 给定一张 SFT/preference/RLVR 样本表，手动计算 task coverage、safety slice coverage、max task share、label conflict rate、mean length delta ratio、eval overlap rate 和 unsafe chosen rate，并判断 `post_training_data_audit` 的 coverage、label_quality、leakage、safety 哪些 gate 失败。
+7. 给定一组 chosen/rejected 回答，指出可能的风格偏差或标注者分歧，并说明这些偏差如何影响 DPO 或 RLHF。
+8. 给定 policy/ref 在 sampled tokens 上的 log probability，计算近似 KL `exp(log_ref-log_policy) - (log_ref-log_policy) - 1`，并说明 padding mask 为什么不能进入均值分母。
+9. 给定 old/new policy log-probs、advantages 和 `clip_range=0.2`，计算 PPO unclipped surrogate、clipped surrogate、最终 policy loss、clip fraction 和 approximate KL；说明 PPO clipping 与 KL penalty 分别约束什么。
+10. 给定 GRPO rewards `[[1],[2],[3]]`、old log-probs 全 0、new/old ratios `[[[1.0,1.5]],[[1.0,1.0]],[[0.5,1.0]]]`、completion mask `[[[1,1]],[[1,0]],[[1,1]]]`、reference log-probs 全 0、`clip_range=0.2`、`kl_beta=0.04`，计算组内白化 advantages、PPO clipped surrogate、masked policy loss、masked approximate KL 和总 loss；说明 GRPO 组内白化不能解决哪些 reward hacking 问题。
+11. 比较 LoRA rank、alpha、target modules 对训练参数量、表达能力和合并推理的影响。
+12. 设计一个评估 DPO 模型是否优于 SFT/reference 的方案：至少包含 helpfulness、事实性、安全拒答、过度拒答和数学/代码能力保留，并解释为什么 preference win rate 不能单独作为结论。
 
 ## Ch10 Inference / RAG / Serving
 

@@ -51,7 +51,7 @@
 | Transformer 核心 | Ch03-Ch06 | 注意力、mask、多头、GQA/MLA、Norm、FFN、MoE 和 GPT 前向传播如何组合 |
 | 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器和 checkpoint 如何工作 |
 | 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG 和推理服务如何取舍 |
-| 微调与对齐 | Ch09 | SFT、LoRA、偏好建模、DPO、GRPO、RLVR/RFT 如何改变模型行为 |
+| 微调与对齐 | Ch09 | SFT/偏好数据 gate、LoRA、偏好建模、DPO、GRPO、RLVR/RFT 如何改变模型行为 |
 | 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | RNN/LSTM、dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
 | 前沿工程案例 | Ch04-Ch10 | MLA、MoE、FP8、GRPO、稀疏/压缩注意力等设计解决了哪些工程瓶颈 |
 
@@ -99,7 +99,7 @@
 | 训练循环工程 | Ch06-Ch07 | 组织 PyTorch Dataset/DataLoader、forward、loss、backward、optimizer、scheduler |
 | 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint、resume 和异常排查保护训练 |
 | 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
-| 微调与对齐 | Ch09 | 区分 SFT、LoRA、DPO、GRPO、RLVR/RFT 的数据格式、损失和适用场景 |
+| 微调与对齐 | Ch09 | 区分 SFT/偏好数据 gate、LoRA、DPO、GRPO、RLVR/RFT 的数据格式、损失和适用场景 |
 | 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、MFU、GPU hours、checkpoint 存储和 scale rehearsal |
 
 **训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、data curation gate、训练、开发集监控、checkpoint、resume、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下数据过滤/去重/混合、DDP/ZeRO/FSDP、低精度、MFU 和 checkpoint state 的工程边界。
@@ -146,7 +146,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 6 | **组装 GPT + DeepSeekMoE** — GPT-2 124M 完整模型 | `GPTModel` ~100行 | 5+5 |
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
-| 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + LoRA + GRPO/RLVR ~210行 | 7+5 |
+| 9 | **微调与对齐** — SFT/偏好数据 Gate/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + post-training data audit + LoRA + GRPO/RLVR ~240行 | 8+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool Gate + P/D pool plan + speculative gate + LSH + 服务蓝图 | 7+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 

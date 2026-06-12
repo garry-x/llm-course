@@ -69,6 +69,11 @@ def preference_length_bias(chosen_lengths, rejected_lengths):
     raise NotImplementedError
 
 
+def post_training_data_audit(records, thresholds=None):
+    """Audit SFT/preference/RLVR records before post-training optimization."""
+    raise NotImplementedError
+
+
 def ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask=None, clip_range=0.2):
     """Compute PPO clipped policy-gradient loss and basic update statistics."""
     raise NotImplementedError

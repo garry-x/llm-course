@@ -214,6 +214,141 @@ class TestDPOGRPO(unittest.TestCase):
         self.assertAlmostEqual(stats["rejected_longer_rate"], 0.25)
         self.assertAlmostEqual(stats["tie_rate"], 0.25)
 
+    def test_post_training_data_audit_passes_balanced_records(self):
+        records = [
+            {
+                "kind": "sft",
+                "prompt_id": "p1",
+                "task": "qa",
+                "safety_slice": "ordinary",
+                "response_tokens": 80,
+            },
+            {
+                "kind": "sft",
+                "prompt_id": "p2",
+                "task": "coding",
+                "safety_slice": "ordinary",
+                "response_tokens": 120,
+            },
+            {
+                "kind": "preference",
+                "prompt_id": "p3",
+                "task": "qa",
+                "safety_slice": "benign_sensitive",
+                "chosen_tokens": 90,
+                "rejected_tokens": 86,
+                "winner_id": "a",
+            },
+            {
+                "kind": "preference",
+                "prompt_id": "p4",
+                "task": "coding",
+                "safety_slice": "ordinary",
+                "chosen_tokens": 75,
+                "rejected_tokens": 80,
+                "winner_id": "b",
+            },
+            {
+                "kind": "rlvr",
+                "prompt_id": "p5",
+                "task": "math",
+                "safety_slice": "ordinary",
+                "chosen_tokens": 60,
+                "rejected_tokens": 62,
+                "winner_id": "solver_a",
+            },
+        ]
+        report = submission.post_training_data_audit(
+            records,
+            thresholds={
+                "min_samples": 5,
+                "min_sft_examples": 2,
+                "min_preference_pairs": 3,
+                "min_task_count": 3,
+                "min_safety_slice_count": 2,
+                "max_task_share": 0.4,
+                "max_mean_length_delta_ratio": 0.1,
+                "max_chosen_longer_rate": 0.5,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "post_training_data_ready")
+        self.assertTrue(report["gates"]["coverage"]["pass"])
+        self.assertTrue(report["gates"]["label_quality"]["pass"])
+        self.assertEqual(report["counts"]["by_kind"]["sft"], 2)
+        self.assertEqual(report["counts"]["by_kind"]["preference_or_rlvr"], 3)
+        self.assertAlmostEqual(report["metrics"]["max_task_share"], 0.4)
+
+    def test_post_training_data_audit_flags_data_quality_failures(self):
+        records = [
+            {
+                "kind": "preference",
+                "prompt_id": "p1",
+                "task": "qa",
+                "safety_slice": "ordinary",
+                "chosen_tokens": 240,
+                "rejected_tokens": 80,
+                "winner_id": "a",
+                "eval_overlap": True,
+            },
+            {
+                "kind": "preference",
+                "prompt_id": "p1",
+                "task": "qa",
+                "safety_slice": "ordinary",
+                "chosen_tokens": 220,
+                "rejected_tokens": 70,
+                "winner_id": "b",
+                "chosen_safety_violation": True,
+            },
+            {
+                "kind": "preference",
+                "prompt_id": "p2",
+                "task": "qa",
+                "safety_slice": "ordinary",
+                "chosen_tokens": 200,
+                "rejected_tokens": 60,
+                "winner_id": "c",
+            },
+        ]
+        report = submission.post_training_data_audit(
+            records,
+            thresholds={
+                "min_samples": 4,
+                "min_task_count": 2,
+                "min_safety_slice_count": 2,
+                "max_task_share": 0.8,
+                "max_eval_overlap_rate": 0.0,
+                "max_label_conflict_rate": 0.0,
+                "max_unsafe_chosen_rate": 0.0,
+                "max_mean_length_delta_ratio": 0.25,
+                "max_chosen_longer_rate": 0.8,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "fix_post_training_data_before_optimization")
+        self.assertFalse(report["gates"]["coverage"]["pass"])
+        self.assertFalse(report["gates"]["label_quality"]["pass"])
+        self.assertFalse(report["gates"]["leakage"]["pass"])
+        self.assertFalse(report["gates"]["safety"]["pass"])
+        self.assertIn("collect_or_rebalance_post_training_slices", report["action_items"])
+        self.assertIn("audit_preference_labels_length_bias_and_prompt_conflicts", report["action_items"])
+        self.assertIn("remove_eval_overlap_before_post_training", report["action_items"])
+        self.assertIn("fix_or_filter_unsafe_chosen_responses", report["action_items"])
+
+    def test_post_training_data_audit_rejects_bad_records(self):
+        with self.assertRaises(ValueError):
+            submission.post_training_data_audit([])
+        with self.assertRaises(ValueError):
+            submission.post_training_data_audit([{"kind": "bad", "prompt_id": "p", "task": "qa"}])
+        with self.assertRaises(ValueError):
+            submission.post_training_data_audit([{"kind": "sft", "prompt_id": "p", "task": "qa", "response_tokens": 0}])
+        with self.assertRaises(ValueError):
+            submission.post_training_data_audit(
+                [{"kind": "preference", "prompt_id": "p", "task": "qa", "chosen_tokens": 1, "rejected_tokens": 1}],
+                thresholds={"max_task_share": 1.2},
+            )
+
     def test_ppo_clipped_policy_loss_matches_manual_surrogate(self):
         old_logps = torch.zeros(3)
         ratios = torch.tensor([1.0, 1.5, 0.5])

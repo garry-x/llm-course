@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第9章 微调与对齐</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO——从预训练到有用助手的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 135 分钟 · 19 小节 · 7 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 140 分钟 · 19 小节 · 8 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -41,9 +41,9 @@
     <li><strong>学习目标：</strong>区分预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO、GRPO 的损失信号。</li>
     <li><strong>本章产出：</strong>SFT/LoRA/DPO/GRPO/RLVR 的最小实现和适用场景地图。</li>
     <li><strong>完成标准：</strong>你能判断一个需求应该用 SFT、LoRA、DPO 还是 RL 类方法。</li>
-    <li><strong>练习产出：</strong>提交 masked SFT、LoRA 参数统计、DPO/GRPO toy 实验、RLVR grader gate、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
+    <li><strong>练习产出：</strong>提交 masked SFT、LoRA 参数统计、post-training 数据审计、DPO/GRPO toy 实验、RLVR grader gate、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>先修能力：</strong>log probability、sequence loss、reference model、KL、偏好数据统计、奖励信号和评测切片。<br><strong>本章内化：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 都会被还原成“数据格式、目标函数、约束项、采样假设和评测切片”五件事；复杂公式服务于行为改变是否可验证。<br><strong>验收信号：</strong>你能判断一个对齐实验是优化了目标行为、奖励漏洞、格式偏差还是评测泄漏，并把质量变化与 Ch08 生成成本、Ch10 服务安全边界一起报告。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>log probability、sequence loss、reference model、KL、偏好数据统计、奖励信号和评测切片。<br><strong>本章内化：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 都会被还原成“数据格式、目标函数、约束项、采样假设和评测切片”五件事；post-training 数据 gate 会在目标函数前检查覆盖、泄漏、长度偏差和安全切片，而不是另开一条补课路径。<br><strong>验收信号：</strong>你能判断一个对齐实验是优化了目标行为、奖励漏洞、格式偏差还是评测泄漏，并把质量变化与 Ch08 生成成本、Ch10 服务安全边界一起报告。</div>
 </section>
 
 <!-- ================================================================ -->
@@ -522,6 +522,35 @@ LoRA train states ~= base_weights + lora_params * (weights + grads + Adam m + Ad
   <h4>把长度偏差转成可计算统计</h4>
   <p>课程作业中的 <code>preference_length_bias(chosen_lengths, rejected_lengths)</code> 把每个偏好对的长度差写成 <span class="katex-inline" data-expr="\Delta \ell_i = \ell_i^w - \ell_i^l" aria-label="\Delta \ell_i = \ell_i^w - \ell_i^l" role="img"></span>，并报告 <code>mean_length_delta</code>、<code>chosen_longer_rate</code>、<code>rejected_longer_rate</code> 和 <code>tie_rate</code>。如果 chosen 经常显著更长，DPO 或 RM 可能学到“多写就赢”的捷径；如果 rejected 更长但仍被判差，学生应进一步判断是冗长、跑题、事实错误还是安全边界问题。</p>
 
+  <h4>把 post-training 数据先过 gate</h4>
+  <p>SFT、DPO、GRPO 和 RLVR/RFT 的目标函数都假设训练样本在语义上可信：prompt 覆盖了目标任务，chosen/rejected 代表稳定偏好，安全样本没有把危险回答当成 chosen，held-out eval 没有混入训练集。真实 post-training 管线通常会混合人工偏好、AI 反馈、rejection sampling、可验证题目和安全数据；课程中不要求复刻完整工业流水线，但要求把基础数据假设变成可计算的审计表。</p>
+
+  <table class="metrics-table">
+    <thead><tr><th>gate</th><th>检查什么</th><th>失败时优先处理</th></tr></thead>
+    <tbody>
+      <tr><td>coverage</td><td>样本量、SFT/偏好样本数量、任务数、安全切片数、最大任务占比</td><td>补数据或重采样，避免一个任务支配所有更新</td></tr>
+      <tr><td>label quality</td><td>同一 prompt 是否出现不同 winner、chosen 是否系统性更长</td><td>重审标注协议、去掉冲突对、控制长度偏差</td></tr>
+      <tr><td>leakage</td><td>样本是否与 held-out eval 或 benchmark 重叠</td><td>移除污染样本并重建评测集</td></tr>
+      <tr><td>safety</td><td>危险或越权回答是否被标成 chosen</td><td>修正标签、加入安全 reviewer 或过滤 unsafe chosen</td></tr>
+    </tbody>
+  </table>
+
+  <p>作业中的 <code>post_training_data_audit(records, thresholds)</code> 把每条 SFT、preference 或 RLVR/RFT 记录汇总成 <code>coverage</code>、<code>label_quality</code>、<code>leakage</code> 和 <code>safety</code> 四类 gate，并输出 <code>action_items</code>。这一步不是“数据集清洗大全”，而是训练前最低限度的工程断言：如果偏好对同 prompt 自相矛盾、chosen 明显更长、eval overlap 不为零或 unsafe chosen 存在，后面的 DPO loss 下降只说明模型更贴近有问题的代理目标。</p>
+
+  <div class="code-block" data-lang="python">
+records = [
+    {"kind": "sft", "prompt_id": "p1", "task": "qa", "safety_slice": "ordinary", "response_tokens": 80},
+    {"kind": "preference", "prompt_id": "p2", "task": "code", "safety_slice": "ordinary",
+     "chosen_tokens": 120, "rejected_tokens": 110, "winner_id": "a"},
+]
+report = post_training_data_audit(records, thresholds={
+    "min_task_count": 2,
+    "max_eval_overlap_rate": 0.0,
+    "max_unsafe_chosen_rate": 0.0,
+})</div>
+
+  <p>这个 gate 把偏好学习的基础知识揉进本章目标函数：DPO 的 <code>chosen/rejected</code> 不是天然真值，GRPO 的 reward group 也不是天然可靠。学生在提交对齐实验时，必须先说明数据 gate 是否通过，再解释 log-ratio、KL、reward 和行为切片。</p>
+
   <h4>为什么 reference model 很关键</h4>
   <p>DPO 中的核心比较不是 <span class="katex-inline" data-expr="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" aria-label="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" role="img"></span>，而是 policy 相对 reference 的提升：</p>
   <div class="math-box"><div class="label">公式 9.7a DPO 的相对偏好边际</div>
@@ -544,6 +573,7 @@ LoRA train states ~= base_weights + lora_params * (weights + grads + Adam m + Ad
       <p><strong>任务：</strong>实现 DPO 损失函数和一个辅助函数计算序列的 log 概率。</p>
       <p><strong>要求：</strong></p>
       <ul>
+        <li><code>post_training_data_audit(records, thresholds)</code> 在 DPO/GRPO 前检查 coverage、label quality、leakage 和 safety gate</li>
         <li><code>sequence_log_probs(model, input_ids, attention_mask, labels)</code> 计算整个序列的 log 概率（忽略 -100 位置）</li>
         <li><code>dpo_loss(...)</code> 计算 DPO 损失：<span class="katex-inline" data-expr="-\log \sigma(\beta \cdot (\text{chosen\_ratio} - \text{rejected\_ratio}))" aria-label="-\log \sigma(\beta \cdot (\text{chosen\_ratio} - \text{rejected\_ratio}))" role="img"></span></li>
         <li><code>dpo_implicit_rewards(...)</code> 报告 chosen/rejected 的隐式 reward、reward margin、preference probability 和 preference accuracy</li>
@@ -1210,6 +1240,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>编程练习 2：LoRA</strong> — 低秩适配，99% 参数节省</li>
     <li>✅ <strong>DPO 数学等价性</strong> — 策略 log 比值作为隐式奖励函数</li>
     <li>✅ <strong>偏好数据质量</strong> — 长度偏差、标注分歧、reference model 和 reward hacking 边界</li>
+    <li>✅ <strong>Post-training 数据 Gate</strong> — coverage、label quality、leakage 和 safety 进入同一张训练前审计表</li>
     <li>✅ <strong>编程练习 3：DPO Loss</strong> — 直接偏好优化</li>
     <li>✅ <strong>DPO 隐式 Reward 诊断</strong> — 用 policy/reference log-ratio 报告 chosen/rejected margin</li>
     <li>✅ <strong>PPO Clipped Objective</strong> — old/new policy ratio、advantage、clip fraction 与 approx KL</li>

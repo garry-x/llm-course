@@ -495,6 +495,7 @@ Quick check：
 目标：
 
 - 从偏好数据解释 chosen/rejected。
+- 把 SFT、preference 和 RLVR/RFT 记录过一遍 coverage、label quality、leakage 和 safety gate。
 - 从 Bradley-Terry 模型写出奖励模型 pairwise loss。
 - 推导 DPO log-ratio 的方向。
 - 用长度统计判断偏好数据是否鼓励冗长输出。
@@ -504,6 +505,7 @@ Quick check：
 核心推导：
 
 - RM 训练最大化 `sigmoid(r_chosen - r_rejected)`，对应 `-logsigmoid` 损失。
+- Post-training 数据 gate 先检查任务/安全切片覆盖、同 prompt 标签冲突、长度偏差、eval overlap 和 unsafe chosen。
 - DPO 比较 policy 相对 reference 的 chosen/rejected log probability 改变量。
 - DPO 隐式 reward：`beta * (log pi_policy - log pi_ref)`，chosen/rejected margin 决定 preference probability。
 - PPO clipped objective 用 `ratio = exp(new_logp - old_logp)`，优化 `min(ratio*A, clip(ratio, 1-eps, 1+eps)*A)`，限制单步 policy 更新幅度。
@@ -514,6 +516,7 @@ Quick check：
 课堂 demo：
 
 - 手算 chosen/rejected reward 的 pairwise loss 和 preference accuracy。
+- 给一组 SFT/preference 记录，判定 `post_training_data_audit` 的失败 gate 和 action item。
 - 手造 chosen/rejected log-probs，计算 DPO loss、隐式 reward、margin 和 preference probability。
 - 给定 old/new log-probs 和 advantages，手算 PPO clipped surrogate、clip fraction 和 approx KL。
 - 手算带 padding mask 的 token-level 近似 KL。
@@ -524,6 +527,7 @@ Quick check：
 Quick check：
 
 - RM accuracy 高是否足以说明偏好数据质量好？
+- 如果 post-training 数据 gate 失败，为什么不能用 DPO loss 下降作为成功证据？
 - DPO 为什么需要 reference model？
 - DPO 的隐式 reward 是否等于一个独立训练好的 reward model？
 - PPO clipping 是否等价于 KL 惩罚？
@@ -533,7 +537,7 @@ Quick check：
 
 课后产出：
 
-- A7 RM/DPO/PPO/GRPO/RLVR grader 测试通过。
+- A7 post-training data audit、RM/DPO/PPO/GRPO/RLVR grader 测试通过。
 - 阅读复盘：R1/GRPO、Kimi k1.5 或 RFT 中的 reward 设计边界。
 
 ## Week 8 Lecture 15: KV Cache、FlashAttention 与 Serving Metrics

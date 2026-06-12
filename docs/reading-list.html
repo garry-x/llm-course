@@ -245,10 +245,11 @@
 </ul>
 <h3 id="week-7-sft-lora-dpo-grpo-与-rlvr-rft">Week 7: SFT、LoRA、DPO、GRPO 与 RLVR/RFT</h3>
 <p>对应章节：Ch09。</p>
-<p>本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据和可验证 reward 如何进入目标函数。</p>
+<p>本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据、AI/人工反馈、安全切片和可验证 reward 如何进入目标函数。</p>
 <p>必读：</p>
 <ul>
 <li>Hu et al. <a href="https://arxiv.org/abs/2106.09685">LoRA: Low-Rank Adaptation of Large Language Models</a>. 重点看低秩增量和可训练参数比例。</li>
+<li>Bai et al. <a href="https://arxiv.org/abs/2204.05862">Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback</a>. 重点看 chosen/rejected 偏好数据、helpful/harmless 目标和在线反馈数据迭代。</li>
 <li>Rafailov et al. <a href="https://arxiv.org/abs/2305.18290">Direct Preference Optimization</a>. 重点看从 KL-constrained RL 到分类式 loss 的推导。</li>
 <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a>. 重点看 GRPO、推理行为和方法边界。</li>
 <li>Kimi Team. <a href="https://arxiv.org/abs/2501.12599">Kimi k1.5: Scaling Reinforcement Learning with LLMs</a>. 重点看 long-context RL、long2short、长度控制和多模态 reasoning 的工程取舍。</li>
@@ -256,13 +257,16 @@
 <p>选读：</p>
 <ul>
 <li>Ouyang et al. <a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a>.</li>
-<li>Anthropic Constitutional AI paper。</li>
+<li>Bai et al. <a href="https://arxiv.org/abs/2212.08073">Constitutional AI: Harmlessness from AI Feedback</a>. 重点看 AI feedback 如何生成 harmlessness preference data，以及为什么仍要审计数据混合和安全边界。</li>
+<li>Meta. <a href="https://arxiv.org/abs/2407.21783">The Llama 3 Herd of Models</a>. 重点看 post-training 数据、rejection sampling、reward model、human annotation、安全数据和评测切片如何共同支撑发布结论。</li>
 <li>OpenAI. <a href="https://openai.com/index/learning-to-reason-with-llms/">Learning to reason with LLMs</a> 与 <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning">Reinforcement fine-tuning guide</a>。重点看 train-time/test-time compute、programmable grader、validation split 和 grader 适用条件。</li>
 </ul>
 <p>复盘问题：</p>
 <ul>
 <li>DPO 为什么需要 reference model？<code>beta</code> 调大或调小会怎样？</li>
 <li>偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？</li>
+<li><code>post_training_data_audit</code> 的 coverage、label quality、leakage 和 safety gate 分别对应 post-training 的哪类失败结论？</li>
+<li>如果 SFT/偏好数据的任务覆盖不足或 eval overlap 不为零，为什么不能用 DPO/GRPO 训练 loss 下降作为上线证据？</li>
 <li>GRPO 的组内 advantage 白化依赖什么采样假设？</li>
 <li>RLVR/RFT 的 grader 为什么需要 pass-rate、reward variance、completion length 和 hacking signal 四类检查？</li>
 <li>LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？</li>

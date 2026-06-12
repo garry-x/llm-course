@@ -12,7 +12,7 @@
 |------|------------|----------|----------|
 | 1. 模型可训练性 | Ch01-Ch07 | 数据如何变成 logits，梯度如何穿过模型 | 能解释 token、shape、参数量、梯度路径和数据策展 gate |
 | 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint |
-| 3. 微调与对齐 | Ch09 | 如何把预训练模型变成可用助手 | SFT/LoRA/DPO/GRPO 训练数据、loss masking、偏好优化 |
+| 3. 微调与对齐 | Ch09 | 如何把预训练模型变成可用助手 | SFT/偏好数据 gate、LoRA/DPO/GRPO 训练数据、loss masking、偏好优化 |
 | 4. 实验设计与评估 | Ch08-Ch09、Capstone | 如何证明训练或对齐方法真的更好 | research question、baseline、ablation、对齐评估和结论边界 |
 | 5. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP2/TP/PP、FP8/MXFP8、MFU、tokens/s 解释 |
 | 6. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划与 strategy report |
@@ -77,9 +77,10 @@
 
 - 能把训练项目写成一个可回答问题，而不是只报告“跑通了”。
 - 能设计 baseline、ablation、开发集和失败案例分类。
+- 能在 SFT/DPO/GRPO 前审计 post-training 数据的任务覆盖、偏好标签冲突、长度偏差、eval overlap 和 unsafe chosen。
 - 能解释 SFT/DPO/GRPO 的训练目标和最终 helpfulness、honesty、harmlessness、能力保留之间的差异。
 
-**对应内容：**Ch08 8.7B、Ch09 9.10A、Training Capstone README。
+**对应内容：**Ch08 8.7B、Ch09 9.6A 与 9.10A、Training Capstone README。
 
 ## 学习成果
 
@@ -87,6 +88,7 @@
 |--------|----------|------|
 | 数据分析 | 能输出样本数、空样本、重复率、长度分布和 token 预算 | `data_profile.py` 输出 |
 | 数据策展 gate | 能报告数据源、过滤/去重、eval overlap、domain mixture 和 privacy 风险，并给出是否训练的判断 | data curation gate 表 |
+| Post-training 数据 gate | 能报告 SFT/偏好/RLVR 数据的任务覆盖、安全切片、长度偏差、标签冲突、eval overlap 和 unsafe chosen 风险 | `post_training_data_audit` 表 |
 | 训练运行 | 能跑完整训练并持续记录 metrics | `train.py` + `metrics.jsonl` |
 | Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复 | `acceptance.py` resume 检查 |
 | 开发集 | 能记录 val_loss / perplexity / ECE | `metrics.jsonl` |
@@ -106,7 +108,7 @@
 | 2 | Ch03-Ch06 | 跑通可训练 GPT，检查梯度和参数量 |
 | 3 | Ch07 前半 | 实现 DataLoader、cross entropy、AdamW、scheduler |
 | 4 | Ch07 后半 | 实现 AMP、gradient clipping、训练日志和 loss 曲线 |
-| 5 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 练习，理解不同 loss |
+| 5 | Ch09 | 跑 SFT/post-training data audit/LoRA/DPO/GRPO 练习，理解不同 loss |
 | 6 | Ch07 分布式专题 | 学 ZeRO/FSDP2/TP/PP、FP8/MXFP8、MFU |
 | 7 | Training Capstone | 跑数据分析、训练、checkpoint/resume、规划脚本和 strategy report |
 | 8 | 复盘 | 写训练报告：配置、曲线、成本、失败排查、下一步 |
@@ -119,6 +121,7 @@
 baseline：
 数据集：
 data curation gate：
+post-training data gate：
 token 数：
 模型配置：
 训练配置：

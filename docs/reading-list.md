@@ -227,11 +227,12 @@
 
 对应章节：Ch09。
 
-本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据和可验证 reward 如何进入目标函数。
+本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据、AI/人工反馈、安全切片和可验证 reward 如何进入目标函数。
 
 必读：
 
 - Hu et al. [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685). 重点看低秩增量和可训练参数比例。
+- Bai et al. [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862). 重点看 chosen/rejected 偏好数据、helpful/harmless 目标和在线反馈数据迭代。
 - Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). 重点看从 KL-constrained RL 到分类式 loss 的推导。
 - DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). 重点看 GRPO、推理行为和方法边界。
 - Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). 重点看 long-context RL、long2short、长度控制和多模态 reasoning 的工程取舍。
@@ -239,13 +240,16 @@
 选读：
 
 - Ouyang et al. [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155).
-- Anthropic Constitutional AI paper。
+- Bai et al. [Constitutional AI: Harmlessness from AI Feedback](https://arxiv.org/abs/2212.08073). 重点看 AI feedback 如何生成 harmlessness preference data，以及为什么仍要审计数据混合和安全边界。
+- Meta. [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783). 重点看 post-training 数据、rejection sampling、reward model、human annotation、安全数据和评测切片如何共同支撑发布结论。
 - OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/) 与 [Reinforcement fine-tuning guide](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning)。重点看 train-time/test-time compute、programmable grader、validation split 和 grader 适用条件。
 
 复盘问题：
 
 - DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
 - 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
+- `post_training_data_audit` 的 coverage、label quality、leakage 和 safety gate 分别对应 post-training 的哪类失败结论？
+- 如果 SFT/偏好数据的任务覆盖不足或 eval overlap 不为零，为什么不能用 DPO/GRPO 训练 loss 下降作为上线证据？
 - GRPO 的组内 advantage 白化依赖什么采样假设？
 - RLVR/RFT 的 grader 为什么需要 pass-rate、reward variance、completion length 和 hacking signal 四类检查？
 - LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？

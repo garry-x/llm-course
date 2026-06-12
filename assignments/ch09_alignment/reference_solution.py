@@ -209,6 +209,204 @@ def preference_length_bias(chosen_lengths, rejected_lengths):
     }
 
 
+def post_training_data_audit(records, thresholds=None):
+    """Gate SFT/preference data before running post-training."""
+    thresholds = dict(thresholds or {})
+    if not records:
+        raise ValueError("records must not be empty")
+
+    min_samples = int(thresholds.get("min_samples", 1))
+    min_sft_examples = int(thresholds.get("min_sft_examples", 0))
+    min_preference_pairs = int(thresholds.get("min_preference_pairs", 0))
+    min_task_count = int(thresholds.get("min_task_count", 1))
+    min_safety_slice_count = int(thresholds.get("min_safety_slice_count", 1))
+    max_task_share = float(thresholds.get("max_task_share", 1.0))
+    max_eval_overlap_rate = float(thresholds.get("max_eval_overlap_rate", 0.0))
+    max_label_conflict_rate = float(thresholds.get("max_label_conflict_rate", 0.0))
+    max_unsafe_chosen_rate = float(thresholds.get("max_unsafe_chosen_rate", 0.0))
+    max_mean_length_delta_ratio = float(thresholds.get("max_mean_length_delta_ratio", 0.5))
+    max_chosen_longer_rate = float(thresholds.get("max_chosen_longer_rate", 1.0))
+
+    if min_samples <= 0 or min_sft_examples < 0 or min_preference_pairs < 0:
+        raise ValueError("minimum counts must be non-negative, and min_samples must be positive")
+    if min_task_count <= 0 or min_safety_slice_count <= 0:
+        raise ValueError("minimum task and safety-slice counts must be positive")
+    for name, value in {
+        "max_task_share": max_task_share,
+        "max_eval_overlap_rate": max_eval_overlap_rate,
+        "max_label_conflict_rate": max_label_conflict_rate,
+        "max_unsafe_chosen_rate": max_unsafe_chosen_rate,
+        "max_mean_length_delta_ratio": max_mean_length_delta_ratio,
+        "max_chosen_longer_rate": max_chosen_longer_rate,
+    }.items():
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1]")
+
+    rows = []
+    task_counts = {}
+    safety_counts = {}
+    prompt_winners = {}
+    preference_length_deltas = []
+    preference_mean_lengths = []
+    eval_overlap_count = 0
+    unsafe_chosen_count = 0
+    sft_count = 0
+    preference_count = 0
+
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise TypeError("each record must be a dict")
+        kind = record.get("kind")
+        if kind not in {"sft", "preference", "rlvr"}:
+            raise ValueError("record kind must be 'sft', 'preference', or 'rlvr'")
+        prompt_id = record.get("prompt_id")
+        task = record.get("task")
+        safety_slice = record.get("safety_slice", "ordinary")
+        if not prompt_id or not task:
+            raise ValueError("each record must include prompt_id and task")
+
+        task_counts[task] = task_counts.get(task, 0) + 1
+        safety_counts[safety_slice] = safety_counts.get(safety_slice, 0) + 1
+        eval_overlap = bool(record.get("eval_overlap", False))
+        eval_overlap_count += int(eval_overlap)
+        unsafe_chosen = bool(record.get("chosen_safety_violation", False))
+        unsafe_chosen_count += int(unsafe_chosen)
+
+        row = {
+            "index": index,
+            "kind": kind,
+            "prompt_id": prompt_id,
+            "task": task,
+            "safety_slice": safety_slice,
+            "eval_overlap": eval_overlap,
+            "chosen_safety_violation": unsafe_chosen,
+        }
+
+        if kind == "sft":
+            sft_count += 1
+            response_tokens = int(record.get("response_tokens", 0))
+            if response_tokens <= 0:
+                raise ValueError("sft records must include positive response_tokens")
+            row["response_tokens"] = response_tokens
+        else:
+            preference_count += 1
+            chosen_tokens = int(record.get("chosen_tokens", 0))
+            rejected_tokens = int(record.get("rejected_tokens", 0))
+            if chosen_tokens <= 0 or rejected_tokens <= 0:
+                raise ValueError("preference/rlvr records must include positive chosen_tokens and rejected_tokens")
+            length_delta = chosen_tokens - rejected_tokens
+            preference_length_deltas.append(length_delta)
+            preference_mean_lengths.append((chosen_tokens + rejected_tokens) / 2.0)
+            row.update(
+                {
+                    "chosen_tokens": chosen_tokens,
+                    "rejected_tokens": rejected_tokens,
+                    "length_delta": length_delta,
+                }
+            )
+            winner_id = record.get("winner_id")
+            if winner_id is not None:
+                prompt_winners.setdefault(prompt_id, set()).add(winner_id)
+
+        rows.append(row)
+
+    sample_count = len(records)
+    max_task_count = max(task_counts.values())
+    max_task_share_observed = max_task_count / sample_count
+    eval_overlap_rate = eval_overlap_count / sample_count
+    unsafe_chosen_rate = unsafe_chosen_count / sample_count
+    conflict_prompt_count = sum(1 for winners in prompt_winners.values() if len(winners) > 1)
+    label_conflict_rate = conflict_prompt_count / max(1, len(prompt_winners))
+
+    if preference_length_deltas:
+        mean_length_delta = sum(preference_length_deltas) / len(preference_length_deltas)
+        mean_pair_length = sum(preference_mean_lengths) / len(preference_mean_lengths)
+        mean_length_delta_ratio = abs(mean_length_delta) / max(1.0, mean_pair_length)
+        chosen_longer_rate = sum(delta > 0 for delta in preference_length_deltas) / len(preference_length_deltas)
+    else:
+        mean_length_delta = 0.0
+        mean_pair_length = 0.0
+        mean_length_delta_ratio = 0.0
+        chosen_longer_rate = 0.0
+
+    gates = {
+        "coverage": {
+            "pass": (
+                sample_count >= min_samples
+                and sft_count >= min_sft_examples
+                and preference_count >= min_preference_pairs
+                and len(task_counts) >= min_task_count
+                and len(safety_counts) >= min_safety_slice_count
+                and max_task_share_observed <= max_task_share
+            ),
+            "signals": {
+                "sample_count": sample_count,
+                "sft_count": sft_count,
+                "preference_count": preference_count,
+                "task_count": len(task_counts),
+                "safety_slice_count": len(safety_counts),
+                "max_task_share": max_task_share_observed,
+            },
+        },
+        "label_quality": {
+            "pass": (
+                label_conflict_rate <= max_label_conflict_rate
+                and mean_length_delta_ratio <= max_mean_length_delta_ratio
+                and chosen_longer_rate <= max_chosen_longer_rate
+            ),
+            "signals": {
+                "label_conflict_rate": label_conflict_rate,
+                "mean_length_delta": mean_length_delta,
+                "mean_pair_length": mean_pair_length,
+                "mean_length_delta_ratio": mean_length_delta_ratio,
+                "chosen_longer_rate": chosen_longer_rate,
+            },
+        },
+        "leakage": {
+            "pass": eval_overlap_rate <= max_eval_overlap_rate,
+            "signals": {"eval_overlap_rate": eval_overlap_rate},
+        },
+        "safety": {
+            "pass": unsafe_chosen_rate <= max_unsafe_chosen_rate,
+            "signals": {"unsafe_chosen_rate": unsafe_chosen_rate},
+        },
+    }
+
+    action_items = []
+    if not gates["coverage"]["pass"]:
+        action_items.append("collect_or_rebalance_post_training_slices")
+    if not gates["label_quality"]["pass"]:
+        action_items.append("audit_preference_labels_length_bias_and_prompt_conflicts")
+    if not gates["leakage"]["pass"]:
+        action_items.append("remove_eval_overlap_before_post_training")
+    if not gates["safety"]["pass"]:
+        action_items.append("fix_or_filter_unsafe_chosen_responses")
+
+    return {
+        "rows": rows,
+        "sample_count": sample_count,
+        "counts": {
+            "by_kind": {"sft": sft_count, "preference_or_rlvr": preference_count},
+            "by_task": task_counts,
+            "by_safety_slice": safety_counts,
+        },
+        "metrics": {
+            "eval_overlap_rate": eval_overlap_rate,
+            "unsafe_chosen_rate": unsafe_chosen_rate,
+            "label_conflict_rate": label_conflict_rate,
+            "mean_length_delta": mean_length_delta,
+            "mean_pair_length": mean_pair_length,
+            "mean_length_delta_ratio": mean_length_delta_ratio,
+            "chosen_longer_rate": chosen_longer_rate,
+            "max_task_share": max_task_share_observed,
+        },
+        "gates": gates,
+        "action_items": action_items,
+        "overall_pass": not action_items,
+        "decision": "post_training_data_ready" if not action_items else "fix_post_training_data_before_optimization",
+    }
+
+
 def ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask=None, clip_range=0.2):
     if new_logps.shape != old_logps.shape or new_logps.shape != advantages.shape:
         raise ValueError("new_logps, old_logps and advantages must have the same shape")

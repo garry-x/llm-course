@@ -510,6 +510,7 @@
 <li>推导 DPO log-ratio 的方向。</li>
 <li>用长度统计判断偏好数据是否鼓励冗长输出。</li>
 <li>解释 GRPO 组内 advantage 白化和局限。</li>
+<li>判断 RLVR/RFT grader 是否适合进入 RL-style post-training。</li>
 </ul>
 <p>核心推导：</p>
 <ul>
@@ -519,6 +520,7 @@
 <li>PPO clipped objective 用 <code>ratio = exp(new_logp - old_logp)</code>，优化 <code>min(ratio*A, clip(ratio, 1-eps, 1+eps)*A)</code>，限制单步 policy 更新幅度。</li>
 <li>近似 KL <code>exp(log_ref-log_policy) - (log_ref-log_policy) - 1</code> 只在有效 sampled tokens 上求平均。</li>
 <li>GRPO 在同 prompt group 内标准化 reward。</li>
+<li>RLVR/RFT grader gate：pass rate 不能接近 0 或 1，reward 方差不能塌缩，completion token 成本和 reward hacking rate 必须受控。</li>
 </ul>
 <p>课堂 demo：</p>
 <ul>
@@ -528,6 +530,7 @@
 <li>手算带 padding mask 的 token-level 近似 KL。</li>
 <li>对 chosen/rejected response length 计算 length bias 统计。</li>
 <li>对不同 reward scale 的 group 做 whitening。</li>
+<li>给定一组 grader 输出，填写 <code>rlvr_grader_report</code>，判断 reward signal、cost 和 integrity gate 是否通过。</li>
 </ul>
 <p>Quick check：</p>
 <ul>
@@ -537,11 +540,12 @@
 <li>PPO clipping 是否等价于 KL 惩罚？</li>
 <li>KL 惩罚为什么不能把 padding token 算进均值？</li>
 <li>GRPO 是否解决 reward hacking？</li>
+<li>为什么“答案可验证”不等于“grader 一定可靠”？</li>
 </ul>
 <p>课后产出：</p>
 <ul>
-<li>A7 RM/DPO/PPO/GRPO 测试通过。</li>
-<li>阅读复盘：R1/GRPO 的方法边界。</li>
+<li>A7 RM/DPO/PPO/GRPO/RLVR grader 测试通过。</li>
+<li>阅读复盘：R1/GRPO、Kimi k1.5 或 RFT 中的 reward 设计边界。</li>
 </ul>
 <h3 id="week-8-lecture-15-kv-cache-flashattention-与-serving-metrics">Week 8 Lecture 15: KV Cache、FlashAttention 与 Serving Metrics</h3>
 <p>对应材料：Ch10、reading-list Week 8。</p>

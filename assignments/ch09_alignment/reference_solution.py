@@ -320,6 +320,93 @@ def grpo_policy_loss(
     }
 
 
+def rlvr_grader_report(rewards, grader_pass, completion_lengths=None, hacking_flags=None, thresholds=None):
+    """Summarize grader health before using a verifiable reward for RL-style post-training."""
+    thresholds = dict(thresholds or {})
+    rewards = torch.as_tensor(rewards, dtype=torch.float32)
+    grader_pass = torch.as_tensor(grader_pass, dtype=torch.bool, device=rewards.device)
+    if rewards.numel() == 0:
+        raise ValueError("rewards must not be empty")
+    if grader_pass.shape != rewards.shape:
+        raise ValueError("grader_pass must have the same shape as rewards")
+    if not torch.isfinite(rewards).all():
+        raise ValueError("rewards must be finite")
+
+    min_pass_rate = float(thresholds.get("min_pass_rate", 0.05))
+    max_pass_rate = float(thresholds.get("max_pass_rate", 0.95))
+    min_reward_std = float(thresholds.get("min_reward_std", 1e-6))
+    max_hacking_rate = float(thresholds.get("max_hacking_rate", 0.0))
+    if not 0.0 <= min_pass_rate <= max_pass_rate <= 1.0:
+        raise ValueError("pass-rate thresholds must satisfy 0 <= min <= max <= 1")
+    if min_reward_std < 0 or not 0.0 <= max_hacking_rate <= 1.0:
+        raise ValueError("thresholds must be non-negative and rates must be in [0, 1]")
+
+    pass_rate = grader_pass.float().mean().item()
+    reward_std = rewards.std(unbiased=False).item()
+    gates = {
+        "reward_signal": {
+            "pass": min_pass_rate <= pass_rate <= max_pass_rate and reward_std >= min_reward_std,
+            "signals": {
+                "pass_rate": pass_rate,
+                "reward_std": reward_std,
+                "mean_reward": rewards.mean().item(),
+                "min_reward": rewards.min().item(),
+                "max_reward": rewards.max().item(),
+            },
+        }
+    }
+
+    action_items = []
+    if not gates["reward_signal"]["pass"]:
+        action_items.append("rebalance_prompts_grader_thresholds_or_reward_scale")
+
+    report = {
+        "sample_count": int(rewards.numel()),
+        "mean_reward": rewards.mean().item(),
+        "reward_std": reward_std,
+        "pass_rate": pass_rate,
+        "gates": gates,
+        "action_items": action_items,
+    }
+
+    if completion_lengths is not None:
+        completion_lengths = torch.as_tensor(completion_lengths, dtype=torch.float32, device=rewards.device)
+        if completion_lengths.shape != rewards.shape:
+            raise ValueError("completion_lengths must have the same shape as rewards")
+        if (completion_lengths < 0).any():
+            raise ValueError("completion_lengths must be non-negative")
+        avg_completion_tokens = completion_lengths.mean().item()
+        max_avg_completion_tokens = thresholds.get("max_avg_completion_tokens")
+        cost_pass = True if max_avg_completion_tokens is None else avg_completion_tokens <= float(max_avg_completion_tokens)
+        gates["cost"] = {
+            "pass": cost_pass,
+            "signals": {
+                "avg_completion_tokens": avg_completion_tokens,
+                "max_completion_tokens": completion_lengths.max().item(),
+            },
+        }
+        report["avg_completion_tokens"] = avg_completion_tokens
+        if not cost_pass:
+            action_items.append("reduce_reasoning_budget_or_add_length_penalty")
+
+    if hacking_flags is not None:
+        hacking_flags = torch.as_tensor(hacking_flags, dtype=torch.bool, device=rewards.device)
+        if hacking_flags.shape != rewards.shape:
+            raise ValueError("hacking_flags must have the same shape as rewards")
+        hacking_rate = hacking_flags.float().mean().item()
+        gates["integrity"] = {
+            "pass": hacking_rate <= max_hacking_rate,
+            "signals": {"hacking_rate": hacking_rate},
+        }
+        report["hacking_rate"] = hacking_rate
+        if not gates["integrity"]["pass"]:
+            action_items.append("tighten_grader_with_adversarial_or_process_checks")
+
+    report["overall_pass"] = not action_items
+    report["decision"] = "train_or_continue_rl" if not action_items else "fix_grader_or_data_before_rl"
+    return report
+
+
 def merge_lora(base_model, lora_weights):
     modules = dict(base_model.named_modules())
     for name, params in lora_weights.items():

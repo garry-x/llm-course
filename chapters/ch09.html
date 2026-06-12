@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>第9章 微调与对齐</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO——从预训练到有用助手的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 125 分钟 · 18 小节 · 6 道编程练习 · 5 道概念练习</div>
+  <div class="reading-time">⏱ 预计阅读: 135 分钟 · 19 小节 · 7 道编程练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
@@ -39,9 +39,9 @@
   <ul>
     <li><strong>前置知识：</strong>第 7 章训练循环、第 8 章生成，以及 log probability。</li>
     <li><strong>学习目标：</strong>区分预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO、GRPO 的损失信号。</li>
-    <li><strong>本章产出：</strong>SFT/LoRA/DPO/GRPO 的最小实现和适用场景地图。</li>
+    <li><strong>本章产出：</strong>SFT/LoRA/DPO/GRPO/RLVR 的最小实现和适用场景地图。</li>
     <li><strong>完成标准：</strong>你能判断一个需求应该用 SFT、LoRA、DPO 还是 RL 类方法。</li>
-    <li><strong>练习产出：</strong>提交 masked SFT、LoRA 参数统计、DPO/GRPO toy 实验、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
+    <li><strong>练习产出：</strong>提交 masked SFT、LoRA 参数统计、DPO/GRPO toy 实验、RLVR grader gate、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>本章依赖：</strong>对齐依赖 log probability、sequence loss、reference model、KL、偏好数据统计和评测切片。DPO/GRPO 公式看起来复杂，但底层问题是“训练目标是否真的支持想要的行为变化”。若目标函数和评估指标容易混淆，先补 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 的 DPO/GRPO 推导检查，以及 <a href="../docs/ml-foundations-prerequisite-bridge.html">ML foundations bridge</a> 的 metric limit、leakage 和 ablation。</div>
 </section>
@@ -1169,6 +1169,34 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
   <p>缓解方法：1) 推理任务与安全对齐分开处理；2) 在 RLHF 数据中加入"安全但有力"的边缘案例；3) 使用 per-task 奖励模型，对不同维度的质量分别评估。</p>
 </section>
 
+<section class="card" id="s9-13a">
+  <h3>9.13A RLVR / RFT：可验证 reward 不是万能奖励</h3>
+  <p>DeepSeek-R1、Kimi k1.5 和 OpenAI o1/RFT 这类工作把 reasoning post-training 推到了工业前沿：模型不只是模仿答案，而是在同一 prompt 上采样多条候选，用可验证 reward、grader 或规则评测给反馈，再用 RL-style 更新提高高分答案概率。这个方向的关键不是“把 PPO/GRPO 打开”，而是判断任务是否真的有稳定、可审计、难作弊的 reward。</p>
+
+  <h4>什么时候适合 RLVR / RFT</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>条件</th><th>适合的信号</th><th>不适合的信号</th></tr>
+      <tr><td>答案可验证</td><td>数学最终答案、代码测试、JSON schema、工具调用结果、检索命中文档</td><td>开放式写作风格、主观“更好看”、无标准答案咨询</td></tr>
+      <tr><td>reward 有方差</td><td>同一 prompt 多个 rollout 有高低分，模型有探索空间</td><td>全部 0 分或全部满分，RL 没有可学习梯度</td></tr>
+      <tr><td>难靠猜测得分</td><td>需要中间约束、测试用例或引用证据</td><td>四选一、短答案可蒙中、grader 只看关键词</td></tr>
+      <tr><td>成本可控</td><td>能限制 reasoning token、rollout 数和训练轮次</td><td>准确率提升只来自无限延长 CoT 或大量重试</td></tr>
+    </table>
+  </div>
+
+  <h4>Grader gate：先验收奖励，再训练策略</h4>
+  <p>RLVR/RFT 的工程顺序应是：先跑固定 prompt 集，采样多个候选，记录 reward、pass/fail、输出长度、grader 错误和可疑 hacking；只有当 reward signal、cost 和 integrity gate 都过了，再进入策略更新。Ch09 作业中的 <code>rlvr_grader_report</code> 要求报告三类 gate：</p>
+  <ul>
+    <li><strong>Reward signal：</strong>pass rate 不能接近 0 或 1，reward standard deviation 不能接近 0，否则没有有效学习信号。</li>
+    <li><strong>Cost：</strong>平均 completion tokens、rollout 数和训练轮次要受控；long-CoT 提升必须同时报告 token 成本。</li>
+    <li><strong>Integrity：</strong>检查 reward hacking、格式绕过、测试泄漏、grader 与模型同源偏置，以及“答案对但推理错”的情况。</li>
+  </ul>
+
+  <h4>和 SFT / DPO / GRPO 的关系</h4>
+  <p>SFT 适合教格式和基本任务行为；DPO 适合把 chosen/rejected 偏好转成 reference-relative 更新；GRPO/RLVR 更适合有可验证 reward、需要探索多条推理路径的任务。工业系统通常不是三选一：先用 SFT 建立可读性和格式，再用偏好或 rule-based reward 做后训练，最后用固定 eval、红队、安全/格式回归和成本账本决定是否发布。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高阶对齐工程师要能证明 reward 本身可靠。一个漂亮的 RL 曲线如果来自可猜答案、泄漏测试、输出变长或 grader 漏洞，就不是能力提升，而是 reward hacking。</div></div>
+</section>
+
 <!-- ================================================================ -->
 <!-- 9.14 总结 -->
 <!-- ================================================================ -->
@@ -1190,6 +1218,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>编程练习 5：DPO vs GRPO 对比</strong> — 收敛速度与准确率</li>
     <li>✅ <strong>对齐评估协议</strong> — 同时看 helpfulness、honesty、harmlessness、过度拒答和能力保留</li>
     <li>✅ <strong>编程练习 6：LoRA 合并推理</strong> — 适配器加载与合并</li>
+    <li>✅ <strong>RLVR / RFT Grader Gate</strong> — 验证 reward signal、成本和 reward hacking 风险</li>
     <li>✅ <strong>On-policy distillation + 可调推理预算</strong> — 训练分布、教师信号和 test-time compute 的关系</li>
     <li>✅ <strong>对齐税</strong> — SS/OS 评估与缓解策略</li>
   </ul>

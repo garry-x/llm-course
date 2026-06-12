@@ -212,28 +212,31 @@
 - constrained decoding 是改变模型参数、logits、token mask 还是后处理？不同实现的失败模式是什么？
 - test-time compute 提高准确率时，应该同时报告哪些系统指标？
 
-## Week 7: SFT、LoRA、DPO 与 GRPO
+## Week 7: SFT、LoRA、DPO、GRPO 与 RLVR/RFT
 
 对应章节：Ch09。
 
-本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO 和 RL-style alignment 的训练信号，理解偏好数据如何进入目标函数。
+本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据和可验证 reward 如何进入目标函数。
 
 必读：
 
 - Hu et al. [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685). 重点看低秩增量和可训练参数比例。
 - Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). 重点看从 KL-constrained RL 到分类式 loss 的推导。
 - DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). 重点看 GRPO、推理行为和方法边界。
+- Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). 重点看 long-context RL、long2short、长度控制和多模态 reasoning 的工程取舍。
 
 选读：
 
 - Ouyang et al. [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155).
 - Anthropic Constitutional AI paper。
+- OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/) 与 [Reinforcement fine-tuning guide](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning)。重点看 train-time/test-time compute、programmable grader、validation split 和 grader 适用条件。
 
 复盘问题：
 
 - DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
 - 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
 - GRPO 的组内 advantage 白化依赖什么采样假设？
+- RLVR/RFT 的 grader 为什么需要 pass-rate、reward variance、completion length 和 hacking signal 四类检查？
 - LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？
 - 对齐后模型质量上升但能力回退时，应如何区分数据分布、KL 约束和评测指标的问题？
 

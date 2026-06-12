@@ -36,16 +36,20 @@ class TinyChatTokenizer:
         return [self.stoi.get(ch, 1) for ch in text]
 
 
-class TinyLogitModel(nn.Module):
-    def __init__(self, logits):
-        super().__init__()
-        self.anchor = nn.Parameter(torch.zeros(()))
-        self.register_buffer("fixed_logits", logits)
+if nn is not None:
+    class TinyLogitModel(nn.Module):
+        def __init__(self, logits):
+            super().__init__()
+            self.anchor = nn.Parameter(torch.zeros(()))
+            self.register_buffer("fixed_logits", logits)
 
-    def forward(self, input_ids=None, attention_mask=None):
-        batch, seq = input_ids.shape
-        logits = self.fixed_logits[:batch, :seq].clone() + self.anchor
-        return SimpleNamespace(logits=logits)
+        def forward(self, input_ids=None, attention_mask=None):
+            batch, seq = input_ids.shape
+            logits = self.fixed_logits[:batch, :seq].clone() + self.anchor
+            return SimpleNamespace(logits=logits)
+else:
+    class TinyLogitModel:
+        pass
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch09 alignment tests")
@@ -68,15 +72,19 @@ class TestSFT(unittest.TestCase):
         self.assertTrue(torch.allclose(loss, expected))
 
 
-class TinyModule(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.q_proj = nn.Linear(4, 3, bias=True)
-        self.v_proj = nn.Linear(4, 3, bias=False)
-        self.other = nn.Linear(4, 3, bias=False)
+if nn is not None:
+    class TinyModule(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.q_proj = nn.Linear(4, 3, bias=True)
+            self.v_proj = nn.Linear(4, 3, bias=False)
+            self.other = nn.Linear(4, 3, bias=False)
 
-    def forward(self, x):
-        return self.q_proj(x) + self.v_proj(x) + self.other(x)
+        def forward(self, x):
+            return self.q_proj(x) + self.v_proj(x) + self.other(x)
+else:
+    class TinyModule:
+        pass
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch09 alignment tests")
@@ -315,6 +323,60 @@ class TestDPOGRPO(unittest.TestCase):
             submission.grpo_policy_loss(logps, logps, logps, rewards, clip_range=0.0)
         with self.assertRaises(ValueError):
             submission.grpo_policy_loss(logps, logps, logps, rewards, kl_beta=-0.1)
+
+    def test_rlvr_grader_report_passes_usable_signal(self):
+        rewards = torch.tensor([0.0, 1.0, 0.5, 1.0])
+        grader_pass = torch.tensor([False, True, False, True])
+        report = submission.rlvr_grader_report(
+            rewards,
+            grader_pass,
+            completion_lengths=torch.tensor([80, 120, 90, 110]),
+            hacking_flags=torch.tensor([False, False, False, False]),
+            thresholds={
+                "min_pass_rate": 0.25,
+                "max_pass_rate": 0.8,
+                "min_reward_std": 0.1,
+                "max_avg_completion_tokens": 128,
+                "max_hacking_rate": 0.0,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "train_or_continue_rl")
+        self.assertEqual(report["sample_count"], 4)
+        self.assertAlmostEqual(report["pass_rate"], 0.5)
+        self.assertTrue(report["gates"]["reward_signal"]["pass"])
+        self.assertTrue(report["gates"]["cost"]["pass"])
+        self.assertTrue(report["gates"]["integrity"]["pass"])
+
+    def test_rlvr_grader_report_attributes_grader_cost_and_hacking_failures(self):
+        report = submission.rlvr_grader_report(
+            torch.tensor([1.0, 1.0, 1.0, 1.0]),
+            torch.tensor([True, True, True, True]),
+            completion_lengths=torch.tensor([400, 500, 450, 550]),
+            hacking_flags=torch.tensor([False, True, False, False]),
+            thresholds={
+                "min_pass_rate": 0.1,
+                "max_pass_rate": 0.9,
+                "min_reward_std": 0.01,
+                "max_avg_completion_tokens": 256,
+                "max_hacking_rate": 0.0,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "fix_grader_or_data_before_rl")
+        self.assertIn("rebalance_prompts_grader_thresholds_or_reward_scale", report["action_items"])
+        self.assertIn("reduce_reasoning_budget_or_add_length_penalty", report["action_items"])
+        self.assertIn("tighten_grader_with_adversarial_or_process_checks", report["action_items"])
+
+    def test_rlvr_grader_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.rlvr_grader_report([], [])
+        with self.assertRaises(ValueError):
+            submission.rlvr_grader_report(torch.ones(2), torch.ones(3, dtype=torch.bool))
+        with self.assertRaises(ValueError):
+            submission.rlvr_grader_report(torch.ones(2), torch.ones(2, dtype=torch.bool), thresholds={"min_pass_rate": 0.9, "max_pass_rate": 0.1})
+        with self.assertRaises(ValueError):
+            submission.rlvr_grader_report(torch.ones(2), torch.ones(2, dtype=torch.bool), completion_lengths=torch.tensor([1.0, -1.0]))
 
 
 if __name__ == "__main__":

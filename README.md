@@ -51,7 +51,7 @@
 | Transformer 核心 | Ch03-Ch06 | 注意力、mask、多头、GQA/MLA、Norm、FFN、MoE 和 GPT 前向传播如何组合 |
 | 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器和 checkpoint 如何工作 |
 | 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG 和推理服务如何取舍 |
-| 微调与对齐 | Ch09 | SFT、LoRA、偏好建模、DPO、GRPO 如何改变模型行为 |
+| 微调与对齐 | Ch09 | SFT、LoRA、偏好建模、DPO、GRPO、RLVR/RFT 如何改变模型行为 |
 | 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | RNN/LSTM、dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
 | 前沿工程案例 | Ch04-Ch10 | MLA、MoE、FP8、GRPO、稀疏/压缩注意力等设计解决了哪些工程瓶颈 |
 
@@ -99,7 +99,7 @@
 | 训练循环工程 | Ch06-Ch07 | 组织 PyTorch Dataset/DataLoader、forward、loss、backward、optimizer、scheduler |
 | 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint、resume 和异常排查保护训练 |
 | 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
-| 微调与对齐 | Ch09 | 区分 SFT、LoRA、DPO、GRPO 的数据格式、损失和适用场景 |
+| 微调与对齐 | Ch09 | 区分 SFT、LoRA、DPO、GRPO、RLVR/RFT 的数据格式、损失和适用场景 |
 | 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、GPU hours 和 checkpoint 存储 |
 
 **训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、训练、开发集监控、checkpoint、resume、metrics 和训练规划。默认模型很小，CPU 可跑通；有 GPU 时可直接迁移到 CUDA 环境。
@@ -146,7 +146,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 6 | **组装 GPT + DeepSeekMoE** — GPT-2 124M 完整模型 | `GPTModel` ~100行 | 5+5 |
 | 7 | **训练循环** — AdamW/Muon + FP8/FP4 + 分布式 | 完整训练脚本 ~120行 | 6+5 |
 | 8 | **文本生成** — 采样策略 + MTP 推测解码 + 约束生成 | 文本生成器 ~60行 | 6+5 |
-| 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO + R1 推理 | SFT + LoRA + GRPO ~190行 | 6+5 |
+| 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + LoRA + GRPO/RLVR ~210行 | 7+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + LSH + 服务蓝图 | 6+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + MLM mask | Ch11 |
 
@@ -160,6 +160,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 |------|---------|----------|
 | MLA (Multi-head Latent Attention) | Ch04 | KV Cache 压缩，潜在向量解耦 RoPE |
 | GRPO (Group Relative Policy Optimization) | Ch09 | 无需 Critic，组内白化优势，RL 激励推理能力 |
+| RLVR / RFT | Ch09 | 用可验证 grader 训练 reasoning，并检查 reward signal、成本和 hacking 风险 |
 | DeepSeekMoE + Aux-Loss-Free | Ch06 | 稀疏激活、专家路由和动态偏置负载均衡 |
 | FP8 Mixed Precision + DualPipe | Ch07 | 低精度训练、缩放策略、通信计算重叠 |
 | MTP (Multi-Token Prediction) | Ch08 | 训练辅助目标和推测解码草稿信号 |
@@ -251,7 +252,7 @@ llm-course/
 - Hoffmann et al. (2022) — [Training Compute-Optimal Large Language Models (Chinchilla)](https://arxiv.org/abs/2203.15556)
 
 **前沿架构案例：**
-- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · DeepSeek-V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · DeepSeek-R1 — [GRPO 与推理行为](https://arxiv.org/abs/2501.12948)
+- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · DeepSeek-V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · DeepSeek-R1 — [GRPO 与推理行为](https://arxiv.org/abs/2501.12948) · Kimi k1.5 — [Scaling RL with LLMs](https://arxiv.org/abs/2501.12599)
 
 **动手实践：**
 - Andrej Karpathy — [Neural Networks: Zero to Hero](https://www.youtube.com/playlist?list=PLAqhIrjkxBUWIvTOCzB7XwZBt03h4H3kW) · [nanoGPT](https://github.com/karpathy/nanoGPT)

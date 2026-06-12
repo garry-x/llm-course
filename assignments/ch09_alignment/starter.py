@@ -91,5 +91,10 @@ def grpo_policy_loss(
     raise NotImplementedError
 
 
+def rlvr_grader_report(rewards, grader_pass, completion_lengths=None, hacking_flags=None, thresholds=None):
+    """Summarize whether a verifiable reward/grader signal is usable for RL-style post-training."""
+    raise NotImplementedError
+
+
 def merge_lora(base_model, lora_weights):
     raise NotImplementedError

@@ -122,6 +122,11 @@ def build_benchmark_summary(task, metrics, baseline, sample_size, risks=None, un
     raise NotImplementedError
 
 
+def production_rollout_gate_report(baseline, candidate, rollout_policy=None):
+    """Gate canary promotion with quality, safety, SLO, cost, monitoring, and rollback signals."""
+    raise NotImplementedError
+
+
 def prefill_decode_disaggregation_report(requests, slo=None):
     """Summarize prefill/decode disaggregation metrics and likely bottleneck."""
     raise NotImplementedError

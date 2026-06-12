@@ -14,7 +14,7 @@
 | 2. 生成链路 | Ch08-Ch10 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性、test-time compute 和 speculative gate 的 trade-off |
 | 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本 | 能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存 |
 | 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark |
-| 5. 多模态与质量评估 | Ch09-Ch11、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、上线方案和压测报告 |
+| 5. 多模态与质量评估 | Ch09-Ch11、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、canary/control/rollback 上线方案和压测报告 |
 
 ## 能力目标
 
@@ -68,9 +68,9 @@
 - 能维护固定评测集，覆盖事实、格式、安全、拒答、工具调用和回归问题。
 - 能区分自动指标、LLM-as-judge、人审抽检、安全拒答、过度拒答和任务可用性。
 - 能用压测报告和 SLO 目标回答“最大并发多少、P95 是否达标、成本是否可接受”。
-- 能写上线方案：限流、超时、降级、监控、日志、告警、回滚。
+- 能写上线方案：canary/control、per-version monitoring、限流、超时、降级、日志、告警、成本 guardrail 和回滚。
 
-**对应内容：**Ch09，Ch10 10.13，Ch11 评测专题，Capstone `evaluate.py` 与 README 上线方案。
+**对应内容：**Ch09，Ch10 10.13，Ch11 评测专题，Capstone `evaluate.py`、production rollout gate 与 README 上线方案。
 
 ### G. 多模态输入评估
 
@@ -94,6 +94,7 @@
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
 | 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性、工具调用、MCP/runtime gate、LLM-as-judge 和安全/过度拒答，失败样例有记录 | `evaluate.py` 输出 |
+| 发布 gate | baseline 与 candidate 的 quality/safety/SLO/error/cost/canary/monitoring/rollback 判断可复算 | production rollout gate 表 |
 | 实验结论 | 项目有 research question、baseline、workload、ablation 和结论边界 | proposal / milestone / final report |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |
 | 引擎替换 | 至少说明如何把 `MockEngine` 替换为一个真实推理引擎 | 代码 diff 或设计说明 |
@@ -140,6 +141,7 @@ P95 TTFT：
 P95 TPOT：
 speculative decoding gate：
 continuous batching admission：
+production rollout gate：
 SLO 是否通过：
 tokens/s：
 显存峰值：

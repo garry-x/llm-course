@@ -678,6 +678,115 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.build_benchmark_summary("qa", {"acc": 1.0}, "baseline", 0)
 
+    def test_production_rollout_gate_promotes_passing_canary(self):
+        baseline = {
+            "pass_rate": 0.82,
+            "safety_pass_rate": 0.96,
+            "cost_per_1k_requests_usd": 1.20,
+        }
+        candidate = {
+            "pass_rate": 0.85,
+            "safety_pass_rate": 0.97,
+            "p95_latency_ms": 780.0,
+            "error_rate": 0.004,
+            "cost_per_1k_requests_usd": 1.25,
+            "canary_traffic_pct": 5.0,
+            "canary_sample_size": 1200,
+            "control_comparison_ready": True,
+            "rollback_ready": True,
+            "monitors": [
+                "pass_rate",
+                "safety_pass_rate",
+                "p95_latency_ms",
+                "error_rate",
+                "cost_per_1k_requests_usd",
+            ],
+        }
+        report = submission.production_rollout_gate_report(
+            baseline,
+            candidate,
+            {
+                "min_pass_rate": 0.8,
+                "max_quality_regression_abs": 0.01,
+                "min_safety_pass_rate": 0.95,
+                "max_p95_latency_ms": 900.0,
+                "max_error_rate": 0.01,
+                "max_cost_per_1k_requests_usd": 1.5,
+                "max_cost_regression_pct": 0.1,
+                "min_canary_sample_size": 1000,
+                "max_canary_traffic_pct": 10.0,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "promote_to_next_stage")
+        self.assertTrue(report["gates"]["offline_quality"]["pass"])
+        self.assertTrue(report["gates"]["canary"]["pass"])
+        self.assertEqual(report["action_items"], [])
+
+    def test_production_rollout_gate_blocks_bad_release(self):
+        baseline = {
+            "pass_rate": 0.9,
+            "safety_pass_rate": 0.98,
+            "cost_per_1k_requests_usd": 1.0,
+        }
+        candidate = {
+            "pass_rate": 0.84,
+            "safety_pass_rate": 0.91,
+            "p95_latency_ms": 1400.0,
+            "error_rate": 0.04,
+            "cost_per_1k_requests_usd": 1.6,
+            "canary_traffic_pct": 50.0,
+            "canary_sample_size": 80,
+            "control_comparison_ready": False,
+            "rollback_ready": False,
+            "monitors": ["pass_rate"],
+        }
+        report = submission.production_rollout_gate_report(
+            baseline,
+            candidate,
+            {
+                "min_pass_rate": 0.85,
+                "max_quality_regression_abs": 0.02,
+                "min_safety_pass_rate": 0.95,
+                "max_safety_regression_abs": 0.02,
+                "max_p95_latency_ms": 900.0,
+                "max_error_rate": 0.01,
+                "max_cost_regression_pct": 0.2,
+                "min_canary_sample_size": 1000,
+                "max_canary_traffic_pct": 10.0,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "rollback_or_block_release")
+        self.assertFalse(report["gates"]["offline_quality"]["pass"])
+        self.assertFalse(report["gates"]["safety"]["pass"])
+        self.assertFalse(report["gates"]["slo"]["pass"])
+        self.assertFalse(report["gates"]["cost"]["pass"])
+        self.assertFalse(report["gates"]["canary"]["pass"])
+        self.assertFalse(report["gates"]["rollback_and_monitoring"]["pass"])
+        self.assertIn("hold_release_and_fix_quality_regression", report["action_items"])
+        self.assertIn("block_release_until_safety_gate_passes", report["action_items"])
+        self.assertIn("reduce_traffic_or_fix_latency_error_slo", report["action_items"])
+        self.assertIn("add_cost_guardrail_or_route_to_cheaper_model", report["action_items"])
+        self.assertIn("run_smaller_or_longer_canary_against_control", report["action_items"])
+        self.assertIn("prepare_rollback_and_required_monitors", report["action_items"])
+
+    def test_production_rollout_gate_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.production_rollout_gate_report({}, {"pass_rate": 1.0})
+        with self.assertRaises(ValueError):
+            submission.production_rollout_gate_report({"pass_rate": 1.0}, {"pass_rate": 1.0})
+        with self.assertRaises(ValueError):
+            submission.production_rollout_gate_report(
+                {"pass_rate": 1.0},
+                {
+                    "pass_rate": True,
+                    "p95_latency_ms": 100,
+                    "error_rate": 0,
+                    "canary_sample_size": 10,
+                },
+            )
+
     def test_prefill_decode_report_splits_latency_and_slo(self):
         requests = [
             {

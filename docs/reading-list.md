@@ -273,6 +273,8 @@
 - OpenAI. [Function calling](https://developers.openai.com/api/docs/guides/function-calling) 与 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). 重点看 function tools、JSON schema、strict structured output 和 tool call output 如何构成服务端协议。
 - Model Context Protocol. [Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18) 与 [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation 以及用户同意、数据隐私和 tool safety。
 - OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) 与 [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). 重点看 prompt injection、insecure output handling、insecure plugin design、excessive agency 和外部内容隔离。
+- OpenAI. [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices) 与 [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 prototype 到 production 时的可靠性、监控、评测和成本控制如何进入上线判断。
+- Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) 与 [Implementing SLOs](https://sre.google/workbook/implementing-slos/). 重点看 canary/control、流量分阶段、SLO/SLI 和 error budget 如何转成发布 gate。
 
 选读：
 
@@ -284,6 +286,7 @@
 - TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。
 - Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化。
 - OpenAI Agents SDK guardrails。重点看 input/output/tool guardrails 在 agent workflow 中运行的不同位置。
+- Google SRE Book. [Release Engineering](https://sre.google/sre-book/release-engineering/) 与 [Service Level Objectives](https://sre.google/sre-book/service-level-objectives/). 重点看发布工程、回滚、SLO 与业务风险之间的连接。
 - llama.cpp 官方文档中 quantization、CPU/GPU offload 和本地部署边界。
 - Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。
 - Liu et al. [Visual Instruction Tuning](https://arxiv.org/abs/2304.08485). 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。
@@ -301,6 +304,7 @@
 - 长 prompt 进入 continuous batching 时，chunked prefill 和 prefix cache 分别缓解哪类 TTFT 问题？
 - tool/function calling 为什么不能只依赖 prompt 约束？schema、权限和循环预算分别拦截哪类失败？
 - MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、敏感数据外发、observation isolation 和 recursive sampling？
+- 生产发布时，为什么候选模型即使离线 pass rate 更高，也必须经过 canary/control、per-version quality/safety/SLO/cost monitoring 和 rollback readiness gate？
 - prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？
 - SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？
 - speculative decoding 的 acceptance rate、draft overhead、QPS 和 quality regression 如何共同决定是否启用，而不是只看 `num_speculative_tokens`？

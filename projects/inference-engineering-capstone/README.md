@@ -23,6 +23,7 @@
 | SLO Check | 将压测 JSON 与延迟/吞吐/错误率目标对比 | `python slo_check.py` 输出 PASS/FAIL |
 | Evaluation | 跑固定评测集，检查 JSON/事实/拒答 | `python evaluate.py` 输出 pass rate |
 | Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
+| Rollout Gate | 把 baseline 与 candidate 的质量、安全、SLO、成本、canary、monitoring 和 rollback 放入同一张发布 gate | 报告中的 production rollout gate 表 |
 | Acceptance | 自动启动服务并串联评测、压测、SLO、容量估算 | `python acceptance.py` 输出 ACCEPTANCE |
 
 ## 项目问题设计
@@ -154,6 +155,7 @@ python capacity_plan.py \
 - RAG 命中率、JSON 格式正确率、安全拒答率有固定回归集。
 - 工具调用能校验 schema、权限和循环预算，返回 `tool_calls`，并记录工具执行结果。
 - 若使用 MCP 或 remote tool，必须报告 server trust/allowlist、用户同意、敏感数据外发、外部 observation isolation、递归 LLM sampling 和 observation token budget；schema 通过不能替代 runtime security gate。
+- 候选发布包与 stable baseline 已在同一 policy 下比较：离线 pass rate、安全通过率、P95/P99、错误率、成本、canary 样本量/流量、control 对照、per-version monitoring 和 rollback readiness 均有记录。
 - 指标能按模型、租户、状态码、错误类型聚合。
 - 限流、超时、降级和错误响应格式明确。
 
@@ -166,6 +168,7 @@ python capacity_plan.py \
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
 - RAG、JSON structured output、tool/MCP calling 和 reasoning budget 的回归用例。
+- Canary/control/rollback 发布判断：候选版本不能只凭离线 eval 提升上线，必须写清 production rollout gate 的通过项、失败项和 action items。
 - 超时、限流、降级、格式错误和安全拒答策略。
 - 明确说明你的研究问题、baseline、workload、结论适用条件，以及哪些结果只在 MockEngine / 本地 CPU 下成立。
 
@@ -185,8 +188,9 @@ python capacity_plan.py \
 10. **Speculative decoding gate.** 若采用或讨论 speculative decoding，报告 acceptance rate、speedup、draft overhead、tokens per verify step、quality regression、memory overhead 和 QPS/workload fit，并说明是否启用。
 11. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
 12. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
-13. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
-14. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
+13. **Production rollout gate.** 将 stable baseline 与 candidate 放进同一张表，报告 offline quality、安全、SLO、错误率、成本、canary traffic/sample、control comparison、required monitors 和 rollback readiness；结论只能是 promote、继续低流量 canary、降级或 block/rollback。
+14. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
+15. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 
 ### 结果表模板
 
@@ -219,6 +223,12 @@ python capacity_plan.py \
 | Config | max_num_seqs | max_num_batched_tokens | chunked prefill | admitted | queued | max queue wait | active KV tokens | action |
 |--------|--------------|------------------------|-----------------|----------|--------|----------------|------------------|--------|
 | baseline | | | | | | | | |
+
+### Production rollout gate 模板
+
+| Candidate | traffic % | sample size | pass rate delta | safety gate | P95/error | cost delta | monitors | rollback | decision |
+|-----------|-----------|-------------|-----------------|-------------|-----------|------------|----------|----------|----------|
+| baseline vs candidate | | | | | | | | | |
 
 ### P/D capacity 模板
 

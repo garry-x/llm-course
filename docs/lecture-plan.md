@@ -607,6 +607,7 @@ Quick check：
 - 区分 VQA、OCR、图表理解、视觉定位和视频理解的评价方式。
 - 建立上线前的 latency、cost、quality 和 safety 判断框架。
 - 把 structured output / tool calling 拆成 schema、权限、预算、MCP/runtime trust、observation 和最终答案校验。
+- 把离线 eval、canary/control、per-version monitoring、成本 guardrail 和 rollback readiness 合成生产发布 gate。
 
 核心推导：
 
@@ -620,6 +621,7 @@ Quick check：
 - RAG context packing 在 context budget 与 reserved output budget 下选择带 citation 的 chunk；Recall 命中但没有进入 prompt 仍然会失败。
 - Tool call gate：schema validation、permission check、loop budget 和 observation injection 必须在工具执行前后分开处理。
 - MCP/runtime gate：server trust、用户同意、敏感数据外发、外部 observation 隔离、recursive LLM sampling 和 runtime budget 不能由 schema 通过来替代。
+- Production rollout gate：候选发布包先与 stable baseline 比较 offline quality、安全、SLO、错误率和成本，再用 canary sample、流量比例、control comparison、required monitors 和 rollback readiness 决定 promote、继续低流量灰度或 block/rollback。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
 课堂 demo：
@@ -633,6 +635,7 @@ Quick check：
 - 给定候选 chunk、token 预算和预留输出预算，手算哪些 citation 进入 prompt。
 - 给定一组工具调用，填写 `validate_tool_call_plan` 输出，判断 schema、permission 和 budget gate。
 - 给定一个 remote MCP tool event，填写 `tool_runtime_security_report` 输出，判断 server trust、consent、data privacy、observation isolation 和 sampling/budget gate。
+- 给定 stable baseline、candidate metrics 和 rollout policy，填写 `production_rollout_gate_report`，判断 offline quality、安全、SLO、cost、canary、rollback/monitoring gate。
 - 对 per-channel INT8 权重做 roundtrip。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 
@@ -644,12 +647,13 @@ Quick check：
 - INT8 降低的是权重显存、KV cache 还是两者？
 - 为什么 structured output 或 function calling 仍然需要服务端 schema 校验和权限检查？
 - 为什么 MCP server allowlist、用户批准和工具输出隔离是 runtime gate，而不是 prompt 文案？
+- 为什么离线 eval 提升不能跳过 canary、control、per-version monitoring 和 rollback？
 - 一个多模态模型 VQA 分数高，是否能推出 OCR 或视觉定位可靠？
 
 课后产出：
 
-- A8 RAG/context packing/tool/MCP runtime gate/quantization/benchmark 测试通过。
-- 推理 capstone 初版，包含 RAG 或多模态输入的失败模式分析。
+- A8 RAG/context packing/tool/MCP runtime gate/production rollout gate/quantization/benchmark 测试通过。
+- 推理 capstone 初版，包含 RAG 或多模态输入的失败模式分析，以及候选发布包的 canary/control/rollback 判断。
 
 ## Week 9 Lecture 17: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT
 

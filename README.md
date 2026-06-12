@@ -71,7 +71,7 @@
 | Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差路径和资源估算 | attention 正确性、GQA/MLA 显存收益、block 稳定性和 FLOPs 预算 |
 | Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性和实验统计 | GPT 组装、训练曲线解释、checkpoint/resume、数据 gate 和扩容判断 |
 | Ch08-Ch09 | logits 分布、采样方差、KL/reference model、偏好数据和 reward 假设 | 生成策略上线、reasoning 预算、SFT/DPO/GRPO 质量与安全边界 |
-| Ch10 | 排队、显存/带宽、KV cache、压测指标、RAG 检索指标和准入控制 | TTFT/TPOT/P95、continuous batching admission、P/D 解耦、容量规划和回退 |
+| Ch10 | 排队、显存/带宽、KV cache、压测指标、RAG 检索指标、准入控制和发布 gate | TTFT/TPOT/P95、continuous batching admission、P/D 解耦、容量规划、canary/control 和回退 |
 | Ch11 | 序列建模、结构化预测、encoder-only、传统指标和 judge 可靠性 | 选择生成/抽取/排序/结构化解码，判断评测结果能否支持上线结论 |
 
 配套学习材料：
@@ -96,7 +96,7 @@
 | 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、量化、FlashAttention 和显存瓶颈 |
 | 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 continuous batching admission、prefix cache、并发调度、speculative decoding gate、tool-call gate 和 MCP runtime security |
 | 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链和失败兜底 |
-| 评测与上线 | Ch09-Ch10 | 设计质量/安全/延迟/成本指标，做压测、回归评估和上线检查 |
+| 评测与上线 | Ch09-Ch10 | 设计质量/安全/延迟/成本指标，做压测、回归评估、canary/control 发布和回滚检查 |
 
 **课程最终项目：**[LLM Inference Engineering Capstone](projects/inference-engineering-capstone/) 会带你部署一个 OpenAI-compatible Chat API：支持流式输出、结构化 JSON、工具调用、RAG、基础指标、压测报告、P50/P95/P99 延迟和 tokens/s 成本估算。先用 mock engine 跑通服务骨架，再替换为 vLLM / SGLang / TensorRT-LLM / llama.cpp。
 
@@ -160,7 +160,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
 | 9 | **微调与对齐** — SFT/偏好数据 Gate/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + post-training data audit + LoRA + GRPO/RLVR ~240行 | 8+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool/MCP Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool/MCP Gate + continuous batching admission + P/D pool plan + speculative gate + LSH + 服务蓝图 | 9+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool/MCP Gate/vLLM/Triton/生产发布/多模态 | KV Cache + 量化 + RAG + Tool/MCP Gate + rollout gate + continuous batching admission + P/D pool plan + speculative gate + LSH + 服务蓝图 | 10+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 
 > **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**

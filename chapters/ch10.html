@@ -38,10 +38,10 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>推理优化不是一堆孤立名词。KV Cache 解决重复计算，量化解决显存/带宽，FlashAttention 解决注意力 IO，RAG 解决知识更新，vLLM 解决服务吞吐。稀疏注意力、外部记忆、Triton 和多模态属于前沿地图，第一次学习先建立分类。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
-    <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、continuous batching admission、benchmark 与 SLO。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用 schema gate、MCP runtime security gate、调度准入 gate、基准测试、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
+    <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度、检索和发布风险问题，并能设计 KV Cache、量化、RAG、continuous batching admission、benchmark、SLO 与生产发布 gate。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用 schema gate、MCP runtime security gate、调度准入 gate、基准测试、production rollout gate、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema/MCP runtime gate、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema/MCP runtime gate、production rollout gate、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>前九章计算图、KV cache、生成策略、评测指标，以及 TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。<br><strong>本章内化：</strong>每个服务问题都会拆成 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和回退策略；KV、量化、prefix cache、RAG、tool gate 与多模态 token 都要进入同一张 SLO/成本账本。<br><strong>验收信号：</strong>你能写出一份上线报告，说明瓶颈在哪、优化改了哪个阶段、质量是否回归、容量边界是什么，以及何时拒绝“只看平均延迟”的结论。</div>
 </section>
@@ -1246,6 +1246,28 @@ assert plan["overall_pass"]</div>
       <tr><td>模型卡 / 发布说明</td><td>训练数据范围、适用任务、风险边界、已知失败和回滚版本</td><td>调用方把局部提升外推成通用能力</td></tr>
     </table>
   </div>
+
+  <h4>1A. Canary 发布不是把离线分数直接放大</h4>
+  <p>LLM 服务的发布对象经常不是单个二进制，而是模型权重、prompt/template、RAG 索引、reranker、tool registry、batch 参数、采样默认值和安全策略的组合。离线 eval 通过只能说明候选版本值得进入灰度；是否扩大流量，还要看真实请求下的质量、安全、P95/P99、错误率、成本、监控字段和回滚准备。</p>
+  <p>课程作业中的 <code>production_rollout_gate_report</code> 把 release candidate 和 stable baseline 放进同一张 gate。它要求候选版本同时满足 offline quality、安全、SLO、成本、canary 设计和 rollback/monitoring 六类条件：</p>
+  <pre><code class="language-python">report = production_rollout_gate_report(
+    baseline={"pass_rate": 0.82, "safety_pass_rate": 0.96, "cost_per_1k_requests_usd": 1.20},
+    candidate={
+        "pass_rate": 0.85,
+        "safety_pass_rate": 0.97,
+        "p95_latency_ms": 780,
+        "error_rate": 0.004,
+        "cost_per_1k_requests_usd": 1.25,
+        "canary_traffic_pct": 5,
+        "canary_sample_size": 1200,
+        "control_comparison_ready": True,
+        "rollback_ready": True,
+        "monitors": ["pass_rate", "safety_pass_rate", "p95_latency_ms", "error_rate", "cost_per_1k_requests_usd"],
+    },
+    rollout_policy={"min_pass_rate": 0.8, "max_p95_latency_ms": 900, "max_error_rate": 0.01},
+)
+assert report["decision"] == "promote_to_next_stage"</code></pre>
+  <p>若 safety gate 失败，应 block release；若质量轻微波动但 safety、canary 和 rollback 都准备好，可以继续小流量观察；若缺少 rollback 或 per-version metrics，即使离线分数更高也不应扩大流量。这个逻辑来自通用 SRE canary 原则，但 LLM 服务还要额外看 answer quality、安全拒答、JSON/tool/RAG 回归和 token 成本。</p>
 
   <h4>2. 推理导出和训练恢复是两种 checkpoint</h4>
   <p>第 7 章的训练 checkpoint 应包含 optimizer、scheduler、RNG、dataloader position 和 global step；推理发布包通常只需要模型权重、配置、tokenizer、模板和服务参数。把训练 checkpoint 直接塞进推理引擎会带来多余状态、格式不兼容和加载速度问题；只保存推理权重又不能用于中断后继续训练。工程上应明确区分：</p>

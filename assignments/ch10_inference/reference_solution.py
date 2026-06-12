@@ -1008,6 +1008,154 @@ def build_benchmark_summary(task, metrics, baseline, sample_size, risks=None, un
     }
 
 
+def production_rollout_gate_report(baseline, candidate, rollout_policy=None):
+    if not isinstance(baseline, dict) or not isinstance(candidate, dict):
+        raise ValueError("baseline and candidate must be metric dictionaries")
+    if not baseline or not candidate:
+        raise ValueError("baseline and candidate must not be empty")
+    policy = dict(rollout_policy or {})
+
+    def metric(source, name, default=None):
+        value = source.get(name, default)
+        if value is None:
+            raise ValueError(f"missing required metric: {name}")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"metric {name} must be numeric")
+        return float(value)
+
+    pass_rate = metric(candidate, "pass_rate")
+    baseline_pass_rate = metric(baseline, "pass_rate")
+    safety_pass_rate = metric(candidate, "safety_pass_rate", pass_rate)
+    baseline_safety_pass_rate = metric(baseline, "safety_pass_rate", baseline_pass_rate)
+    p95_latency_ms = metric(candidate, "p95_latency_ms")
+    error_rate = metric(candidate, "error_rate")
+    cost_per_1k = metric(candidate, "cost_per_1k_requests_usd", 0.0)
+    baseline_cost_per_1k = metric(baseline, "cost_per_1k_requests_usd", cost_per_1k)
+    canary_traffic_pct = metric(candidate, "canary_traffic_pct", 0.0)
+    canary_sample_size = metric(candidate, "canary_sample_size", 0.0)
+
+    min_pass_rate = float(policy.get("min_pass_rate", 0.0))
+    max_quality_regression = float(policy.get("max_quality_regression_abs", 0.0))
+    min_safety_pass_rate = float(policy.get("min_safety_pass_rate", min_pass_rate))
+    max_safety_regression = float(policy.get("max_safety_regression_abs", max_quality_regression))
+    max_p95_latency_ms = float(policy.get("max_p95_latency_ms", float("inf")))
+    max_error_rate = float(policy.get("max_error_rate", float("inf")))
+    max_cost_per_1k = float(policy.get("max_cost_per_1k_requests_usd", float("inf")))
+    max_cost_regression_pct = float(policy.get("max_cost_regression_pct", float("inf")))
+    min_canary_sample_size = int(policy.get("min_canary_sample_size", 0))
+    max_canary_traffic_pct = float(policy.get("max_canary_traffic_pct", 100.0))
+    require_control_comparison = bool(policy.get("require_control_comparison", True))
+    required_monitors = set(
+        policy.get(
+            "required_monitors",
+            ["pass_rate", "safety_pass_rate", "p95_latency_ms", "error_rate", "cost_per_1k_requests_usd"],
+        )
+    )
+    if min_canary_sample_size < 0:
+        raise ValueError("min_canary_sample_size must be non-negative")
+
+    quality_regression = baseline_pass_rate - pass_rate
+    safety_regression = baseline_safety_pass_rate - safety_pass_rate
+    if baseline_cost_per_1k > 0:
+        cost_regression_pct = (cost_per_1k - baseline_cost_per_1k) / baseline_cost_per_1k
+    else:
+        cost_regression_pct = 0.0 if cost_per_1k == 0 else float("inf")
+
+    observed_monitors = set(candidate.get("monitors", []))
+    missing_monitors = sorted(required_monitors - observed_monitors)
+    rollback_ready = bool(candidate.get("rollback_ready", False))
+    control_comparison_ready = bool(candidate.get("control_comparison_ready", False))
+
+    gates = {
+        "offline_quality": {
+            "pass": pass_rate >= min_pass_rate and quality_regression <= max_quality_regression,
+            "signals": {
+                "pass_rate": pass_rate,
+                "baseline_pass_rate": baseline_pass_rate,
+                "quality_regression_abs": quality_regression,
+                "min_pass_rate": min_pass_rate,
+                "max_quality_regression_abs": max_quality_regression,
+            },
+        },
+        "safety": {
+            "pass": safety_pass_rate >= min_safety_pass_rate and safety_regression <= max_safety_regression,
+            "signals": {
+                "safety_pass_rate": safety_pass_rate,
+                "baseline_safety_pass_rate": baseline_safety_pass_rate,
+                "safety_regression_abs": safety_regression,
+                "min_safety_pass_rate": min_safety_pass_rate,
+                "max_safety_regression_abs": max_safety_regression,
+            },
+        },
+        "slo": {
+            "pass": p95_latency_ms <= max_p95_latency_ms and error_rate <= max_error_rate,
+            "signals": {
+                "p95_latency_ms": p95_latency_ms,
+                "max_p95_latency_ms": max_p95_latency_ms,
+                "error_rate": error_rate,
+                "max_error_rate": max_error_rate,
+            },
+        },
+        "cost": {
+            "pass": cost_per_1k <= max_cost_per_1k and cost_regression_pct <= max_cost_regression_pct,
+            "signals": {
+                "cost_per_1k_requests_usd": cost_per_1k,
+                "baseline_cost_per_1k_requests_usd": baseline_cost_per_1k,
+                "cost_regression_pct": cost_regression_pct,
+                "max_cost_per_1k_requests_usd": max_cost_per_1k,
+                "max_cost_regression_pct": max_cost_regression_pct,
+            },
+        },
+        "canary": {
+            "pass": (
+                canary_sample_size >= min_canary_sample_size
+                and canary_traffic_pct <= max_canary_traffic_pct
+                and (control_comparison_ready or not require_control_comparison)
+            ),
+            "signals": {
+                "canary_sample_size": canary_sample_size,
+                "min_canary_sample_size": min_canary_sample_size,
+                "canary_traffic_pct": canary_traffic_pct,
+                "max_canary_traffic_pct": max_canary_traffic_pct,
+                "control_comparison_ready": control_comparison_ready,
+            },
+        },
+        "rollback_and_monitoring": {
+            "pass": rollback_ready and not missing_monitors,
+            "signals": {"rollback_ready": rollback_ready, "missing_monitors": missing_monitors},
+        },
+    }
+
+    action_items = []
+    if not gates["offline_quality"]["pass"]:
+        action_items.append("hold_release_and_fix_quality_regression")
+    if not gates["safety"]["pass"]:
+        action_items.append("block_release_until_safety_gate_passes")
+    if not gates["slo"]["pass"]:
+        action_items.append("reduce_traffic_or_fix_latency_error_slo")
+    if not gates["cost"]["pass"]:
+        action_items.append("add_cost_guardrail_or_route_to_cheaper_model")
+    if not gates["canary"]["pass"]:
+        action_items.append("run_smaller_or_longer_canary_against_control")
+    if not gates["rollback_and_monitoring"]["pass"]:
+        action_items.append("prepare_rollback_and_required_monitors")
+
+    overall_pass = not action_items
+    if overall_pass:
+        decision = "promote_to_next_stage"
+    elif gates["safety"]["pass"] and gates["rollback_and_monitoring"]["pass"] and gates["canary"]["pass"]:
+        decision = "keep_canary_running_with_guardrails"
+    else:
+        decision = "rollback_or_block_release"
+
+    return {
+        "overall_pass": overall_pass,
+        "gates": gates,
+        "action_items": action_items,
+        "decision": decision,
+    }
+
+
 def prefill_decode_disaggregation_report(requests, slo=None):
     if not requests:
         raise ValueError("requests must not be empty")

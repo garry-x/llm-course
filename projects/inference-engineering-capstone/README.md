@@ -17,6 +17,7 @@
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
 | PD Breakdown | 拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens | 报告中的 PD 指标表 |
+| PD Pool Plan | 用 QPS、prompt/output 长度、prefix cache、worker 吞吐、KV transfer 和 decode KV 容量估算 P/D worker pool | 报告中的 P/D capacity 表 |
 | SLO Check | 将压测 JSON 与延迟/吞吐/错误率目标对比 | `python slo_check.py` 输出 PASS/FAIL |
 | Evaluation | 跑固定评测集，检查 JSON/事实/拒答 | `python evaluate.py` 输出 pass rate |
 | Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
@@ -32,6 +33,7 @@
 | 结构化输出策略是否可靠 | prompt-only JSON vs JSON mode / retry | JSON 有效率、重试次数、latency | MockEngine 的格式稳定性不能代表真实模型 |
 | 并发增加如何影响尾延迟 | concurrency 1/2/5/10 | P50/P95/P99、tokens/s、error rate | 本地 CPU 网络开销与 GPU serving 不同 |
 | 容量规划对上下文长度多敏感 | context 4K/8K/32K | KV Cache GB、max batch、$/1M tokens | 估算公式不包含全部 runtime overhead |
+| prefill/decode 解耦是否值得 | single pool vs P/D pool sizing | required prefill/decode workers、KV transfer utilization、active KV tokens、SLO pass | KV transfer 或 decode KV memory 可能抵消 prefill 分离收益 |
 | reasoning/test-time compute 是否值得上线 | greedy vs self-consistency/best-of-N/verifier rerank | pass rate、output tokens、P95 latency、cost/request | 多采样提升可能被延迟、成本或 verifier 偏差抵消 |
 | 多模态输入如何改变服务成本 | 文本请求 vs 图像/文档请求的视觉 token 预算 | prefill tokens、TTFT、KV Cache、任务 pass rate | 视觉 encoder 和裁剪策略会显著改变结果 |
 
@@ -194,6 +196,12 @@ python capacity_plan.py \
 |-----|-------------|-----------------|------------------|----------|----------------------|-------------------|----------|
 | unified baseline | | | | | | | |
 | PD experiment / estimate | | | | | | | |
+
+### P/D capacity 模板
+
+| Workload | QPS | effective prefill tok/s | decode tok/s | KV transfer tok/s | prefill workers | decode workers | KV links | KV memory gate | 结论 |
+|----------|-----|-------------------------|--------------|-------------------|-----------------|----------------|----------|----------------|------|
+| baseline | | | | | | | | | |
 
 ### 失败分类模板
 

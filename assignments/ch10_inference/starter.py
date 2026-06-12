@@ -117,6 +117,11 @@ def prefill_decode_disaggregation_report(requests, slo=None):
     raise NotImplementedError
 
 
+def pd_pool_capacity_plan(workload, capacity):
+    """Plan prefill/decode worker pools, KV transfer, and active KV memory gates."""
+    raise NotImplementedError
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         raise NotImplementedError

@@ -1100,6 +1100,32 @@ summary = build_benchmark_summary(
   </div>
   <p>例如 <code>20 QPS</code>、平均 <code>2,000</code> prompt tokens、平均 <code>200</code> output tokens 的服务，每秒约产生 <code>40k</code> prefill tokens 和 <code>4k</code> decode tokens。若单卡实测 decode 只有 <code>2.5k output tokens/s</code>，即使 prefill 还有余量，TPOT 和排队时间也会先恶化。若长上下文请求把 active KV tokens 推到显存上限附近，服务会表现为吞吐曲线突然塌陷、尾延迟升高和 OOM 交替出现。</p>
 
+  <h4>第三步 A：P/D disaggregation 要做 worker pool 容量规划</h4>
+  <p>Prefill/decode 解耦不是把两个英文词拆开就结束。vLLM、SGLang 和 TensorRT-LLM 的当前实践都把 prefill、decode 和 KV transfer 作为不同资源边界：prefill worker 更偏计算吞吐，decode worker 更受显存和带宽约束，二者之间还要传 KV cache。只要 KV transfer 或 active KV memory 成为瓶颈，解耦可能不会改善端到端 SLO。</p>
+  <p>Ch10 作业中的 <code>pd_pool_capacity_plan</code> 把这个判断做成容量 gate。它从 <code>QPS</code>、平均 prompt/output tokens、prefix cache hit rate 和 active requests 估算三类 token rate：effective prefill、decode output 和 KV transfer；再与 prefill worker、decode worker、KV transfer link 和 decode 侧 KV 容量比较，输出 required workers/links、likely bottleneck 和 action items。</p>
+  <div class="code-block" data-lang="python">
+plan = pd_pool_capacity_plan(
+    workload={
+        "qps": 20,
+        "mean_prompt_tokens": 2000,
+        "mean_output_tokens": 200,
+        "prefix_cache_hit_rate": 0.25,
+        "active_requests": 120,
+    },
+    capacity={
+        "prefill_tokens_per_s_per_worker": 30000,
+        "decode_tokens_per_s_per_worker": 2500,
+        "kv_transfer_tokens_per_s_per_link": 50000,
+        "prefill_workers": 2,
+        "decode_workers": 2,
+        "kv_transfer_links": 1,
+        "kv_cache_tokens_per_decode_worker": 200000,
+        "target_utilization": 0.8,
+    },
+)
+assert plan["overall_pass"]</div>
+  <p>这类计划的结论必须写得具体：如果 prefill 不过，优先增加 prefill worker、提高 prefix cache 命中或限制长 prompt；如果 decode 不过，优先增加 decode worker、压低输出长度或换更高带宽配置；如果 KV transfer 不过，说明 disaggregation 的网络/跨进程传输成本正在吃掉收益；如果 KV memory 不过，就必须按 active KV tokens 做 admission control，而不是只按请求数限流。</p>
+
   <h4>第四步：把症状映射到工程动作</h4>
   <p>推理压测报告最有价值的部分是归因表：同样是“慢”，不同指标组合对应完全不同的处理方式。</p>
   <div class="table-wrap">

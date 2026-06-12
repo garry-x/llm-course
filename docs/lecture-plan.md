@@ -550,6 +550,7 @@ Quick check：
 - Workload token rate：`QPS * E[prompt_tokens]` 和 `QPS * E[output_tokens]` 分别约束 prefill/decode。
 - active KV tokens 与 admission control：按请求数限流、按活跃 token 限流和按 SLO 队列隔离的差异。
 - Disaggregated serving 指标：`TTFT = queue + prefill + KV transfer + decode admission + first decode token`，`TPOT` 单独约束 decode worker。
+- P/D pool sizing：effective prefill token rate、decode output token rate、KV transfer token rate 和 active KV memory 必须分别过 target utilization gate。
 - tail latency 与并发队列的关系。
 
 课堂 demo：
@@ -560,6 +561,7 @@ Quick check：
 - 给定 QPS、平均 prompt/output tokens、prefill/decode capacity，判断瓶颈在 prefill 还是 decode。
 - 给定每 token KV bytes、平均活跃上下文长度和 KV 显存预算，估算 admission limit，并说明为什么长请求不能和短请求只按请求数统一限流。
 - 给定一组 prefill/decode trace，填写 `prefill_decode_disaggregation_report`，判断 likely bottleneck、SLO violation 和 prefill/decode worker 配比是否合理。
+- 给定 workload、prefix cache hit rate、prefill/decode worker 吞吐、KV transfer link 吞吐和 decode KV 容量，填写 `pd_pool_capacity_plan` 并决定是否需要调整 P/D worker pool。
 - 把一次 benchmark 结果改写成结构化结论摘要，区分任务、baseline、指标和结论边界。
 
 Quick check：
@@ -570,6 +572,7 @@ Quick check：
 - 为什么 high QPS 下 TPOT 可能先坏，而 TTFT 仍暂时正常？
 - admission control 为什么要看 active KV tokens？
 - KV transfer 什么时候会抵消 prefill/decode 解耦收益？
+- P/D 解耦后，为什么 prefill worker 够用不代表 decode worker 或 KV transfer link 够用？
 - 为什么固定开发集上的 pass rate 不能证明开放域能力？
 
 课后产出：

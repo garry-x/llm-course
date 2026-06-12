@@ -543,6 +543,93 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
                 ]
             )
 
+    def test_pd_pool_capacity_plan_sizes_prefill_decode_and_transfer(self):
+        plan = submission.pd_pool_capacity_plan(
+            workload={
+                "qps": 20,
+                "mean_prompt_tokens": 2000,
+                "mean_output_tokens": 200,
+                "prefix_cache_hit_rate": 0.25,
+                "active_requests": 120,
+            },
+            capacity={
+                "prefill_tokens_per_s_per_worker": 30000,
+                "decode_tokens_per_s_per_worker": 2500,
+                "kv_transfer_tokens_per_s_per_link": 50000,
+                "prefill_workers": 2,
+                "decode_workers": 2,
+                "kv_transfer_links": 1,
+                "kv_cache_tokens_per_decode_worker": 200000,
+                "target_utilization": 0.8,
+            },
+        )
+        self.assertTrue(plan["overall_pass"])
+        self.assertEqual(plan["decision"], "pd_pool_plan_within_budget")
+        self.assertAlmostEqual(plan["loads"]["effective_prefill_tokens_per_s"], 30000.0)
+        self.assertAlmostEqual(plan["loads"]["decode_tokens_per_s"], 4000.0)
+        self.assertAlmostEqual(plan["loads"]["kv_transfer_tokens_per_s"], 30000.0)
+        self.assertEqual(plan["components"]["prefill"]["required_workers"], 2)
+        self.assertEqual(plan["components"]["decode"]["required_workers"], 2)
+        self.assertEqual(plan["components"]["kv_transfer"]["required_links"], 1)
+        self.assertTrue(plan["components"]["kv_memory"]["pass"])
+
+    def test_pd_pool_capacity_plan_reports_bottlenecks_and_actions(self):
+        plan = submission.pd_pool_capacity_plan(
+            workload={
+                "qps": 50,
+                "mean_prompt_tokens": 8000,
+                "mean_output_tokens": 500,
+                "active_requests": 300,
+            },
+            capacity={
+                "prefill_tokens_per_s_per_worker": 100000,
+                "decode_tokens_per_s_per_worker": 5000,
+                "kv_transfer_tokens_per_s_per_link": 100000,
+                "prefill_workers": 2,
+                "decode_workers": 4,
+                "kv_transfer_links": 2,
+                "kv_cache_tokens_per_decode_worker": 150000,
+                "target_utilization": 0.8,
+            },
+        )
+        self.assertFalse(plan["overall_pass"])
+        self.assertEqual(plan["decision"], "revise_pool_sizing_or_serving_mode")
+        self.assertFalse(plan["components"]["prefill"]["pass"])
+        self.assertFalse(plan["components"]["decode"]["pass"])
+        self.assertFalse(plan["components"]["kv_transfer"]["pass"])
+        self.assertFalse(plan["components"]["kv_memory"]["pass"])
+        self.assertEqual(plan["likely_bottleneck"], "kv_memory")
+        self.assertIn("add_prefill_workers_or_raise_prefix_cache_hit_rate", plan["action_items"])
+        self.assertIn("add_decode_workers_or_reduce_output_tokens", plan["action_items"])
+        self.assertIn("increase_kv_transfer_bandwidth_or_avoid_disaggregation_for_this_workload", plan["action_items"])
+        self.assertIn("lower_active_kv_tokens_or_add_decode_memory_capacity", plan["action_items"])
+
+    def test_pd_pool_capacity_plan_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.pd_pool_capacity_plan({}, {})
+        with self.assertRaises(ValueError):
+            submission.pd_pool_capacity_plan(
+                {"qps": 1, "mean_prompt_tokens": 1, "mean_output_tokens": 1, "prefix_cache_hit_rate": 1.0},
+                {
+                    "prefill_tokens_per_s_per_worker": 1,
+                    "decode_tokens_per_s_per_worker": 1,
+                    "kv_transfer_tokens_per_s_per_link": 1,
+                    "prefill_workers": 1,
+                    "decode_workers": 1,
+                },
+            )
+        with self.assertRaises(ValueError):
+            submission.pd_pool_capacity_plan(
+                {"qps": 1, "mean_prompt_tokens": 1, "mean_output_tokens": 1},
+                {
+                    "prefill_tokens_per_s_per_worker": 1,
+                    "decode_tokens_per_s_per_worker": 1,
+                    "kv_transfer_tokens_per_s_per_link": 1,
+                    "prefill_workers": 0,
+                    "decode_workers": 1,
+                },
+            )
+
     def test_lsh_returns_best_same_bucket_candidate(self):
         memory = submission.LSHMemory(dim=2, n_bits=1, seed=0)
         memory.planes = torch.tensor([[1.0, 0.0]])

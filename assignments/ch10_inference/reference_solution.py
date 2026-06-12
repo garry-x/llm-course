@@ -735,6 +735,136 @@ def prefill_decode_disaggregation_report(requests, slo=None):
     }
 
 
+def pd_pool_capacity_plan(workload, capacity):
+    """Plan prefill/decode pools and KV-transfer capacity for disaggregated serving."""
+    if not isinstance(workload, dict) or not isinstance(capacity, dict):
+        raise ValueError("workload and capacity must be dictionaries")
+
+    required_workload = ["qps", "mean_prompt_tokens", "mean_output_tokens"]
+    required_capacity = [
+        "prefill_tokens_per_s_per_worker",
+        "decode_tokens_per_s_per_worker",
+        "kv_transfer_tokens_per_s_per_link",
+        "prefill_workers",
+        "decode_workers",
+    ]
+    missing_workload = [name for name in required_workload if name not in workload]
+    missing_capacity = [name for name in required_capacity if name not in capacity]
+    if missing_workload or missing_capacity:
+        raise ValueError(f"missing fields: {', '.join(missing_workload + missing_capacity)}")
+
+    qps = float(workload["qps"])
+    mean_prompt_tokens = float(workload["mean_prompt_tokens"])
+    mean_output_tokens = float(workload["mean_output_tokens"])
+    prefix_cache_hit_rate = float(workload.get("prefix_cache_hit_rate", 0.0))
+    active_requests = float(workload.get("active_requests", qps))
+    if qps <= 0 or mean_prompt_tokens <= 0 or mean_output_tokens <= 0 or active_requests < 0:
+        raise ValueError("qps, prompt tokens, and output tokens must be positive; active_requests must be non-negative")
+    if not 0.0 <= prefix_cache_hit_rate < 1.0:
+        raise ValueError("prefix_cache_hit_rate must be in [0, 1)")
+
+    target_utilization = float(capacity.get("target_utilization", 0.8))
+    prefill_per_worker = float(capacity["prefill_tokens_per_s_per_worker"])
+    decode_per_worker = float(capacity["decode_tokens_per_s_per_worker"])
+    transfer_per_link = float(capacity["kv_transfer_tokens_per_s_per_link"])
+    prefill_workers = int(capacity["prefill_workers"])
+    decode_workers = int(capacity["decode_workers"])
+    kv_transfer_links = int(capacity.get("kv_transfer_links", 1))
+    if not 0.0 < target_utilization <= 1.0:
+        raise ValueError("target_utilization must be in (0, 1]")
+    if min(prefill_per_worker, decode_per_worker, transfer_per_link) <= 0:
+        raise ValueError("per-worker/link capacities must be positive")
+    if min(prefill_workers, decode_workers, kv_transfer_links) <= 0:
+        raise ValueError("worker and link counts must be positive")
+
+    effective_prefill_tokens_per_s = qps * mean_prompt_tokens * (1.0 - prefix_cache_hit_rate)
+    decode_tokens_per_s = qps * mean_output_tokens
+    kv_transfer_tokens_per_s = effective_prefill_tokens_per_s
+
+    def pool(load, per_unit, units, unit_name):
+        raw_capacity = per_unit * units
+        budgeted_capacity = raw_capacity * target_utilization
+        required_units = max(1, int(np.ceil(load / (per_unit * target_utilization)))) if load > 0 else 1
+        utilization = load / raw_capacity
+        return {
+            f"{unit_name}s": units,
+            f"required_{unit_name}s": required_units,
+            "load_tokens_per_s": load,
+            "raw_capacity_tokens_per_s": raw_capacity,
+            "budgeted_capacity_tokens_per_s": budgeted_capacity,
+            "utilization": utilization,
+            "pass": utilization <= target_utilization,
+        }
+
+    prefill = pool(effective_prefill_tokens_per_s, prefill_per_worker, prefill_workers, "worker")
+    decode = pool(decode_tokens_per_s, decode_per_worker, decode_workers, "worker")
+    kv_transfer = pool(kv_transfer_tokens_per_s, transfer_per_link, kv_transfer_links, "link")
+
+    active_kv_tokens = active_requests * (mean_prompt_tokens + 0.5 * mean_output_tokens)
+    kv_capacity_tokens = capacity.get("kv_cache_tokens_per_decode_worker")
+    if kv_capacity_tokens is None:
+        kv_cache_gb_per_decode_worker = capacity.get("kv_cache_gb_per_decode_worker")
+        kv_bytes_per_token = capacity.get("kv_bytes_per_token")
+        if kv_cache_gb_per_decode_worker is not None and kv_bytes_per_token is not None:
+            if float(kv_bytes_per_token) <= 0:
+                raise ValueError("kv_bytes_per_token must be positive")
+            kv_capacity_tokens = float(kv_cache_gb_per_decode_worker) * (1024**3) / float(kv_bytes_per_token)
+    memory = {
+        "active_kv_tokens": active_kv_tokens,
+        "capacity_tokens": None,
+        "utilization": None,
+        "pass": True,
+    }
+    if kv_capacity_tokens is not None:
+        kv_capacity_total = float(kv_capacity_tokens) * decode_workers
+        if kv_capacity_total <= 0:
+            raise ValueError("KV cache token capacity must be positive")
+        memory = {
+            "active_kv_tokens": active_kv_tokens,
+            "capacity_tokens": kv_capacity_total,
+            "utilization": active_kv_tokens / kv_capacity_total,
+            "pass": active_kv_tokens <= kv_capacity_total * target_utilization,
+        }
+
+    components = {
+        "prefill": prefill,
+        "decode": decode,
+        "kv_transfer": kv_transfer,
+        "kv_memory": memory,
+    }
+    action_items = []
+    if not prefill["pass"]:
+        action_items.append("add_prefill_workers_or_raise_prefix_cache_hit_rate")
+    if not decode["pass"]:
+        action_items.append("add_decode_workers_or_reduce_output_tokens")
+    if not kv_transfer["pass"]:
+        action_items.append("increase_kv_transfer_bandwidth_or_avoid_disaggregation_for_this_workload")
+    if not memory["pass"]:
+        action_items.append("lower_active_kv_tokens_or_add_decode_memory_capacity")
+
+    comparable = {
+        name: comp["utilization"]
+        for name, comp in components.items()
+        if comp["utilization"] is not None
+    }
+    likely_bottleneck = max(comparable, key=comparable.get)
+    overall_pass = not action_items
+    return {
+        "loads": {
+            "effective_prefill_tokens_per_s": effective_prefill_tokens_per_s,
+            "decode_tokens_per_s": decode_tokens_per_s,
+            "kv_transfer_tokens_per_s": kv_transfer_tokens_per_s,
+            "active_kv_tokens": active_kv_tokens,
+        },
+        "components": components,
+        "target_utilization": target_utilization,
+        "likely_bottleneck": likely_bottleneck,
+        "overall_pass": overall_pass,
+        "action_items": action_items,
+        "decision": "pd_pool_plan_within_budget" if overall_pass else "revise_pool_sizing_or_serving_mode",
+    }
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         generator = torch.Generator().manual_seed(seed)

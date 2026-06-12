@@ -664,6 +664,162 @@ def summarize_pairwise_judgments(judgments):
     }
 
 
+def judge_reliability_audit(judgments, thresholds=None):
+    """Audit LLM-as-judge records for position bias, verbosity bias, and gold agreement."""
+    if not judgments:
+        raise ValueError("at least one judgment is required")
+    thresholds = dict(thresholds or {})
+    min_sample_size = int(thresholds.get("min_sample_size", 1))
+    min_swapped_consistency = float(thresholds.get("min_swapped_consistency", 0.8))
+    max_position_bias = float(thresholds.get("max_position_bias", 0.1))
+    max_longer_win_rate = float(thresholds.get("max_longer_win_rate", 0.65))
+    min_gold_agreement = float(thresholds.get("min_gold_agreement", 0.7))
+    if min_sample_size <= 0:
+        raise ValueError("min_sample_size must be positive")
+    for name, value in [
+        ("min_swapped_consistency", min_swapped_consistency),
+        ("max_position_bias", max_position_bias),
+        ("max_longer_win_rate", max_longer_win_rate),
+        ("min_gold_agreement", min_gold_agreement),
+    ]:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1]")
+
+    valid_winners = {"A", "B", "tie"}
+    normalized = []
+    for idx, record in enumerate(judgments):
+        if not isinstance(record, dict):
+            raise ValueError("each judgment must be a dict")
+        missing = [field for field in ["comparison_id", "winner", "response_a_id", "response_b_id"] if field not in record]
+        if missing:
+            raise ValueError(f"judgment {idx} missing fields: {', '.join(missing)}")
+        winner = str(record["winner"]).strip()
+        if winner not in valid_winners:
+            raise ValueError("winner must be A, B, or tie")
+        response_a_id = str(record["response_a_id"])
+        response_b_id = str(record["response_b_id"])
+        if response_a_id == response_b_id:
+            raise ValueError("response_a_id and response_b_id must differ")
+        chosen_id = None
+        if winner == "A":
+            chosen_id = response_a_id
+        elif winner == "B":
+            chosen_id = response_b_id
+
+        a_tokens = record.get("response_a_tokens")
+        b_tokens = record.get("response_b_tokens")
+        if a_tokens is not None:
+            a_tokens = int(a_tokens)
+        if b_tokens is not None:
+            b_tokens = int(b_tokens)
+        if (a_tokens is not None and a_tokens < 0) or (b_tokens is not None and b_tokens < 0):
+            raise ValueError("response token counts must be non-negative")
+
+        gold_winner = record.get("gold_winner")
+        if gold_winner is not None:
+            gold_winner = str(gold_winner)
+            if gold_winner not in {response_a_id, response_b_id, "tie"}:
+                raise ValueError("gold_winner must be a response id from the comparison or tie")
+
+        normalized.append(
+            {
+                "comparison_id": str(record["comparison_id"]),
+                "winner": winner,
+                "chosen_id": chosen_id,
+                "response_a_id": response_a_id,
+                "response_b_id": response_b_id,
+                "response_a_tokens": a_tokens,
+                "response_b_tokens": b_tokens,
+                "gold_winner": gold_winner,
+                "task": record.get("task"),
+            }
+        )
+
+    total = len(normalized)
+    non_tie = [record for record in normalized if record["winner"] != "tie"]
+    first_position_wins = sum(1 for record in normalized if record["winner"] == "A")
+    first_position_preference_rate = None
+    position_bias = None
+    if non_tie:
+        first_position_preference_rate = first_position_wins / len(non_tie)
+        position_bias = abs(first_position_preference_rate - 0.5)
+
+    longer_decisions = 0
+    longer_wins = 0
+    for record in non_tie:
+        a_tokens = record["response_a_tokens"]
+        b_tokens = record["response_b_tokens"]
+        if a_tokens is None or b_tokens is None or a_tokens == b_tokens:
+            continue
+        longer_decisions += 1
+        winner_tokens = a_tokens if record["winner"] == "A" else b_tokens
+        longer_wins += int(winner_tokens == max(a_tokens, b_tokens))
+    longer_win_rate = longer_wins / longer_decisions if longer_decisions else None
+
+    by_comparison = {}
+    for record in normalized:
+        by_comparison.setdefault(record["comparison_id"], []).append(record)
+    swapped_groups = []
+    inconsistent_groups = []
+    for comparison_id, records in by_comparison.items():
+        if len(records) < 2:
+            continue
+        chosen_values = [record["chosen_id"] or "tie" for record in records]
+        consistent = len(set(chosen_values)) == 1
+        swapped_groups.append({"comparison_id": comparison_id, "consistent": consistent, "chosen_values": chosen_values})
+        if not consistent:
+            inconsistent_groups.append(comparison_id)
+    swapped_consistency_rate = None
+    if swapped_groups:
+        swapped_consistency_rate = sum(1 for group in swapped_groups if group["consistent"]) / len(swapped_groups)
+
+    gold_records = [record for record in normalized if record["gold_winner"] is not None]
+    gold_agreement_rate = None
+    if gold_records:
+        gold_matches = 0
+        for record in gold_records:
+            judged = record["chosen_id"] or "tie"
+            gold_matches += int(judged == record["gold_winner"])
+        gold_agreement_rate = gold_matches / len(gold_records)
+
+    gates = {
+        "sample_size": total >= min_sample_size,
+        "position_bias": position_bias is None or position_bias <= max_position_bias,
+        "verbosity_bias": longer_win_rate is None or longer_win_rate <= max_longer_win_rate,
+        "swapped_consistency": swapped_consistency_rate is None or swapped_consistency_rate >= min_swapped_consistency,
+        "gold_agreement": gold_agreement_rate is None or gold_agreement_rate >= min_gold_agreement,
+    }
+    action_items = []
+    if not gates["sample_size"]:
+        action_items.append("increase_eval_sample_size_before_trusting_judge")
+    if not gates["position_bias"]:
+        action_items.append("randomize_or_swap_candidate_order_and_report_position_bias")
+    if not gates["verbosity_bias"]:
+        action_items.append("control_answer_length_or_add_length_normalized_rubric")
+    if not gates["swapped_consistency"]:
+        action_items.append("rerun_swapped_pairs_or_change_judge_prompt_model")
+    if not gates["gold_agreement"]:
+        action_items.append("validate_judge_against_more_human_labels")
+
+    return {
+        "total": total,
+        "non_tie": len(non_tie),
+        "first_position_preference_rate": first_position_preference_rate,
+        "position_bias": position_bias,
+        "longer_win_rate": longer_win_rate,
+        "longer_decisions": longer_decisions,
+        "swapped_pair_count": len(swapped_groups),
+        "swapped_consistency_rate": swapped_consistency_rate,
+        "inconsistent_comparison_ids": inconsistent_groups,
+        "gold_labeled_count": len(gold_records),
+        "gold_agreement_rate": gold_agreement_rate,
+        "gates": gates,
+        "overall_pass": all(gates.values()),
+        "action_items": action_items,
+        "decision": "judge_metrics_can_support_comparison" if all(gates.values()) else "audit_or_relabel_before_model_decision",
+    }
+
+
 def safety_evaluation_metrics(buckets):
     """Compute safety and usefulness rates from stratified evaluation buckets."""
     required = {"harmful", "benign_sensitive", "ordinary"}

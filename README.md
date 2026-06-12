@@ -148,7 +148,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + LoRA + GRPO/RLVR ~210行 | 7+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool Gate + P/D pool plan + LSH + 服务蓝图 | 7+5 |
-| 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + MLM mask | Ch11 |
+| 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 
 > **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**
 

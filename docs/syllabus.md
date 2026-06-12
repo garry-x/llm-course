@@ -80,7 +80,7 @@
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、`test_time_compute_budget_report`、token constraints、speculative decoding | 解码策略、搜索、多样性、reasoning/test-time compute 预算、结构化生成 | top-p 为什么是自适应截断？多样本 reasoning 何时值得上线？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、LoRA、sequence log-probs、RM/DPO/PPO/GRPO、implicit reward、KL、length bias、`rlvr_grader_report` | 指令微调、偏好优化、reference model、可验证 reward、对齐风险 | DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？什么时候 RLVR/RFT 的 grader 信号足够可靠？ |
 | A8 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、`validate_tool_call_plan`、benchmark summary、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、指标结论边界 | 推理工程、RAG、tool/agent 协议、服务指标、容量规划、prefill/decode 解耦、KV transfer、P/D worker pool sizing | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？如何在执行前拦截无效或越权 tool call？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？P/D 解耦后如何判断 worker、link 和 KV memory 哪个先饱和？ |
-| A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1 | 经典 NLP、encoder-only、结构化预测、评测指标 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？ |
+| A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1、`judge_reliability_audit` | 经典 NLP、encoder-only、结构化预测、评测指标、LLM-as-judge 可靠性 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？为什么一次 judge win rate 不能直接支持上线结论？ |
 
 ## 书面题能力层级
 

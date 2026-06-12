@@ -319,6 +319,8 @@
 <ul>
 <li>Papineni et al. <a href="https://aclanthology.org/P02-1040/">BLEU: a Method for Automatic Evaluation of Machine Translation</a>.</li>
 <li>Lin. <a href="https://aclanthology.org/W04-1013/">ROUGE: A Package for Automatic Evaluation of Summaries</a>.</li>
+<li>Zheng et al. <a href="https://papers.nips.cc/paper_files/paper/2023/hash/91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_Benchmarks.html">Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena</a>. 重点看 position、verbosity、self-enhancement bias 和与人工偏好的一致性验证。</li>
+<li>OpenAI. <a href="https://developers.openai.com/api/docs/guides/evaluation-best-practices">Evaluation best practices</a>. 重点看 model graders 需要先和 human labels 验证一致性，再用于优化。</li>
 </ul>
 <p>复盘问题：</p>
 <ul>
@@ -329,6 +331,7 @@
 <li>BLEU/ROUGE/F1/EM 为什么不能单独作为 LLM 质量指标？</li>
 <li>什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？</li>
 <li>transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？</li>
+<li>LLM-as-judge 的 position bias、verbosity bias、swapped-order inconsistency 和 human-label disagreement 分别会让什么结论失真？</li>
 </ul>
 <h3 id="week-10-前沿方法-benchmark-边界与课程综合">Week 10: 前沿方法、Benchmark 边界与课程综合</h3>
 <p>对应材料：两个 capstone 方向、Ch10 前沿推理部分和前沿主题阅读。</p>

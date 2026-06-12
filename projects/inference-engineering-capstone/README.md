@@ -155,6 +155,7 @@ python capacity_plan.py \
 推理工程报告必须包含：
 
 - 固定评测集 pass rate 与失败案例。
+- 若使用 LLM-as-judge 或人工偏好近似指标，必须报告 position/verbosity bias、swapped-order consistency 和少量 human label agreement；未通过时不能把 judge win rate 作为上线依据。
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
 - RAG、JSON structured output、tool calling 和 reasoning budget 的回归用例。
@@ -171,7 +172,7 @@ python capacity_plan.py \
 4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON、是否多样本 reasoning 或 verifier rerank。
 5. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
-7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题、reasoning budget gate 和安全拒答/过度拒答。
+7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
 9. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
 10. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。

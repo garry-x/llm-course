@@ -434,6 +434,123 @@ class TestModernLLMEvaluation(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.summarize_pairwise_judgments([{"winner": "model_a"}])
 
+    def test_judge_reliability_audit_passes_balanced_consistent_records(self):
+        judgments = [
+            {
+                "comparison_id": "q1",
+                "winner": "A",
+                "response_a_id": "strong",
+                "response_b_id": "weak",
+                "response_a_tokens": 80,
+                "response_b_tokens": 120,
+                "gold_winner": "strong",
+            },
+            {
+                "comparison_id": "q1",
+                "winner": "B",
+                "response_a_id": "weak",
+                "response_b_id": "strong",
+                "response_a_tokens": 120,
+                "response_b_tokens": 80,
+                "gold_winner": "strong",
+            },
+            {
+                "comparison_id": "q2",
+                "winner": "B",
+                "response_a_id": "weak2",
+                "response_b_id": "strong2",
+                "response_a_tokens": 100,
+                "response_b_tokens": 90,
+                "gold_winner": "strong2",
+            },
+            {
+                "comparison_id": "q2",
+                "winner": "A",
+                "response_a_id": "strong2",
+                "response_b_id": "weak2",
+                "response_a_tokens": 90,
+                "response_b_tokens": 100,
+                "gold_winner": "strong2",
+            },
+        ]
+        audit = solution.judge_reliability_audit(judgments, thresholds={"min_sample_size": 4})
+        self.assertTrue(audit["overall_pass"])
+        self.assertEqual(audit["decision"], "judge_metrics_can_support_comparison")
+        self.assertAlmostEqual(audit["first_position_preference_rate"], 0.5)
+        self.assertAlmostEqual(audit["position_bias"], 0.0)
+        self.assertAlmostEqual(audit["swapped_consistency_rate"], 1.0)
+        self.assertAlmostEqual(audit["gold_agreement_rate"], 1.0)
+        self.assertAlmostEqual(audit["longer_win_rate"], 0.0)
+
+    def test_judge_reliability_audit_flags_bias_and_unstable_swaps(self):
+        judgments = [
+            {
+                "comparison_id": "q1",
+                "winner": "A",
+                "response_a_id": "long_a",
+                "response_b_id": "short_b",
+                "response_a_tokens": 200,
+                "response_b_tokens": 80,
+                "gold_winner": "short_b",
+            },
+            {
+                "comparison_id": "q1",
+                "winner": "A",
+                "response_a_id": "short_b",
+                "response_b_id": "long_a",
+                "response_a_tokens": 80,
+                "response_b_tokens": 200,
+                "gold_winner": "short_b",
+            },
+            {
+                "comparison_id": "q2",
+                "winner": "A",
+                "response_a_id": "long_c",
+                "response_b_id": "short_d",
+                "response_a_tokens": 180,
+                "response_b_tokens": 60,
+                "gold_winner": "short_d",
+            },
+        ]
+        audit = solution.judge_reliability_audit(
+            judgments,
+            thresholds={
+                "min_sample_size": 3,
+                "max_position_bias": 0.2,
+                "max_longer_win_rate": 0.5,
+                "min_swapped_consistency": 1.0,
+                "min_gold_agreement": 0.7,
+            },
+        )
+        self.assertFalse(audit["overall_pass"])
+        self.assertFalse(audit["gates"]["position_bias"])
+        self.assertFalse(audit["gates"]["verbosity_bias"])
+        self.assertFalse(audit["gates"]["swapped_consistency"])
+        self.assertFalse(audit["gates"]["gold_agreement"])
+        self.assertEqual(audit["inconsistent_comparison_ids"], ["q1"])
+        self.assertIn("randomize_or_swap_candidate_order_and_report_position_bias", audit["action_items"])
+        self.assertIn("control_answer_length_or_add_length_normalized_rubric", audit["action_items"])
+        self.assertIn("rerun_swapped_pairs_or_change_judge_prompt_model", audit["action_items"])
+        self.assertIn("validate_judge_against_more_human_labels", audit["action_items"])
+
+    def test_judge_reliability_audit_rejects_bad_records(self):
+        with self.assertRaises(ValueError):
+            solution.judge_reliability_audit([])
+        with self.assertRaises(ValueError):
+            solution.judge_reliability_audit([{"winner": "A"}])
+        with self.assertRaises(ValueError):
+            solution.judge_reliability_audit(
+                [{"comparison_id": "x", "winner": "C", "response_a_id": "a", "response_b_id": "b"}]
+            )
+        with self.assertRaises(ValueError):
+            solution.judge_reliability_audit(
+                [{"comparison_id": "x", "winner": "A", "response_a_id": "a", "response_b_id": "a"}]
+            )
+        with self.assertRaises(ValueError):
+            solution.judge_reliability_audit(
+                [{"comparison_id": "x", "winner": "A", "response_a_id": "a", "response_b_id": "b", "gold_winner": "c"}]
+            )
+
     def test_safety_evaluation_metrics_separates_harmful_and_benign_refusals(self):
         buckets = {
             "harmful": {"unsafe": 2, "refused": 18},

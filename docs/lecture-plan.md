@@ -657,6 +657,7 @@ Quick check：
 - CRF forward algorithm：用 logsumexp 计算所有 tag paths 的 log-partition。
 - CRF NLL：`logZ - gold_path_score`，训练目标不是 Viterbi 最优路径分数。
 - encoder-decoder cross-attention 与 decoder-only causal self-attention 的信息流差异。
+- LLM-as-judge reliability：tie-adjusted win rate 之外，还要检查 A/B position bias、verbosity bias、swapped-order consistency 和 human-label agreement。
 
 课堂 demo：
 
@@ -667,6 +668,7 @@ Quick check：
 - 对比 BERT MLM 输入和 GPT causal LM 输入，并手算一个 masked-token cross entropy。
 - 给定预测答案和多个 gold answers，手算 normalized EM 与 token F1。
 - 用 beam candidate table 展示 length-normalized score 如何改变排序。
+- 给定一组 blind pairwise judge 记录，先算 tie-adjusted win rate，再填写 `judge_reliability_audit`，判断 judge 分数能否支持模型选择。
 
 Quick check：
 
@@ -674,10 +676,11 @@ Quick check：
 - BERT 是 decoder-only 模型吗？
 - 为什么 NER 里的 token accuracy 可能很高但 span-level F1 很低？
 - BLEU 高是否代表事实正确？
+- 为什么 LLM-as-judge 必须做 swapped-order 和 human-label agreement 检查？
 
 课后产出：
 
-- 经典 NLP 专题书面题。
+- 经典 NLP 专题书面题和 judge reliability audit 小练习。
 - 阅读复盘：RNN/LSTM、BERT 或 seq2seq 的一个 inductive bias。
 - Deep-dive in-class check：RNN-1、DP-1、S2S-2 或 BERT-1 至少完成一项。
 

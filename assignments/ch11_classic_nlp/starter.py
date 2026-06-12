@@ -106,6 +106,11 @@ def summarize_pairwise_judgments(judgments):
     raise NotImplementedError
 
 
+def judge_reliability_audit(judgments, thresholds=None):
+    """Audit LLM-as-judge records for position bias, verbosity bias, and gold agreement."""
+    raise NotImplementedError
+
+
 def safety_evaluation_metrics(buckets):
     """Compute safety and usefulness rates from stratified evaluation buckets.
 

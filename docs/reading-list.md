@@ -308,6 +308,8 @@
 
 - Papineni et al. [BLEU: a Method for Automatic Evaluation of Machine Translation](https://aclanthology.org/P02-1040/).
 - Lin. [ROUGE: A Package for Automatic Evaluation of Summaries](https://aclanthology.org/W04-1013/).
+- Zheng et al. [Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena](https://papers.nips.cc/paper_files/paper/2023/hash/91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_Benchmarks.html). 重点看 position、verbosity、self-enhancement bias 和与人工偏好的一致性验证。
+- OpenAI. [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 model graders 需要先和 human labels 验证一致性，再用于优化。
 
 复盘问题：
 
@@ -318,6 +320,7 @@
 - BLEU/ROUGE/F1/EM 为什么不能单独作为 LLM 质量指标？
 - 什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？
 - transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？
+- LLM-as-judge 的 position bias、verbosity bias、swapped-order inconsistency 和 human-label disagreement 分别会让什么结论失真？
 
 ## Week 10: 前沿方法、Benchmark 边界与课程综合
 

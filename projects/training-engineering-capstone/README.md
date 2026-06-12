@@ -102,6 +102,7 @@ python plan_training.py \
 - checkpoint resume 产出：恢复后 step 单调增加，配置和优化器状态被恢复。
 - 至少一个 ablation，例如学习率、batch size、seq_len 或 dropout。
 - loss spike、NaN、过拟合或吞吐下降的排查记录。
+- 若使用 LLM-as-judge 或偏好评测替代人工检查，必须报告 position/verbosity bias、swapped-order consistency 和少量 human label agreement；未通过时不能把 judge win rate 当作训练改进证据。
 - 分布式/低精度策略说明：即使本项目只在 CPU 或单 GPU 上跑，也要用 Ch07 的策略账本解释目标规模下 DDP、ZeRO/FSDP、FP8/MXFP8 或 checkpoint state 会改变哪些风险。
 - 明确说明你的研究问题、baseline、结论适用条件，以及哪些结果只在 tiny corpus / CPU baseline 下成立。
 

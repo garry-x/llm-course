@@ -155,12 +155,14 @@
 
 对应章节：Ch07。
 
-本周阅读目标：从单步 loss 进入训练系统，理解 optimizer、scheduler、mixed precision、checkpoint、scaling law 和 distributed memory sharding 如何共同决定可训练规模。
+本周阅读目标：从单步 loss 进入训练系统，理解数据策展、optimizer、scheduler、mixed precision、checkpoint、scaling law 和 distributed memory sharding 如何共同决定可训练规模。
 
 必读：
 
 - Loshchilov and Hutter. [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101). 重点看 AdamW 与 L2 正则的差别。
 - Hoffmann et al. [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556). 重点看 Chinchilla scaling law 的数据/参数权衡。
+- Li et al. [DataComp-LM: In search of the next generation of training sets for language models](https://arxiv.org/abs/2406.11794). 重点看 data curation strategies：deduplication、filtering、data mixing 和多尺度评估。
+- Penedo et al. [The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale](https://arxiv.org/abs/2406.17557). 重点看 pretraining data 的 filtering、deduplication、ablation 和 FineWeb-Edu 的教育文本过滤。
 - Rajbhandari et al. [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054). 重点看 optimizer/gradient/parameter state sharding。
 - Shoeybi et al. [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053). 重点看 tensor parallelism 如何切分 Transformer 层内矩阵。
 - Jiang et al. [MegaScale: Scaling Large Language Model Training to More Than 10,000 GPUs](https://arxiv.org/abs/2402.15627). 重点看大规模训练中的 full-stack observability、straggler 诊断、容错和 MFU，而不是只记住 GPU 数。
@@ -172,6 +174,7 @@
 - NVIDIA Transformer Engine documentation on [FP8/MXFP8/NVFP4](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html)。重点看低精度训练不仅是 dtype 选择，还包括 scaling、amax history、kernel 支持和 checkpoint state。
 - NVIDIA Megatron Core parallelism guide。重点看 DP、TP、PP、CP、EP 和 sequence parallelism 分别切什么维度，什么时候组合。
 - DeepSeek-V3 Technical Report 中 FP8 mixed precision、DualPipe、MLA/MoE 和 MTP。重点看这些设计如何共同服务训练效率和稳定性。
+- Meta. [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783). 重点看 pre-training data cleaning、deduplication、PII/adult-content filtering 和 contamination analysis 如何影响评测解释。
 - Jordan et al. [Muon is Scalable for LLM Training](https://arxiv.org/abs/2502.16982)。重点看 Muon 从小模型实验扩展到 LLM 时需要 weight decay 和 update scale，不能只背“正交化”口号。
 - NVIDIA / PyTorch profiler 文档中 GPU utilization、kernel timeline、communication overlap 和 dataloader bottleneck 的诊断方法。
 
@@ -179,6 +182,7 @@
 
 - AdamW 的 weight decay 为什么不能简单等同于 Adam 里的 L2 penalty？
 - 在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？
+- `training_data_curation_report` 的 size、dedup、quality、eval contamination、domain mixture 和 privacy gate 分别阻止哪类错误训练结论？
 - 训练日志里 loss 下降但开发集变差时，应该先查哪些产出？
 - 参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？
 - DDP、ZeRO/FSDP、tensor parallel 和 pipeline parallel 分别解决容量、通信还是吞吐中的哪一类瓶颈？

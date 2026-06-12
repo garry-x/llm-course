@@ -31,6 +31,11 @@ def ngram_overlap_rate(train_token_ids, eval_token_ids, n=8):
     raise NotImplementedError
 
 
+def training_data_curation_report(sources, thresholds=None):
+    """Summarize token scale, dedup, quality filtering, eval overlap, and domain mixture gates."""
+    raise NotImplementedError
+
+
 def global_batch_tokens(micro_batch_size, seq_len, grad_accum_steps=1, data_parallel_size=1):
     raise NotImplementedError
 

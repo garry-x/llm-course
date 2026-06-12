@@ -72,14 +72,15 @@
 5. 解释 AdamW 中“解耦权重衰减”和 L2 regularization 的区别，并说明 warmup + cosine decay 的作用；给定 `base_lr=0.2`、`num_warmup_steps=2`、`num_training_steps=6`、`min_lr_ratio=0.25`、每个 optimizer step 消耗 `1000` tokens，手算 step `0,1,2,6` 的 lr multiplier、实际 lr、phase 和累计 consumed tokens。
 6. 给定 `micro_batch=4`、`seq_len=2048`、`grad_accum=8`、`data_parallel=16`、训练预算 `D=20B tokens` 和 dense LM 参数量 `N=1B`，计算 global batch tokens、训练 step 数和近似训练 FLOPs；再按 bf16 参数/梯度、fp32 AdamW 两个 moment states 计算训练显存，并说明 optimizer-state sharding 会改变哪些项。
 7. 给定 train token 序列和 eval token 序列，计算 n-gram repetition rate 与 train/eval overlap rate，并说明它们如何影响 val loss 和泛化判断。
-8. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。
-9. 给定一组 logits、targets 和 confidence bins，计算每个桶的 accuracy、mean confidence 与 ECE，并说明模型过度自信会如何影响拒答阈值或风险控制。
-10. 给定两个参数张量的梯度，计算 global grad norm、clip coefficient 和裁剪后的梯度；说明它与逐参数裁剪的区别。
-11. 给定 `grad_accum_steps=4`、四个 micro-batch mean losses、每个 micro-batch 的 token 数和 warmup scheduler，计算每次 backward 使用的 scaled loss、一次 optimizer step 消耗的 token 数、scheduler 应推进几次，以及如果忘记除以 `grad_accum_steps` 会等价于怎样改变学习率。
-12. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
-13. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
-14. 给定 7B 参数模型、8 张 GPU、bf16 参数/梯度、fp32 AdamW `m/v` states，分别计算 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存；再按 `distributed_training_strategy_report` 的格式写出 strategy、global batch tokens、memory gate 和 action item，并说明这些估算没有包含 activation、通信 buffer、临时张量和 allocator fragmentation，因此不能单独证明训练可行。
-15. 给定模型参数量 `N=7B`、吞吐 `tokens/s=20000`、GPU 数 `8`、单卡峰值 `300 TFLOP/s`，按 `6N` FLOPs/token 粗估 MFU；若 MFU 只有 18%，列出至少 4 个可能原因，并说明如何用 profiler 或日志区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合。若策略使用 FP8/MXFP8，还要写出 scale/amax history、loss spike、梯度范围和 checkpoint state 的验证证据。
+8. 给定两个数据源：web `600k` tokens、`600` documents、duplicate `0.03`、eval overlap `0.001`、quality pass `0.92`；code `400k` tokens、`400` documents、duplicate `0.02`、eval overlap `0`、quality pass `0.90`。在阈值 `min_total_tokens=900k`、`max_duplicate_rate=0.05`、`max_eval_overlap_rate=0.005`、`min_quality_pass_rate=0.88`、`min_domain_count=2`、`max_domain_token_share=0.7` 下，计算 weighted duplicate rate、weighted quality pass rate、domain shares，并判断 `training_data_curation_report` 是否通过。再说明如果 PII rate 或 eval overlap 失败，为什么不能直接用低 val loss 支持扩容。
+9. 解释 Chinchilla-style scaling law 的核心启示：为什么固定算力下需要同时考虑模型参数量、训练 token 数和数据质量，而不是只扩大参数量。
+10. 给定一组 logits、targets 和 confidence bins，计算每个桶的 accuracy、mean confidence 与 ECE，并说明模型过度自信会如何影响拒答阈值或风险控制。
+11. 给定两个参数张量的梯度，计算 global grad norm、clip coefficient 和裁剪后的梯度；说明它与逐参数裁剪的区别。
+12. 给定 `grad_accum_steps=4`、四个 micro-batch mean losses、每个 micro-batch 的 token 数和 warmup scheduler，计算每次 backward 使用的 scaled loss、一次 optimizer step 消耗的 token 数、scheduler 应推进几次，以及如果忘记除以 `grad_accum_steps` 会等价于怎样改变学习率。
+13. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
+14. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
+15. 给定 7B 参数模型、8 张 GPU、bf16 参数/梯度、fp32 AdamW `m/v` states，分别计算 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存；再按 `distributed_training_strategy_report` 的格式写出 strategy、global batch tokens、memory gate 和 action item，并说明这些估算没有包含 activation、通信 buffer、临时张量和 allocator fragmentation，因此不能单独证明训练可行。
+16. 给定模型参数量 `N=7B`、吞吐 `tokens/s=20000`、GPU 数 `8`、单卡峰值 `300 TFLOP/s`，按 `6N` FLOPs/token 粗估 MFU；若 MFU 只有 18%，列出至少 4 个可能原因，并说明如何用 profiler 或日志区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合。若策略使用 FP8/MXFP8，还要写出 scale/amax history、loss spike、梯度范围和 checkpoint state 的验证证据。
 
 ## Ch08 Generation / Decoding
 

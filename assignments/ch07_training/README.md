@@ -1,6 +1,6 @@
 # Chapter 7 Assignment: Training Loop
 
-本作业对应第 7 章训练循环。目标是把 next-token 数据切片、数据重复/泄漏诊断、训练 token budget 估算、稳定交叉熵、logits 梯度、label smoothing、校准指标、global grad norm clipping、gradient accumulation step accounting、AdamW、warmup+cosine 调度轨迹、分布式训练策略账本、训练异常 runbook 和一个可复现的小训练循环串起来。
+本作业对应第 7 章训练循环。目标是把 next-token 数据切片、数据重复/泄漏诊断、训练数据策展 gate、训练 token budget 估算、稳定交叉熵、logits 梯度、label smoothing、校准指标、global grad norm clipping、gradient accumulation step accounting、AdamW、warmup+cosine 调度轨迹、分布式训练策略账本、训练异常 runbook 和一个可复现的小训练循环串起来。
 
 ## Files
 
@@ -24,6 +24,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 
 - `TextDataset[i]` 必须返回等长的 `x` 和 `y`，其中 `y` 是 `x` 右移一位的 next-token target。
 - `ngram_repetition_rate` 和 `ngram_overlap_rate` 必须能发现训练语料重复和 train/eval n-gram 重叠。
+- `training_data_curation_report` 必须把训练前数据源清单汇总成 size、dedup、quality filter、eval contamination、domain mixture 和 privacy gate，报告 weighted duplicate/quality/PII、domain token share、action items 和是否可以进入 training rehearsal。
 - `global_batch_tokens`、`training_steps_for_token_budget` 和 `dense_lm_training_flops` 必须能把 batch 设置、token 预算和 dense LM 近似训练 FLOPs 连起来。
 - `optimizer_state_memory_bytes` 必须区分参数、梯度、AdamW moments，并能粗估 ZeRO-style optimizer state sharding 后的单卡显存。
 - `distributed_training_strategy_report` 必须比较 DDP、ZeRO/FSDP 类策略的每卡参数/梯度/optimizer state、global batch tokens、通信模式、显存 gate 和可选 MFU gate，说明是否可以进入 scale rehearsal。
@@ -43,6 +44,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、gradient accumulation loss scaling、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、DDP/ZeRO/FSDP 分片差异、MFU、AdamW 偏置修正、warmup+cosine 边界与 token 进度、n-gram 泄漏诊断、grad clipping 的诊断意义、异常 runbook 和训练 gate 判定 |
-| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、optimizer state 显存估算、`distributed_training_strategy_report`、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、gradient accumulation step accounting、AdamW、scheduler、lr schedule trace、训练循环和 `training_system_gate_report` |
-| Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、tokens/s、MFU、resume 行为、评测 gate 和最小修复实验 |
+| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、gradient accumulation loss scaling、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、DDP/ZeRO/FSDP 分片差异、MFU、AdamW 偏置修正、warmup+cosine 边界与 token 进度、n-gram 泄漏诊断、data curation gate、grad clipping 的诊断意义、异常 runbook 和训练 gate 判定 |
+| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、`training_data_curation_report`、训练预算计算、optimizer state 显存估算、`distributed_training_strategy_report`、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、gradient accumulation step accounting、AdamW、scheduler、lr schedule trace、训练循环和 `training_system_gate_report` |
+| Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、数据质量/污染 gate、tokens/s、MFU、resume 行为、评测 gate 和最小修复实验 |

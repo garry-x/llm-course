@@ -10,7 +10,7 @@
 
 | 阶段 | 章节与项目 | 主要问题 | 学习产出 |
 |------|------------|----------|----------|
-| 1. 模型可训练性 | Ch01-Ch06 | 数据如何变成 logits，梯度如何穿过模型 | 能解释 token、shape、参数量、梯度路径 |
+| 1. 模型可训练性 | Ch01-Ch07 | 数据如何变成 logits，梯度如何穿过模型 | 能解释 token、shape、参数量、梯度路径和数据策展 gate |
 | 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint |
 | 3. 微调与对齐 | Ch09 | 如何把预训练模型变成可用助手 | SFT/LoRA/DPO/GRPO 训练数据、loss masking、偏好优化 |
 | 4. 实验设计与评估 | Ch08-Ch09、Capstone | 如何证明训练或对齐方法真的更好 | research question、baseline、ablation、对齐评估和结论边界 |
@@ -25,8 +25,9 @@
 - 能计算 token budget、batch size、sequence length、gradient accumulation 对总 step 的影响。
 - 能发现空样本、重复样本、过长样本、编码异常和数据泄漏风险。
 - 能报告 n-gram repetition 和 train/eval overlap，避免把数据泄漏误判为泛化能力提升。
+- 能用 size、dedup、quality filter、eval contamination、domain mixture 和 privacy gate 判断数据是否可以进入训练 rehearsal。
 
-**对应内容：**Ch01、Ch07 7.3，Training Capstone `data_profile.py`。
+**对应内容：**Ch01、Ch07 7.3-7.3B，Training Capstone `data_profile.py` 与 data curation gate 表。
 
 ### B. 训练循环与优化
 
@@ -84,7 +85,8 @@
 
 | 项目项 | 合格标准 | 产出 |
 |--------|----------|------|
-| 数据分析 | 能输出样本数、空样本、重复率、长度分布 | `data_profile.py` 输出 |
+| 数据分析 | 能输出样本数、空样本、重复率、长度分布和 token 预算 | `data_profile.py` 输出 |
+| 数据策展 gate | 能报告数据源、过滤/去重、eval overlap、domain mixture 和 privacy 风险，并给出是否训练的判断 | data curation gate 表 |
 | 训练运行 | 能跑完整训练并持续记录 metrics | `train.py` + `metrics.jsonl` |
 | Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复 | `acceptance.py` resume 检查 |
 | 开发集 | 能记录 val_loss / perplexity / ECE | `metrics.jsonl` |
@@ -100,7 +102,7 @@
 
 | 周次 | 学习内容 | 工程任务 |
 |------|----------|----------|
-| 1 | Ch01-Ch02 | 做 tokenization 和 packing 练习，记录数据 shape |
+| 1 | Ch01-Ch02 | 做 tokenization、packing 和数据质量练习，记录数据 shape 与重复/污染风险 |
 | 2 | Ch03-Ch06 | 跑通可训练 GPT，检查梯度和参数量 |
 | 3 | Ch07 前半 | 实现 DataLoader、cross entropy、AdamW、scheduler |
 | 4 | Ch07 后半 | 实现 AMP、gradient clipping、训练日志和 loss 曲线 |
@@ -116,6 +118,7 @@
 研究问题：
 baseline：
 数据集：
+data curation gate：
 token 数：
 模型配置：
 训练配置：

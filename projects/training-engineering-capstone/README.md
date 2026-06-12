@@ -1,6 +1,6 @@
 # LLM Training Engineering Capstone
 
-这个项目把第 7 章和第 9 章的训练知识落成一个可运行的训练工程作品：一个 PyTorch 字符级语言模型训练闭环，覆盖数据分析、训练、开发集监控、checkpoint、resume、metrics、训练规划和一键运行。
+这个项目把第 7 章和第 9 章的训练知识落成一个可运行的训练工程作品：一个 PyTorch 字符级语言模型训练闭环，覆盖数据分析、data curation gate、训练、开发集监控、checkpoint、resume、metrics、训练规划和一键运行。
 
 默认模型很小，可以在 CPU 上跑通；有 GPU 时会自动使用 CUDA。目标不是追求模型质量，而是先掌握训练工程交付物的结构：可复现训练配置、loss 曲线、checkpoint/resume、显存与吞吐估算，以及针对失败模式的 ablation。
 
@@ -9,6 +9,7 @@
 | 模块 | 最低要求 | 交付内容 |
 |------|----------|----------|
 | Data Profile | 样本数、空样本、重复率、长度分布、字符/token 规模 | `python data_profile.py` 输出 JSON |
+| Data Curation Gate | 报告数据源、过滤、去重、eval overlap、domain mixture 和 privacy 风险是否支持训练 | 报告中的 data curation 表 |
 | Training | PyTorch 训练循环，记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s | `metrics.jsonl` |
 | Checkpoint | 保存 latest checkpoint，包含 model/optimizer/config/global_step | `checkpoints/latest.pt` |
 | Resume | 从 checkpoint 恢复并继续训练，global_step 单调增加 | `python acceptance.py` |
@@ -27,6 +28,7 @@
 | 序列长度如何影响质量和吞吐 | `seq_len=64` vs `128` | val PPL、tokens/s、显存/内存 | 字符级模型和 BPE 模型的长度含义不同 |
 | batch size / grad accumulation 如何影响曲线 | 小 batch vs 等效大 batch | loss 方差、tokens/s、step time | CPU baseline 的吞吐结论不能直接外推 GPU |
 | dropout 或 weight decay 是否缓解过拟合 | 正则开/关 | train-val gap、val loss | 数据很小时方差可能大于真实差异 |
+| 数据清洗或配比是否值得 | raw data vs dedup/filter/rebalanced mix | duplicate rate、eval overlap、quality pass rate、val PPL、目标任务指标 | tiny corpus 的质量过滤规则不能直接外推到 web-scale 预训练 |
 
 建议把项目拆成三个阶段：
 
@@ -86,6 +88,7 @@ python plan_training.py \
 ## 上线准备
 
 - 固定随机种子、训练配置和数据版本。
+- 数据报告包含 source inventory、过滤规则、重复率、eval overlap、domain mixture、PII/凭据风险和未覆盖风险。
 - `metrics.jsonl` 至少包含 train_loss、val_loss、ppl、lr、grad_norm、tokens/s。
 - `checkpoints/latest.pt` 能恢复训练，resume 后 global_step 增加。
 - 能解释 global batch tokens、总 step、tokens/s/GPU、GPU hours 和预计成本。
@@ -97,7 +100,8 @@ python plan_training.py \
 
 训练工程报告必须包含：
 
-- 数据分析结果：长度分布、重复、异常样本和 token 预算。
+- 数据分析结果：长度分布、重复、异常样本、过滤/去重规则、eval overlap、domain mixture、PII/凭据风险和 token 预算。
+- Data curation gate：按 Ch07 `training_data_curation_report` 或等价表格报告 size、dedup、quality filter、eval contamination、mixture balance 和 privacy gate；未通过时不能把训练曲线当作可扩容证据。
 - 训练曲线：train loss、val loss、perplexity、lr、grad_norm 和 tokens/s。
 - checkpoint resume 产出：恢复后 step 单调增加，配置和优化器状态被恢复。
 - 至少一个 ablation，例如学习率、batch size、seq_len 或 dropout。
@@ -113,15 +117,16 @@ python plan_training.py \
 1. **Research question.** 用一句话提出可回答的问题，例如“在固定 token budget 下，较长 `seq_len` 是否降低 validation PPL，并以多少 tokens/s 为代价？”
 2. **Hypothesis.** 写出预期机制：更长上下文可能改善依赖建模，但会降低 batch occupancy 或增加 step time。
 3. **Related work.** 连接至少 2 篇论文、技术报告或官方文档，例如 AdamW、Chinchilla、ZeRO/FSDP、LoRA 或数据质量相关材料，说明你的项目采用了什么、简化了什么。
-4. **Experimental setup.** 固定数据版本、seed、模型配置、训练步数、batch tokens、optimizer、scheduler、precision 和硬件环境。
+4. **Experimental setup.** 固定数据版本、source inventory、过滤/去重规则、seed、模型配置、训练步数、batch tokens、optimizer、scheduler、precision 和硬件环境。
 5. **Baseline.** 至少有一个清晰 baseline，例如默认 `seq_len=64`、`lr=3e-4`、`dropout=0.1`。
 6. **Ablation.** 一次只改一个主要因素；若同时改多个因素，要说明为什么无法归因。
 7. **Results.** 用表格报告 train loss、val loss/PPL、grad norm、tokens/s、step time、是否出现 NaN/loss spike。
-8. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
-9. **Strategy report.** 用 `distributed_training_strategy_report` 或等价表格报告每卡模型状态、global batch tokens、MFU、显存 gate 和 action item；若讨论 FP8/MXFP8，写清 scale/amax/checkpoint state 如何验证。
-10. **Industrial gates.** 用表格报告 optimization、throughput、state/checkpoint、evaluation gate：每个 gate 的信号、阈值、通过/失败和下一步动作。
-11. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
-12. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
+8. **Data curation gate.** 报告 total tokens/documents、weighted duplicate rate、quality pass rate、max eval overlap、domain token shares、PII/凭据风险和 action items。
+9. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
+10. **Strategy report.** 用 `distributed_training_strategy_report` 或等价表格报告每卡模型状态、global batch tokens、MFU、显存 gate 和 action item；若讨论 FP8/MXFP8，写清 scale/amax/checkpoint state 如何验证。
+11. **Industrial gates.** 用表格报告 data curation、optimization、throughput、state/checkpoint、evaluation gate：每个 gate 的信号、阈值、通过/失败和下一步动作。
+12. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
+13. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
 
 ### 结果表模板
 
@@ -136,10 +141,17 @@ python plan_training.py \
 |----------|--------------|---------------------|-----|-----------|-------------|
 | DDP / ZeRO / FSDP | | | | | |
 
+### Data curation gate 模板
+
+| Source/mix | tokens | documents | duplicate rate | quality pass rate | eval overlap | PII/secret risk | domain share | Gate | 下一步 |
+|------------|--------|-----------|----------------|-------------------|--------------|-----------------|--------------|------|--------|
+| baseline | | | | | | | | | |
+
 ### Industrial gate 模板
 
 | Gate | 信号 | 阈值/判断 | 状态 | 下一步 |
 |------|------|-----------|------|--------|
+| Data curation | tokens/documents、duplicate、quality、eval overlap、domain mix、PII | | | |
 | Optimization | train/val loss、grad_norm、NaN/loss spike | | | |
 | Throughput | tokens/s、step time、dataloader wait、checkpoint overhead | | | |
 | State | checkpoint/resume、lr 连续性、optimizer/scheduler/RNG/sampler state | | | |

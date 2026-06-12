@@ -84,6 +84,109 @@ class TestDataDiagnostics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.ngram_overlap_rate([1, 2, 3], [1, 2, 3], n=0)
 
+    def test_training_data_curation_report_passes_balanced_sources(self):
+        report = submission.training_data_curation_report(
+            [
+                {
+                    "name": "web-filtered",
+                    "domain": "web",
+                    "tokens": 600_000,
+                    "documents": 600,
+                    "duplicate_rate": 0.03,
+                    "eval_overlap_rate": 0.001,
+                    "quality_pass_rate": 0.92,
+                    "pii_rate": 0.0,
+                },
+                {
+                    "name": "code-clean",
+                    "domain": "code",
+                    "tokens": 400_000,
+                    "documents": 400,
+                    "duplicate_rate": 0.02,
+                    "eval_overlap_rate": 0.0,
+                    "quality_pass_rate": 0.90,
+                    "pii_rate": 0.0,
+                },
+            ],
+            thresholds={
+                "min_total_tokens": 900_000,
+                "min_documents": 900,
+                "max_duplicate_rate": 0.05,
+                "max_eval_overlap_rate": 0.005,
+                "min_quality_pass_rate": 0.88,
+                "min_domain_count": 2,
+                "max_domain_token_share": 0.7,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "data_ready_for_training_rehearsal")
+        self.assertEqual(report["totals"]["tokens"], 1_000_000)
+        self.assertEqual(report["totals"]["documents"], 1_000)
+        self.assertAlmostEqual(report["metrics"]["weighted_duplicate_rate"], 0.026)
+        self.assertAlmostEqual(report["metrics"]["weighted_quality_pass_rate"], 0.912)
+        self.assertAlmostEqual(report["metrics"]["domain_token_shares"]["web"], 0.6)
+        self.assertTrue(all(report["gates"].values()))
+
+    def test_training_data_curation_report_flags_curation_failures(self):
+        report = submission.training_data_curation_report(
+            [
+                {
+                    "name": "web-raw",
+                    "domain": "web",
+                    "tokens": 800_000,
+                    "documents": 300,
+                    "duplicate_rate": 0.22,
+                    "eval_overlap_rate": 0.04,
+                    "quality_pass_rate": 0.60,
+                    "pii_rate": 0.02,
+                },
+                {
+                    "name": "web-more",
+                    "domain": "web",
+                    "tokens": 100_000,
+                    "documents": 50,
+                    "duplicate_rate": 0.10,
+                    "eval_overlap_rate": 0.03,
+                    "quality_pass_rate": 0.70,
+                    "pii_rate": 0.01,
+                },
+            ],
+            thresholds={
+                "min_total_tokens": 1_000_000,
+                "min_documents": 500,
+                "max_duplicate_rate": 0.1,
+                "max_eval_overlap_rate": 0.01,
+                "min_quality_pass_rate": 0.8,
+                "min_domain_count": 2,
+                "max_domain_token_share": 0.8,
+                "max_pii_rate": 0.0,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "curate_data_before_training")
+        self.assertFalse(report["gates"]["size"])
+        self.assertFalse(report["gates"]["dedup"])
+        self.assertFalse(report["gates"]["quality_filter"])
+        self.assertFalse(report["gates"]["eval_contamination"])
+        self.assertFalse(report["gates"]["mixture_balance"])
+        self.assertFalse(report["gates"]["privacy"])
+        self.assertIn("collect_more_tokens_or_documents_before_training", report["action_items"])
+        self.assertIn("run_document_line_or_semantic_deduplication", report["action_items"])
+        self.assertIn("remove_train_eval_overlap_and_rebuild_eval_set", report["action_items"])
+        self.assertIn("remove_or_redact_pii_before_training", report["action_items"])
+
+    def test_training_data_curation_report_rejects_bad_sources(self):
+        with self.assertRaises(ValueError):
+            submission.training_data_curation_report([])
+        with self.assertRaises(ValueError):
+            submission.training_data_curation_report([{"name": "bad", "tokens": 10}])
+        with self.assertRaises(ValueError):
+            submission.training_data_curation_report([{"name": "bad", "tokens": 0, "documents": 1}])
+        with self.assertRaises(ValueError):
+            submission.training_data_curation_report(
+                [{"name": "bad", "tokens": 1, "documents": 1, "duplicate_rate": 1.5}]
+            )
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
 class TestTrainingBudget(unittest.TestCase):

@@ -72,6 +72,132 @@ def ngram_overlap_rate(train_token_ids, eval_token_ids, n=8):
     return overlap / len(eval_grams)
 
 
+def training_data_curation_report(sources, thresholds=None):
+    """Gate training data quality before spending a full training run."""
+    if not sources:
+        raise ValueError("sources must not be empty")
+    thresholds = dict(thresholds or {})
+    min_total_tokens = int(thresholds.get("min_total_tokens", 1))
+    min_documents = int(thresholds.get("min_documents", 1))
+    max_duplicate_rate = float(thresholds.get("max_duplicate_rate", 0.1))
+    max_eval_overlap_rate = float(thresholds.get("max_eval_overlap_rate", 0.01))
+    min_quality_pass_rate = float(thresholds.get("min_quality_pass_rate", 0.8))
+    min_domain_count = int(thresholds.get("min_domain_count", 1))
+    max_domain_token_share = float(thresholds.get("max_domain_token_share", 1.0))
+    max_pii_rate = float(thresholds.get("max_pii_rate", 0.0))
+    if min_total_tokens <= 0 or min_documents <= 0 or min_domain_count <= 0:
+        raise ValueError("minimum thresholds must be positive")
+    for name, value in [
+        ("max_duplicate_rate", max_duplicate_rate),
+        ("max_eval_overlap_rate", max_eval_overlap_rate),
+        ("min_quality_pass_rate", min_quality_pass_rate),
+        ("max_domain_token_share", max_domain_token_share),
+        ("max_pii_rate", max_pii_rate),
+    ]:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1]")
+
+    rows = []
+    domain_tokens = {}
+    for idx, source in enumerate(sources):
+        if not isinstance(source, dict):
+            raise ValueError("each source must be a dict")
+        required = ["name", "tokens", "documents"]
+        missing = [name for name in required if name not in source]
+        if missing:
+            raise ValueError(f"source {idx} missing fields: {', '.join(missing)}")
+        tokens = int(source["tokens"])
+        documents = int(source["documents"])
+        duplicate_rate = float(source.get("duplicate_rate", 0.0))
+        eval_overlap_rate = float(source.get("eval_overlap_rate", 0.0))
+        quality_pass_rate = float(source.get("quality_pass_rate", 1.0))
+        pii_rate = float(source.get("pii_rate", 0.0))
+        if tokens <= 0 or documents <= 0:
+            raise ValueError("tokens and documents must be positive")
+        for name, value in [
+            ("duplicate_rate", duplicate_rate),
+            ("eval_overlap_rate", eval_overlap_rate),
+            ("quality_pass_rate", quality_pass_rate),
+            ("pii_rate", pii_rate),
+        ]:
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be in [0, 1]")
+        domain = str(source.get("domain", source["name"])).strip()
+        if not domain:
+            raise ValueError("domain must be non-empty")
+        row = {
+            "name": str(source["name"]),
+            "domain": domain,
+            "tokens": tokens,
+            "documents": documents,
+            "duplicate_rate": duplicate_rate,
+            "eval_overlap_rate": eval_overlap_rate,
+            "quality_pass_rate": quality_pass_rate,
+            "pii_rate": pii_rate,
+        }
+        rows.append(row)
+        domain_tokens[domain] = domain_tokens.get(domain, 0) + tokens
+
+    total_tokens = sum(row["tokens"] for row in rows)
+    total_documents = sum(row["documents"] for row in rows)
+
+    def weighted_mean(field):
+        return sum(row[field] * row["tokens"] for row in rows) / total_tokens
+
+    weighted_duplicate_rate = weighted_mean("duplicate_rate")
+    weighted_quality_pass_rate = weighted_mean("quality_pass_rate")
+    weighted_pii_rate = weighted_mean("pii_rate")
+    max_eval_overlap_observed = max(row["eval_overlap_rate"] for row in rows)
+    domain_shares = {domain: tokens / total_tokens for domain, tokens in sorted(domain_tokens.items())}
+    max_domain_share = max(domain_shares.values())
+
+    gates = {
+        "size": total_tokens >= min_total_tokens and total_documents >= min_documents,
+        "dedup": weighted_duplicate_rate <= max_duplicate_rate,
+        "quality_filter": weighted_quality_pass_rate >= min_quality_pass_rate,
+        "eval_contamination": max_eval_overlap_observed <= max_eval_overlap_rate,
+        "mixture_balance": len(domain_shares) >= min_domain_count and max_domain_share <= max_domain_token_share,
+    }
+    action_items = []
+    if not gates["size"]:
+        action_items.append("collect_more_tokens_or_documents_before_training")
+    if not gates["dedup"]:
+        action_items.append("run_document_line_or_semantic_deduplication")
+    if not gates["quality_filter"]:
+        action_items.append("tighten_quality_filter_or_reweight_low_quality_sources")
+    if not gates["eval_contamination"]:
+        action_items.append("remove_train_eval_overlap_and_rebuild_eval_set")
+    if not gates["mixture_balance"]:
+        action_items.append("rebalance_domain_mixture_or_add_missing_sources")
+    if weighted_pii_rate > max_pii_rate:
+        gates["privacy"] = False
+        action_items.append("remove_or_redact_pii_before_training")
+    else:
+        gates["privacy"] = True
+
+    overall_pass = not action_items
+    return {
+        "sources": rows,
+        "totals": {
+            "tokens": total_tokens,
+            "documents": total_documents,
+            "domains": len(domain_shares),
+        },
+        "metrics": {
+            "weighted_duplicate_rate": weighted_duplicate_rate,
+            "weighted_quality_pass_rate": weighted_quality_pass_rate,
+            "weighted_pii_rate": weighted_pii_rate,
+            "max_eval_overlap_rate": max_eval_overlap_observed,
+            "domain_token_shares": domain_shares,
+            "max_domain_token_share": max_domain_share,
+        },
+        "gates": gates,
+        "overall_pass": overall_pass,
+        "action_items": action_items,
+        "decision": "data_ready_for_training_rehearsal" if overall_pass else "curate_data_before_training",
+    }
+
+
 def global_batch_tokens(micro_batch_size, seq_len, grad_accum_steps=1, data_parallel_size=1):
     values = [micro_batch_size, seq_len, grad_accum_steps, data_parallel_size]
     if any(value <= 0 for value in values):

@@ -38,12 +38,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>训练的主线只有四步：取一段 token、让模型预测下一个 token、用交叉熵计算错误、反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练是大规模优化专题，第一遍可作为“知道为什么需要它们”。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 6 章 GPTModel、交叉熵、optimizer 的基本概念。</li>
-    <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释 perplexity、calibration/ECE、AdamW、warmup、gradient clipping、混合精度与训练异常诊断。</li>
-    <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity/calibration 变化的训练循环。</li>
+    <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释数据策展 gate、perplexity、calibration/ECE、AdamW、warmup、gradient clipping、混合精度与训练异常诊断。</li>
+    <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity/calibration 变化的训练循环，以及训练前数据质量/污染验收报告。</li>
     <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
     <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>先修能力：</strong>自回归概率分解、cross entropy、optimizer state、随机性控制、train/val split 和实验统计。<br><strong>本章内化：</strong>这些基础会直接进入 loss/ppl、AdamW/Muon、learning-rate schedule、gradient clipping、checkpoint resume、数据 packing、seed 和 ablation 报告。<br><strong>验收信号：</strong>你不只是让 loss 下降，而是能解释曲线方差、baseline、恢复点、token budget 和训练成本，并把这些结果传给 Ch08 生成质量和 Ch09 对齐实验。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>自回归概率分解、cross entropy、optimizer state、随机性控制、train/val split 和实验统计。<br><strong>本章内化：</strong>这些基础会直接进入 data curation gate、loss/ppl、AdamW/Muon、learning-rate schedule、gradient clipping、checkpoint resume、数据 packing、seed 和 ablation 报告。<br><strong>验收信号：</strong>你不只是让 loss 下降，而是能解释数据来源、过滤/去重、曲线方差、baseline、恢复点、token budget 和训练成本，并把这些结果传给 Ch08 生成质量和 Ch09 对齐实验。</div>
 </section>
 
 <!-- ================================================================ -->
@@ -311,7 +311,20 @@ assert report["decision"] == "strategy_ready_for_rehearsal"</div>
       <tr><td>embedding nearest neighbor</td><td>语义近似改写和 paraphrase</td><td>主题相近但答案不同的样本</td><td>模型、阈值、人工抽样结果</td></tr>
     </table>
   </div>
-  <p>例如代码语料里，<code>import</code>、许可证头、常见函数签名和框架样板会产生大量重复。如果阈值过严，模型会失去真实代码风格；如果阈值过松，模型又会记住热门仓库和训练集答案。合理做法是按数据源和任务风险分层处理，而不是全库统一一个相似度阈值。</p>
+  <p>例如代码语料里，<code>import</code>、许可证头、常见函数签名和框架样板会产生大量重复。如果阈值过严，模型会失去真实代码风格；如果阈值过松，模型又会记住热门仓库和训练集答案。合理做法是按数据源和任务风险分层处理，而不是全库统一一个相似度阈值。Ch07 作业中的 <code>training_data_curation_report</code> 把这些检查落成训练前 gate：</p>
+  <div class="code-block" data-lang="python">
+report = training_data_curation_report(
+    sources=[
+        {"name": "web-filtered", "domain": "web", "tokens": 600_000, "documents": 600,
+         "duplicate_rate": 0.03, "eval_overlap_rate": 0.001, "quality_pass_rate": 0.92},
+        {"name": "code-clean", "domain": "code", "tokens": 400_000, "documents": 400,
+         "duplicate_rate": 0.02, "eval_overlap_rate": 0.0, "quality_pass_rate": 0.90},
+    ],
+    thresholds={"min_total_tokens": 900_000, "max_duplicate_rate": 0.05,
+                "max_eval_overlap_rate": 0.005, "min_domain_count": 2},
+)
+assert report["decision"] == "data_ready_for_training_rehearsal"</div>
+  <p>这个报告不替代大规模 MinHash、模型打分过滤或人工抽样，但它强制训练报告先回答基础问题：token 是否足够、重复是否过高、开发集是否被污染、质量过滤是否太松、领域混合是否失衡、PII/凭据风险是否处理。只有这些 gate 过了，后面的 loss 曲线才更有解释价值。</p>
 
   <h4>3. PII、凭据和版权风险要进入训练账本</h4>
   <p>课程不把法律判断简化成一个自动分类器，但工程上必须知道风险从哪里进入。PII 可能以邮箱、电话、地址、身份证号、病历、聊天记录形式出现；代码语料可能包含 API key、private token、密码或内部 URL；网页和书籍还涉及来源授权、引用、再分发和下游生成风险。数据报告至少要写出：过滤规则、命中比例、保留/删除策略、人工抽样结果，以及哪些风险无法由当前规则覆盖。</p>

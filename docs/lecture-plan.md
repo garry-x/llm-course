@@ -339,12 +339,14 @@ Quick check：
 - 解释 grad clipping、AMP、checkpoint/resume、tokens/s。
 - 读训练日志，定位 loss spike、NaN 和吞吐下降。
 - 用简单 scaling law 讨论数据/参数/算力预算。
+- 把数据源、去重、质量过滤、eval contamination、PII 和 domain mixture 汇总成训练前 curation gate。
 - 把训练 run 拆成 optimization、throughput、state/checkpoint 和 evaluation gate，决定继续训练、扩容、回退或 debug。
 - 用 `distributed_training_strategy_report` 把 DDP、ZeRO/FSDP、global batch tokens、显存 gate 和 MFU gate 合成 scale rehearsal 前的策略报告。
 
 核心推导：
 
 - global batch tokens、steps、tokens/s、GPU hours 的关系。
+- Data curation gate：total tokens/documents、weighted duplicate rate、quality pass rate、max eval overlap、domain token share 和 privacy risk 共同决定能否进入 training rehearsal。
 - dense LM 近似训练 FLOPs：`6 * params * train_tokens`。
 - AdamW training memory：参数、梯度和两个 moment states；optimizer state sharding 只分摊 optimizer states。
 - ZeRO/FSDP 每卡模型状态显存：DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的参数、梯度和 optimizer states 分摊差异。
@@ -359,6 +361,7 @@ Quick check：
 课堂 demo：
 
 - 跑 training capstone 的 tiny train + resume。
+- 给定 web/code/math 三个数据源的 token、documents、duplicate、quality、eval overlap 和 PII 统计，填写 `training_data_curation_report` 并决定先训练还是先清洗。
 - 手算 20B token 预算下的 step count 与 dense LM FLOPs。
 - 给定 1B 参数、bf16 参数/梯度、fp32 AdamW moments，计算训练显存和 optimizer-state sharding 后的单卡估算。
 - 给定 7B 模型、8 卡、bf16 参数/梯度和 fp32 AdamW states，比较 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存。
@@ -371,6 +374,7 @@ Quick check：
 
 - resume 时只恢复 model 权重够不够？
 - token budget 翻倍时，step count、FLOPs 和 GPU hours 分别怎样变化？
+- val loss 很低但 eval overlap gate 失败时，为什么这不能证明泛化能力？
 - tokens/s 下降可能来自哪些非模型原因？
 - 为什么 DDP 不会降低每卡模型状态显存？
 - MFU 低一定说明模型实现错误吗？
@@ -378,8 +382,8 @@ Quick check：
 
 课后产出：
 
-- 训练日志、distributed strategy report、checkpoint、resume 证明。
-- 阅读复盘：Chinchilla、ZeRO/FSDP、MegaScale 或 DeepSeek-V3 中一个工程假设，并说明它在课程项目中的简化边界。
+- 训练日志、data curation report、distributed strategy report、checkpoint、resume 证明。
+- 阅读复盘：DCLM/FineWeb、Chinchilla、ZeRO/FSDP、MegaScale 或 DeepSeek-V3 中一个工程假设，并说明它在课程项目中的简化边界。
 
 ## Week 6 Lecture 11: Decoding、Sampling 与 Search
 

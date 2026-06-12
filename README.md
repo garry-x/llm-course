@@ -95,14 +95,14 @@
 
 | 能力 | 对应章节 | 你需要能做什么 |
 |------|----------|----------------|
-| 数据与 Token 预算 | Ch01, Ch07 | 分析样本、重复、长度分布和 token 规模，估算训练 step |
+| 数据与 Token 预算 | Ch01, Ch07 | 分析样本、重复、质量过滤、eval contamination、领域混合、长度分布和 token 规模，估算训练 step |
 | 训练循环工程 | Ch06-Ch07 | 组织 PyTorch Dataset/DataLoader、forward、loss、backward、optimizer、scheduler |
 | 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint、resume 和异常排查保护训练 |
 | 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
 | 微调与对齐 | Ch09 | 区分 SFT、LoRA、DPO、GRPO、RLVR/RFT 的数据格式、损失和适用场景 |
 | 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、MFU、GPU hours、checkpoint 存储和 scale rehearsal |
 
-**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、训练、开发集监控、checkpoint、resume、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下 DDP/ZeRO/FSDP、低精度、MFU 和 checkpoint state 的工程边界。
+**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、data curation gate、训练、开发集监控、checkpoint、resume、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下数据过滤/去重/混合、DDP/ZeRO/FSDP、低精度、MFU 和 checkpoint state 的工程边界。
 
 **学习路线：**按 [LLM 训练工程师课程路线](training-engineer-curriculum.html)（详细版在 [docs/training-engineer-curriculum.html](docs/training-engineer-curriculum.html)）完成训练报告、指标日志、checkpoint 恢复说明和成本规划。
 

@@ -2,7 +2,7 @@
 
 本模块用于把 [经典 NLP 专题 Handout](classic-nlp-handout.md) 从讨论课材料扩展为可独立授课的 2-4 讲专题。它补充 [10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[逐周阅读材料与复盘 Handout](reading-list.md)、[书面推导与概念题题库](written-problem-set.md) 和 `assignments/ch11_classic_nlp/`。
 
-目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释 CS224N 风格神经 NLP 主线中的 RNN/LSTM、structured prediction、encoder-decoder 和 encoder-only representation learning。
+目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释本课程经典神经 NLP 专题中的 RNN/LSTM、structured prediction、encoder-decoder 和 encoder-only representation learning。
 
 ## Module Outcomes
 
@@ -96,7 +96,7 @@ p(a_t | state_t) = softmax(W h(state_t) + b)
 - greedy parsing 快但会累积错误；beam 或 dynamic oracle 可缓解但增加复杂度。
 - attention heatmap 不能自动替代 dependency tree。
 
-Ch11 的 `run_arc_standard_transitions` 把本节 action 定义落成可运行状态机。它要求学生处理 action 合法性、dependent 只能有一个 head、最终 parse 必须耗尽 buffer 并为每个 token 赋 head。这比只计算 UAS/LAS 更接近 CS224N 风格的 structured prediction 基础。
+Ch11 的 `run_arc_standard_transitions` 把本节 action 定义落成可运行状态机。它要求学生处理 action 合法性、dependent 只能有一个 head、最终 parse 必须耗尽 buffer 并为每个 token 赋 head。这比只计算 UAS/LAS 更接近本课程要求掌握的 structured prediction 基础。
 
 ## RNN / LSTM Deep Dive
 
@@ -129,7 +129,7 @@ dh_t / dh_{t-1} = w_h * (1 - h_t^2)
 dL / dh_1 = dL / dh_T * product_{t=2..T} w_h * (1 - h_t^2)
 ```
 
-Ch11 的 `recurrent_gradient_factors` 返回每一步局部因子。若 `|w_h * (1 - h_t^2)| < 1` 持续出现，早期 token 的梯度会迅速衰减；若因子持续大于 1，训练可能不稳定。这个推导解释了为什么 CS224N 传统主线会讲 gradient clipping、LSTM/GRU 和 attention。
+Ch11 的 `recurrent_gradient_factors` 返回每一步局部因子。若 `|w_h * (1 - h_t^2)| < 1` 持续出现，早期 token 的梯度会迅速衰减；若因子持续大于 1，训练可能不稳定。这个推导解释了为什么本课程会补充 gradient clipping、LSTM/GRU 和 attention。
 
 ### LSTM Gate Interpretation
 

@@ -25,7 +25,7 @@
 <main class="main">
 <article class="chapter">
   <h2>第11章 经典神经 NLP 与评测</h2>
-  <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT——把 CS224N 主线接回现代 LLM</p>
+  <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT——把经典神经 NLP 接回现代 LLM</p>
   <div class="reading-time">预计阅读: 135 分钟 · 14 小节 · 5 类可运行练习 · 5 道概念练习</div>
   <div class="font-controls"><span>字号:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
@@ -48,7 +48,7 @@
 
 <section class="card" id="s11-1">
   <h3>11.1 为什么 LLM 课程仍要学习 Classic NLP</h3>
-  <p>CS224N 风格的神经 NLP 主线从词向量、RNN、dependency parsing、seq2seq attention、Transformer、BERT 一路发展到大语言模型。跳过中间模型会带来一个常见误解：以为所有 NLP 问题都应被改写成 prompt-based generation。实际上，许多生产系统把不同模型族组合起来：BERT 或 DeBERTa 做 reranking，bi-encoder 做 retrieval embedding，encoder-only head 做抽取式 QA，decoder-only LLM 做答案生成。</p>
+  <p>本课程的经典神经 NLP 专题从词向量、RNN、dependency parsing、seq2seq attention、Transformer、BERT 一路连接到大语言模型。跳过中间模型会带来一个常见误解：以为所有 NLP 问题都应被改写成 prompt-based generation。实际上，许多生产系统把不同模型族组合起来：BERT 或 DeBERTa 做 reranking，bi-encoder 做 retrieval embedding，encoder-only head 做抽取式 QA，decoder-only LLM 做答案生成。</p>
   <p>本章的重点不是记住旧模型名字，而是掌握三类稳定概念：</p>
   <ul>
     <li><strong>归纳偏置：</strong>RNN 按时间递归，parser 输出树，seq2seq 分离源序列和目标序列，BERT 双向读上下文。</li>
@@ -451,7 +451,7 @@ labels:       None  None cat    sat    None</div>
 
 <section class="card" id="s11-8">
   <h3>11.8 Capstone 项目报告：从实验结果到可判定结论</h3>
-  <p>CS224N 这样的高校课程会把 final project 看成一次小型研究或工程论文训练：学生不仅要实现系统，还要说明问题、方法、实验、失败和边界。本课程的训练工程与推理工程 capstone 也应达到同样标准。最终项目报告的核心不是“我跑通了脚本”，而是回答一个明确问题，并让读者能判断这个结论在什么条件下成立。</p>
+  <p>本课程把 final project 看成一次小型研究或工程论文训练：学生不仅要实现系统，还要说明问题、方法、实验、失败和边界。训练工程与推理工程 capstone 都应达到这一标准。最终项目报告的核心不是“我跑通了脚本”，而是回答一个明确问题，并让读者能判断这个结论在什么条件下成立。</p>
 
   <h4>1. 把项目问题写成可检验命题</h4>
   <p>好的项目问题应该能被数据和实验反驳。例如：</p>

@@ -60,7 +60,7 @@
     <section class="card doc-content">
 <h2 id="classic-nlp-deep-dive-teaching-module">Classic NLP Deep-Dive Teaching Module</h2>
 <p>本模块用于把 <a href="classic-nlp-handout.html">经典 NLP 专题 Handout</a> 从讨论课材料扩展为可独立授课的 2-4 讲专题。它补充 <a href="lecture-plan.html">10 周 / 20 讲 Lecture Plan</a>、<a href="reading-list.html">逐周阅读材料与复盘 Handout</a>、<a href="written-problem-set.html">书面推导与概念题题库</a> 和 <code>assignments/ch11_classic_nlp/</code>。</p>
-<p>目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释 CS224N 风格神经 NLP 主线中的 RNN/LSTM、structured prediction、encoder-decoder 和 encoder-only representation learning。</p>
+<p>目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释本课程经典神经 NLP 专题中的 RNN/LSTM、structured prediction、encoder-decoder 和 encoder-only representation learning。</p>
 <h3 id="module-outcomes">Module Outcomes</h3>
 <p>完成本模块后，学生应能：</p>
 <div class="table-wrap"><table><thead><tr><th>outcome_id</th><th>学习结果</th><th>学习产出</th></tr></thead><tbody><tr><td>CL-NLP-1</td><td>用 transition system 描述 dependency parsing，并计算 UAS/LAS</td><td>手写 stack/buffer/arcs trace；Ch11 <code>run_arc_standard_transitions</code> 与 <code>attachment_scores</code> 测试</td></tr><tr><td>CL-NLP-2</td><td>计算标量 RNN hidden state 和 BPTT 梯度连乘，解释 LSTM 为什么缓解长程依赖</td><td>Ch11 <code>scalar_rnn_forward</code> 与 <code>recurrent_gradient_factors</code> 测试；手算题</td></tr><tr><td>CL-NLP-3</td><td>写出 seq2seq teacher forcing 和 beam search 的目标、搜索状态和 length bias</td><td>书面题；beam table；metric failure case</td></tr><tr><td>CL-NLP-4</td><td>区分 encoder-decoder attention alignment 与 decoder-only causal self-attention</td><td>信息流图；错误解释短答</td></tr><tr><td>CL-NLP-5</td><td>构造 BERT-style MLM input、labels、loss mask、抽取式 QA span 和 <code>[CLS]</code> no-answer 产出</td><td>Ch11 <code>build_mlm_example</code> 与 <code>select_extractive_qa_span</code> 测试；书面题</td></tr><tr><td>CL-NLP-6</td><td>判断 BLEU/ROUGE/EM/F1 与人工评价各自能支持什么 claim</td><td>指标反例；短答解释</td></tr></tbody></table></div>
@@ -102,7 +102,7 @@ LAS = count(pred_head_i == gold_head_i and pred_label_i == gold_label_i) / n</co
 <li>greedy parsing 快但会累积错误；beam 或 dynamic oracle 可缓解但增加复杂度。</li>
 <li>attention heatmap 不能自动替代 dependency tree。</li>
 </ul>
-<p>Ch11 的 <code>run_arc_standard_transitions</code> 把本节 action 定义落成可运行状态机。它要求学生处理 action 合法性、dependent 只能有一个 head、最终 parse 必须耗尽 buffer 并为每个 token 赋 head。这比只计算 UAS/LAS 更接近 CS224N 风格的 structured prediction 基础。</p>
+<p>Ch11 的 <code>run_arc_standard_transitions</code> 把本节 action 定义落成可运行状态机。它要求学生处理 action 合法性、dependent 只能有一个 head、最终 parse 必须耗尽 buffer 并为每个 token 赋 head。这比只计算 UAS/LAS 更接近本课程要求掌握的 structured prediction 基础。</p>
 <h3 id="rnn-lstm-deep-dive">RNN / LSTM Deep Dive</h3>
 <h4 id="scalar-rnn-recurrence">Scalar RNN Recurrence</h4>
 <p>课堂先用标量版本避免学生被矩阵符号淹没：</p>
@@ -118,7 +118,7 @@ h_3 = tanh(0.8 * -1.0 + 0.4 * h_2)</code></pre>
 <p>对同一个标量 RNN：</p>
 <pre class="code-block" data-lang="text"><code>dh_t / dh_{t-1} = w_h * (1 - h_t^2)
 dL / dh_1 = dL / dh_T * product_{t=2..T} w_h * (1 - h_t^2)</code></pre>
-<p>Ch11 的 <code>recurrent_gradient_factors</code> 返回每一步局部因子。若 <code>|w_h * (1 - h_t^2)| &lt; 1</code> 持续出现，早期 token 的梯度会迅速衰减；若因子持续大于 1，训练可能不稳定。这个推导解释了为什么 CS224N 传统主线会讲 gradient clipping、LSTM/GRU 和 attention。</p>
+<p>Ch11 的 <code>recurrent_gradient_factors</code> 返回每一步局部因子。若 <code>|w_h * (1 - h_t^2)| &lt; 1</code> 持续出现，早期 token 的梯度会迅速衰减；若因子持续大于 1，训练可能不稳定。这个推导解释了为什么本课程会补充 gradient clipping、LSTM/GRU 和 attention。</p>
 <h4 id="lstm-gate-interpretation">LSTM Gate Interpretation</h4>
 <p>LSTM 把 hidden state 拆成 cell state 与 output state：</p>
 <pre class="code-block" data-lang="text"><code>c_t = f_t * c_{t-1} + i_t * \tilde{c}_t

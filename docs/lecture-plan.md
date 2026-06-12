@@ -612,7 +612,7 @@ Quick check：
 
 目标：
 
-- 补齐 CS224N 式经典神经 NLP 主线：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。
+- 补齐本课程经典神经 NLP 主线：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT。
 - 比较 structured prediction、encoder-decoder 和 encoder-only 表示。
 - 说明这些主题与 decoder-only LLM 的关系和边界。
 

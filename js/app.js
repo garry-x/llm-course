@@ -25,6 +25,10 @@
   var completed = new Set(safeGet('llm-done', []));
   var currentCh = parseInt(document.body.getAttribute('data-ch')||'0');
 
+  function homeHref(){
+    return currentCh === 0 ? 'index.html' : '../index.html';
+  }
+
   function chapterHref(ch){
     return currentCh === 0 ? 'chapters/' + ch.file : ch.file;
   }
@@ -45,7 +49,9 @@
   function renderSidebar(){
     var nav = document.getElementById('sidebar-nav');
     if(!nav) return;
-    var html = '';
+    var html = '<a href="'+homeHref()+'" class="'+(currentCh===0?'active ':'')+'home-link"'+
+      (currentCh===0?' aria-current="page"':'')+'>'+
+      '<span class="ch-num">⌂</span> 首页</a>';
     CHAPTERS.forEach(function(ch){
       var cls = (ch.id===currentCh?'active ':'')+(completed.has(ch.id)?'completed ':'');
       html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'"'+
@@ -53,6 +59,13 @@
         '<span class="ch-num">'+ch.id+'</span> '+ch.title+'</a>';
     });
     nav.innerHTML = html;
+  }
+
+  function initHomeLinks(){
+    document.querySelectorAll('.sidebar-header h1').forEach(function(title){
+      if(title.querySelector('a')) return;
+      title.innerHTML = '<a href="'+homeHref()+'">'+title.textContent+'</a>';
+    });
   }
 
   function updateProgress(){
@@ -334,6 +347,7 @@
   function init(){
     initTheme();
     initFontSize();
+    initHomeLinks();
     renderSidebar();
     updateProgress();
     updateCompleteButton();

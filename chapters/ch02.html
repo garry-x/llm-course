@@ -89,7 +89,7 @@
 <!-- ================================================================ -->
 <section class="card" id="s2-1a">
   <h3>2.1A 从 word2vec/GloVe 到 LLM Token Embedding</h3>
-  <p>CS224N 这类课程通常从 word vectors 开始，因为它们展示了一个核心思想：语义不是手写规则，而是可以从上下文统计中学习出来。现代 LLM 的 <code>nn.Embedding</code> 不再单独训练成静态词向量，但它仍继承了同一个表示学习问题：如何把离散 token 映射到可微、可比较、可组合的连续空间。</p>
+  <p>本课程从 word vectors 切入，是因为它们展示了一个核心思想：语义不是手写规则，而是可以从上下文统计中学习出来。现代 LLM 的 <code>nn.Embedding</code> 不再单独训练成静态词向量，但它仍继承了同一个表示学习问题：如何把离散 token 映射到可微、可比较、可组合的连续空间。</p>
 
   <h4>Skip-gram with Negative Sampling</h4>
   <p>word2vec 的 skip-gram 目标是：给定中心词 <span class="katex-inline" data-expr="w_t" aria-label="w_t" role="img"></span>，预测窗口内上下文词 <span class="katex-inline" data-expr="w_{t+j}" aria-label="w_{t+j}" role="img"></span>。负采样版本把“真实上下文词”与“随机噪声词”区分开：</p>
@@ -174,7 +174,7 @@
 
 <section class="card" id="s2-1c">
   <h3>2.1C Embedding 空间诊断：相似、各向异性与频率效应</h3>
-  <p>训练出一个 embedding 矩阵之后，不能只看 loss 下降就认为表示已经“学好”。高校 NLP 课程会反复强调：向量空间的几何结构来自训练目标和数据分布，也会带来偏差与失败模式。对 LLM 工程师来说，embedding 诊断是发现 tokenizer、数据配比、初始化和 weight tying 问题的早期信号。</p>
+  <p>训练出一个 embedding 矩阵之后，不能只看 loss 下降就认为表示已经“学好”。本课程会反复强调：向量空间的几何结构来自训练目标和数据分布，也会带来偏差与失败模式。对 LLM 工程师来说，embedding 诊断是发现 tokenizer、数据配比、初始化和 weight tying 问题的早期信号。</p>
 
   <h4>1. 行范数不是语义强度</h4>
   <p>embedding 矩阵 <code>E[V, d]</code> 中每一行对应一个 token。训练后常见现象是高频 token 的行范数更大，因为它们被更新次数更多；特殊 token、空格、标点和常见子词也可能形成明显簇。范数大不等于语义更重要，它往往混合了频率、优化历史和输出层梯度。</p>

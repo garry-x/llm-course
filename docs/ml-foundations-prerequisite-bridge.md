@@ -1,6 +1,6 @@
 # ML Foundations Prerequisite Bridge
 
-本 handout 补齐 CS224N 风格先修中的 college calculus、probability/statistics 和 foundations of machine learning。它不是独立机器学习课程，而是把学生需要带入本课程的最小概念映射到 LLM 章节、作业、书面题和项目报告。相关复习材料见 [数学与 PyTorch 先修复习](math-prerequisites.md)、[Python and PyTorch Review Session](python-pytorch-review-session.md) 和 [逐周阅读材料与复盘 Handout](reading-list.md)。
+本 handout 补齐本课程需要的 college calculus、probability/statistics 和 foundations of machine learning。它不是独立机器学习课程，而是把学生需要带入本课程的最小概念映射到 LLM 章节、作业、书面题和项目报告。相关复习材料见 [数学与 PyTorch 先修复习](math-prerequisites.md)、[Python and PyTorch Review Session](python-pytorch-review-session.md) 和 [逐周阅读材料与复盘 Handout](reading-list.md)。
 
 ## 覆盖范围
 

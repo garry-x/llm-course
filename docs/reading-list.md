@@ -35,7 +35,7 @@
 
 - 本课程 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)：重点看 calculus、probability/statistics、ML objectives、generalization 和 evaluation。
 - Goodfellow, Bengio, Courville. [Deep Learning](https://www.deeplearningbook.org/), optimization 和 ML basics 相关章节。
-- Stanford CS224N 公开页 Prerequisites 和 Reference Texts：重点看 Python、PyTorch、calculus、linear algebra、probability/statistics 和 ML foundations 的预期边界。
+- 本课程 [数学与 PyTorch 先修复习](math-prerequisites.md)：重点确认 Python、PyTorch、calculus、linear algebra、probability/statistics 和 ML foundations 的最低掌握边界。
 
 复盘问题：
 
@@ -66,7 +66,7 @@
 
 选读：
 
-- Stanford CS224N 2026 schedule 中的 Word Vectors 主题和 suggested readings。
+- 本课程 Ch02 的 word vectors 与 embedding 相关小节。
 - Jurafsky and Martin, Speech and Language Processing, word embeddings 相关章节。
 
 复盘问题：
@@ -86,7 +86,7 @@
 必读：
 
 - Vaswani et al. [Attention Is All You Need](https://arxiv.org/abs/1706.03762). 重点看 scaled dot-product attention、mask 和 multi-head 结构。
-- Stanford CS224N Assignment 2 主题：neural network foundations、tensor derivatives、dependency parsing。
+- 本课程 Ch03 attention 作业与书面题：重点看 neural network foundations、tensor derivatives 和 masked attention。
 
 选读：
 
@@ -304,7 +304,7 @@
 
 必读：
 
-- Stanford CS224N coursework/final project 页面：重点看 project 如何把问题设定、方法、实验和结论组织成课程级研究产出。
+- 本课程两个 Capstone README：重点看 project 如何把问题设定、方法、实验和结论组织成课程级工程产出。
 - 目标方向的官方论文、课程讲义或模型卡：interpretability、multimodality、social impact、agents 或 reasoning。
 - 本课程 worked-example-pack：重点复盘每个模块的可计算定义和常见误解。
 

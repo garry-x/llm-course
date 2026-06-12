@@ -2,7 +2,7 @@
 
 本 handout 用于 Week 1 Python Review Session 和 Week 2 PyTorch Tutorial Session。它和 [数学与 PyTorch 先修复习](math-prerequisites.md)、[10 周 / 20 讲 Lecture Plan](lecture-plan.md) 配套，帮助学生在进入 Transformer 代码前补齐 Python、张量 shape、autograd 和测试定位能力。
 
-参照 CS224N Winter 2026 公开 schedule：Week 1 安排 Python Review Session，Week 2 安排 PyTorch Tutorial Session。本课程把两次 review 合并为可移植 handout：学生先确认环境和 Python helper，再进入 PyTorch tensor、`nn.Module`、loss、autograd 和作业提交日志。
+本课程在 Week 1 安排 Python Review Session，在 Week 2 安排 PyTorch Tutorial Session，并把两次 review 合并为可移植 handout：学生先确认环境和 Python helper，再进入 PyTorch tensor、`nn.Module`、loss、autograd 和作业提交日志。
 
 ## Session 目标
 

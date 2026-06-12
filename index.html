@@ -36,101 +36,38 @@
   <section class="hero">
     <div class="hero-copy">
       <div class="hero-tags">
-        <span class="hero-tag">可运行 Python 代码</span>
-        <span class="hero-tag">编程作业 + 书面推导</span>
-        <span class="hero-tag">训练工程 + 推理工程路线</span>
+        <span class="hero-tag">训练工程</span>
+        <span class="hero-tag">推理工程</span>
+        <span class="hero-tag">从代码到服务</span>
       </div>
-      <h2>系统学习大语言模型：表示、架构、训练、生成、对齐与服务</h2>
-      <p>11 章 · 编程练习 · 书面推导 · 两个工程 Capstone<br>先建立 LLM 的完整计算图，再进入训练工程、推理工程、对齐评估和经典 NLP 专题。</p>
-      <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
-    </div>
-    <div class="hero-jump" aria-label="章节首节快速入口">
-      <span>章节入口</span>
-      <div class="hero-deep-links">
-        <a href="chapters/ch01.html#s1-1">Ch01</a>
-        <a href="chapters/ch02.html#s2-1">Ch02</a>
-        <a href="chapters/ch03.html#s3-1">Ch03</a>
-        <a href="chapters/ch04.html#s4-1">Ch04</a>
-        <a href="chapters/ch05.html#s5-1">Ch05</a>
-        <a href="chapters/ch06.html#s6-1">Ch06</a>
-        <a href="chapters/ch07.html#s7-1">Ch07</a>
-        <a href="chapters/ch08.html#s8-1">Ch08</a>
-        <a href="chapters/ch09.html#s9-1">Ch09</a>
-        <a href="chapters/ch10.html#s10-1">Ch10</a>
-        <a href="chapters/ch11.html#s11-1">Ch11</a>
+      <h2>面向训练与推理工程师的 LLM 系统课程</h2>
+      <p>用 11 章建立从 tokenizer、attention、GPT 前向传播，到训练循环、对齐、生成策略和推理服务的完整工程视角。</p>
+      <div class="hero-actions">
+        <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
+        <a href="#chapters" class="btn btn-outline">查看章节</a>
       </div>
     </div>
-  </section>
-
-  <div class="dashboard" id="dashboard">
-    <div class="dash-card">
-      <div class="dash-icon">📚</div>
-      <div class="num" id="dash-completed">—</div>
-      <div class="label">已完成章节</div>
-    </div>
-    <div class="dash-card">
-      <div class="dash-icon">📊</div>
-      <div class="num" id="dash-progress">—</div>
-      <div class="label">总体进度</div>
-    </div>
-    <div class="dash-card">
-      <div class="dash-icon">⏱️</div>
-      <div class="num">10 周</div>
-      <div class="label">建议课程周期</div>
-    </div>
-    <div class="dash-card">
-      <div class="dash-icon">🎯</div>
-      <div class="num">2 个</div>
-      <div class="label">工程 Capstone</div>
-    </div>
-  </div>
-
-  <section class="learning-path">
-    <h3>推荐学习路线</h3>
-    <div class="path-grid">
-      <div class="path-step"><strong>主线入门</strong><span>按 Ch01-Ch06 顺序完成 tokenizer、embedding、attention、Transformer Block 和 GPT 前向传播，先能画出完整计算图。</span></div>
-      <div class="path-step"><strong>训练方向</strong><span>重点推进 Ch07、Ch09 和训练 Capstone，交付数据分析、训练日志、checkpoint/resume、指标曲线和成本规划。</span></div>
-      <div class="path-step"><strong>推理方向</strong><span>重点推进 Ch08-Ch10 和推理 Capstone，拆解 TTFT/TPOT、KV Cache、量化、RAG、压测、容量规划和上线复盘。</span></div>
+    <div class="hero-panel" aria-label="课程重点">
+      <h3>课程重点</h3>
+      <ul>
+        <li><strong>模型内部</strong><span>BPE、Embedding、RoPE、Attention、Transformer Block、GPT 组装。</span></li>
+        <li><strong>训练闭环</strong><span>数据管线、AdamW、scheduler、checkpoint、分布式、MFU、对齐评估。</span></li>
+        <li><strong>推理上线</strong><span>采样、KV Cache、量化、RAG、压测、容量规划和服务发布。</span></li>
+      </ul>
     </div>
   </section>
 
   <section class="learning-path">
-    <h3>LLM 知识主线</h3>
+    <h3>课程主线</h3>
     <div class="path-grid">
-      <div class="path-step"><strong>1. 文本表示</strong><span>Ch01-Ch02：BPE、token id、embedding lookup、RoPE 和长上下文表示。</span></div>
-      <div class="path-step"><strong>2. Transformer 核心</strong><span>Ch03-Ch06：Q/K/V、causal mask、MHA/GQA/MLA、Norm、FFN、MoE 和完整 GPT。</span></div>
-      <div class="path-step"><strong>3. 训练闭环</strong><span>Ch07：loss、PPL、AdamW、scheduler、checkpoint、分布式、低精度和 MFU。</span></div>
-      <div class="path-step"><strong>4. 生成与推理</strong><span>Ch08-Ch10：sampling、speculative decoding、KV Cache、FlashAttention、RAG 和推理服务。</span></div>
-      <div class="path-step"><strong>5. 微调与对齐</strong><span>Ch09：SFT、LoRA、DPO、GRPO、偏好数据质量、对齐评估和能力保留。</span></div>
-      <div class="path-step"><strong>6. 经典 NLP 与评测</strong><span>Ch11：RNN、Parsing、Seq2Seq、BERT、BLEU/ROUGE/EM/F1 和 LLM-as-judge。</span></div>
+      <div class="path-step"><strong>1. 计算图基础</strong><span>Ch01-Ch06：从 tokenizer、embedding、attention 到 Transformer Block 和 GPT 模型组装。</span></div>
+      <div class="path-step"><strong>2. 训练工程</strong><span>Ch07、Ch09：数据、优化器、checkpoint、分布式、低精度、SFT/LoRA/DPO/GRPO。</span></div>
+      <div class="path-step"><strong>3. 推理工程</strong><span>Ch08-Ch10：解码策略、KV Cache、量化、RAG、压测、容量估算和发布检查。</span></div>
+      <div class="path-step"><strong>4. 评测与复盘</strong><span>Ch11：经典 NLP 任务、评测指标、LLM-as-judge、误差分析和 Capstone 报告。</span></div>
     </div>
   </section>
 
-  <section class="learning-path">
-    <h3>课程交付产出</h3>
-    <div class="path-grid">
-      <div class="path-step"><strong>核心代码</strong><span>BPE tokenizer、RoPE、attention、Transformer Block、GPTModel、生成器、KV Cache 和 LoRA/GRPO 练习。</span></div>
-      <div class="path-step"><strong>书面推导</strong><span>shape 账本、复杂度分析、loss 梯度、优化器推导、KV Cache 显存预算和评测误差分析。</span></div>
-      <div class="path-step"><strong>工程报告</strong><span>训练 Capstone 与推理 Capstone 分别输出可复现实验、指标、压测、容量估算和上线检查。</span></div>
-    </div>
-  </section>
-
-  <section class="role-path">
-    <h3>资料入口</h3>
-    <div class="role-grid">
-      <span><a href="docs/syllabus.html">Syllabus</a></span>
-      <span><a href="docs/lecture-plan.html">Lecture Plan</a></span>
-      <span><a href="docs/reading-list.html">Reading List</a></span>
-      <span><a href="docs/written-problem-set.html">书面题库</a></span>
-      <span><a href="docs/worked-example-pack.html">Worked Examples</a></span>
-      <span><a href="docs/math-prerequisites.html">数学先修</a></span>
-      <span><a href="inference-engineer-curriculum.html">推理工程师路线</a></span>
-      <span><a href="training-engineer-curriculum.html">训练工程师路线</a></span>
-      <span><a href="docs/classic-nlp-handout.html">经典 NLP 专题</a></span>
-    </div>
-  </section>
-
-  <section class="role-path">
+  <section class="course-index" id="chapters">
     <h3>章节目录</h3>
     <div class="chapter-list" id="chapter-list"></div>
   </section>
@@ -143,12 +80,6 @@
   var chapters = window.LLM && LLM.getChapters ? LLM.getChapters() : [];
   function safeGet(k,d){ return window.IDB ? IDB.get(k,d) : (function(){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d} })() }
   var done = new Set(safeGet('llm-done',[]));
-  var completed = done.size;
-  var pct = chapters.length ? Math.round(completed/chapters.length*100) : 0;
-
-  document.getElementById('dash-completed').textContent = completed;
-  document.getElementById('dash-progress').textContent = pct+'%';
-
   var list = document.getElementById('chapter-list');
   list.innerHTML = chapters.map(function(ch){
     var isDone = done.has(ch.id);

@@ -566,7 +566,7 @@ td{color:var(--text-secondary)}
 
 /* ---- Hero Enhancements ---- */
 .hero{
-  position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.45fr) 320px;
+  position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 360px;
   gap:36px;align-items:center;
   background:var(--surface);
   border-radius:var(--radius);padding:48px 52px;margin-bottom:18px;
@@ -578,48 +578,25 @@ td{color:var(--text-secondary)}
 }
 .hero h2{font-size:2.35rem;font-weight:700;margin-bottom:14px;position:relative;line-height:1.25;text-wrap:balance}
 .hero p{color:var(--text-secondary);font-size:1.02rem;max-width:620px;margin:0 0 28px;position:relative;line-height:1.75}
-.hero .btn{position:relative;padding:12px 32px;font-size:.95rem}
+.hero-actions{display:flex;align-items:center;gap:12px;position:relative}
+.hero .btn{padding:12px 28px;font-size:.95rem}
 .hero-tags{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;margin-bottom:20px;position:relative}
 .hero-tag{
   padding:5px 12px;border-radius:999px;font-size:.75rem;font-weight:600;
   background:var(--accent-light);color:var(--accent);border:1px solid rgba(179,92,34,.15)
 }
-.hero-jump{
+.hero-panel{
   position:relative;background:var(--bg);border:1px solid var(--border);
-  border-radius:8px;padding:20px
+  border-radius:8px;padding:22px 24px
 }
-.hero-jump>span{
-  display:block;margin-bottom:12px;color:var(--text);
-  font-size:.86rem;font-weight:700
+.hero-panel h3{
+  font-family:var(--font-heading);font-size:1rem;font-weight:700;
+  margin-bottom:14px;color:var(--text)
 }
-.hero-deep-links{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
-  max-width:none;margin:0;position:relative
-}
-.hero-deep-links a{
-  display:inline-flex;align-items:center;justify-content:center;
-  min-height:38px;padding:4px 10px;
-  border:1px solid var(--border);border-radius:var(--radius-sm);
-  color:var(--text-secondary);background:var(--surface);
-  font-size:.76rem;font-weight:700;text-decoration:none
-}
-.hero-deep-links a:hover{border-color:var(--accent);color:var(--accent)}
-
-/* ---- Dashboard Cards (homepage) ---- */
-.dashboard{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px
-}
-.dash-card{
-  background:var(--surface);border-radius:8px;padding:16px 18px;
-  box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:center;
-  transition:transform var(--transition),box-shadow var(--transition)
-}
-.dash-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.dash-card .dash-icon{font-size:1.25rem;margin-bottom:4px}
-.dash-card .num{font-size:1.72rem;font-weight:800;color:var(--accent);font-family:var(--font-heading)}
-.dash-card .label{font-size:.78rem;color:var(--text-secondary);margin-top:2px}
-@media(max-width:959px){.dashboard{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:639px){.dashboard{grid-template-columns:1fr}}
+.hero-panel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.hero-panel li{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:start}
+.hero-panel strong{font-size:.82rem;color:var(--accent);line-height:1.55}
+.hero-panel span{font-size:.8rem;color:var(--text-secondary);line-height:1.65}
 
 /* ---- Chapter List Items (homepage) ---- */
 .chapter-list{display:flex;flex-direction:column;gap:10px;margin-bottom:32px}
@@ -679,39 +656,23 @@ td{color:var(--text-secondary)}
   font-family:var(--font-heading);font-size:1.15rem;font-weight:700;
   margin-bottom:12px;color:var(--text)
 }
-.path-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.path-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .path-step{
   background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
-  padding:14px 16px;min-height:112px
+  padding:14px 16px;min-height:136px
 }
 .path-step strong{display:block;color:var(--accent);font-size:.9rem;margin-bottom:6px}
 .path-step span{display:block;color:var(--text-secondary);font-size:.82rem;line-height:1.65}
 @media(max-width:959px){.path-grid{grid-template-columns:1fr}}
 
-/* ---- Role competency map ---- */
-.role-path{
+/* ---- Course index ---- */
+.course-index{
   padding:8px 0 0;margin:0 0 28px
 }
-.role-path h3{
+.course-index h3{
   font-family:var(--font-heading);font-size:1.1rem;font-weight:700;
   margin-bottom:12px;color:var(--text)
 }
-.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.role-grid span{
-  display:flex;align-items:center;min-height:42px;padding:8px 12px;
-  border:1px solid var(--border);border-radius:var(--radius-sm);
-  color:var(--text-secondary);font-size:.8rem;background:var(--bg)
-}
-.role-grid span a{color:inherit;text-decoration:none;display:block;width:100%}
-.role-grid span:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
-.role-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
-.role-project-link{
-  display:inline-flex;align-items:center;min-height:40px;
-  color:var(--accent);font-size:.84rem;font-weight:700;text-decoration:none
-}
-.role-project-link:hover{color:var(--accent-hover);text-decoration:underline}
-@media(max-width:959px){.role-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:639px){.role-grid{grid-template-columns:1fr}}
 
 /* ---- Mark Complete Celebration ---- */
 @keyframes celebrate{
@@ -855,23 +816,18 @@ td{color:var(--text-secondary)}
     font-size:.7rem;
     line-height:1.35
   }
-  .hero-deep-links{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:6px;
-    margin-top:18px
+  .hero-actions{
+    flex-wrap:wrap
   }
-  .hero-jump{
+  .hero-panel{
     margin-top:20px;
-    padding:14px
+    padding:18px
   }
-  .hero-deep-links a{
-    min-width:44px;
-    min-height:34px;
-    padding:4px 8px
+  .hero-panel li{
+    grid-template-columns:1fr;
+    gap:2px
   }
-  .learning-path,.role-path{
+  .learning-path,.course-index{
     padding:18px 16px;
     margin-bottom:18px;
     border-radius:8px

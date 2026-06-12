@@ -38,10 +38,10 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>推理优化不是一堆孤立名词。KV Cache 解决重复计算，量化解决显存/带宽，FlashAttention 解决注意力 IO，RAG 解决知识更新，vLLM 解决服务吞吐。稀疏注意力、外部记忆、Triton 和多模态属于前沿地图，第一次学习先建立分类。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
-    <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度、检索和发布风险问题，并能设计 KV Cache、量化、RAG、continuous batching admission、benchmark、SLO 与生产发布 gate。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用 schema gate、MCP runtime security gate、调度准入 gate、基准测试、production rollout gate、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
+    <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度、检索、发布和运行期过载问题，并能设计 KV Cache、量化、RAG、continuous batching admission、benchmark、SLO、生产发布 gate 与 load-shedding gate。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用 schema gate、MCP runtime security gate、调度准入 gate、基准测试、production rollout gate、serving overload response gate、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema/MCP runtime gate、production rollout gate、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema/MCP runtime gate、production rollout gate、serving overload response gate、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>前九章计算图、KV cache、生成策略、评测指标，以及 TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。<br><strong>本章内化：</strong>每个服务问题都会拆成 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和回退策略；KV、量化、prefix cache、RAG、tool gate 与多模态 token 都要进入同一张 SLO/成本账本。<br><strong>验收信号：</strong>你能写出一份上线报告，说明瓶颈在哪、优化改了哪个阶段、质量是否回归、容量边界是什么，以及何时拒绝“只看平均延迟”的结论。</div>
 </section>
@@ -1268,6 +1268,27 @@ assert plan["overall_pass"]</div>
 )
 assert report["decision"] == "promote_to_next_stage"</code></pre>
   <p>若 safety gate 失败，应 block release；若质量轻微波动但 safety、canary 和 rollback 都准备好，可以继续小流量观察；若缺少 rollback 或 per-version metrics，即使离线分数更高也不应扩大流量。这个逻辑来自通用 SRE canary 原则，但 LLM 服务还要额外看 answer quality、安全拒答、JSON/tool/RAG 回归和 token 成本。</p>
+
+  <h4>1B. 上线后要能在过载前主动降级</h4>
+  <p>发布 gate 回答“候选版本能不能扩大流量”，运行期 overload gate 回答“当前服务还能不能继续接同样的流量”。LLM 服务的过载信号通常不是单一 CPU 使用率，而是 queue backlog、P95 TTFT、P95 TPOT、KV cache usage、swapping、timeout/error、租户配额和长上下文请求共同恶化。只等 5xx 上升再处理，通常已经太晚。</p>
+  <p>作业中的 <code>serving_overload_response_report</code> 把这些运行期信号放进同一张响应表：</p>
+  <pre><code class="language-python">report = serving_overload_response_report(
+    metrics={
+        "waiting_requests": 80,
+        "p95_queue_wait_ms": 900,
+        "p95_ttft_ms": 1800,
+        "p95_tpot_ms": 95,
+        "kv_cache_usage_pct": 0.96,
+        "swapped_requests": 3,
+        "error_rate": 0.03,
+        "timeout_rate": 0.02,
+        "degradation_ready": False,
+    },
+    policy={"max_p95_ttft_ms": 900, "max_p95_tpot_ms": 60, "max_kv_cache_usage_pct": 0.9},
+    tenant_usage=[{"tenant_id": "free-tier", "request_rate": 40, "quota": 10}],
+)
+assert report["decision"] == "load_shed_and_page_owner"</code></pre>
+  <p>如果 queue 和 TTFT 先坏，优先做低优先级限流、排队隔离、减少 RAG top-k 或启用缓存回答；如果 TPOT 先坏，说明 decode 侧饱和，应减少 <code>max_tokens</code>、调低并发或扩 decode worker；如果 KV usage 接近满或出现 swapping，应立即减少 active KV、截断上下文或拒绝长请求；如果某个租户超过配额，应隔离 noisy neighbor，而不是让全体用户一起承担尾延迟。过载响应不是“服务变慢后写复盘”，而是把 SLO、配额和降级动作预先变成可执行 runbook。</p>
 
   <h4>2. 推理导出和训练恢复是两种 checkpoint</h4>
   <p>第 7 章的训练 checkpoint 应包含 optimizer、scheduler、RNG、dataloader position 和 global step；推理发布包通常只需要模型权重、配置、tokenizer、模板和服务参数。把训练 checkpoint 直接塞进推理引擎会带来多余状态、格式不兼容和加载速度问题；只保存推理权重又不能用于中断后继续训练。工程上应明确区分：</p>

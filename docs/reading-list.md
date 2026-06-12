@@ -275,6 +275,8 @@
 - OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) 与 [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). 重点看 prompt injection、insecure output handling、insecure plugin design、excessive agency 和外部内容隔离。
 - OpenAI. [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices) 与 [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 prototype 到 production 时的可靠性、监控、评测和成本控制如何进入上线判断。
 - Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) 与 [Implementing SLOs](https://sre.google/workbook/implementing-slos/). 重点看 canary/control、流量分阶段、SLO/SLI 和 error budget 如何转成发布 gate。
+- Google SRE. [Handling Overload](https://sre.google/sre-book/handling-overload/) 与 [Addressing Cascading Failures](https://sre.google/sre-book/addressing-cascading-failures/). 重点看 degraded responses、load shedding、动态超时和防止过载级联。
+- vLLM documentation: [Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/) 与 [V1 Metrics design](https://docs.vllm.ai/en/latest/design/v1/metrics.html). 重点看推理引擎的 request/engine metrics 如何服务生产监控、capacity planning 和 incident triage。
 
 选读：
 
@@ -305,6 +307,7 @@
 - tool/function calling 为什么不能只依赖 prompt 约束？schema、权限和循环预算分别拦截哪类失败？
 - MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、敏感数据外发、observation isolation 和 recursive sampling？
 - 生产发布时，为什么候选模型即使离线 pass rate 更高，也必须经过 canary/control、per-version quality/safety/SLO/cost monitoring 和 rollback readiness gate？
+- 服务运行中 queue backlog、KV cache nearing full、swapped requests、TPOT 变差、timeout 上升和单租户超配额分别指向哪些不同的 overload response？
 - prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？
 - SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？
 - speculative decoding 的 acceptance rate、draft overhead、QPS 和 quality regression 如何共同决定是否启用，而不是只看 `num_speculative_tokens`？

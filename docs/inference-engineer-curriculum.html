@@ -54,7 +54,7 @@
 <h3 id="目标画像">目标画像</h3>
 <p>完成课程后，你应该能独立完成一个小型 LLM 推理服务的设计、实现、压测、评估和上线复盘。最低能力不是“背熟名词”，而是面对一个慢、贵、不稳定、质量波动或多模态输入成本失控的 LLM 服务时，能拆解问题、定位瓶颈并给出可验证的改进方案。</p>
 <h3 id="章节能力映射">章节能力映射</h3>
-<div class="table-wrap"><table><thead><tr><th>阶段</th><th>章节与项目</th><th>主要问题</th><th>学习产出</th></tr></thead><tbody><tr><td>1. 模型内部结构</td><td>Ch01-Ch06</td><td>Token 如何进入模型，attention/FFN/MoE 如何产生 logits</td><td>能从 shape 和参数量解释一次前向传播</td></tr><tr><td>2. 生成链路</td><td>Ch08-Ch10</td><td>Prefill、decode、采样、reasoning 和推测解码如何影响用户体验</td><td>能解释 TTFT、TPOT、TPS、质量、随机性、test-time compute 和 speculative gate 的 trade-off</td></tr><tr><td>3. 显存与吞吐</td><td>Ch03-Ch04、Ch10</td><td>KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本</td><td>能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存</td></tr><tr><td>4. 服务化工程</td><td>Ch10、Capstone</td><td>如何把模型包装成可观测、可压测、可回归的 API</td><td>跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark</td></tr><tr><td>5. 多模态与质量评估</td><td>Ch09-Ch11、Capstone</td><td>如何评测文本、RAG、结构化输出、多模态任务、安全和成本</td><td>有固定评测集、canary/control/rollback 上线方案和压测报告</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>阶段</th><th>章节与项目</th><th>主要问题</th><th>学习产出</th></tr></thead><tbody><tr><td>1. 模型内部结构</td><td>Ch01-Ch06</td><td>Token 如何进入模型，attention/FFN/MoE 如何产生 logits</td><td>能从 shape 和参数量解释一次前向传播</td></tr><tr><td>2. 生成链路</td><td>Ch08-Ch10</td><td>Prefill、decode、采样、reasoning 和推测解码如何影响用户体验</td><td>能解释 TTFT、TPOT、TPS、质量、随机性、test-time compute 和 speculative gate 的 trade-off</td></tr><tr><td>3. 显存与吞吐</td><td>Ch03-Ch04、Ch10</td><td>KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本</td><td>能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存</td></tr><tr><td>4. 服务化工程</td><td>Ch10、Capstone</td><td>如何把模型包装成可观测、可压测、可回归、可降级的 API</td><td>跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark 和 overload response runbook</td></tr><tr><td>5. 多模态与质量评估</td><td>Ch09-Ch11、Capstone</td><td>如何评测文本、RAG、结构化输出、多模态任务、安全和成本</td><td>有固定评测集、canary/control/rollback 上线方案和压测报告</td></tr></tbody></table></div>
 <h3 id="能力目标">能力目标</h3>
 <h4 id="a-模型结构读懂">A. 模型结构读懂</h4>
 <ul>
@@ -86,8 +86,9 @@
 <li>能支持非流式响应和 SSE 流式响应。</li>
 <li>能记录 request id、model、tokens、latency、finish reason、错误类型。</li>
 <li>能把 mock engine 替换为 vLLM、SGLang、TensorRT-LLM、llama.cpp 或远程 OpenAI-compatible endpoint。</li>
+<li>能把 queue backlog、KV cache usage、swapping、TPOT、错误率、timeout 和租户配额映射成限流、load shedding、降级、扩容、回滚或 incident page。</li>
 </ul>
-<p><strong>对应内容：</strong>Ch10 10.12-10.13，Capstone <code>app.py</code>。</p>
+<p><strong>对应内容：</strong>Ch10 10.12-10.13，Capstone <code>app.py</code> 与 overload response 表。</p>
 <h4 id="e-rag-工具调用与输出约束">E. RAG、工具调用与输出约束</h4>
 <ul>
 <li>能解释 RAG 解决知识更新和可追溯问题，但不等于模型推理能力增强。</li>
@@ -113,7 +114,7 @@
 <p><strong>对应内容：</strong>Ch10 10.20，Inference Capstone research question。</p>
 <h3 id="学习成果">学习成果</h3>
 <p>完成以下项目后，可以认为你已经达到“初级 LLM 推理工程师”课程目标。</p>
-<div class="table-wrap"><table><thead><tr><th>项目项</th><th>合格标准</th><th>产出</th></tr></thead><tbody><tr><td>章节主线</td><td>Ch01-Ch11 每章至少完成一个编程练习和全部概念练习</td><td>页面进度或个人笔记</td></tr><tr><td>结构理解</td><td>能画出从 prompt 到 logits 再到 token 的完整数据流</td><td>一页架构图或文字说明</td></tr><tr><td>显存预算</td><td>能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本</td><td>表格或 <code>capacity_plan.py</code> 输出</td></tr><tr><td>调度准入</td><td>能用 <code>max_num_seqs</code>、<code>max_num_batched_tokens</code>、active KV tokens 和 queue wait 判断哪些请求进入 continuous batch</td><td>admission gate 表</td></tr><tr><td>准入控制</td><td>能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit</td><td>容量规划说明</td></tr><tr><td>服务运行</td><td>Capstone API 能启动，<code>/health</code>、非流式、流式、<code>/metrics</code> 可用</td><td><code>curl</code> 输出或 <code>acceptance.py</code></td></tr><tr><td>压测报告</td><td>至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标</td><td><code>benchmark.py</code> JSON + <code>slo_check.py</code> 输出</td></tr><tr><td>回归评测</td><td>固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性、工具调用、MCP/runtime gate、LLM-as-judge 和安全/过度拒答，失败样例有记录</td><td><code>evaluate.py</code> 输出</td></tr><tr><td>发布 gate</td><td>baseline 与 candidate 的 quality/safety/SLO/error/cost/canary/monitoring/rollback 判断可复算</td><td>production rollout gate 表</td></tr><tr><td>实验结论</td><td>项目有 research question、baseline、workload、ablation 和结论边界</td><td>proposal / milestone / final report</td></tr><tr><td>优化复盘</td><td>选择一个瓶颈，提出优化前后指标对比</td><td>简短复盘文档</td></tr><tr><td>引擎替换</td><td>至少说明如何把 <code>MockEngine</code> 替换为一个真实推理引擎</td><td>代码 diff 或设计说明</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>项目项</th><th>合格标准</th><th>产出</th></tr></thead><tbody><tr><td>章节主线</td><td>Ch01-Ch11 每章至少完成一个编程练习和全部概念练习</td><td>页面进度或个人笔记</td></tr><tr><td>结构理解</td><td>能画出从 prompt 到 logits 再到 token 的完整数据流</td><td>一页架构图或文字说明</td></tr><tr><td>显存预算</td><td>能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本</td><td>表格或 <code>capacity_plan.py</code> 输出</td></tr><tr><td>调度准入</td><td>能用 <code>max_num_seqs</code>、<code>max_num_batched_tokens</code>、active KV tokens 和 queue wait 判断哪些请求进入 continuous batch</td><td>admission gate 表</td></tr><tr><td>过载响应</td><td>能用 queue/KV/decode/error/quota 信号判断 load shedding、降级、扩容、回滚或 page owner</td><td>overload response 表</td></tr><tr><td>准入控制</td><td>能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit</td><td>容量规划说明</td></tr><tr><td>服务运行</td><td>Capstone API 能启动，<code>/health</code>、非流式、流式、<code>/metrics</code> 可用</td><td><code>curl</code> 输出或 <code>acceptance.py</code></td></tr><tr><td>压测报告</td><td>至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标</td><td><code>benchmark.py</code> JSON + <code>slo_check.py</code> 输出</td></tr><tr><td>回归评测</td><td>固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性、工具调用、MCP/runtime gate、LLM-as-judge 和安全/过度拒答，失败样例有记录</td><td><code>evaluate.py</code> 输出</td></tr><tr><td>发布 gate</td><td>baseline 与 candidate 的 quality/safety/SLO/error/cost/canary/monitoring/rollback 判断可复算</td><td>production rollout gate 表</td></tr><tr><td>实验结论</td><td>项目有 research question、baseline、workload、ablation 和结论边界</td><td>proposal / milestone / final report</td></tr><tr><td>优化复盘</td><td>选择一个瓶颈，提出优化前后指标对比</td><td>简短复盘文档</td></tr><tr><td>引擎替换</td><td>至少说明如何把 <code>MockEngine</code> 替换为一个真实推理引擎</td><td>代码 diff 或设计说明</td></tr></tbody></table></div>
 <h3 id="推荐-8-周节奏">推荐 8 周节奏</h3>
 <div class="table-wrap"><table><thead><tr><th>周次</th><th>学习内容</th><th>工程任务</th></tr></thead><tbody><tr><td>1</td><td>Ch01-Ch02</td><td>跑通 tokenizer、embedding、RoPE，记录 shape</td></tr><tr><td>2</td><td>Ch03-Ch04</td><td>实现 attention，比较 MHA/GQA/MLA KV Cache</td></tr><tr><td>3</td><td>Ch05-Ch06</td><td>组装 GPT，完成参数量和显存估算</td></tr><tr><td>4</td><td>Ch07</td><td>跑微型训练循环，理解优化器和混合精度</td></tr><tr><td>5</td><td>Ch08</td><td>实现生成、采样、TTFT/TPS 分析</td></tr><tr><td>6</td><td>Ch09</td><td>跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测</td></tr><tr><td>7</td><td>Ch10</td><td>完成 KV Cache、continuous batching admission、量化、RAG、speculative gate、benchmark、服务蓝图</td></tr><tr><td>8</td><td>Ch11 + Capstone</td><td>把结构化任务与评测指标接回服务决策，跑通 <code>acceptance.py</code>，完成服务、压测、评测、容量估算和上线复盘</td></tr></tbody></table></div>
 <h3 id="常见误区">常见误区</h3>
@@ -143,6 +144,7 @@ P95 TTFT：
 P95 TPOT：
 speculative decoding gate：
 continuous batching admission：
+overload response：
 production rollout gate：
 SLO 是否通过：
 tokens/s：

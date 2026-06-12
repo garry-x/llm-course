@@ -127,6 +127,11 @@ def production_rollout_gate_report(baseline, candidate, rollout_policy=None):
     raise NotImplementedError
 
 
+def serving_overload_response_report(metrics, policy=None, tenant_usage=None):
+    """Diagnose overload and choose queue/KV/decode/quota degradation or load-shedding actions."""
+    raise NotImplementedError
+
+
 def prefill_decode_disaggregation_report(requests, slo=None):
     """Summarize prefill/decode disaggregation metrics and likely bottleneck."""
     raise NotImplementedError

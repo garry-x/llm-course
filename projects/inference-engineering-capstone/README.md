@@ -21,6 +21,7 @@
 | PD Breakdown | 拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens | 报告中的 PD 指标表 |
 | PD Pool Plan | 用 QPS、prompt/output 长度、prefix cache、worker 吞吐、KV transfer 和 decode KV 容量估算 P/D worker pool | 报告中的 P/D capacity 表 |
 | SLO Check | 将压测 JSON 与延迟/吞吐/错误率目标对比 | `python slo_check.py` 输出 PASS/FAIL |
+| Overload Response | 把 queue、KV cache、swapping、TPOT、错误率、timeout 和租户配额转成降级/限流/扩容/回滚 runbook | 报告中的 overload response 表 |
 | Evaluation | 跑固定评测集，检查 JSON/事实/拒答 | `python evaluate.py` 输出 pass rate |
 | Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
 | Rollout Gate | 把 baseline 与 candidate 的质量、安全、SLO、成本、canary、monitoring 和 rollback 放入同一张发布 gate | 报告中的 production rollout gate 表 |
@@ -148,6 +149,7 @@ python capacity_plan.py \
 - 若采用或讨论 prefill/decode 解耦，必须单独报告 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，不能只给端到端 P95。
 - 若采用或讨论 speculative decoding，必须单独报告 accepted/draft tokens、target verify steps、draft_ms、speedup、quality regression、memory overhead 和 QPS/workload fit，不能只给引擎支持或 `num_speculative_tokens`。
 - 若采用或讨论 continuous batching，必须单独报告 `max_num_seqs`、`max_num_batched_tokens`、chunked prefill、admitted/queued、queue wait、active KV tokens 和 queued reasons，不能只给平均 tokens/s。
+- 若服务面向多个租户或开放流量，必须报告运行期过载响应：queue backlog、P95 TTFT/TPOT、KV cache usage、swapped requests、错误率、timeout、tenant quota/noisy neighbor、degraded mode 和 load shedding 动作。
 - SLO 目标可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
 - 最大 prompt 长度、最大输出长度、并发上限已测。
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
@@ -169,6 +171,7 @@ python capacity_plan.py \
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
 - RAG、JSON structured output、tool/MCP calling 和 reasoning budget 的回归用例。
 - Canary/control/rollback 发布判断：候选版本不能只凭离线 eval 提升上线，必须写清 production rollout gate 的通过项、失败项和 action items。
+- Overload response runbook：SLO 变坏时要能从 queue/KV/decode/error/quota 信号判断是限流、降级、扩容、回滚还是 page owner，不能只写“增加机器”。
 - 超时、限流、降级、格式错误和安全拒答策略。
 - 明确说明你的研究问题、baseline、workload、结论适用条件，以及哪些结果只在 MockEngine / 本地 CPU 下成立。
 
@@ -189,8 +192,9 @@ python capacity_plan.py \
 11. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
 12. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
 13. **Production rollout gate.** 将 stable baseline 与 candidate 放进同一张表，报告 offline quality、安全、SLO、错误率、成本、canary traffic/sample、control comparison、required monitors 和 rollback readiness；结论只能是 promote、继续低流量 canary、降级或 block/rollback。
-14. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
-15. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
+14. **Overload response.** 报告 queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness；每个失败项必须有明确动作，例如 load shedding、排队隔离、上下文截断、max-token 降级、扩容、回滚或 incident page。
+15. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
+16. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 
 ### 结果表模板
 
@@ -229,6 +233,12 @@ python capacity_plan.py \
 | Candidate | traffic % | sample size | pass rate delta | safety gate | P95/error | cost delta | monitors | rollback | decision |
 |-----------|-----------|-------------|-----------------|-------------|-----------|------------|----------|----------|----------|
 | baseline vs candidate | | | | | | | | | |
+
+### Overload response 模板
+
+| Window | queue/TTFT | TPOT | KV usage/swaps | error/timeout | noisy tenant | degradation ready | severity | action |
+|--------|------------|------|----------------|---------------|--------------|-------------------|----------|--------|
+| incident window | | | | | | | | |
 
 ### P/D capacity 模板
 

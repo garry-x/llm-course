@@ -787,6 +787,92 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
                 },
             )
 
+    def test_serving_overload_response_passes_healthy_service(self):
+        report = submission.serving_overload_response_report(
+            {
+                "waiting_requests": 2,
+                "p95_queue_wait_ms": 40.0,
+                "p95_ttft_ms": 420.0,
+                "p95_tpot_ms": 32.0,
+                "kv_cache_usage_pct": 0.55,
+                "swapped_requests": 0,
+                "error_rate": 0.002,
+                "timeout_rate": 0.001,
+                "degradation_ready": True,
+            },
+            {
+                "max_waiting_requests": 10,
+                "max_p95_queue_wait_ms": 100.0,
+                "max_p95_ttft_ms": 800.0,
+                "max_p95_tpot_ms": 50.0,
+                "max_kv_cache_usage_pct": 0.85,
+                "max_error_rate": 0.01,
+                "max_timeout_rate": 0.005,
+            },
+            tenant_usage=[{"tenant_id": "team-a", "request_rate": 5.0, "quota": 10.0, "active_kv_tokens": 2000}],
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["severity"], "normal")
+        self.assertEqual(report["decision"], "serve_normally")
+        self.assertTrue(report["gates"]["queue_pressure"]["pass"])
+        self.assertEqual(report["action_items"], [])
+
+    def test_serving_overload_response_detects_queue_kv_decode_and_tenant_risk(self):
+        report = submission.serving_overload_response_report(
+            {
+                "waiting_requests": 80,
+                "p95_queue_wait_ms": 900.0,
+                "p95_ttft_ms": 1800.0,
+                "p95_tpot_ms": 95.0,
+                "kv_cache_usage_pct": 0.96,
+                "swapped_requests": 3,
+                "error_rate": 0.03,
+                "timeout_rate": 0.02,
+                "degradation_ready": False,
+                "scaleout_ready": False,
+            },
+            {
+                "max_waiting_requests": 20,
+                "max_p95_queue_wait_ms": 200.0,
+                "max_p95_ttft_ms": 900.0,
+                "max_p95_tpot_ms": 60.0,
+                "max_kv_cache_usage_pct": 0.9,
+                "max_swapped_requests": 0,
+                "max_error_rate": 0.01,
+                "max_timeout_rate": 0.005,
+                "max_tenant_quota_ratio": 1.0,
+            },
+            tenant_usage=[
+                {"tenant_id": "free-tier", "request_rate": 40.0, "quota": 10.0, "active_kv_tokens": 32000},
+                {"tenant_id": "paid", "request_rate": 4.0, "quota": 20.0, "active_kv_tokens": 2000},
+            ],
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["severity"], "incident")
+        self.assertEqual(report["decision"], "load_shed_and_page_owner")
+        self.assertFalse(report["gates"]["queue_pressure"]["pass"])
+        self.assertFalse(report["gates"]["kv_pressure"]["pass"])
+        self.assertFalse(report["gates"]["decode_saturation"]["pass"])
+        self.assertFalse(report["gates"]["error_budget"]["pass"])
+        self.assertFalse(report["gates"]["tenant_fairness"]["pass"])
+        self.assertIn("free-tier", report["gates"]["tenant_fairness"]["signals"]["noisy_tenants"][0]["tenant_id"])
+        self.assertIn("shed_or_rate_limit_low_priority_traffic", report["action_items"])
+        self.assertIn("reduce_context_or_active_kv_and_disable_swapping", report["action_items"])
+        self.assertIn("reduce_max_tokens_or_add_decode_capacity", report["action_items"])
+        self.assertIn("trigger_incident_and_check_recent_release_or_dependency", report["action_items"])
+        self.assertIn("enforce_tenant_quota_or_isolate_noisy_neighbor", report["action_items"])
+
+    def test_serving_overload_response_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.serving_overload_response_report({}, {})
+        with self.assertRaises(ValueError):
+            submission.serving_overload_response_report({"p95_ttft_ms": 10, "p95_tpot_ms": 5, "error_rate": "bad"})
+        with self.assertRaises(ValueError):
+            submission.serving_overload_response_report(
+                {"p95_ttft_ms": 10, "p95_tpot_ms": 5, "error_rate": 0.0},
+                tenant_usage=[{"tenant_id": "x", "request_rate": 1, "quota": 0}],
+            )
+
     def test_prefill_decode_report_splits_latency_and_slo(self):
         requests = [
             {

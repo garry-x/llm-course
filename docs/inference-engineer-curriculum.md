@@ -13,7 +13,7 @@
 | 1. 模型内部结构 | Ch01-Ch06 | Token 如何进入模型，attention/FFN/MoE 如何产生 logits | 能从 shape 和参数量解释一次前向传播 |
 | 2. 生成链路 | Ch08-Ch10 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性、test-time compute 和 speculative gate 的 trade-off |
 | 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本 | 能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存 |
-| 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark |
+| 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归、可降级的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark 和 overload response runbook |
 | 5. 多模态与质量评估 | Ch09-Ch11、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、canary/control/rollback 上线方案和压测报告 |
 
 ## 能力目标
@@ -51,8 +51,9 @@
 - 能支持非流式响应和 SSE 流式响应。
 - 能记录 request id、model、tokens、latency、finish reason、错误类型。
 - 能把 mock engine 替换为 vLLM、SGLang、TensorRT-LLM、llama.cpp 或远程 OpenAI-compatible endpoint。
+- 能把 queue backlog、KV cache usage、swapping、TPOT、错误率、timeout 和租户配额映射成限流、load shedding、降级、扩容、回滚或 incident page。
 
-**对应内容：**Ch10 10.12-10.13，Capstone `app.py`。
+**对应内容：**Ch10 10.12-10.13，Capstone `app.py` 与 overload response 表。
 
 ### E. RAG、工具调用与输出约束
 
@@ -90,6 +91,7 @@
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
 | 调度准入 | 能用 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens 和 queue wait 判断哪些请求进入 continuous batch | admission gate 表 |
+| 过载响应 | 能用 queue/KV/decode/error/quota 信号判断 load shedding、降级、扩容、回滚或 page owner | overload response 表 |
 | 准入控制 | 能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit | 容量规划说明 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
@@ -141,6 +143,7 @@ P95 TTFT：
 P95 TPOT：
 speculative decoding gate：
 continuous batching admission：
+overload response：
 production rollout gate：
 SLO 是否通过：
 tokens/s：

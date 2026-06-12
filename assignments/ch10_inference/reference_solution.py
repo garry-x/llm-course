@@ -1156,6 +1156,161 @@ def production_rollout_gate_report(baseline, candidate, rollout_policy=None):
     }
 
 
+def serving_overload_response_report(metrics, policy=None, tenant_usage=None):
+    if not isinstance(metrics, dict) or not metrics:
+        raise ValueError("metrics must be a non-empty dict")
+    policy = dict(policy or {})
+    tenant_usage = list(tenant_usage or [])
+
+    def metric(name, default=None):
+        value = metrics.get(name, default)
+        if value is None:
+            raise ValueError(f"missing required metric: {name}")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"metric {name} must be numeric")
+        if float(value) < 0:
+            raise ValueError(f"metric {name} must be non-negative")
+        return float(value)
+
+    def threshold(name, default):
+        value = policy.get(name, default)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"policy {name} must be numeric")
+        if float(value) < 0:
+            raise ValueError(f"policy {name} must be non-negative")
+        return float(value)
+
+    waiting_requests = metric("waiting_requests", 0.0)
+    max_waiting_requests = threshold("max_waiting_requests", float("inf"))
+    p95_queue_wait_ms = metric("p95_queue_wait_ms", 0.0)
+    max_p95_queue_wait_ms = threshold("max_p95_queue_wait_ms", float("inf"))
+    p95_ttft_ms = metric("p95_ttft_ms")
+    max_p95_ttft_ms = threshold("max_p95_ttft_ms", float("inf"))
+    p95_tpot_ms = metric("p95_tpot_ms")
+    max_p95_tpot_ms = threshold("max_p95_tpot_ms", float("inf"))
+    kv_cache_usage_pct = metric("kv_cache_usage_pct", 0.0)
+    max_kv_cache_usage_pct = threshold("max_kv_cache_usage_pct", 1.0)
+    swapped_requests = metric("swapped_requests", 0.0)
+    max_swapped_requests = threshold("max_swapped_requests", 0.0)
+    error_rate = metric("error_rate")
+    max_error_rate = threshold("max_error_rate", float("inf"))
+    timeout_rate = metric("timeout_rate", 0.0)
+    max_timeout_rate = threshold("max_timeout_rate", float("inf"))
+    degradation_ready = bool(metrics.get("degradation_ready", False))
+    scaleout_ready = bool(metrics.get("scaleout_ready", False))
+
+    noisy_tenants = []
+    tenant_quota_ratio_threshold = threshold("max_tenant_quota_ratio", 1.0)
+    for tenant in tenant_usage:
+        if not isinstance(tenant, dict):
+            raise ValueError("tenant usage rows must be dicts")
+        tenant_id = str(tenant.get("tenant_id", "unknown"))
+        request_rate = tenant.get("request_rate", 0.0)
+        quota = tenant.get("quota", None)
+        active_kv_tokens = tenant.get("active_kv_tokens", 0.0)
+        if quota is None:
+            continue
+        for name, value in [("request_rate", request_rate), ("quota", quota), ("active_kv_tokens", active_kv_tokens)]:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"tenant {name} must be numeric")
+            if float(value) < 0:
+                raise ValueError(f"tenant {name} must be non-negative")
+        if float(quota) <= 0:
+            raise ValueError("tenant quota must be positive")
+        quota_ratio = float(request_rate) / float(quota)
+        if quota_ratio > tenant_quota_ratio_threshold:
+            noisy_tenants.append(
+                {
+                    "tenant_id": tenant_id,
+                    "request_rate": float(request_rate),
+                    "quota": float(quota),
+                    "quota_ratio": quota_ratio,
+                    "active_kv_tokens": float(active_kv_tokens),
+                }
+            )
+
+    gates = {
+        "queue_pressure": {
+            "pass": waiting_requests <= max_waiting_requests and p95_queue_wait_ms <= max_p95_queue_wait_ms and p95_ttft_ms <= max_p95_ttft_ms,
+            "signals": {
+                "waiting_requests": waiting_requests,
+                "max_waiting_requests": max_waiting_requests,
+                "p95_queue_wait_ms": p95_queue_wait_ms,
+                "max_p95_queue_wait_ms": max_p95_queue_wait_ms,
+                "p95_ttft_ms": p95_ttft_ms,
+                "max_p95_ttft_ms": max_p95_ttft_ms,
+            },
+        },
+        "kv_pressure": {
+            "pass": kv_cache_usage_pct <= max_kv_cache_usage_pct and swapped_requests <= max_swapped_requests,
+            "signals": {
+                "kv_cache_usage_pct": kv_cache_usage_pct,
+                "max_kv_cache_usage_pct": max_kv_cache_usage_pct,
+                "swapped_requests": swapped_requests,
+                "max_swapped_requests": max_swapped_requests,
+            },
+        },
+        "decode_saturation": {
+            "pass": p95_tpot_ms <= max_p95_tpot_ms,
+            "signals": {"p95_tpot_ms": p95_tpot_ms, "max_p95_tpot_ms": max_p95_tpot_ms},
+        },
+        "error_budget": {
+            "pass": error_rate <= max_error_rate and timeout_rate <= max_timeout_rate,
+            "signals": {
+                "error_rate": error_rate,
+                "max_error_rate": max_error_rate,
+                "timeout_rate": timeout_rate,
+                "max_timeout_rate": max_timeout_rate,
+            },
+        },
+        "tenant_fairness": {
+            "pass": not noisy_tenants,
+            "signals": {"noisy_tenants": noisy_tenants, "max_tenant_quota_ratio": tenant_quota_ratio_threshold},
+        },
+        "degradation_readiness": {
+            "pass": degradation_ready or (scaleout_ready and not noisy_tenants),
+            "signals": {"degradation_ready": degradation_ready, "scaleout_ready": scaleout_ready},
+        },
+    }
+
+    action_items = []
+    if not gates["tenant_fairness"]["pass"]:
+        action_items.append("enforce_tenant_quota_or_isolate_noisy_neighbor")
+    if not gates["queue_pressure"]["pass"]:
+        action_items.append("shed_or_rate_limit_low_priority_traffic")
+    if not gates["kv_pressure"]["pass"]:
+        action_items.append("reduce_context_or_active_kv_and_disable_swapping")
+    if not gates["decode_saturation"]["pass"]:
+        action_items.append("reduce_max_tokens_or_add_decode_capacity")
+    if not gates["error_budget"]["pass"]:
+        action_items.append("trigger_incident_and_check_recent_release_or_dependency")
+    if not gates["degradation_readiness"]["pass"]:
+        action_items.append("prepare_degraded_mode_or_scaleout_before_expanding_traffic")
+
+    failed_gates = [name for name, gate in gates.items() if not gate["pass"]]
+    if not failed_gates:
+        severity = "normal"
+        decision = "serve_normally"
+    elif not gates["error_budget"]["pass"] or (not gates["kv_pressure"]["pass"] and swapped_requests > max_swapped_requests):
+        severity = "incident"
+        decision = "load_shed_and_page_owner"
+    elif not gates["queue_pressure"]["pass"] or not gates["decode_saturation"]["pass"] or not gates["tenant_fairness"]["pass"]:
+        severity = "degraded"
+        decision = "enter_degraded_mode_with_load_shedding"
+    else:
+        severity = "watch"
+        decision = "prepare_mitigation"
+
+    return {
+        "overall_pass": not failed_gates,
+        "severity": severity,
+        "decision": decision,
+        "failed_gates": failed_gates,
+        "gates": gates,
+        "action_items": action_items,
+    }
+
+
 def prefill_decode_disaggregation_report(requests, slo=None):
     if not requests:
         raise ValueError("requests must not be empty")

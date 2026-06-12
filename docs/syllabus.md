@@ -76,10 +76,10 @@
 | A2 Ch03 | scaled attention、causal/padding mask、softmax Jacobian、attention entropy | Q/K/V、mask 语义、attention 反向传播 | 为什么 mask 必须在 softmax 前应用？attention score 的 shape 为什么是四维？ |
 | A3 Ch04-Ch05 | MHA/GQA/MLA、repeat KV heads、LayerNorm/RMSNorm、SwiGLU、block resource estimates | 多头结构、KV cache、残差路径、激活显存 | GQA 为什么能省推理显存？Pre-Norm 为什么更利于深层训练？ |
 | A4 Ch06 | GPT config/model、weight tying、causal LM label shift、MoE router 和参数预算 | decoder-only LM、LM head、MoE 稀疏激活 | 为什么 logits 位置 `t` 预测 label `t+1`？MoE 的总参数和激活参数为什么不同？ |
-| A5 Ch07 | dataset/dataloader、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory | 训练闭环、优化器、校准、训练成本 | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？ |
+| A5 Ch07 | dataset/dataloader、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory、`training_system_gate_report` | 训练闭环、优化器、校准、训练成本、resume parity、工业训练 gate | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？什么时候应该继续扩容，什么时候必须先 debug？ |
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、token constraints、speculative decoding | 解码策略、搜索、多样性、test-time compute、结构化生成 | top-p 为什么是自适应截断？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、LoRA、sequence log-probs、RM/DPO/PPO/GRPO、implicit reward、KL、length bias | 指令微调、偏好优化、reference model、对齐风险 | DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？ |
-| A8 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、benchmark summary、指标结论边界 | 推理工程、RAG、服务指标、容量规划 | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？ |
+| A8 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、benchmark summary、`prefill_decode_disaggregation_report`、指标结论边界 | 推理工程、RAG、服务指标、容量规划、prefill/decode 解耦、KV transfer | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？ |
 | A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1 | 经典 NLP、encoder-only、结构化预测、评测指标 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？ |
 
 ## 书面题能力层级
@@ -90,7 +90,7 @@
 |------|------|------|
 | Level 1: Definition / Shape | 写清输入输出、mask、标签、有效 token、batch/head/sequence 维度 | attention score shape、SFT label mask、KV cache bytes |
 | Level 2: Derivation / Calculation | 展开公式并完成小数值例子，说明每一步分母、归一化或动态规划状态 | softmax CE gradient、top-p nucleus、CRF log-partition、pass@k |
-| Level 3: Experiment / Critique | 设计实验、选择指标、列出失败模式，并说明结果不能推出哪些更强结论 | RAG ablation、DPO vs SFT evaluation、benchmark summary |
+| Level 3: Experiment / Critique | 设计实验、选择指标、列出失败模式，并说明结果不能推出哪些更强结论 | RAG ablation、DPO vs SFT evaluation、training gate、prefill/decode benchmark summary |
 
 ## Capstone 学术要求
 
@@ -114,6 +114,7 @@
 - 数据：训练/验证拆分、去重或泄漏风险、token 统计、样本质量问题。
 - 模型：架构规模、参数量、训练 token budget、batch tokens、optimizer state 和 checkpoint 策略。
 - 优化：loss/PPL 曲线、learning rate schedule、gradient clipping、resume、失败 run 处理。
+- 系统 gate：把 optimization、throughput、state/checkpoint 和 evaluation 分开判定，说明继续训练、扩容、回退或 debug 的依据。
 - 评测：至少一个 held-out 指标、一个人工错误分析维度和一个能力退化或偏差风险。
 - 结论：哪些发现只适用于当前数据、规模、预算和随机种子。
 
@@ -122,6 +123,7 @@
 - 服务：模型、硬件、batching、context length、generation 参数和 API 行为。
 - 检索/上下文：chunking、embedding、retrieval、reranking、MMR、context packing 和 citation 策略。
 - 性能：TTFT、TPOT、tokens/s、P50/P95/P99、显存、并发和错误率。
+- 解耦分析：若 workload 有长 prompt、RAG、多模态或 agent 请求，必须拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens。
 - 质量：任务指标、失败案例、结构化输出或 tool/JSON 回归。
 - 结论：哪些结果依赖当前负载、评测集、缓存命中率、硬件和实现。
 

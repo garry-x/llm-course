@@ -339,6 +339,7 @@ Quick check：
 - 解释 grad clipping、AMP、checkpoint/resume、tokens/s。
 - 读训练日志，定位 loss spike、NaN 和吞吐下降。
 - 用简单 scaling law 讨论数据/参数/算力预算。
+- 把训练 run 拆成 optimization、throughput、state/checkpoint 和 evaluation gate，决定继续训练、扩容、回退或 debug。
 
 核心推导：
 
@@ -347,8 +348,10 @@ Quick check：
 - AdamW training memory：参数、梯度和两个 moment states；optimizer state sharding 只分摊 optimizer states。
 - ZeRO/FSDP 每卡模型状态显存：DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的参数、梯度和 optimizer states 分摊差异。
 - DDP、tensor parallel、pipeline parallel 分别改变的通信模式：AllReduce、AllGather/ReduceScatter、层间 activation transfer。
+- 多维并行选型：FSDP/ZeRO 解决模型状态显存，TP 切层内矩阵，PP 切模型深度，CP 切长序列，EP 切 MoE experts；选型必须绑定模型结构、序列长度和集群拓扑。
 - MFU：`model_flops_per_token * tokens/s / (num_gpus * peak_flops_per_gpu)`，以及低 MFU 的常见系统原因。
-- checkpoint storage 与保存频率的成本。
+- checkpoint storage、保存频率、resume parity 和失败重跑成本。
+- training gate 表：optimization 看 train/val/lr/grad_norm，throughput 看 tokens/s/MFU/等待时间，state 看 checkpoint/resume/RNG/sampler，evaluation 看 held-out、能力、安全和格式回归。
 
 课堂 demo：
 
@@ -357,6 +360,7 @@ Quick check：
 - 给定 1B 参数、bf16 参数/梯度、fp32 AdamW moments，计算训练显存和 optimizer-state sharding 后的单卡估算。
 - 给定 7B 模型、8 卡、bf16 参数/梯度和 fp32 AdamW states，比较 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存。
 - 给定 `tokens/s`、GPU 峰值算力和参数量，手算 MFU，并列出 batch 太小、通信等待、dataloader 慢和 checkpoint 写盘四类诊断信号。
+- 给定一份训练日志，填 `training_system_gate_report`：判断哪些 gate 通过、哪些 action item 必须先处理。
 - 修改 learning rate 观察 loss 异常。
 
 Quick check：
@@ -366,11 +370,12 @@ Quick check：
 - tokens/s 下降可能来自哪些非模型原因？
 - 为什么 DDP 不会降低每卡模型状态显存？
 - MFU 低一定说明模型实现错误吗？
+- loss 下降但 evaluation gate 失败时，为什么不能直接扩大训练规模？
 
 课后产出：
 
 - 训练日志、checkpoint、resume 证明。
-- 阅读复盘：Chinchilla 或 ZeRO 的一个工程假设。
+- 阅读复盘：Chinchilla、ZeRO/FSDP、MegaScale 或 DeepSeek-V3 中一个工程假设，并说明它在课程项目中的简化边界。
 
 ## Week 6 Lecture 11: Decoding、Sampling 与 Search
 
@@ -525,6 +530,7 @@ Quick check：
 - 推导 KV cache 显存公式。
 - 区分 prefill/decode、TTFT、TPOT、tokens/s、P95/P99。
 - 解释 FlashAttention 的 IO-aware 动机。
+- 判断什么时候需要 prefill/decode 解耦，并把 KV transfer 作为新的系统边界计入报告。
 
 核心推导：
 
@@ -532,6 +538,7 @@ Quick check：
 - Prefix cache effective prefill tokens：总 prompt tokens 减去每条请求可复用的最长历史前缀 tokens。
 - Workload token rate：`QPS * E[prompt_tokens]` 和 `QPS * E[output_tokens]` 分别约束 prefill/decode。
 - active KV tokens 与 admission control：按请求数限流、按活跃 token 限流和按 SLO 队列隔离的差异。
+- Disaggregated serving 指标：`TTFT = queue + prefill + KV transfer + decode admission + first decode token`，`TPOT` 单独约束 decode worker。
 - tail latency 与并发队列的关系。
 
 课堂 demo：
@@ -541,6 +548,7 @@ Quick check：
 - 运行 inference capstone benchmark，读 P95 和 tokens/s。
 - 给定 QPS、平均 prompt/output tokens、prefill/decode capacity，判断瓶颈在 prefill 还是 decode。
 - 给定每 token KV bytes、平均活跃上下文长度和 KV 显存预算，估算 admission limit，并说明为什么长请求不能和短请求只按请求数统一限流。
+- 给定一组 prefill/decode trace，填写 `prefill_decode_disaggregation_report`，判断 likely bottleneck、SLO violation 和 prefill/decode worker 配比是否合理。
 - 把一次 benchmark 结果改写成结构化结论摘要，区分任务、baseline、指标和结论边界。
 
 Quick check：
@@ -550,12 +558,13 @@ Quick check：
 - 平均延迟为什么不能替代 P95？
 - 为什么 high QPS 下 TPOT 可能先坏，而 TTFT 仍暂时正常？
 - admission control 为什么要看 active KV tokens？
+- KV transfer 什么时候会抵消 prefill/decode 解耦收益？
 - 为什么固定开发集上的 pass rate 不能证明开放域能力？
 
 课后产出：
 
 - Ch10 KV cache 与 benchmark summary 测试通过。
-- 推理项目提案。
+- 推理项目提案，若 workload 有长 prompt/RAG/多模态/agent 请求，附 prefill、KV transfer、decode queue、TPOT 和 active KV tokens 的测量计划。
 
 ## Week 8 Lecture 16: RAG、Quantization、多模态输入与 Production Readiness
 

@@ -163,12 +163,14 @@
 - Hoffmann et al. [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556). 重点看 Chinchilla scaling law 的数据/参数权衡。
 - Rajbhandari et al. [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054). 重点看 optimizer/gradient/parameter state sharding。
 - Shoeybi et al. [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053). 重点看 tensor parallelism 如何切分 Transformer 层内矩阵。
+- Jiang et al. [MegaScale: Scaling Large Language Model Training to More Than 10,000 GPUs](https://arxiv.org/abs/2402.15627). 重点看大规模训练中的 full-stack observability、straggler 诊断、容错和 MFU，而不是只记住 GPU 数。
 
 选读：
 
 - Huang et al. [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://arxiv.org/abs/1811.06965). 重点看 micro-batch、pipeline bubble 和 activation rematerialization。
-- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, FSDP。
-- DeepSeek-V3 Technical Report 中 FP8 mixed precision 与 DualPipe。
+- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, FSDP2 和 Distributed Checkpoint。重点看 FSDP 如何分片参数、梯度和 optimizer state，以及 resume parity 如何验证。
+- NVIDIA Megatron Core parallelism guide。重点看 DP、TP、PP、CP、EP 和 sequence parallelism 分别切什么维度，什么时候组合。
+- DeepSeek-V3 Technical Report 中 FP8 mixed precision、DualPipe、MLA/MoE 和 MTP。重点看这些设计如何共同服务训练效率和稳定性。
 - NVIDIA / PyTorch profiler 文档中 GPU utilization、kernel timeline、communication overlap 和 dataloader bottleneck 的诊断方法。
 
 复盘问题：
@@ -179,6 +181,8 @@
 - 参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？
 - DDP、ZeRO/FSDP、tensor parallel 和 pipeline parallel 分别解决容量、通信还是吞吐中的哪一类瓶颈？
 - MFU 低时，如何区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合？
+- 一次训练 run 的 optimization、throughput、state/checkpoint 和 evaluation gate 分别需要哪些最低证据？
+- FSDP2 / Distributed Checkpoint / Megatron Core 这类工具解决的是课程 tiny train 中哪一个被简化掉的问题？
 - Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？
 
 ## Week 6: Generation、Search 与 Speculative Decoding
@@ -246,11 +250,14 @@
 - Lewis et al. [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401). 重点看 retriever/generator 组合。
 - Dettmers et al. [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314). 重点看 4-bit quantization 与 LoRA 结合。
 - Yu et al. [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu). 重点看 iteration-level scheduling 和 continuous batching 为什么能减少队列浪费。
+- PyTorch and vLLM. [Disaggregated Inference at Scale with PyTorch & vLLM](https://pytorch.org/blog/disaggregated-inference-at-scale-with-pytorch-vllm/). 重点看 prefill/decode 分离如何同时影响 TTFT、TPOT、throughput 和 KV transfer。
 
 选读：
 
-- vLLM documentation on PagedAttention and continuous batching。
-- SGLang, TensorRT-LLM, llama.cpp 官方文档中 serving、quantization 或 batching 部分。
+- vLLM documentation on PagedAttention、continuous batching、prefix caching 和 disaggregated prefilling。
+- SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。
+- TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。
+- llama.cpp 官方文档中 quantization、CPU/GPU offload 和本地部署边界。
 - Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。
 - Liu et al. [Visual Instruction Tuning](https://arxiv.org/abs/2304.08485). 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。
 - OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。
@@ -265,6 +272,8 @@
 - quantization 的误差会优先影响哪些任务、层或 token 分布？
 - 为什么 serving admission control 不能只按并发请求数，而要看 active KV tokens、prompt/output token 分布和 SLO 队列？
 - 长 prompt 进入 continuous batching 时，chunked prefill 和 prefix cache 分别缓解哪类 TTFT 问题？
+- prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？
+- SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？
 
 ## Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics
 

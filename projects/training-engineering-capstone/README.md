@@ -13,6 +13,7 @@
 | Checkpoint | 保存 latest checkpoint，包含 model/optimizer/config/global_step | `checkpoints/latest.pt` |
 | Resume | 从 checkpoint 恢复并继续训练，global_step 单调增加 | `python acceptance.py` |
 | Planning | 估算 steps、GPU hours、成本、checkpoint 存储 | `python plan_training.py` |
+| Strategy Report | 对照 Ch07 的 `distributed_training_strategy_report`，估算 DDP/ZeRO/FSDP 类策略的每卡模型状态、global batch tokens、MFU 和 scale rehearsal 风险 | 报告中的 strategy 表 |
 | Industrial Gate | 把训练 run 拆成 optimization、throughput、state/checkpoint、evaluation gate | 报告中的 gate 表 |
 | Acceptance | 串联数据分析、训练、resume、规划和指标检查 | `python acceptance.py` 输出 `ACCEPTANCE: PASS` |
 
@@ -88,6 +89,7 @@ python plan_training.py \
 - `metrics.jsonl` 至少包含 train_loss、val_loss、ppl、lr、grad_norm、tokens/s。
 - `checkpoints/latest.pt` 能恢复训练，resume 后 global_step 增加。
 - 能解释 global batch tokens、总 step、tokens/s/GPU、GPU hours 和预计成本。
+- 能用 strategy report 说明 DDP、ZeRO/FSDP、TP/PP 或低精度训练分别解决的是容量、通信、吞吐还是 checkpoint 状态问题。
 - 能说明 loss spike、nan、吞吐下降、开发集退化时的排查顺序。
 - 能把训练 run 映射到 optimization、throughput、state/checkpoint、evaluation 四类 gate，并说明哪些 gate 支持继续扩容，哪些 gate 要先 debug。
 
@@ -100,6 +102,7 @@ python plan_training.py \
 - checkpoint resume 产出：恢复后 step 单调增加，配置和优化器状态被恢复。
 - 至少一个 ablation，例如学习率、batch size、seq_len 或 dropout。
 - loss spike、NaN、过拟合或吞吐下降的排查记录。
+- 分布式/低精度策略说明：即使本项目只在 CPU 或单 GPU 上跑，也要用 Ch07 的策略账本解释目标规模下 DDP、ZeRO/FSDP、FP8/MXFP8 或 checkpoint state 会改变哪些风险。
 - 明确说明你的研究问题、baseline、结论适用条件，以及哪些结果只在 tiny corpus / CPU baseline 下成立。
 
 ### Final report 结构
@@ -114,9 +117,10 @@ python plan_training.py \
 6. **Ablation.** 一次只改一个主要因素；若同时改多个因素，要说明为什么无法归因。
 7. **Results.** 用表格报告 train loss、val loss/PPL、grad norm、tokens/s、step time、是否出现 NaN/loss spike。
 8. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
-9. **Industrial gates.** 用表格报告 optimization、throughput、state/checkpoint、evaluation gate：每个 gate 的信号、阈值、通过/失败和下一步动作。
-10. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
-11. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
+9. **Strategy report.** 用 `distributed_training_strategy_report` 或等价表格报告每卡模型状态、global batch tokens、MFU、显存 gate 和 action item；若讨论 FP8/MXFP8，写清 scale/amax/checkpoint state 如何验证。
+10. **Industrial gates.** 用表格报告 optimization、throughput、state/checkpoint、evaluation gate：每个 gate 的信号、阈值、通过/失败和下一步动作。
+11. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
+12. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
 
 ### 结果表模板
 
@@ -124,6 +128,12 @@ python plan_training.py \
 |-----|----------|------------|----------|-----|-----------|----------|------|------|
 | baseline | 默认配置 | | | | | | | |
 | ablation | 例如 `seq_len=128` | | | | | | | |
+
+### Strategy report 模板
+
+| Strategy | 每卡模型状态 | Global batch tokens | MFU | 显存 gate | Action item |
+|----------|--------------|---------------------|-----|-----------|-------------|
+| DDP / ZeRO / FSDP | | | | | |
 
 ### Industrial gate 模板
 

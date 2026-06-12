@@ -56,6 +56,26 @@ def optimizer_state_memory_bytes(
     raise NotImplementedError
 
 
+def distributed_training_strategy_report(
+    num_params,
+    num_gpus,
+    strategy,
+    micro_batch_size,
+    seq_len,
+    grad_accum_steps=1,
+    param_dtype_bytes=2,
+    grad_dtype_bytes=2,
+    optimizer_state_dtype_bytes=4,
+    num_optimizer_states=2,
+    gpu_memory_gb=None,
+    activation_memory_gb=None,
+    tokens_per_second=None,
+    peak_flops_per_gpu=None,
+):
+    """Report per-rank state memory, global batch tokens, MFU, and scale-readiness gates."""
+    raise NotImplementedError
+
+
 def cross_entropy_manual(logits, targets):
     raise NotImplementedError
 

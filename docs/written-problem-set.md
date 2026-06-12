@@ -78,8 +78,8 @@
 11. 给定 `grad_accum_steps=4`、四个 micro-batch mean losses、每个 micro-batch 的 token 数和 warmup scheduler，计算每次 backward 使用的 scaled loss、一次 optimizer step 消耗的 token 数、scheduler 应推进几次，以及如果忘记除以 `grad_accum_steps` 会等价于怎样改变学习率。
 12. 给出训练日志中 loss spike、NaN、grad_norm 突增、tokens/s 下降各自可能的原因和排查顺序。
 13. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
-14. 给定 7B 参数模型、8 张 GPU、bf16 参数/梯度、fp32 AdamW `m/v` states，分别计算 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存；再说明这些估算没有包含 activation、通信 buffer、临时张量和 allocator fragmentation，因此不能单独证明训练可行。
-15. 给定模型参数量 `N=7B`、吞吐 `tokens/s=20000`、GPU 数 `8`、单卡峰值 `300 TFLOP/s`，按 `6N` FLOPs/token 粗估 MFU；若 MFU 只有 18%，列出至少 4 个可能原因，并说明如何用 profiler 或日志区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合。
+14. 给定 7B 参数模型、8 张 GPU、bf16 参数/梯度、fp32 AdamW `m/v` states，分别计算 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存；再按 `distributed_training_strategy_report` 的格式写出 strategy、global batch tokens、memory gate 和 action item，并说明这些估算没有包含 activation、通信 buffer、临时张量和 allocator fragmentation，因此不能单独证明训练可行。
+15. 给定模型参数量 `N=7B`、吞吐 `tokens/s=20000`、GPU 数 `8`、单卡峰值 `300 TFLOP/s`，按 `6N` FLOPs/token 粗估 MFU；若 MFU 只有 18%，列出至少 4 个可能原因，并说明如何用 profiler 或日志区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合。若策略使用 FP8/MXFP8，还要写出 scale/amax history、loss spike、梯度范围和 checkpoint state 的验证证据。
 
 ## Ch08 Generation / Decoding
 

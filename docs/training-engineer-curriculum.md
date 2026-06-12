@@ -14,8 +14,8 @@
 | 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint |
 | 3. 微调与对齐 | Ch09 | 如何把预训练模型变成可用助手 | SFT/LoRA/DPO/GRPO 训练数据、loss masking、偏好优化 |
 | 4. 实验设计与评估 | Ch08-Ch09、Capstone | 如何证明训练或对齐方法真的更好 | research question、baseline、ablation、对齐评估和结论边界 |
-| 5. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP/TP/PP、FP8/FP4、MFU、tokens/s 解释 |
-| 6. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划报告 |
+| 5. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP2/TP/PP、FP8/MXFP8、MFU、tokens/s 解释 |
+| 6. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划与 strategy report |
 
 ## 能力目标
 
@@ -55,11 +55,12 @@
 
 ### E. 分布式与低精度训练
 
-- 能解释 DP、DDP、FSDP/ZeRO、TP、PP、gradient accumulation 的适用场景。
-- 能解释 BF16/FP16/FP8/FP4 的收益、风险和常见数值问题。
+- 能解释 DP、DDP、FSDP2/ZeRO、TP、PP、gradient accumulation 的适用场景。
+- 能解释 BF16/FP16/FP8/MXFP8/FP4 的收益、风险和常见数值问题。
 - 能用 MFU、tokens/s/GPU、通信开销判断集群训练效率。
 - 能估算 parameters、gradients、AdamW moments、activations、temporary buffers 和 checkpoint 对单卡显存的影响。
 - 能说明 ZeRO/FSDP 分别切分哪些训练状态，TP/PP 如何改变通信路径和 pipeline bubble。
+- 能用 `distributed_training_strategy_report` 或等价表格比较 per-rank memory、global batch tokens、MFU、显存 gate 和 scale rehearsal action item。
 
 **对应内容：**Ch07 7.10、7.15，Ch10 10.15。
 
@@ -89,7 +90,7 @@
 | 开发集 | 能记录 val_loss / perplexity / ECE | `metrics.jsonl` |
 | 监控指标 | 至少记录 loss、lr、grad_norm、tokens/s | `metrics.jsonl` |
 | 显存规划 | 能拆分参数、梯度、optimizer state、activation 和 checkpoint 存储 | 显存估算表 |
-| 分布式规划 | 能解释 ZeRO/FSDP/TP/PP 选择、per-rank memory、tokens/s/GPU 和 MFU | 训练规划说明 |
+| 分布式规划 | 能解释 ZeRO/FSDP2/TP/PP 选择、per-rank memory、tokens/s/GPU、MFU 和 action item | strategy report + 训练规划说明 |
 | 训练规划 | 能估算 steps、GPU hours、成本、checkpoint 存储 | `plan_training.py` 输出 |
 | 实验结论 | 项目有研究问题、baseline、ablation 和结论边界 | proposal / milestone / final report |
 | 异常处理 | 能说明 nan/loss spike/吞吐下降时的排查顺序 | 复盘文档 |
@@ -104,8 +105,8 @@
 | 3 | Ch07 前半 | 实现 DataLoader、cross entropy、AdamW、scheduler |
 | 4 | Ch07 后半 | 实现 AMP、gradient clipping、训练日志和 loss 曲线 |
 | 5 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 练习，理解不同 loss |
-| 6 | Ch07 分布式专题 | 学 ZeRO/FSDP/TP/PP、FP8/FP4、MFU |
-| 7 | Training Capstone | 跑数据分析、训练、checkpoint/resume、规划脚本 |
+| 6 | Ch07 分布式专题 | 学 ZeRO/FSDP2/TP/PP、FP8/MXFP8、MFU |
+| 7 | Training Capstone | 跑数据分析、训练、checkpoint/resume、规划脚本和 strategy report |
 | 8 | 复盘 | 写训练报告：配置、曲线、成本、失败排查、下一步 |
 
 ## 最终交付模板

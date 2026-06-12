@@ -100,9 +100,9 @@
 | 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint、resume 和异常排查保护训练 |
 | 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
 | 微调与对齐 | Ch09 | 区分 SFT、LoRA、DPO、GRPO、RLVR/RFT 的数据格式、损失和适用场景 |
-| 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、GPU hours 和 checkpoint 存储 |
+| 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、MFU、GPU hours、checkpoint 存储和 scale rehearsal |
 
-**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、训练、开发集监控、checkpoint、resume、metrics 和训练规划。默认模型很小，CPU 可跑通；有 GPU 时可直接迁移到 CUDA 环境。
+**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、训练、开发集监控、checkpoint、resume、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下 DDP/ZeRO/FSDP、低精度、MFU 和 checkpoint state 的工程边界。
 
 **学习路线：**按 [LLM 训练工程师课程路线](training-engineer-curriculum.html)（详细版在 [docs/training-engineer-curriculum.html](docs/training-engineer-curriculum.html)）完成训练报告、指标日志、checkpoint 恢复说明和成本规划。
 
@@ -144,7 +144,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 4 | **多头注意力与 MLA** — MHA → GQA → DeepSeek MLA | `MultiHeadAttention` ~60行 | 5+5 |
 | 5 | **Transformer Block** — RMSNorm + FFN/SwiGLU + mHC | `TransformerBlock` ~50行 | 5+5 |
 | 6 | **组装 GPT + DeepSeekMoE** — GPT-2 124M 完整模型 | `GPTModel` ~100行 | 5+5 |
-| 7 | **训练循环** — AdamW/Muon + FP8/FP4 + 分布式 | 完整训练脚本 ~120行 | 6+5 |
+| 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + MTP 推测解码 + 约束生成 | 文本生成器 ~60行 | 6+5 |
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + LoRA + GRPO/RLVR ~210行 | 7+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool Gate + LSH + 服务蓝图 | 7+5 |

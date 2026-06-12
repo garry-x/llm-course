@@ -218,7 +218,7 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
     <div class="katex" data-expr="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" aria-label="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" role="img"></div>
   </div>
   <p>Ch07 作业中的 <code>global_batch_tokens</code> 和 <code>training_steps_for_token_budget</code> 对应这两个公式。举例：<code>micro_batch=4</code>、<code>seq_len=2048</code>、<code>grad_accum=8</code>、<code>data_parallel=16</code> 时，每步消耗 <code>1,048,576</code> 个 token；若训练预算是 <code>20B</code> token，则需要约 <code>19,074</code> 个 optimizer step。dense decoder-only LM 的粗略训练计算量常用 <span class="katex-inline" data-expr="6ND" aria-label="6ND" role="img"></span> 估算，其中 <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> 是参数量，<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 是训练 token 数；作业中的 <code>dense_lm_training_flops</code> 用这个近似把规模、数据和算力预算连起来。</p>
-  <p>训练显存还要包含优化器状态。AdamW 通常为每个参数保存梯度、一阶动量 <code>m</code> 和二阶动量 <code>v</code>；如果参数用 bf16、梯度用 bf16、moment 用 fp32，那么每个参数大约需要 <code>2 + 2 + 2*4 = 12</code> bytes。Ch07 作业中的 <code>optimizer_state_memory_bytes</code> 把参数、梯度、optimizer states 和 ZeRO-style optimizer state sharding 的单卡粗估分开计算。</p>
+  <p>训练显存还要包含优化器状态。AdamW 通常为每个参数保存梯度、一阶动量 <code>m</code> 和二阶动量 <code>v</code>；如果参数用 bf16、梯度用 bf16、moment 用 fp32，那么每个参数大约需要 <code>2 + 2 + 2*4 = 12</code> bytes。Ch07 作业中的 <code>optimizer_state_memory_bytes</code> 把参数、梯度、optimizer states 和 ZeRO-style optimizer state sharding 的单卡粗估分开计算；进一步的 <code>distributed_training_strategy_report</code> 会把 DDP、ZeRO-1/2/3、FSDP/FSDP2 映射到每卡模型状态、global batch tokens、通信模式、显存 gate 和 MFU gate。</p>
 
   <h4>Worked Example：AdamW 显存账本与 ZeRO-1 分片</h4>
   <p>以一个 <code>7B</code> 参数的 dense decoder-only LM 为例，假设参数用 bf16（2 bytes）、梯度用 bf16（2 bytes）、AdamW 的一阶/二阶动量 <code>m,v</code> 用 fp32（各 4 bytes）。训练显存不能只按“7B × 2 bytes”估算，因为那只覆盖模型权重本身：</p>
@@ -237,6 +237,20 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
     <div class="katex" data-expr="M_{\text{rank}}=14+14+\frac{56}{8}=35\text{ GB}" aria-label="M_{\text{rank}}=14+14+\frac{56}{8}=35\text{ GB}" role="img"></div>
   </div>
   <p>因此在这个配置下，ZeRO-1 把参数/梯度/optimizer state 的每卡显存从约 84 GB 降到约 35 GB。这个数字仍然没有包含激活、activation checkpointing、通信 buffer、临时矩阵、CUDA allocator 碎片和 checkpoint 写入峰值；这些部分会继续限制实际 micro-batch size。</p>
+  <div class="code-block" data-lang="python">
+report = distributed_training_strategy_report(
+    num_params=7_000_000_000,
+    num_gpus=8,
+    strategy="fsdp2",
+    micro_batch_size=2,
+    seq_len=2048,
+    grad_accum_steps=8,
+    gpu_memory_gb=80,
+    tokens_per_second=20_000,
+    peak_flops_per_gpu=300e12,
+)
+assert report["decision"] == "strategy_ready_for_rehearsal"</div>
+  <p>这个练习要求学生看到：同样是 8 卡训练，DDP 复制完整模型状态，FSDP/ZeRO-3 分片参数、梯度和 optimizer state；但是能不能扩大训练还要看激活显存、通信等待、checkpoint 开销和 MFU，而不是只看每卡状态显存。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么这很重要：</strong>learning rate schedule、checkpoint 间隔、日志频率和训练成本都依赖 step count。只报告 epoch 不足以复现 LLM 训练，因为同一语料在不同 packing、sequence length、重复采样和数据配比下会产生不同 token 分布。</div></div>
 
   <h4>Data mixture：不是所有 token 等价</h4>
@@ -1138,12 +1152,12 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
   </ul>
   <p>ZeRO-3 的核心收益是把参数、梯度和优化器状态分摊到多张 GPU 上，使单卡显存压力随并行规模下降。粗略地说，405B 参数若平均分到 128 张 GPU，每卡参数切片约为 3.2B；但真实训练仍要容纳激活、通信 buffer、临时张量、checkpoint、并行切分和优化器状态，不能仅凭这个除法断言“可训练”。</p>
 
-  <h4>FSDP (PyTorch 原生)</h4>
-  <p>FSDP 是 PyTorch 的 ZeRO-3 等价方案。核心 API：</p>
+  <h4>FSDP / FSDP2 (PyTorch 原生)</h4>
+  <p>FSDP 是 PyTorch 的 ZeRO-3 等价方案。较新的 FSDP2 使用 DTensor 风格的逐参数分片表示，比早期 flat-parameter FSDP 更容易和 DeviceMesh、distributed checkpoint、多维并行组合。学习本章时不要求写完整分布式脚本，但要能解释 FSDP2 解决的是“参数/梯度/optimizer state 不应在每张卡完整复制”的问题，而不是自动解决数据质量、激活显存或通信拓扑问题。教学上可以先把旧式包装 API 理解为概念入口：</p>
   <div class="code-block" data-lang="python">
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
-  <p>前向传播前收集分片参数 (all-gather)，计算完成后<strong>立即释放</strong>，将显存峰值降低到 1/N。</p>
+  <p>前向传播前收集分片参数 (all-gather)，计算完成后释放或重新分片；反向传播中梯度通过 reduce-scatter 分回各 rank。真实项目应额外记录 wrap/shard 规则、activation checkpointing、mixed precision、checkpoint 格式和 world-size 变化恢复方式。</p>
 
   <h4>通信模式：AllReduce、ReduceScatter 与 AllGather</h4>
   <p>分布式训练不是把单卡代码复制 N 份这么简单。不同并行策略会把计算变成不同通信算子：</p>
@@ -1173,8 +1187,8 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   </div>
   <p>MFU 低不一定代表模型代码错。短 sequence、batch 太小、通信跨节点、数据加载不足、频繁 eval/checkpoint、kernel 未融合、padding 浪费都会降低 MFU。诊断时应同时报告 tokens/s/GPU、GPU utilization、network utilization、dataloader wait time 和 checkpoint duration。</p>
 
-  <h4>DeepSeek DualPipe</h4>
-  <p>传统流水线并行有<strong>气泡（bubble）</strong>——GPU 在等待上游时闲置。DeepSeek-V3 技术报告中的 DualPipe 通过<strong>双向流水线调度</strong>重叠前向、反向和 MoE 通信，目标是显著降低 bubble；具体重叠程度取决于模型切分、通信拓扑、micro-batch 和实现细节。</p>
+  <h4>FP8/MXFP8 与 DeepSeek DualPipe</h4>
+  <p>低精度训练和流水线调度要一起看。NVIDIA Transformer Engine 把 FP8、MXFP8 和 NVFP4 这类格式做成可用接口；DeepSeek-V3 技术报告则展示了 FP8 mixed precision、MoE/MLA 和 DualPipe 的组合。课程中不把任何一个格式当作“免费加速”，而是要求学生检查 scale/amax history、loss spike、梯度范围、kernel 支持、通信数据宽度和恢复状态。传统流水线并行有<strong>气泡（bubble）</strong>，DualPipe 通过<strong>双向流水线调度</strong>重叠前向、反向和 MoE 通信，目标是降低 bubble；具体重叠程度取决于模型切分、通信拓扑、micro-batch 和实现细节。</p>
 
   <h4>训练工程排查顺序</h4>
   <ol>
@@ -1272,7 +1286,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
 
 <section class="card" id="s7-15b">
   <h3>7.15B 工业训练系统 Gate：数据、并行、容错与评测闭环</h3>
-  <p>最新工业训练系统的共同点不是某一个并行策略，而是把<strong>数据质量、模型并行、通信重叠、checkpoint、可观测性和评测 gate</strong>连成闭环。MegaScale 把 10K+ GPU 训练中的稳定性、straggler 诊断和容错作为核心问题；DeepSeek-V3 把 MLA、MoE、FP8、DualPipe 和稳定长跑结合起来；PyTorch Distributed Checkpoint 和 Megatron Core 则把分片 checkpoint、多维并行和专家并行变成工程接口。课程项目不需要复刻这些系统，但必须学会它们解决的同一类问题。</p>
+  <p>最新工业训练系统的共同点不是某一个并行策略，而是把<strong>数据质量、模型并行、通信重叠、checkpoint、可观测性和评测 gate</strong>连成闭环。MegaScale 把 10K+ GPU 训练中的稳定性、straggler 诊断和容错作为核心问题；DeepSeek-V3 把 MLA、MoE、FP8、DualPipe 和稳定长跑结合起来；PyTorch FSDP2/DTensor 与 Distributed Checkpoint 把分片状态变成可组合接口；NVIDIA Transformer Engine 把 FP8/MXFP8/NVFP4 低精度训练落到 kernel 和 scale 管理。课程项目不需要复刻这些系统，但必须学会它们解决的同一类问题。</p>
 
   <h4>1. 训练系统不是只选 DDP/FSDP/TP/PP</h4>
   <div class="table-wrap">
@@ -1288,7 +1302,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
 
   <h4>2. 并行策略要绑定模型结构和集群拓扑</h4>
   <p>Dense Transformer、MoE、长上下文和多模态模型的最优并行配置不同。Dense 模型常先用 FSDP/ZeRO 降低状态显存，再用 TP/PP 扩展到多节点；MoE 还需要 expert parallel 和 all-to-all 负载均衡；长上下文会放大 activation、attention 和 checkpointing 压力。不要把“开启 FSDP”当成训练系统设计，真正的问题是：哪个张量太大、哪条通信太频繁、哪个阶段阻塞了 critical path。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>工业参照：</strong><a href="https://arxiv.org/abs/2402.15627" target="_blank">MegaScale</a> 强调全栈观测和 straggler/故障诊断；<a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3</a> 展示了 FP8、DualPipe、MoE/MLA 与稳定训练的组合；<a href="https://docs.nvidia.com/megatron-core/developer-guide/0.16.0/user-guide/parallelism-guide.html" target="_blank">Megatron Core</a> 把 DP/TP/PP/SP/EP 作为可组合策略。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>工业参照：</strong><a href="https://arxiv.org/abs/2402.15627" target="_blank">MegaScale</a> 强调全栈观测和 straggler/故障诊断；<a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3</a> 展示了 FP8、DualPipe、MoE/MLA 与稳定训练的组合；<a href="https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html" target="_blank">PyTorch FSDP2</a> 和 <a href="https://docs.pytorch.org/docs/stable/distributed.tensor.html" target="_blank">DTensor</a> 提供分片训练基础；<a href="https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html" target="_blank">Transformer Engine</a> 覆盖 FP8/MXFP8/NVFP4；<a href="https://docs.nvidia.com/megatron-core/developer-guide/0.16.0/user-guide/parallelism-guide.html" target="_blank">Megatron Core</a> 把 DP/TP/PP/SP/EP 作为可组合策略。</div></div>
 
   <h4>3. Checkpoint gate 要同时覆盖恢复和发布</h4>
   <p>训练中断恢复关注 optimizer、scheduler、RNG 和 sampler；推理发布关注权重格式、tokenizer、模板、量化和服务参数。两者不能混用。分布式训练中，checkpoint 还要处理参数分片、优化器分片、world size 变化和异步保存开销。PyTorch Distributed Checkpoint 的价值在于把这些分片状态作为可组合对象保存，而不是让每个训练脚本手写一套 fragile 的 rank-local 保存逻辑。</p>

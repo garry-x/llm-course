@@ -123,6 +123,133 @@ def optimizer_state_memory_bytes(
     }
 
 
+def distributed_training_strategy_report(
+    num_params,
+    num_gpus,
+    strategy,
+    micro_batch_size,
+    seq_len,
+    grad_accum_steps=1,
+    param_dtype_bytes=2,
+    grad_dtype_bytes=2,
+    optimizer_state_dtype_bytes=4,
+    num_optimizer_states=2,
+    gpu_memory_gb=None,
+    activation_memory_gb=None,
+    tokens_per_second=None,
+    peak_flops_per_gpu=None,
+):
+    """Compare per-rank model-state memory, batch tokens, and MFU for a training strategy."""
+    if num_params <= 0 or num_gpus <= 0:
+        raise ValueError("num_params and num_gpus must be positive")
+    if any(value <= 0 for value in [micro_batch_size, seq_len, grad_accum_steps]):
+        raise ValueError("batch, sequence length, and grad accumulation must be positive")
+    if any(value <= 0 for value in [param_dtype_bytes, grad_dtype_bytes, optimizer_state_dtype_bytes]):
+        raise ValueError("dtype byte sizes must be positive")
+    if num_optimizer_states < 0:
+        raise ValueError("num_optimizer_states must be non-negative")
+    if gpu_memory_gb is not None and gpu_memory_gb <= 0:
+        raise ValueError("gpu_memory_gb must be positive when provided")
+    if activation_memory_gb is not None and activation_memory_gb < 0:
+        raise ValueError("activation_memory_gb must be non-negative when provided")
+    if tokens_per_second is not None and tokens_per_second <= 0:
+        raise ValueError("tokens_per_second must be positive when provided")
+    if peak_flops_per_gpu is not None and peak_flops_per_gpu <= 0:
+        raise ValueError("peak_flops_per_gpu must be positive when provided")
+
+    normalized = str(strategy).lower().replace("-", "_")
+    aliases = {
+        "data_parallel": "ddp",
+        "zero_1": "zero1",
+        "zero_2": "zero2",
+        "zero_3": "zero3",
+        "fsdp": "zero3",
+        "fsdp2": "zero3",
+    }
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in {"ddp", "zero1", "zero2", "zero3"}:
+        raise ValueError("strategy must be one of ddp, zero1, zero2, zero3, fsdp, or fsdp2")
+
+    n = int(num_params)
+    gpus = int(num_gpus)
+    param_bytes = n * int(param_dtype_bytes)
+    grad_bytes = n * int(grad_dtype_bytes)
+    optimizer_bytes = n * int(num_optimizer_states) * int(optimizer_state_dtype_bytes)
+
+    if normalized == "ddp":
+        per_rank_param_bytes = param_bytes
+        per_rank_grad_bytes = grad_bytes
+        per_rank_optimizer_bytes = optimizer_bytes
+        communication_pattern = "gradient_all_reduce"
+    elif normalized == "zero1":
+        per_rank_param_bytes = param_bytes
+        per_rank_grad_bytes = grad_bytes
+        per_rank_optimizer_bytes = optimizer_bytes / gpus
+        communication_pattern = "gradient_all_reduce_plus_optimizer_state_partition"
+    elif normalized == "zero2":
+        per_rank_param_bytes = param_bytes
+        per_rank_grad_bytes = grad_bytes / gpus
+        per_rank_optimizer_bytes = optimizer_bytes / gpus
+        communication_pattern = "reduce_scatter_gradients"
+    else:
+        per_rank_param_bytes = param_bytes / gpus
+        per_rank_grad_bytes = grad_bytes / gpus
+        per_rank_optimizer_bytes = optimizer_bytes / gpus
+        communication_pattern = "all_gather_parameters_and_reduce_scatter_gradients"
+
+    per_rank_model_state_bytes = per_rank_param_bytes + per_rank_grad_bytes + per_rank_optimizer_bytes
+    activation_bytes = 0 if activation_memory_gb is None else float(activation_memory_gb) * (1024**3)
+    estimated_peak_bytes = per_rank_model_state_bytes + activation_bytes
+    global_tokens = global_batch_tokens(micro_batch_size, seq_len, grad_accum_steps, gpus)
+
+    memory_pass = True
+    if gpu_memory_gb is not None:
+        memory_pass = estimated_peak_bytes <= float(gpu_memory_gb) * (1024**3)
+
+    mfu = None
+    if tokens_per_second is not None and peak_flops_per_gpu is not None:
+        mfu = (6.0 * n * float(tokens_per_second)) / (gpus * float(peak_flops_per_gpu))
+
+    action_items = []
+    if not memory_pass:
+        action_items.append("reduce_model_state_with_fsdp_zero_or_reduce_activation_memory")
+    if normalized == "ddp" and per_rank_model_state_bytes > 40 * (1024**3):
+        action_items.append("ddp_replicates_model_state_consider_zero_or_fsdp")
+    if mfu is not None and mfu < 0.3:
+        action_items.append("profile_batch_size_dataloader_kernels_communication_or_checkpoint")
+
+    return {
+        "strategy": normalized,
+        "num_gpus": gpus,
+        "global_batch_tokens": global_tokens,
+        "per_rank": {
+            "param_bytes": per_rank_param_bytes,
+            "grad_bytes": per_rank_grad_bytes,
+            "optimizer_state_bytes": per_rank_optimizer_bytes,
+            "model_state_bytes": per_rank_model_state_bytes,
+            "model_state_gb": per_rank_model_state_bytes / (1024**3),
+            "estimated_peak_gb": estimated_peak_bytes / (1024**3),
+        },
+        "communication_pattern": communication_pattern,
+        "mfu": mfu,
+        "gates": {
+            "memory": {
+                "pass": memory_pass,
+                "signals": {
+                    "gpu_memory_gb": gpu_memory_gb,
+                    "estimated_peak_gb": estimated_peak_bytes / (1024**3),
+                },
+            },
+            "utilization": {
+                "pass": mfu is None or mfu >= 0.3,
+                "signals": {"mfu": mfu},
+            },
+        },
+        "action_items": action_items,
+        "decision": "strategy_ready_for_rehearsal" if not action_items else "revise_before_scale_rehearsal",
+    }
+
+
 def cross_entropy_manual(logits, targets):
     batch, seq_len, vocab_size = logits.shape
     logits_flat = logits.reshape(batch * seq_len, vocab_size)

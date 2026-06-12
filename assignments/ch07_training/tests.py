@@ -146,6 +146,53 @@ class TestTrainingBudget(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.optimizer_state_memory_bytes(1000, num_moments=-1)
 
+    def test_distributed_training_strategy_report_compares_ddp_and_fsdp_state(self):
+        ddp = submission.distributed_training_strategy_report(
+            num_params=7_000_000_000,
+            num_gpus=8,
+            strategy="ddp",
+            micro_batch_size=2,
+            seq_len=2048,
+            grad_accum_steps=8,
+            gpu_memory_gb=70,
+        )
+        fsdp = submission.distributed_training_strategy_report(
+            num_params=7_000_000_000,
+            num_gpus=8,
+            strategy="fsdp2",
+            micro_batch_size=2,
+            seq_len=2048,
+            grad_accum_steps=8,
+            gpu_memory_gb=80,
+            tokens_per_second=20_000,
+            peak_flops_per_gpu=300e12,
+        )
+        self.assertEqual(ddp["strategy"], "ddp")
+        self.assertEqual(fsdp["strategy"], "zero3")
+        self.assertEqual(fsdp["global_batch_tokens"], 262_144)
+        self.assertGreater(ddp["per_rank"]["model_state_bytes"], fsdp["per_rank"]["model_state_bytes"])
+        self.assertFalse(ddp["gates"]["memory"]["pass"])
+        self.assertTrue(fsdp["gates"]["memory"]["pass"])
+        self.assertAlmostEqual(fsdp["mfu"], 0.35)
+        self.assertEqual(fsdp["decision"], "strategy_ready_for_rehearsal")
+
+    def test_distributed_training_strategy_report_attributes_low_mfu_and_bad_strategy(self):
+        report = submission.distributed_training_strategy_report(
+            num_params=1_000_000_000,
+            num_gpus=4,
+            strategy="zero2",
+            micro_batch_size=1,
+            seq_len=1024,
+            grad_accum_steps=1,
+            tokens_per_second=100,
+            peak_flops_per_gpu=100e12,
+        )
+        self.assertLess(report["mfu"], 0.3)
+        self.assertFalse(report["gates"]["utilization"]["pass"])
+        self.assertIn("profile_batch_size_dataloader_kernels_communication_or_checkpoint", report["action_items"])
+        with self.assertRaises(ValueError):
+            submission.distributed_training_strategy_report(1000, 1, "unknown", 1, 128)
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
 class TestLossOptimizerScheduler(unittest.TestCase):

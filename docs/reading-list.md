@@ -168,9 +168,11 @@
 选读：
 
 - Huang et al. [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://arxiv.org/abs/1811.06965). 重点看 micro-batch、pipeline bubble 和 activation rematerialization。
-- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, FSDP2 和 Distributed Checkpoint。重点看 FSDP 如何分片参数、梯度和 optimizer state，以及 resume parity 如何验证。
+- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, [FSDP2](https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html)、[DTensor](https://docs.pytorch.org/docs/stable/distributed.tensor.html) 和 Distributed Checkpoint。重点看 FSDP2 如何用 DTensor 风格分片参数、梯度和 optimizer state，以及 resume parity 如何验证。
+- NVIDIA Transformer Engine documentation on [FP8/MXFP8/NVFP4](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html)。重点看低精度训练不仅是 dtype 选择，还包括 scaling、amax history、kernel 支持和 checkpoint state。
 - NVIDIA Megatron Core parallelism guide。重点看 DP、TP、PP、CP、EP 和 sequence parallelism 分别切什么维度，什么时候组合。
 - DeepSeek-V3 Technical Report 中 FP8 mixed precision、DualPipe、MLA/MoE 和 MTP。重点看这些设计如何共同服务训练效率和稳定性。
+- Jordan et al. [Muon is Scalable for LLM Training](https://arxiv.org/abs/2502.16982)。重点看 Muon 从小模型实验扩展到 LLM 时需要 weight decay 和 update scale，不能只背“正交化”口号。
 - NVIDIA / PyTorch profiler 文档中 GPU utilization、kernel timeline、communication overlap 和 dataloader bottleneck 的诊断方法。
 
 复盘问题：
@@ -180,7 +182,9 @@
 - 训练日志里 loss 下降但开发集变差时，应该先查哪些产出？
 - 参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？
 - DDP、ZeRO/FSDP、tensor parallel 和 pipeline parallel 分别解决容量、通信还是吞吐中的哪一类瓶颈？
+- `distributed_training_strategy_report` 中每卡模型状态、global batch tokens、MFU 和 action item 分别对应训练系统的哪个风险？
 - MFU 低时，如何区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合？
+- FP8/MXFP8 带来吞吐收益时，为什么仍要单独检查 loss spike、scale/amax history、梯度范围和 checkpoint resume？
 - 一次训练 run 的 optimization、throughput、state/checkpoint 和 evaluation gate 分别需要哪些最低证据？
 - FSDP2 / Distributed Checkpoint / Megatron Core 这类工具解决的是课程 tiny train 中哪一个被简化掉的问题？
 - Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？

@@ -43,7 +43,7 @@
     <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
     <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>本章依赖：</strong>训练循环依赖概率分解、cross entropy、optimizer state、随机性控制和实验统计。若只会让 loss 下降，还不够；必须能解释 train/val split、seed、baseline、曲线方差和 checkpoint 恢复。薄弱时同步补 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 的 CE 梯度，以及 <a href="../docs/ml-foundations-prerequisite-bridge.html">ML foundations bridge</a> 的泛化、评测和 ablation。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>自回归概率分解、cross entropy、optimizer state、随机性控制、train/val split 和实验统计。<br><strong>本章内化：</strong>这些基础会直接进入 loss/ppl、AdamW/Muon、learning-rate schedule、gradient clipping、checkpoint resume、数据 packing、seed 和 ablation 报告。<br><strong>验收信号：</strong>你不只是让 loss 下降，而是能解释曲线方差、baseline、恢复点、token budget 和训练成本，并把这些结果传给 Ch08 生成质量和 Ch09 对齐实验。</div>
 </section>
 
 <!-- ================================================================ -->

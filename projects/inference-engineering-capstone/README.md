@@ -13,6 +13,7 @@
 | RAG | 能注入检索上下文，记录命中文档 | 响应里返回 `x_retrieved_docs` |
 | Structured Output | `response_format={"type":"json_object"}` 返回可解析 JSON | `evaluate.py` 检查 JSON key |
 | Tool Calling | 接收 OpenAI 风格 `tools` schema，返回 `tool_calls`，并在执行前做 schema/权限/预算 gate | `evaluate.py` 检查工具名，报告记录 gate |
+| Reasoning Budget | 对 greedy、self-consistency、best-of-N 或 verifier rerank 做 quality/token/latency/cost gate | 报告中的 generation policy 表 |
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
 | PD Breakdown | 拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens | 报告中的 PD 指标表 |
@@ -31,6 +32,7 @@
 | 结构化输出策略是否可靠 | prompt-only JSON vs JSON mode / retry | JSON 有效率、重试次数、latency | MockEngine 的格式稳定性不能代表真实模型 |
 | 并发增加如何影响尾延迟 | concurrency 1/2/5/10 | P50/P95/P99、tokens/s、error rate | 本地 CPU 网络开销与 GPU serving 不同 |
 | 容量规划对上下文长度多敏感 | context 4K/8K/32K | KV Cache GB、max batch、$/1M tokens | 估算公式不包含全部 runtime overhead |
+| reasoning/test-time compute 是否值得上线 | greedy vs self-consistency/best-of-N/verifier rerank | pass rate、output tokens、P95 latency、cost/request | 多采样提升可能被延迟、成本或 verifier 偏差抵消 |
 | 多模态输入如何改变服务成本 | 文本请求 vs 图像/文档请求的视觉 token 预算 | prefill tokens、TTFT、KV Cache、任务 pass rate | 视觉 encoder 和裁剪策略会显著改变结果 |
 
 建议把项目拆成三个阶段：
@@ -153,7 +155,7 @@ python capacity_plan.py \
 - 固定评测集 pass rate 与失败案例。
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
-- RAG、JSON structured output、tool calling 的回归用例。
+- RAG、JSON structured output、tool calling 和 reasoning budget 的回归用例。
 - 超时、限流、降级、格式错误和安全拒答策略。
 - 明确说明你的研究问题、baseline、workload、结论适用条件，以及哪些结果只在 MockEngine / 本地 CPU 下成立。
 
@@ -164,10 +166,10 @@ python capacity_plan.py \
 1. **Service scenario.** 描述目标场景：客服 RAG、结构化抽取、工具调用、长文档问答、多模态文档理解等。
 2. **Research question.** 提出可测问题，例如“RAG top-k 从 3 增到 8 是否提高 pass rate，代价是多少 TTFT 和 prompt tokens？”
 3. **Related work.** 连接至少 2 篇论文、技术报告或官方文档，例如 vLLM/PagedAttention、FlashAttention、RAG、Orca、SGLang、TensorRT-LLM、structured output 或 model card，说明项目采用和简化了什么。
-4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON。
+4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON、是否多样本 reasoning 或 verifier rerank。
 5. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
-7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题和安全拒答/过度拒答。
+7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题、reasoning budget gate 和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
 9. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
 10. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
@@ -179,6 +181,12 @@ python capacity_plan.py \
 |-----|------|-----------|----------|----------|-------------|----------|------------|----------------|
 | baseline | 默认配置 | | | | | | | |
 | ablation | 例如 RAG top-k=8 | | | | | | | |
+
+### Generation policy 模板
+
+| Strategy | accuracy/pass rate | samples/request | output tokens/request | P95 latency | cost/request | Gate | 结论 |
+|----------|--------------------|-----------------|-----------------------|-------------|--------------|------|------|
+| greedy / self-consistency / best-of-N | | | | | | | |
 
 ### Prefill/Decode 解耦指标模板
 

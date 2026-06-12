@@ -1,6 +1,6 @@
 # Chapter 8 Assignment: Text Generation
 
-本作业对应第 8 章文本生成。目标是实现从 logits 到 token 的核心解码策略，包括概率截断、重复惩罚、约束解码、采样分布账本、搜索、多样性指标、reasoning 多样本聚合和推测解码速度账本，并用小模型验证采样边界和生成行为。
+本作业对应第 8 章文本生成。目标是实现从 logits 到 token 的核心解码策略，包括概率截断、重复惩罚、约束解码、采样分布账本、搜索、多样性指标、reasoning 多样本聚合、test-time compute 预算 gate 和推测解码速度账本，并用小模型验证采样边界和生成行为。
 
 ## Files
 
@@ -32,6 +32,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch08_generation/tests.py
 - Beam search 必须保留多个候选，累加 log probability，并支持长度归一化评分。
 - `pass_at_k` 应使用 `1 - C(n-c,k)/C(n,k)` 的采样成功率估计，连接代码/数学任务中的多样本评测。
 - `self_consistency_vote` 应从多条 reasoning 输出中抽取最终答案，按多数投票聚合，并报告样本数、票数占比和 token 成本。
+- `test_time_compute_budget_report` 应比较 greedy、self-consistency、best-of-N、verifier reranking 或 reasoning model 档位的 accuracy、samples、输出 token、延迟、成本和边际收益，输出是否适合上线的预算 gate。
 - `speculative_decoding_speedup` 应根据每轮接受草稿 token 数、实际写入输出 token 数、`gamma` 和 draft/target 成本比，报告 proposed、accepted、generated tokens、目标模型验证次数、草稿模型步数、粗略耗时和 speedup。
 - `Generator` 应提供统一生成接口，并能计算 distinct-n 多样性指标。
 - 简化推测解码应返回生成序列和接受率统计，便于比较 draft/target 一致性。
@@ -40,6 +41,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch08_generation/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 比较 greedy、beam、temperature、top-k、top-p、repetition penalty、CoT/self-consistency/best-of-N、speculative decoding、生成评估指标和约束解码的适用边界 |
-| Programming parts | 55 | 实现 greedy/beam/temperature、top-k、top-p、repetition penalty、token constraints、decoding distribution report、pass@k、self-consistency vote、speculative decoding speedup accounting、Generator 指标和 speculative decoding |
-| Analysis / style | 10 | 解释质量、多样性、事实性、推理正确率、test-time compute、延迟、退化风险、参数 sweep 和采样参数边界 |
+| Written questions | 35 | 比较 greedy、beam、temperature、top-k、top-p、repetition penalty、CoT/self-consistency/best-of-N、verifier reranking、speculative decoding、生成评估指标和约束解码的适用边界 |
+| Programming parts | 55 | 实现 greedy/beam/temperature、top-k、top-p、repetition penalty、token constraints、decoding distribution report、pass@k、self-consistency vote、`test_time_compute_budget_report`、speculative decoding speedup accounting、Generator 指标和 speculative decoding |
+| Analysis / style | 10 | 解释质量、多样性、事实性、推理正确率、test-time compute、延迟、成本、边际收益、退化风险、参数 sweep 和采样参数边界 |

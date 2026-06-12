@@ -43,7 +43,7 @@
     <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
     <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标、约束 token mask，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>本章依赖：</strong>生成依赖概率分布、logits 变换、采样方差和自回归状态管理。temperature/top-k/top-p 不是魔法参数，而是在改变候选集和概率质量；speculative decoding 还要求理解目标模型分布不应被草稿模型破坏。概率和指标基础不稳时回看 <a href="../docs/ml-foundations-prerequisite-bridge.html">ML foundations bridge</a> 的 probability、statistics 和 evaluation 小节。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>概率分布、logits 变换、采样方差、自回归状态、KV cache 直觉和基础质量/延迟指标。<br><strong>本章内化：</strong>temperature、top-k、top-p、beam、self-consistency、reasoning budget 和 speculative decoding 都会被写成“改变候选分布、重复计算或接受率”的可测策略，而不是孤立调参技巧。<br><strong>验收信号：</strong>你能把一次生成策略上线决策拆成质量、输出 token、P95 latency、成本、marginal gain 和回退策略，并接到 Ch10 服务 SLO。</div>
 </section>
 
 <!-- ================================================================ -->
@@ -868,6 +868,26 @@ request_cost ~= prompt_tokens
              + tool_calls * tool_cost
              + retries * retry_cost</div>
   <p>如果把 <code>samples</code> 从 1 提到 16，pass@k 可能提高，但 P95 延迟和 token 成本也会接近线性上升，除非系统做并行采样并有足够 batch/硬件余量。推测解码能降低目标模型验证次数，但也引入草稿模型计算和调度复杂度。</p>
+
+  <h4>3A. Reasoning / test-time compute 要先过预算 gate</h4>
+  <p>OpenAI o1、DeepSeek-R1 和 Kimi k1.5 之后，很多系统会把“多想一会儿”作为质量提升手段：增加 reasoning token、采样多条解题路径、用 verifier 或 unit tests 选 best-of-N，或把长链路蒸馏成短输出。工程上不能只报告准确率提升，必须同时报告每题样本数、平均输出 token、P95 延迟、verifier 调用、单位正确答案成本和边际收益。</p>
+  <p>Ch08 作业中的 <code>test_time_compute_budget_report</code> 把这个判断落成一个可测试 gate。它比较 greedy、self-consistency、best-of-N、verifier reranking 或 reasoning model 档位，输出 quality、token budget、latency、cost 和 marginal efficiency gate，并给出是否可以上线的推荐策略。</p>
+  <div class="code-block" data-lang="python">
+report = test_time_compute_budget_report(
+    [
+        {"name": "greedy", "accuracy": 0.55, "samples_per_prompt": 1, "mean_output_tokens": 120, "latency_ms": 500},
+        {"name": "self_consistency_5", "accuracy": 0.72, "samples_per_prompt": 5, "mean_output_tokens": 160, "latency_ms": 3200},
+        {"name": "best_of_16", "accuracy": 0.78, "samples_per_prompt": 16, "mean_output_tokens": 170, "latency_ms": 9000},
+    ],
+    budgets={
+        "min_accuracy": 0.70,
+        "max_output_tokens_per_prompt": 1000,
+        "max_latency_ms": 4000,
+        "min_accuracy_gain_per_1k_tokens": 0.05,
+    },
+)
+assert report["recommended_strategy"] == "self_consistency_5"</div>
+  <p>这个 gate 的核心不是替代 benchmark，而是防止“无限采样换分数”的结论污染上线决策。如果 best-of-16 准确率最高但超过 token 和延迟预算，合格报告应写“需要蒸馏、路由到难题、优化并行采样或拒绝该策略”，而不是直接把最高分当作生产策略。</p>
 
   <h4>4. 一个合格策略说明的格式</h4>
   <p>课程项目中的 generation policy 应能写成下面这种形式：</p>

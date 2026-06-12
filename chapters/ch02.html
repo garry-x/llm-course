@@ -43,7 +43,7 @@
     <li><strong>完成标准：</strong>你能跟踪形状从 <code>[batch, seq]</code> 变成 <code>[batch, seq, d_model]</code>。</li>
     <li><strong>练习产出：</strong>提交嵌入/位置编码实现、RoPE 相对位置数值验证图，以及一页关于外推失败模式的短报告；可用 <a href="../assignments/ch02_embeddings/" target="_blank">Ch02 位置编码作业测试</a> 检查核心实现。</li>
   </ul>
-  <div class="dependency-note"><strong>本章依赖：</strong>核心是矩阵查表、向量点积、sin/cos 周期和张量 shape 追踪。embedding lookup 可先理解为 one-hot 与矩阵相乘的等价实现；RoPE 需要能跟踪二维旋转和点积不变量。薄弱时优先补 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 中的线性代数、shape 约定和 PyTorch 实现纪律。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>矩阵查表、向量点积、sin/cos 周期、二维旋转和张量 shape 追踪。<br><strong>本章内化：</strong>one-hot 乘 embedding 矩阵会在 2.1 被改写成查表；点积和旋转矩阵会在 RoPE 推导里证明“注意力分数只依赖相对位置”；shape 纪律会贯穿 token embedding、position ids、batch/seq 维度和外推实验。<br><strong>验收信号：</strong>你能从 <code>[B,T]</code> 追到 <code>[B,T,D]</code>，并解释位置编码 bug 为什么会影响 Ch03 attention score 和 Ch10 prefix cache。</div>
 </section>
 
 <!-- ================================================================ -->

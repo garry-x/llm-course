@@ -424,6 +424,7 @@ Quick check：
 - 分析接受率、draft 成本和 target batch verify 的权衡。
 - 区分普通 sampling 与 reasoning/test-time compute。
 - 引入结构化输出、JSON schema 和约束生成。
+- 把 reasoning/test-time compute 拆成 accuracy、samples、output tokens、latency、verifier cost 和 marginal efficiency gate。
 
 核心推导：
 
@@ -431,6 +432,7 @@ Quick check：
 - self-consistency、best-of-N 和 verifier reranking 的准确率/成本权衡。
 - self-consistency 需要定义 final-answer extractor；多数投票报告 vote distribution，不能只报告最后选出的答案。
 - pass@k：从 `n` 个样本中有 `c` 个正确时，估计抽取 `k` 个至少命中一次的概率。
+- `test_time_compute_budget_report`：quality、token、latency、cost 和 marginal efficiency 同时通过，才适合把多样本 reasoning 作为线上策略。
 - 约束生成把无效 token mask 到候选集之外，再在合法集合上重新归一化。
 
 课堂 demo：
@@ -438,6 +440,7 @@ Quick check：
 - 运行 speculative decoding toy model，记录接受率。
 - 对同一数学题采样多条推理路径，抽取最终答案，比较 single-sample、majority vote 和 best-of-N。
 - 给定 `n,c,k` 手算 pass@k，并讨论它和单样本准确率的差异。
+- 给定 greedy、self-consistency 和 best-of-N 三组统计，填写 `test_time_compute_budget_report` 并选择上线策略。
 - 构造 JSON 输出失败和修复策略；给定两行 logits 与各自合法 token 集，手算 constraint mask 后的 greedy 结果。
 
 Quick check：
@@ -448,7 +451,7 @@ Quick check：
 
 课后产出：
 
-- A6 self-consistency vote 和 speculative decoding 输出统计。
+- A6 self-consistency vote、test-time compute budget 和 speculative decoding 输出统计。
 - 阅读复盘：speculative decoding 或 self-consistency 的失败条件。
 
 ## Week 7 Lecture 13: SFT、LoRA 与 Parameter-Efficient Tuning

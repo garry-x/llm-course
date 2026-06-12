@@ -5,11 +5,11 @@
 <h1 align="center">LLM 深度学习</h1>
 
 <p align="center">
-  <strong>从代码出发，10 章构建一个完整的大语言模型</strong>
+  <strong>从代码出发，11 章构建一个完整的大语言模型工程体系</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/chapters-10-orange" alt="10 chapters">
+  <img src="https://img.shields.io/badge/chapters-11-orange" alt="11 chapters">
   <img src="https://img.shields.io/badge/exercises-programming_+_written-blue" alt="programming and written exercises">
   <img src="https://img.shields.io/badge/sections-127-yellow" alt="127 sections">
   <img src="https://img.shields.io/badge/frontier-architecture_cases-green" alt="frontier architecture cases">
@@ -22,7 +22,7 @@
 
 ## 关于本课程
 
-这是一门**从代码出发**的 LLM 实战课程。不做概念浏览，而是用 Python 和 PyTorch 逐行实现大语言模型的每一个核心组件。
+这是一门**从代码出发**的 LLM 实战课程。不做概念浏览，而是用 Python 和 PyTorch 逐行实现大语言模型的每一个核心组件。必要的数学、PyTorch、ML 和系统基础不会作为额外路线悬在旁边，而是揉进每章开头的先修能力、章节内实现和验收信号里。
 
 **每章的学习循环：**
 > 深度理论 → 理解"为什么" → 编程练习（你写代码）→ 对照参考解答 → 概念练习巩固
@@ -79,7 +79,7 @@
 | 能力 | 对应章节 | 你需要能做什么 |
 |------|----------|----------------|
 | 模型结构读懂 | Ch01-Ch06 | 看懂 tokenizer、attention、KV Cache 来源、logits 输出和参数规模 |
-| 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐和采样质量 |
+| 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐、采样质量和 reasoning 预算 |
 | 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、量化、FlashAttention 和显存瓶颈 |
 | 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 batching、prefix cache、并发调度和 tool-call gate |
 | 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链和失败兜底 |
@@ -145,12 +145,12 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 5 | **Transformer Block** — RMSNorm + FFN/SwiGLU + mHC | `TransformerBlock` ~50行 | 5+5 |
 | 6 | **组装 GPT + DeepSeekMoE** — GPT-2 124M 完整模型 | `GPTModel` ~100行 | 5+5 |
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
-| 8 | **文本生成** — 采样策略 + MTP 推测解码 + 约束生成 | 文本生成器 ~60行 | 6+5 |
+| 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
 | 9 | **微调与对齐** — SFT/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + LoRA + GRPO/RLVR ~210行 | 7+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool Gate + LSH + 服务蓝图 | 7+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + MLM mask | Ch11 |
 
-> **总计：覆盖 10 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**
+> **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**
 
 ## DeepSeek 技术融入
 
@@ -180,8 +180,8 @@ llm-course/
 ├── js/
 │   ├── db.js                  # IndexedDB 持久化存储层
 │   └── app.js                 # 搜索/主题/字号/进度/笔记/TOC/键盘导航
-├── chapters/                  # 10 章，纯 HTML（~8,000 行）
-│   └── ch01.html ~ ch10.html
+├── chapters/                  # 11 章，纯 HTML
+│   └── ch01.html ~ ch11.html
 ├── docs/
 │   ├── syllabus.md              # 课程目标、周安排、作业和项目结构
 │   ├── lecture-plan.md          # 10 周 / 20 讲授课计划

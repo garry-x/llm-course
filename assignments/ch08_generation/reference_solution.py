@@ -375,6 +375,143 @@ def self_consistency_vote(outputs, answer_extractor=None, token_counts=None):
     }
 
 
+def test_time_compute_budget_report(strategies, budgets=None):
+    """Compare reasoning-time strategies under quality, token, latency, and cost budgets."""
+    if not strategies:
+        raise ValueError("strategies must be non-empty")
+    budgets = dict(budgets or {})
+
+    min_accuracy = float(budgets.get("min_accuracy", 0.0))
+    max_output_tokens = budgets.get("max_output_tokens_per_prompt")
+    max_latency_ms = budgets.get("max_latency_ms")
+    max_cost_usd = budgets.get("max_cost_per_prompt_usd")
+    min_gain_per_1k_tokens = budgets.get("min_accuracy_gain_per_1k_tokens")
+    cost_per_1k_output_tokens = float(budgets.get("cost_per_1k_output_tokens_usd", 0.0))
+    if not 0.0 <= min_accuracy <= 1.0:
+        raise ValueError("min_accuracy must be in [0, 1]")
+    if max_output_tokens is not None and max_output_tokens <= 0:
+        raise ValueError("max_output_tokens_per_prompt must be positive when provided")
+    if max_latency_ms is not None and max_latency_ms <= 0:
+        raise ValueError("max_latency_ms must be positive when provided")
+    if max_cost_usd is not None and max_cost_usd < 0:
+        raise ValueError("max_cost_per_prompt_usd must be non-negative when provided")
+    if min_gain_per_1k_tokens is not None and min_gain_per_1k_tokens < 0:
+        raise ValueError("min_accuracy_gain_per_1k_tokens must be non-negative when provided")
+    if cost_per_1k_output_tokens < 0:
+        raise ValueError("cost_per_1k_output_tokens_usd must be non-negative")
+
+    rows = []
+    action_items = []
+    baseline = None
+    for idx, strategy in enumerate(strategies):
+        if not isinstance(strategy, dict):
+            raise ValueError("each strategy must be a dict")
+        name = strategy.get("name")
+        if not name:
+            raise ValueError("each strategy must include a name")
+
+        if "accuracy" in strategy:
+            accuracy = float(strategy["accuracy"])
+        else:
+            num_prompts = int(strategy.get("num_prompts", 0))
+            num_correct = int(strategy.get("num_correct", -1))
+            if num_prompts <= 0 or num_correct < 0 or num_correct > num_prompts:
+                raise ValueError("strategy must include accuracy or valid num_prompts/num_correct")
+            accuracy = num_correct / num_prompts
+        if not 0.0 <= accuracy <= 1.0:
+            raise ValueError("accuracy must be in [0, 1]")
+
+        samples_per_prompt = float(strategy.get("samples_per_prompt", 1.0))
+        mean_output_tokens = float(strategy.get("mean_output_tokens", 0.0))
+        latency_ms = float(strategy.get("latency_ms", 0.0))
+        verifier_calls = float(strategy.get("verifier_calls_per_prompt", 0.0))
+        verifier_latency_ms = float(strategy.get("verifier_latency_ms", 0.0))
+        if samples_per_prompt <= 0 or mean_output_tokens < 0 or latency_ms < 0:
+            raise ValueError("samples, tokens, and latency must be positive or non-negative")
+        if verifier_calls < 0 or verifier_latency_ms < 0:
+            raise ValueError("verifier call counts and latency must be non-negative")
+
+        output_tokens_per_prompt = samples_per_prompt * mean_output_tokens
+        total_latency_ms = latency_ms + verifier_calls * verifier_latency_ms
+        cost_per_prompt_usd = output_tokens_per_prompt * cost_per_1k_output_tokens / 1000.0
+
+        if idx == 0:
+            baseline = {
+                "accuracy": accuracy,
+                "tokens": output_tokens_per_prompt,
+            }
+        accuracy_gain = accuracy - baseline["accuracy"]
+        extra_tokens = output_tokens_per_prompt - baseline["tokens"]
+        gain_per_1k_tokens = None
+        if idx > 0:
+            if extra_tokens > 0:
+                gain_per_1k_tokens = accuracy_gain * 1000.0 / extra_tokens
+            elif accuracy_gain > 0:
+                gain_per_1k_tokens = float("inf")
+            elif accuracy_gain == 0:
+                gain_per_1k_tokens = 0.0
+            else:
+                gain_per_1k_tokens = float("-inf")
+
+        gates = {
+            "quality": accuracy >= min_accuracy,
+            "token_budget": max_output_tokens is None or output_tokens_per_prompt <= float(max_output_tokens),
+            "latency": max_latency_ms is None or total_latency_ms <= float(max_latency_ms),
+            "cost": max_cost_usd is None or cost_per_prompt_usd <= float(max_cost_usd),
+            "efficiency": min_gain_per_1k_tokens is None
+            or idx == 0
+            or gain_per_1k_tokens >= float(min_gain_per_1k_tokens),
+        }
+        pass_gates = all(gates.values())
+        row = {
+            "name": name,
+            "accuracy": accuracy,
+            "accuracy_gain_vs_baseline": accuracy_gain,
+            "samples_per_prompt": samples_per_prompt,
+            "output_tokens_per_prompt": output_tokens_per_prompt,
+            "total_latency_ms": total_latency_ms,
+            "cost_per_prompt_usd": cost_per_prompt_usd,
+            "gain_per_1k_extra_tokens": gain_per_1k_tokens,
+            "gates": gates,
+            "pass": pass_gates,
+        }
+        rows.append(row)
+
+    if not any(row["gates"]["quality"] for row in rows):
+        action_items.append("increase_samples_improve_prompt_or_train_better_reasoner")
+    if not any(row["gates"]["token_budget"] for row in rows):
+        action_items.append("reduce_samples_or_distill_long_reasoning")
+    if not any(row["gates"]["latency"] for row in rows):
+        action_items.append("optimize_latency_with_batching_caching_or_speculative_decoding")
+    if not any(row["gates"]["cost"] for row in rows):
+        action_items.append("lower_token_cost_or_route_only_hard_prompts_to_reasoning")
+    if min_gain_per_1k_tokens is not None and len(rows) > 1 and not any(row["gates"]["efficiency"] for row in rows[1:]):
+        action_items.append("justify_marginal_accuracy_gain_or_reject_extra_test_time_compute")
+
+    passing = [row for row in rows if row["pass"]]
+    recommended = None
+    if passing:
+        recommended = sorted(
+            passing,
+            key=lambda row: (-row["accuracy"], row["cost_per_prompt_usd"], row["total_latency_ms"]),
+        )[0]["name"]
+    return {
+        "overall_pass": bool(passing),
+        "recommended_strategy": recommended,
+        "strategies": rows,
+        "budgets": {
+            "min_accuracy": min_accuracy,
+            "max_output_tokens_per_prompt": max_output_tokens,
+            "max_latency_ms": max_latency_ms,
+            "max_cost_per_prompt_usd": max_cost_usd,
+            "min_accuracy_gain_per_1k_tokens": min_gain_per_1k_tokens,
+            "cost_per_1k_output_tokens_usd": cost_per_1k_output_tokens,
+        },
+        "action_items": action_items,
+        "decision": "serve_recommended_strategy" if passing else "revise_or_distill_before_serving",
+    }
+
+
 def speculative_decoding_speedup(accepted_counts, output_token_counts, gamma=4, draft_cost_ratio=0.2):
     if gamma <= 0:
         raise ValueError("gamma must be positive")

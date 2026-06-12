@@ -202,17 +202,20 @@
 - Stern et al. [Blockwise Parallel Decoding for Deep Autoregressive Models](https://arxiv.org/abs/1811.03115). 重点看一次预测多个 token 的动机。
 - Wei et al. [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903). 重点看中间推理 token 如何改变任务成功率。
 - Wang et al. [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171). 重点看多路径采样与投票。
+- Snell et al. [Scaling LLM Test-Time Compute Optimally Can be More Effective than Scaling Model Parameters](https://arxiv.org/abs/2408.03314). 重点看 verifier search、test-time compute 与边际收益，不要把多采样等同于免费提升。
 
 选读：
 
 - Hugging Face Transformers generation strategies documentation。
 - DeepSeek-V3 Technical Report 中 multi-token prediction。
+- OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/). 重点看 train-time compute 与 test-time compute 的区别，以及为什么 reasoning 模型的系统指标要单独报告。
 
 复盘问题：
 
 - top-k、top-p、temperature 分别控制分布的哪个性质？
 - speculative decoding 在什么情况下不能带来明显加速？
 - self-consistency 或 best-of-N 的准确率提升应如何同时报告 token 成本和延迟？
+- `test_time_compute_budget_report` 的 quality、token、latency、cost 和 efficiency gate 分别阻止哪类错误上线结论？
 - constrained decoding 是改变模型参数、logits、token mask 还是后处理？不同实现的失败模式是什么？
 - test-time compute 提高准确率时，应该同时报告哪些系统指标？
 

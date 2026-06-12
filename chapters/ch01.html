@@ -43,7 +43,7 @@
     <li><strong>完成标准：</strong>你能说清楚一段文本如何变成 token ID，以及 token ID 如何还原成文本。</li>
     <li><strong>练习产出：</strong>提交 tokenizer 代码、3 组中英混合测试、复杂度分析，以及一段不同词表大小下 token 数变化的实验记录；可用 <a href="../assignments/ch01_bpe/" target="_blank">Ch01 BPE 作业测试</a> 检查核心实现。</li>
   </ul>
-  <div class="dependency-note"><strong>本章依赖：</strong>重点补 Python 列表/字典、bytes/string 边界、循环不变量和测试驱动实现。若 pair counting、non-overlapping merge 或文件读取不稳，先回到 <a href="../docs/python-pytorch-review-session.html">Python/PyTorch review</a> 的 Python drill；复杂度和 token 成本部分只需要能读懂平均值、P95 和简单乘法估算。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>Python 列表/字典、bytes/string 边界、循环不变量、简单复杂度和测试驱动实现。<br><strong>本章内化：</strong>这些基础会直接落到 pair counting、非重叠 merge、encode/decode 可逆性、特殊 token 合约和 token 成本估算里。<br><strong>验收信号：</strong>你能不用外部补课路线，直接在本章代码中解释每个中间结构为什么存在，以及 tokenizer 改动如何传导到 Ch02 embedding、Ch07 token budget 和 Ch10 服务成本。</div>
 </section>
 
 <!-- ================================================================ -->

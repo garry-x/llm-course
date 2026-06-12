@@ -292,6 +292,92 @@ class TestBeamSearch(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.self_consistency_vote(["A"], token_counts=[-1])
 
+    def test_test_time_compute_budget_report_recommends_passing_reasoning_strategy(self):
+        report = submission.test_time_compute_budget_report(
+            [
+                {
+                    "name": "greedy",
+                    "accuracy": 0.55,
+                    "samples_per_prompt": 1,
+                    "mean_output_tokens": 120,
+                    "latency_ms": 500,
+                },
+                {
+                    "name": "self_consistency_5",
+                    "num_prompts": 100,
+                    "num_correct": 72,
+                    "samples_per_prompt": 5,
+                    "mean_output_tokens": 160,
+                    "latency_ms": 3200,
+                },
+                {
+                    "name": "best_of_16_with_verifier",
+                    "accuracy": 0.78,
+                    "samples_per_prompt": 16,
+                    "mean_output_tokens": 170,
+                    "latency_ms": 9000,
+                    "verifier_calls_per_prompt": 16,
+                    "verifier_latency_ms": 15,
+                },
+            ],
+            budgets={
+                "min_accuracy": 0.70,
+                "max_output_tokens_per_prompt": 1000,
+                "max_latency_ms": 4000,
+                "max_cost_per_prompt_usd": 0.003,
+                "min_accuracy_gain_per_1k_tokens": 0.05,
+                "cost_per_1k_output_tokens_usd": 0.002,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["recommended_strategy"], "self_consistency_5")
+        self.assertEqual(report["decision"], "serve_recommended_strategy")
+        greedy, self_consistency, best_of = report["strategies"]
+        self.assertFalse(greedy["gates"]["quality"])
+        self.assertTrue(self_consistency["pass"])
+        self.assertFalse(best_of["gates"]["token_budget"])
+        self.assertFalse(best_of["gates"]["latency"])
+        self.assertAlmostEqual(self_consistency["output_tokens_per_prompt"], 800.0)
+        self.assertAlmostEqual(self_consistency["cost_per_prompt_usd"], 0.0016)
+        self.assertGreater(self_consistency["gain_per_1k_extra_tokens"], 0.0)
+
+    def test_test_time_compute_budget_report_returns_actions_when_all_fail(self):
+        report = submission.test_time_compute_budget_report(
+            [
+                {"name": "greedy", "accuracy": 0.40, "samples_per_prompt": 1, "mean_output_tokens": 200, "latency_ms": 500},
+                {
+                    "name": "expensive_reasoning",
+                    "accuracy": 0.62,
+                    "samples_per_prompt": 8,
+                    "mean_output_tokens": 300,
+                    "latency_ms": 8000,
+                },
+            ],
+            budgets={
+                "min_accuracy": 0.70,
+                "max_output_tokens_per_prompt": 1000,
+                "max_latency_ms": 4000,
+                "min_accuracy_gain_per_1k_tokens": 0.2,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertIsNone(report["recommended_strategy"])
+        self.assertEqual(report["decision"], "revise_or_distill_before_serving")
+        self.assertIn("increase_samples_improve_prompt_or_train_better_reasoner", report["action_items"])
+        self.assertIn("justify_marginal_accuracy_gain_or_reject_extra_test_time_compute", report["action_items"])
+
+    def test_test_time_compute_budget_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.test_time_compute_budget_report([])
+        with self.assertRaises(ValueError):
+            submission.test_time_compute_budget_report([{"name": "bad", "accuracy": 1.2}])
+        with self.assertRaises(ValueError):
+            submission.test_time_compute_budget_report([{"name": "bad", "num_prompts": 10, "num_correct": 11}])
+        with self.assertRaises(ValueError):
+            submission.test_time_compute_budget_report(
+                [{"name": "bad", "accuracy": 0.5, "samples_per_prompt": 0}],
+            )
+
     def test_beam_search_keeps_multiple_candidates_and_reports_scores(self):
         model = BeamToyModel()
         prompt = torch.tensor([[0]])

@@ -98,6 +98,11 @@ def self_consistency_vote(outputs, answer_extractor=None, token_counts=None):
     raise NotImplementedError
 
 
+def test_time_compute_budget_report(strategies, budgets=None):
+    """Compare reasoning strategies under quality, token, latency, cost, and efficiency gates."""
+    raise NotImplementedError
+
+
 def speculative_decoding_speedup(accepted_counts, output_token_counts, gamma=4, draft_cost_ratio=0.2):
     """Estimate speculative decoding acceptance rate and rough target-step speedup."""
     raise NotImplementedError

@@ -43,7 +43,7 @@
     <li><strong>完成标准：</strong>你能说明为什么 Block 输入和输出都保持 <code>[batch, seq, d_model]</code>。</li>
     <li><strong>练习产出：</strong>提交 Block 实现、梯度检查、归一化 ablation，以及 FFN 参数量、FLOPs、激活显存分析；配套作业见 <a href="../assignments/ch05_block/">assignments/ch05_block/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>本章依赖：</strong>需要把 PyTorch Module、残差相加、LayerNorm/RMSNorm、矩阵参数量和反向传播检查连起来。Pre-Norm 稳定性依赖梯度路径直觉，FFN/SwiGLU 依赖矩阵乘法和激活函数。若 gradcheck、LayerNorm 推导或参数/FLOPs 账本不稳，优先补 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 的反向传播和 LayerNorm 检查。</div>
+  <div class="dependency-note"><strong>先修能力：</strong>PyTorch Module、残差相加、矩阵乘法、激活函数、LayerNorm/RMSNorm 统计量和反向传播检查。<br><strong>本章内化：</strong>Pre-Norm 稳定性会回到梯度路径；FFN/SwiGLU 会回到矩阵参数和激活门控；mHC 会回到残差连接如何受约束地混合。<br><strong>验收信号：</strong>你能解释一个 Transformer block 的前向、参数量、FLOPs 和梯度路径，并把 norm 或 FFN 的实现错误追到 Ch06 GPT 组装失败。</div>
 </section>
 
 <!-- ================================================================ -->

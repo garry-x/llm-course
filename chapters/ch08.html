@@ -803,7 +803,7 @@ def speculative_decoding(target_model, draft_model,
   <div class="math-box"><div class="label">speculative decoding rough speedup</div>
     <div class="katex" data-expr="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" aria-label="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" role="img"></div>
   </div>
-  <p>这个账本解释了两个常见误区：第一，<code>gamma=4</code> 不代表固定 4 倍加速，因为草稿模型也要花时间，且拒绝会减少每轮产出的 token；第二，接受率高也不自动等于端到端高吞吐，真实服务还受 batching、KV cache、内存带宽、网络和排队影响。因此实验报告应同时给出 <code>proposed</code>、<code>accepted</code>、<code>generated_tokens</code>、<code>acceptance_rate</code>、目标模型验证次数、草稿模型步数和粗略 speedup。Ch08 作业中的 <code>speculative_decoding_speedup</code> 要求把这些量从每轮接受数和输出 token 数中算出来，避免把 <code>gamma</code> 误读为固定加速比。</p>
+  <p>这个账本解释了两个常见误区：第一，<code>gamma=4</code> 不代表固定 4 倍加速，因为草稿模型也要花时间，且拒绝会减少每轮产出的 token；第二，接受率高也不自动等于端到端高吞吐，真实服务还受 batching、KV cache、内存带宽、网络和排队影响。因此实验报告应同时给出 <code>proposed</code>、<code>accepted</code>、<code>generated_tokens</code>、<code>acceptance_rate</code>、目标模型验证次数、草稿模型步数和粗略 speedup。Ch08 作业中的 <code>speculative_decoding_speedup</code> 要求把这些量从每轮接受数和输出 token 数中算出来；到 Ch10 时，这些量会进入 <code>speculative_serving_gate_report</code>，和 P95 latency、QPS、draft 开销、额外显存、质量/分布校验一起决定是否启用推测解码。</p>
 </section>
 
 <!-- ================================================================ -->

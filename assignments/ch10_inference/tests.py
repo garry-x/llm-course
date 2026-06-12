@@ -630,6 +630,115 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
                 },
             )
 
+    def test_speculative_serving_gate_report_passes_measured_workload(self):
+        report = submission.speculative_serving_gate_report(
+            [
+                {
+                    "record_id": "math-low-qps",
+                    "baseline_ms": 1200.0,
+                    "speculative_ms": 540.0,
+                    "output_tokens": 120,
+                    "draft_tokens": 120,
+                    "accepted_tokens": 92,
+                    "target_verify_steps": 30,
+                    "draft_ms": 110.0,
+                    "quality_regression": 0.0,
+                    "memory_overhead_gb": 1.5,
+                    "qps": 4.0,
+                    "lossless_validation_passed": True,
+                },
+                {
+                    "record_id": "code-low-qps",
+                    "baseline_ms": 800.0,
+                    "speculative_ms": 400.0,
+                    "output_tokens": 80,
+                    "draft_tokens": 80,
+                    "accepted_tokens": 60,
+                    "target_verify_steps": 20,
+                    "draft_ms": 90.0,
+                    "quality_regression": 0.0,
+                    "memory_overhead_gb": 1.2,
+                    "qps": 5.0,
+                    "lossless_validation_passed": True,
+                },
+            ],
+            thresholds={
+                "min_output_tokens": 100,
+                "min_acceptance_rate": 0.7,
+                "min_speedup": 1.8,
+                "max_draft_overhead_fraction": 0.25,
+                "max_quality_regression": 0.0,
+                "max_memory_overhead_gb": 2.0,
+                "max_qps_for_latency_mode": 8.0,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "enable_speculative_decoding_for_this_workload")
+        self.assertAlmostEqual(report["metrics"]["acceptance_rate"], 152 / 200)
+        self.assertAlmostEqual(report["metrics"]["speedup"], 2000 / 940)
+        self.assertAlmostEqual(report["metrics"]["tokens_per_verify_step"], 4.0)
+        self.assertAlmostEqual(report["metrics"]["draft_overhead_fraction"], 200 / 940)
+        self.assertTrue(all(report["gates"].values()))
+
+    def test_speculative_serving_gate_report_flags_unprofitable_speculation(self):
+        report = submission.speculative_serving_gate_report(
+            [
+                {
+                    "baseline_ms": 1000.0,
+                    "speculative_ms": 900.0,
+                    "output_tokens": 100,
+                    "draft_tokens": 160,
+                    "accepted_tokens": 50,
+                    "target_verify_steps": 40,
+                    "draft_ms": 500.0,
+                    "quality_regression": 0.03,
+                    "memory_overhead_gb": 3.0,
+                    "qps": 30.0,
+                    "lossless_validation_passed": False,
+                }
+            ],
+            thresholds={
+                "min_acceptance_rate": 0.6,
+                "min_speedup": 1.2,
+                "max_draft_overhead_fraction": 0.4,
+                "max_quality_regression": 0.01,
+                "max_memory_overhead_gb": 2.0,
+                "max_qps_for_latency_mode": 10.0,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "keep_baseline_or_rebenchmark_speculation")
+        self.assertFalse(report["gates"]["acceptance_rate"])
+        self.assertFalse(report["gates"]["speedup"])
+        self.assertFalse(report["gates"]["quality"])
+        self.assertFalse(report["gates"]["draft_overhead"])
+        self.assertFalse(report["gates"]["memory_overhead"])
+        self.assertFalse(report["gates"]["latency_workload_fit"])
+        self.assertIn("improve_draft_model_or_reduce_speculation_depth", report["action_items"])
+        self.assertIn("keep_speculation_disabled_until_speedup_reproduces", report["action_items"])
+        self.assertIn("run_lossless_or_quality_regression_validation", report["action_items"])
+        self.assertIn("reduce_draft_cost_or_use_ngram_suffix_method", report["action_items"])
+        self.assertIn("benchmark_under_target_qps_and_batching", report["action_items"])
+
+    def test_speculative_serving_gate_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.speculative_serving_gate_report([])
+        with self.assertRaises(ValueError):
+            submission.speculative_serving_gate_report([{"baseline_ms": 1.0}])
+        with self.assertRaises(ValueError):
+            submission.speculative_serving_gate_report(
+                [
+                    {
+                        "baseline_ms": 1.0,
+                        "speculative_ms": 1.0,
+                        "output_tokens": 1,
+                        "draft_tokens": 2,
+                        "accepted_tokens": 3,
+                        "target_verify_steps": 1,
+                    }
+                ]
+            )
+
     def test_lsh_returns_best_same_bucket_candidate(self):
         memory = submission.LSHMemory(dim=2, n_bits=1, seed=0)
         memory.planes = torch.tensor([[1.0, 0.0]])

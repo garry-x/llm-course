@@ -121,6 +121,7 @@
 10. 为一个 LLM benchmark 写结构化结论摘要：包括 task、sample_size、baseline、metrics、risks、uncertainty 和 conclusion，并说明哪些结论不能从这组数据推出。
 11. 给定服务 workload：`QPS=10`、平均 prompt tokens `800`、平均 output tokens `200`、单卡 prefill capacity `120k prompt tokens/s`、decode capacity `2.5k output tokens/s`，计算 prefill/decode token rate，并判断主要瓶颈；说明为什么 QPS 继续上升时 TPOT、排队时长和 TTFT 可能以不同顺序恶化。
 12. 给定 32 层 GQA 模型、`n_kv_heads=8`、`head_dim=128`、fp16 KV Cache、平均活跃上下文 `6000` tokens、可用于 KV 的显存 `48 GiB`，计算每 token KV bytes、每请求 KV Cache 和理论最大活跃请求数；再考虑 20% 安全余量，给出 admission limit，并解释为什么只按并发请求数限流会误伤短请求或放过长请求。
+13. 给定 speculative decoding 服务 trace：baseline `2000 ms`、speculative `940 ms`、输出 `200` tokens、draft `200` tokens、accepted `152` tokens、target verify steps `50`、draft cost `200 ms`、quality regression `0`、额外显存 `1.5 GiB`、QPS `5`。在 gate `acceptance>=0.7`、`speedup>=1.8`、`draft_overhead<=0.25`、额外显存 `<=2 GiB` 下，计算 acceptance rate、speedup、draft overhead、tokens per verify step，并判断是否启用；再说明为什么 high QPS、compute-bound workload 或质量回归会改变结论。
 
 ## 经典 NLP 专题题
 

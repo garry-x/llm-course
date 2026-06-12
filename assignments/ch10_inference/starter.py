@@ -122,6 +122,11 @@ def pd_pool_capacity_plan(workload, capacity):
     raise NotImplementedError
 
 
+def speculative_serving_gate_report(records, thresholds=None):
+    """Gate speculative decoding with acceptance, speedup, quality, and workload metrics."""
+    raise NotImplementedError
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         raise NotImplementedError

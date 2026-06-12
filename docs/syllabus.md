@@ -79,7 +79,7 @@
 | A5 Ch07 | dataset/dataloader、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory、`distributed_training_strategy_report`、`training_system_gate_report` | 训练闭环、优化器、校准、训练成本、DDP/ZeRO/FSDP、MFU、resume parity、工业训练 gate | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？DDP、ZeRO/FSDP 和 TP/PP 分别解决什么瓶颈？什么时候应该继续扩容，什么时候必须先 debug？ |
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、`test_time_compute_budget_report`、token constraints、speculative decoding | 解码策略、搜索、多样性、reasoning/test-time compute 预算、结构化生成 | top-p 为什么是自适应截断？多样本 reasoning 何时值得上线？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、LoRA、sequence log-probs、RM/DPO/PPO/GRPO、implicit reward、KL、length bias、`rlvr_grader_report` | 指令微调、偏好优化、reference model、可验证 reward、对齐风险 | DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？什么时候 RLVR/RFT 的 grader 信号足够可靠？ |
-| A8 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、`validate_tool_call_plan`、benchmark summary、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、指标结论边界 | 推理工程、RAG、tool/agent 协议、服务指标、容量规划、prefill/decode 解耦、KV transfer、P/D worker pool sizing | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？如何在执行前拦截无效或越权 tool call？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？P/D 解耦后如何判断 worker、link 和 KV memory 哪个先饱和？ |
+| A8 Ch10 | KV cache、prefix cache、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、`validate_tool_call_plan`、benchmark summary、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report`、指标结论边界 | 推理工程、RAG、tool/agent 协议、服务指标、容量规划、prefill/decode 解耦、KV transfer、P/D worker pool sizing、speculative decoding 上线 gate | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？如何在执行前拦截无效或越权 tool call？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？P/D 解耦后如何判断 worker、link 和 KV memory 哪个先饱和？为什么高接受率不必然支持启用推测解码？ |
 | A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1、`judge_reliability_audit` | 经典 NLP、encoder-only、结构化预测、评测指标、LLM-as-judge 可靠性 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？为什么一次 judge win rate 不能直接支持上线结论？ |
 
 ## 书面题能力层级
@@ -151,7 +151,7 @@
 | 5 | Training Loop | Ch07；reading-list Week 5 | A5：dataset/CE/AdamW/scheduler/train；训练项目提案 |
 | 6 | Generation、Decoding 与 Reasoning | Ch08；reading-list Week 6 | A6：top-k/top-p/speculative decoding/reasoning；书面题 Ch08 |
 | 7 | Fine-tuning 与 Alignment | Ch09；reading-list Week 7 | A7：SFT/LoRA/DPO/GRPO/RLVR grader；训练 capstone 初版 |
-| 8 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 8 | A8：KV cache/RAG/benchmark summary/多模态评估；推理项目提案 |
+| 8 | Inference Engineering、RAG 与 Multimodal Serving | Ch10；reading-list Week 8 | A8：KV cache/RAG/speculative gate/benchmark summary/多模态评估；推理项目提案 |
 | 9 | 经典 NLP、结构化预测与评测专题 | Ch11；classic-nlp-handout；reading-list Week 9 | A9：RNN/dependency/seq2seq/BERT/evaluation 作业与书面题；推理 capstone 初版 |
 | 10 | Capstone 综合与前沿 seminar | 两个 capstone 方向；reading-list Week 10 | 训练 capstone + 推理 capstone 总结、前沿方法复盘 |
 

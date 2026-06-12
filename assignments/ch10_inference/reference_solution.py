@@ -865,6 +865,164 @@ def pd_pool_capacity_plan(workload, capacity):
     }
 
 
+def speculative_serving_gate_report(records, thresholds=None):
+    """Decide whether speculative decoding is worth enabling for a measured workload."""
+    if not records:
+        raise ValueError("records must not be empty")
+    thresholds = dict(thresholds or {})
+    min_output_tokens = int(thresholds.get("min_output_tokens", 1))
+    min_acceptance_rate = float(thresholds.get("min_acceptance_rate", 0.5))
+    min_speedup = float(thresholds.get("min_speedup", 1.1))
+    max_draft_overhead_fraction = thresholds.get("max_draft_overhead_fraction", 0.5)
+    max_quality_regression = float(thresholds.get("max_quality_regression", 0.0))
+    max_memory_overhead_gb = thresholds.get("max_memory_overhead_gb")
+    max_qps_for_latency_mode = thresholds.get("max_qps_for_latency_mode")
+    if min_output_tokens <= 0:
+        raise ValueError("min_output_tokens must be positive")
+    for name, value in [
+        ("min_acceptance_rate", min_acceptance_rate),
+        ("max_quality_regression", max_quality_regression),
+    ]:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1]")
+    if min_speedup <= 0:
+        raise ValueError("min_speedup must be positive")
+    if max_draft_overhead_fraction is not None:
+        max_draft_overhead_fraction = float(max_draft_overhead_fraction)
+        if not 0.0 <= max_draft_overhead_fraction <= 1.0:
+            raise ValueError("max_draft_overhead_fraction must be in [0, 1]")
+    if max_memory_overhead_gb is not None and float(max_memory_overhead_gb) < 0:
+        raise ValueError("max_memory_overhead_gb must be non-negative")
+    if max_qps_for_latency_mode is not None and float(max_qps_for_latency_mode) <= 0:
+        raise ValueError("max_qps_for_latency_mode must be positive")
+
+    rows = []
+    for idx, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise ValueError("each record must be a dict")
+        required = ["baseline_ms", "speculative_ms", "output_tokens", "draft_tokens", "accepted_tokens", "target_verify_steps"]
+        missing = [name for name in required if name not in record]
+        if missing:
+            raise ValueError(f"record {idx} missing fields: {', '.join(missing)}")
+
+        baseline_ms = float(record["baseline_ms"])
+        speculative_ms = float(record["speculative_ms"])
+        output_tokens = int(record["output_tokens"])
+        draft_tokens = int(record["draft_tokens"])
+        accepted_tokens = int(record["accepted_tokens"])
+        target_verify_steps = int(record["target_verify_steps"])
+        draft_ms = record.get("draft_ms")
+        draft_ms = None if draft_ms is None else float(draft_ms)
+        quality_regression = float(record.get("quality_regression", 0.0))
+        memory_overhead_gb = float(record.get("memory_overhead_gb", 0.0))
+        qps = record.get("qps")
+        qps = None if qps is None else float(qps)
+        if min(baseline_ms, speculative_ms) <= 0:
+            raise ValueError("baseline_ms and speculative_ms must be positive")
+        if min(output_tokens, draft_tokens, target_verify_steps) <= 0:
+            raise ValueError("output_tokens, draft_tokens, and target_verify_steps must be positive")
+        if not 0 <= accepted_tokens <= draft_tokens:
+            raise ValueError("accepted_tokens must be between 0 and draft_tokens")
+        if draft_ms is not None and draft_ms < 0:
+            raise ValueError("draft_ms must be non-negative")
+        if not 0.0 <= quality_regression <= 1.0:
+            raise ValueError("quality_regression must be in [0, 1]")
+        if memory_overhead_gb < 0:
+            raise ValueError("memory_overhead_gb must be non-negative")
+        if qps is not None and qps <= 0:
+            raise ValueError("qps must be positive")
+
+        rows.append(
+            {
+                "record_id": record.get("record_id", idx),
+                "baseline_ms": baseline_ms,
+                "speculative_ms": speculative_ms,
+                "output_tokens": output_tokens,
+                "draft_tokens": draft_tokens,
+                "accepted_tokens": accepted_tokens,
+                "target_verify_steps": target_verify_steps,
+                "draft_ms": draft_ms,
+                "quality_regression": quality_regression,
+                "memory_overhead_gb": memory_overhead_gb,
+                "qps": qps,
+                "lossless_validation_passed": bool(record.get("lossless_validation_passed", True)),
+            }
+        )
+
+    total_output_tokens = sum(row["output_tokens"] for row in rows)
+    total_draft_tokens = sum(row["draft_tokens"] for row in rows)
+    total_accepted_tokens = sum(row["accepted_tokens"] for row in rows)
+    total_baseline_ms = sum(row["baseline_ms"] for row in rows)
+    total_speculative_ms = sum(row["speculative_ms"] for row in rows)
+    total_verify_steps = sum(row["target_verify_steps"] for row in rows)
+    draft_ms_values = [row["draft_ms"] for row in rows if row["draft_ms"] is not None]
+    total_draft_ms = sum(draft_ms_values) if draft_ms_values else None
+    draft_overhead_fraction = None if total_draft_ms is None else total_draft_ms / total_speculative_ms
+    acceptance_rate = total_accepted_tokens / total_draft_tokens
+    speedup = total_baseline_ms / total_speculative_ms
+    max_quality_regression_observed = max(row["quality_regression"] for row in rows)
+    max_memory_overhead_observed = max(row["memory_overhead_gb"] for row in rows)
+    max_qps_observed = max((row["qps"] for row in rows if row["qps"] is not None), default=None)
+
+    gates = {
+        "sample_size": total_output_tokens >= min_output_tokens,
+        "acceptance_rate": acceptance_rate >= min_acceptance_rate,
+        "speedup": speedup >= min_speedup,
+        "quality": max_quality_regression_observed <= max_quality_regression and all(row["lossless_validation_passed"] for row in rows),
+    }
+    if max_draft_overhead_fraction is not None and draft_overhead_fraction is not None:
+        gates["draft_overhead"] = draft_overhead_fraction <= max_draft_overhead_fraction
+    if max_memory_overhead_gb is not None:
+        gates["memory_overhead"] = max_memory_overhead_observed <= float(max_memory_overhead_gb)
+    if max_qps_for_latency_mode is not None and max_qps_observed is not None:
+        gates["latency_workload_fit"] = max_qps_observed <= float(max_qps_for_latency_mode)
+
+    action_items = []
+    if not gates["sample_size"]:
+        action_items.append("collect_more_speculative_decode_samples")
+    if not gates["acceptance_rate"]:
+        action_items.append("improve_draft_model_or_reduce_speculation_depth")
+    if not gates["speedup"]:
+        action_items.append("keep_speculation_disabled_until_speedup_reproduces")
+    if not gates["quality"]:
+        action_items.append("run_lossless_or_quality_regression_validation")
+    if gates.get("draft_overhead") is False:
+        action_items.append("reduce_draft_cost_or_use_ngram_suffix_method")
+    if gates.get("memory_overhead") is False:
+        action_items.append("reduce_extra_memory_or_choose_lighter_speculator")
+    if gates.get("latency_workload_fit") is False:
+        action_items.append("benchmark_under_target_qps_and_batching")
+
+    overall_pass = not action_items
+    return {
+        "records": rows,
+        "totals": {
+            "output_tokens": total_output_tokens,
+            "draft_tokens": total_draft_tokens,
+            "accepted_tokens": total_accepted_tokens,
+            "target_verify_steps": total_verify_steps,
+            "baseline_ms": total_baseline_ms,
+            "speculative_ms": total_speculative_ms,
+            "draft_ms": total_draft_ms,
+        },
+        "metrics": {
+            "acceptance_rate": acceptance_rate,
+            "speedup": speedup,
+            "baseline_tpot_ms": total_baseline_ms / total_output_tokens,
+            "speculative_tpot_ms": total_speculative_ms / total_output_tokens,
+            "tokens_per_verify_step": total_output_tokens / total_verify_steps,
+            "draft_overhead_fraction": draft_overhead_fraction,
+            "max_quality_regression": max_quality_regression_observed,
+            "max_memory_overhead_gb": max_memory_overhead_observed,
+            "max_qps": max_qps_observed,
+        },
+        "gates": gates,
+        "overall_pass": overall_pass,
+        "action_items": action_items,
+        "decision": "enable_speculative_decoding_for_this_workload" if overall_pass else "keep_baseline_or_rebenchmark_speculation",
+    }
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         generator = torch.Generator().manual_seed(seed)

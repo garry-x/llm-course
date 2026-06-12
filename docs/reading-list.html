@@ -266,7 +266,7 @@
 </ul>
 <h3 id="week-8-inference-engineering-rag-quantization-与-serving">Week 8: Inference Engineering、RAG、Quantization 与 Serving</h3>
 <p>对应章节：Ch10 与推理工程 capstone。</p>
-<p>本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG 和多模态输入如何共同影响延迟、吞吐、成本和质量。</p>
+<p>本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG、speculative decoding 和多模态输入如何共同影响延迟、吞吐、成本和质量。</p>
 <p>必读：</p>
 <ul>
 <li>Kwon et al. <a href="https://arxiv.org/abs/2309.06180">Efficient Memory Management for Large Language Model Serving with PagedAttention</a>. 重点看 KV cache 分页。</li>
@@ -280,6 +280,8 @@
 <p>选读：</p>
 <ul>
 <li>vLLM documentation on PagedAttention、continuous batching、prefix caching 和 disaggregated prefilling。</li>
+<li>vLLM <a href="https://docs.vllm.ai/en/latest/features/speculative_decoding/">Speculative Decoding</a> documentation。重点看 medium-to-low QPS、memory-bound workload、draft/EAGLE/MTP/n-gram/suffix 方法选择和 lossless validation 边界。</li>
+<li>SGLang <a href="https://docs.sglang.ai/advanced_features/speculative_decoding.html">Speculative Decoding</a> documentation。重点看 EAGLE-2/EAGLE-3、MTP、standalone draft model、NGRAM 和 OOM/benchmark 注意事项。</li>
 <li>SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。</li>
 <li>TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。</li>
 <li>Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化。</li>
@@ -302,6 +304,7 @@
 <li>tool/function calling 为什么不能只依赖 prompt 约束？schema、权限和循环预算分别拦截哪类失败？</li>
 <li>prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？</li>
 <li>SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？</li>
+<li>speculative decoding 的 acceptance rate、draft overhead、QPS 和 quality regression 如何共同决定是否启用，而不是只看 <code>num_speculative_tokens</code>？</li>
 </ul>
 <h3 id="week-9-rnn-经典-nlp-encoder-only-evaluation-与-ethics">Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics</h3>
 <p>对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。</p>

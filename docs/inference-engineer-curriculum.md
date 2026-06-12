@@ -11,7 +11,7 @@
 | 阶段 | 章节与项目 | 主要问题 | 学习产出 |
 |------|------------|----------|----------|
 | 1. 模型内部结构 | Ch01-Ch06 | Token 如何进入模型，attention/FFN/MoE 如何产生 logits | 能从 shape 和参数量解释一次前向传播 |
-| 2. 生成链路 | Ch08 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性和 test-time compute 的 trade-off |
+| 2. 生成链路 | Ch08-Ch10 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性、test-time compute 和 speculative gate 的 trade-off |
 | 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本 | 能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存 |
 | 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark |
 | 5. 多模态与质量评估 | Ch09-Ch11、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、上线方案和压测报告 |
@@ -31,9 +31,10 @@
 - 能区分 prefill 与 decode 的瓶颈：prefill 更偏计算密集，decode 更偏带宽密集。
 - 能定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率。
 - 能解释 batch size、continuous batching、prefix cache、speculative decoding 对吞吐和延迟的影响。
+- 能用 acceptance rate、speedup、draft overhead、quality regression、额外显存和 workload QPS 判断是否启用 speculative decoding。
 - 能用 active KV tokens 和 admission limit 描述容量，而不是只用并发请求数。
 
-**对应内容：**Ch08，Ch10 10.1、10.10、10.12、10.13，Capstone `benchmark.py` 与 `slo_check.py`。
+**对应内容：**Ch08，Ch10 10.1、10.10、10.12、10.13、10.17A，Capstone `benchmark.py`、`slo_check.py` 与 speculative gate 表。
 
 ### C. 显存与成本预算
 
@@ -105,7 +106,7 @@
 | 4 | Ch07 | 跑微型训练循环，理解优化器和混合精度 |
 | 5 | Ch08 | 实现生成、采样、TTFT/TPS 分析 |
 | 6 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测 |
-| 7 | Ch10 | 完成 KV Cache、量化、RAG、benchmark、服务蓝图 |
+| 7 | Ch10 | 完成 KV Cache、量化、RAG、speculative gate、benchmark、服务蓝图 |
 | 8 | Ch11 + Capstone | 补齐结构化任务与评测指标，跑通 `acceptance.py`，完成服务、压测、评测、容量估算和上线复盘 |
 
 ## 常见误区
@@ -135,6 +136,7 @@ pass rate：
 P50/P95/P99 latency：
 P95 TTFT：
 P95 TPOT：
+speculative decoding gate：
 SLO 是否通过：
 tokens/s：
 显存峰值：

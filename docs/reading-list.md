@@ -251,7 +251,7 @@
 
 对应章节：Ch10 与推理工程 capstone。
 
-本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG 和多模态输入如何共同影响延迟、吞吐、成本和质量。
+本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG、speculative decoding 和多模态输入如何共同影响延迟、吞吐、成本和质量。
 
 必读：
 
@@ -266,6 +266,8 @@
 选读：
 
 - vLLM documentation on PagedAttention、continuous batching、prefix caching 和 disaggregated prefilling。
+- vLLM [Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/) documentation。重点看 medium-to-low QPS、memory-bound workload、draft/EAGLE/MTP/n-gram/suffix 方法选择和 lossless validation 边界。
+- SGLang [Speculative Decoding](https://docs.sglang.ai/advanced_features/speculative_decoding.html) documentation。重点看 EAGLE-2/EAGLE-3、MTP、standalone draft model、NGRAM 和 OOM/benchmark 注意事项。
 - SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。
 - TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。
 - Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化。
@@ -288,6 +290,7 @@
 - tool/function calling 为什么不能只依赖 prompt 约束？schema、权限和循环预算分别拦截哪类失败？
 - prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？
 - SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？
+- speculative decoding 的 acceptance rate、draft overhead、QPS 和 quality regression 如何共同决定是否启用，而不是只看 `num_speculative_tokens`？
 
 ## Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics
 

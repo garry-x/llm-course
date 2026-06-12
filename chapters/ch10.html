@@ -39,7 +39,7 @@
   <ul>
     <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
     <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、benchmark 与 SLO。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用设计、基准测试、指标结论摘要和 LSH 检索示例。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用设计、基准测试、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
     <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、tool schema 设计、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
@@ -1441,6 +1441,44 @@ class LSHMemory:
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么常说近似常数时间？</strong>哈希把全库切成许多小桶，查询通常只比对命中桶内的少量候选，平均查询成本可能远低于全库扫描。代价是<strong>近似</strong>：相似向量大概率、但不保证进同桶；最坏情况、桶分布和多表探测都会影响复杂度。课程把 Engram 只作为“外部记忆 + LSH 检索”的前沿案例，不把具体 benchmark 当作稳定事实。</p>
     </div>
   </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.17A Speculative Decoding Serving Gate -->
+<!-- ================================================================ -->
+<section class="card" id="s10-17a">
+  <h3>10.17A 推测解码服务 Gate：什么时候真的该打开</h3>
+  <p>Ch08 已经把 speculative decoding 拆成草稿 token、接受率、目标模型验证次数和粗略 speedup。到了服务层，判断口径还要再加四件事：目标 workload 的 QPS 和 batch 状态、draft 模型/头的额外计算与显存、质量或分布一致性校验，以及在真实 prompt/output 长度分布上的 P95 TPOT。vLLM 文档把它定位为 medium-to-low QPS、memory-bound workload 下的 inter-token latency 优化；SGLang、vLLM 等引擎也提供 EAGLE、MTP、draft model、n-gram/suffix 等不同实现，收益必须用本系统 workload 复测。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Gate</th><th>要算什么</th><th>不通过时的动作</th></tr>
+      <tr><td>接受率</td><td><code>accepted_tokens / draft_tokens</code></td><td>换 draft、降低 speculative depth、改用 n-gram/suffix</td></tr>
+      <tr><td>端到端 speedup</td><td><code>baseline_ms / speculative_ms</code>，按真实输出 token 分布汇总</td><td>保持 baseline，重新压测 batch/QPS/采样设置</td></tr>
+      <tr><td>draft overhead</td><td><code>draft_ms / speculative_ms</code> 与额外显存</td><td>减少草稿模型成本或避免在高峰 workload 开启</td></tr>
+      <tr><td>质量/分布校验</td><td>greedy 等价、采样分布回归、任务指标回归</td><td>先修正 rejection sampling、数值差异或回退策略</td></tr>
+    </table>
+  </div>
+  <div class="code-block" data-lang="python">
+report = speculative_serving_gate_report(
+    records=[
+        {
+            "baseline_ms": 1200,
+            "speculative_ms": 540,
+            "output_tokens": 120,
+            "draft_tokens": 120,
+            "accepted_tokens": 92,
+            "target_verify_steps": 30,
+            "draft_ms": 110,
+            "quality_regression": 0.0,
+            "memory_overhead_gb": 1.5,
+            "qps": 4.0,
+            "lossless_validation_passed": True,
+        }
+    ],
+    thresholds={"min_acceptance_rate": 0.7, "min_speedup": 1.8},
+)
+assert report["decision"] == "enable_speculative_decoding_for_this_workload"</div>
+  <p>这个 gate 把“看起来有 2x 加速”的论文或引擎 demo 改写成上线前必须回答的问题：是否在你的 prompt 分布、并发、采样参数、GPU kernel 和服务 SLO 下仍然成立。对高 QPS、compute-bound 或 draft overhead 很高的系统，speculative decoding 可能只增加复杂度而不改善 P95。</p>
 </section>
 
 <!-- ================================================================ -->

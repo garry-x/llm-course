@@ -542,6 +542,7 @@ Quick check：
 - 区分 prefill/decode、TTFT、TPOT、tokens/s、P95/P99。
 - 解释 FlashAttention 的 IO-aware 动机。
 - 判断什么时候需要 prefill/decode 解耦，并把 KV transfer 作为新的系统边界计入报告。
+- 把 Ch08 speculative decoding 的接受率账本升级为服务 gate，判断它是否真的改善当前 workload。
 
 核心推导：
 
@@ -551,6 +552,7 @@ Quick check：
 - active KV tokens 与 admission control：按请求数限流、按活跃 token 限流和按 SLO 队列隔离的差异。
 - Disaggregated serving 指标：`TTFT = queue + prefill + KV transfer + decode admission + first decode token`，`TPOT` 单独约束 decode worker。
 - P/D pool sizing：effective prefill token rate、decode output token rate、KV transfer token rate 和 active KV memory 必须分别过 target utilization gate。
+- Speculative serving gate：接受率、端到端 speedup、draft overhead、额外显存、QPS/workload fit 和质量/分布校验必须同时报告。
 - tail latency 与并发队列的关系。
 
 课堂 demo：
@@ -562,6 +564,7 @@ Quick check：
 - 给定每 token KV bytes、平均活跃上下文长度和 KV 显存预算，估算 admission limit，并说明为什么长请求不能和短请求只按请求数统一限流。
 - 给定一组 prefill/decode trace，填写 `prefill_decode_disaggregation_report`，判断 likely bottleneck、SLO violation 和 prefill/decode worker 配比是否合理。
 - 给定 workload、prefix cache hit rate、prefill/decode worker 吞吐、KV transfer link 吞吐和 decode KV 容量，填写 `pd_pool_capacity_plan` 并决定是否需要调整 P/D worker pool。
+- 给定 baseline/speculative trace、accepted/draft token、draft_ms、quality regression、memory overhead 和 QPS，填写 `speculative_serving_gate_report` 并决定是否启用推测解码。
 - 把一次 benchmark 结果改写成结构化结论摘要，区分任务、baseline、指标和结论边界。
 
 Quick check：
@@ -573,11 +576,12 @@ Quick check：
 - admission control 为什么要看 active KV tokens？
 - KV transfer 什么时候会抵消 prefill/decode 解耦收益？
 - P/D 解耦后，为什么 prefill worker 够用不代表 decode worker 或 KV transfer link 够用？
+- speculative decoding 接受率高时，为什么仍可能不改善 P95 TPOT 或吞吐？
 - 为什么固定开发集上的 pass rate 不能证明开放域能力？
 
 课后产出：
 
-- Ch10 KV cache 与 benchmark summary 测试通过。
+- Ch10 KV cache、benchmark summary、P/D pool plan 和 speculative serving gate 测试通过。
 - 推理项目提案，若 workload 有长 prompt/RAG/多模态/agent 请求，附 prefill、KV transfer、decode queue、TPOT 和 active KV tokens 的测量计划。
 
 ## Week 8 Lecture 16: RAG、Quantization、多模态输入与 Production Readiness

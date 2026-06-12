@@ -81,6 +81,11 @@ def distributed_training_strategy_report(
     raise NotImplementedError
 
 
+def checkpoint_resume_integrity_report(checkpoints, expected=None):
+    """Audit whether checkpoints contain enough state to resume distributed training safely."""
+    raise NotImplementedError
+
+
 def cross_entropy_manual(logits, targets):
     raise NotImplementedError
 

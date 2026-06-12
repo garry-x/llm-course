@@ -37,7 +37,7 @@
 | 注意力核心 | Week 2 | Ch03 | Q/K/V、scaled dot-product attention、causal mask、softmax 行为 |
 | Transformer 组件 | Week 3 | Ch04-Ch05 | MHA、GQA、MLA、LayerNorm/RMSNorm、FFN、SwiGLU、residual path、block 资源估算 |
 | GPT 组装 | Week 4 | Ch06 | GPTModel、LM head、weight tying、参数量估算、MoE router |
-| 训练闭环 | Week 5 | Ch07 | MLE、cross entropy、PPL、AdamW、scheduler、checkpoint、分布式训练概念 |
+| 训练闭环 | Week 5 | Ch07 | MLE、cross entropy、PPL、AdamW、scheduler、checkpoint/resume integrity、分布式训练概念 |
 | 生成方法 | Week 6 | Ch08 | greedy、temperature、top-k/top-p、speculative decoding、structured decoding |
 | 微调与对齐 | Week 7 | Ch09 | SFT chat template/mask/packing gate、偏好数据 gate、LoRA、preference model、DPO、GRPO、alignment tax |
 | 推理工程 | Week 8 | Ch10 | KV Cache、continuous batching admission、quantization、FlashAttention、RAG、vLLM/SGLang、Triton、服务指标 |
@@ -52,7 +52,7 @@
 |------|----------------|----------|
 | Ch01-Ch02 | Python 数据结构、矩阵查表、向量点积、二维旋转、shape trace | tokenizer report、embedding lookup、RoPE 推导和 token 成本说明 |
 | Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差梯度、FLOPs/activation 估算 | attention 测试、MHA/GQA/MLA 实现、block resource report 和 written derivation |
-| Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性、train/val split 和实验统计 | GPT forward/loss、training gate、checkpoint/resume、数据质量与扩容决策 |
+| Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性、train/val split 和实验统计 | GPT forward/loss、training gate、checkpoint/resume integrity、数据质量与扩容决策 |
 | Ch08-Ch09 | logits 分布、采样方差、KL/reference、chat template、assistant mask、偏好数据、reward 和安全切片 | decoding budget、SFT mask/packing audit、post-training data audit、DPO/GRPO/RLVR 评估与失败分析 |
 | Ch10 | KV cache、排队、显存/带宽、压测统计、RAG 指标、tool 协议和准入控制 | continuous batching admission、benchmark summary、P/D 解耦容量计划和上线报告 |
 | Ch11 | RNN/LSTM、encoder-decoder、encoder-only、结构化预测、传统指标和 judge 可靠性 | parsing/CRF/QA/metrics 作业、LLM-as-judge audit 和任务建模选择说明 |
@@ -89,7 +89,7 @@
 | A2 Ch03 | scaled attention、causal/padding mask、softmax Jacobian、attention entropy | Q/K/V、mask 语义、attention 反向传播 | 为什么 mask 必须在 softmax 前应用？attention score 的 shape 为什么是四维？ |
 | A3 Ch04-Ch05 | MHA/GQA/MLA、repeat KV heads、LayerNorm/RMSNorm、SwiGLU、block resource estimates | 多头结构、KV cache、残差路径、激活显存 | GQA 为什么能省推理显存？Pre-Norm 为什么更利于深层训练？ |
 | A4 Ch06 | GPT config/model、weight tying、causal LM label shift、MoE router 和参数预算 | decoder-only LM、LM head、MoE 稀疏激活 | 为什么 logits 位置 `t` 预测 label `t+1`？MoE 的总参数和激活参数为什么不同？ |
-| A5 Ch07 | dataset/dataloader、data curation gate、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory、`distributed_training_strategy_report`、`training_system_gate_report` | 训练闭环、数据过滤/去重/混合、优化器、校准、训练成本、DDP/ZeRO/FSDP、MFU、resume parity、工业训练 gate | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？DDP、ZeRO/FSDP 和 TP/PP 分别解决什么瓶颈？数据质量或污染 gate 失败时为什么不能直接扩容？什么时候应该继续扩容，什么时候必须先 debug？ |
+| A5 Ch07 | dataset/dataloader、data curation gate、CE gradient、label smoothing、AdamW、scheduler、calibration、training budget、optimizer memory、`distributed_training_strategy_report`、`checkpoint_resume_integrity_report`、`training_system_gate_report` | 训练闭环、数据过滤/去重/混合、优化器、校准、训练成本、DDP/ZeRO/FSDP、MFU、checkpoint integrity、distributed checkpoint、resume parity、工业训练 gate | AdamW 与 L2 penalty 有何差异？训练显存为什么不能只数参数？DDP、ZeRO/FSDP 和 TP/PP 分别解决什么瓶颈？只保存 model weights 为什么不够恢复训练？为什么 FSDP/ZeRO 需要 sharded/DCP 类 checkpoint 才能安全 reshard？数据质量或污染 gate 失败时为什么不能直接扩容？什么时候应该继续扩容，什么时候必须先 debug？ |
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、`test_time_compute_budget_report`、token constraints、speculative decoding | 解码策略、搜索、多样性、reasoning/test-time compute 预算、结构化生成 | top-p 为什么是自适应截断？多样本 reasoning 何时值得上线？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、`sft_chat_template_mask_report`、LoRA、sequence log-probs、post-training data audit、RM/DPO/PPO/GRPO、implicit reward、KL、length bias、`rlvr_grader_report` | 指令微调、chat template、assistant-only mask、packing 边界、偏好优化、reference model、可验证 reward、对齐风险 | 为什么 SFT loss 下降不能证明 chat template、assistant mask 和 packing 都正确？DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？偏好数据 gate 失败时为什么不能直接进入 DPO/GRPO？什么时候 RLVR/RFT 的 grader 信号足够可靠？ |
 | A8 Ch10 | KV cache、prefix cache、`continuous_batching_admission_report`、quantization、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、`structured_output_reliability_report`、`validate_tool_call_plan`、`tool_runtime_security_report`、benchmark summary、`production_rollout_gate_report`、`serving_overload_response_report`、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report`、指标结论边界 | 推理工程、RAG、structured output、tool/agent 协议、MCP runtime security、生产发布 gate、运行期过载响应、服务指标、容量规划、continuous batching admission、prefill/decode 解耦、KV transfer、P/D worker pool sizing、speculative decoding 上线 gate | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？为什么 JSON parse 通过不等于 schema/safety/retry gate 通过？如何在执行前拦截无效或越权 tool call，并继续检查 MCP server trust、用户同意、数据外发和 observation isolation？为什么离线 eval 提升仍需要 canary、control、monitoring 和 rollback gate？queue、KV cache、swapping、租户配额和 timeout 同时异常时，如何决定限流、降级、扩容、回滚或 page owner？如何用 max_num_seqs、max_num_batched_tokens 和 active KV tokens 做调度准入？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？P/D 解耦后如何判断 worker、link 和 KV memory 哪个先饱和？为什么高接受率不必然支持启用推测解码？ |
@@ -125,7 +125,7 @@
 训练工程 Capstone 必须回答：
 
 - 数据：训练/验证拆分、去重或泄漏风险、token 统计、样本质量问题。
-- 模型：架构规模、参数量、训练 token budget、batch tokens、optimizer state 和 checkpoint 策略。
+- 模型：架构规模、参数量、训练 token budget、batch tokens、optimizer state、checkpoint 完整性和分布式恢复策略。
 - 优化：loss/PPL 曲线、learning rate schedule、gradient clipping、resume、失败 run 处理。
 - 系统 gate：把 optimization、throughput、state/checkpoint 和 evaluation 分开判定，说明继续训练、扩容、回退或 debug 的依据。
 - 评测：至少一个 held-out 指标、一个人工错误分析维度和一个能力退化或偏差风险。

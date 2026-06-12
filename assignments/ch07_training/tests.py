@@ -296,6 +296,113 @@ class TestTrainingBudget(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.distributed_training_strategy_report(1000, 1, "unknown", 1, 128)
 
+    def test_checkpoint_resume_integrity_report_passes_distributed_resume_state(self):
+        checkpoints = [
+            {
+                "id": "step100",
+                "step": 100,
+                "components": ["model", "optimizer", "scheduler", "global_step", "rng", "sampler", "grad_scaler"],
+                "format": "dcp",
+                "type": "resume",
+                "reshardable": True,
+                "interval_steps": 100,
+                "checkpoint_overhead_pct": 0.03,
+                "async_save": True,
+                "size_gb": 48,
+            },
+            {
+                "id": "step200",
+                "step": 200,
+                "components": ["model", "optimizer", "scheduler", "global_step", "rng", "sampler", "grad_scaler"],
+                "format": "dcp",
+                "type": "resume",
+                "reshardable": True,
+                "interval_steps": 100,
+                "checkpoint_overhead_pct": 0.04,
+                "overlap_with_training": True,
+                "size_gb": 48,
+            },
+        ]
+        report = submission.checkpoint_resume_integrity_report(
+            checkpoints,
+            {
+                "strategy": "fsdp2",
+                "world_size": 8,
+                "required_components": ["model", "optimizer", "scheduler", "global_step", "rng", "sampler", "grad_scaler"],
+                "max_checkpoint_interval_steps": 200,
+                "max_checkpoint_overhead_pct": 0.05,
+                "require_async_or_overlap": True,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "resume_checkpoint_ready")
+        self.assertTrue(report["gates"]["state_completeness"]["pass"])
+        self.assertTrue(report["gates"]["distributed_reshard"]["pass"])
+        self.assertAlmostEqual(report["gates"]["checkpoint_overhead"]["signals"]["total_size_gb"], 96.0)
+
+    def test_checkpoint_resume_integrity_report_flags_missing_state_and_bad_writes(self):
+        checkpoints = [
+            {
+                "id": "export-only",
+                "step": 100,
+                "components": ["model"],
+                "format": "single_file",
+                "type": "export",
+                "interval_steps": 100,
+                "checkpoint_overhead_pct": 0.12,
+                "write_complete": False,
+            },
+            {
+                "id": "older",
+                "step": 90,
+                "components": ["model", "optimizer", "scheduler", "global_step"],
+                "format": "single_file",
+                "type": "resume",
+                "interval_steps": 500,
+                "checkpoint_overhead_pct": 0.08,
+            },
+        ]
+        report = submission.checkpoint_resume_integrity_report(
+            checkpoints,
+            {
+                "strategy": "zero3",
+                "world_size": 4,
+                "max_checkpoint_interval_steps": 200,
+                "max_checkpoint_overhead_pct": 0.05,
+                "require_async_or_overlap": True,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "fix_checkpointing_before_scale_run")
+        self.assertFalse(report["gates"]["state_completeness"]["pass"])
+        self.assertFalse(report["gates"]["write_integrity"]["pass"])
+        self.assertFalse(report["gates"]["distributed_reshard"]["pass"])
+        self.assertFalse(report["gates"]["checkpoint_interval"]["pass"])
+        self.assertFalse(report["gates"]["checkpoint_overhead"]["pass"])
+        self.assertIn("save_full_resume_state_model_optimizer_scheduler_rng_sampler", report["action_items"])
+        self.assertIn("use_atomic_checkpoint_writes_and_validate_latest_pointer", report["action_items"])
+        self.assertIn("use_distributed_checkpoint_or_sharded_state_for_resharding", report["action_items"])
+        self.assertIn("shorten_checkpoint_interval_or_reduce_preemption_loss", report["action_items"])
+        self.assertIn("reduce_checkpoint_overhead_with_async_or_sharded_saves", report["action_items"])
+
+    def test_checkpoint_resume_integrity_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([])
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([{"components": ["model"]}])
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([{"step": 1, "components": []}])
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([{"step": 1, "components": ["model"], "checkpoint_overhead_pct": 1.2}])
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([{"step": 1, "components": ["model"], "size_gb": -1}])
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([{"step": 1, "components": ["model"]}], {"world_size": 0})
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([{"step": 1, "components": "model"}])
+        with self.assertRaises(ValueError):
+            submission.checkpoint_resume_integrity_report([{"step": 1, "components": ["model"]}], {"required_components": "model"})
+
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
 class TestLossOptimizerScheduler(unittest.TestCase):

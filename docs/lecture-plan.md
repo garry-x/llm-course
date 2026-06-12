@@ -336,12 +336,12 @@ Quick check：
 
 目标：
 
-- 解释 grad clipping、AMP、checkpoint/resume、tokens/s。
+- 解释 grad clipping、AMP、checkpoint/resume integrity、tokens/s。
 - 读训练日志，定位 loss spike、NaN 和吞吐下降。
 - 用简单 scaling law 讨论数据/参数/算力预算。
 - 把数据源、去重、质量过滤、eval contamination、PII 和 domain mixture 汇总成训练前 curation gate。
 - 把训练 run 拆成 optimization、throughput、state/checkpoint 和 evaluation gate，决定继续训练、扩容、回退或 debug。
-- 用 `distributed_training_strategy_report` 把 DDP、ZeRO/FSDP、global batch tokens、显存 gate 和 MFU gate 合成 scale rehearsal 前的策略报告。
+- 用 `distributed_training_strategy_report` 和 `checkpoint_resume_integrity_report` 把 DDP、ZeRO/FSDP、global batch tokens、显存 gate、MFU gate 和恢复状态 gate 合成 scale rehearsal 前的策略报告。
 
 核心推导：
 
@@ -355,7 +355,7 @@ Quick check：
 - 多维并行选型：FSDP/ZeRO 解决模型状态显存，TP 切层内矩阵，PP 切模型深度，CP 切长序列，EP 切 MoE experts；选型必须绑定模型结构、序列长度和集群拓扑。
 - FP8/MXFP8 gate：scale/amax history、loss spike、梯度范围、kernel 支持和 checkpoint state 必须与吞吐收益一起报告。
 - MFU：`model_flops_per_token * tokens/s / (num_gpus * peak_flops_per_gpu)`，以及低 MFU 的常见系统原因。
-- checkpoint storage、保存频率、resume parity 和失败重跑成本。
+- checkpoint storage、保存频率、atomic write、model-only export 风险、sharded/DCP reshard、resume parity 和失败重跑成本。
 - training gate 表：optimization 看 train/val/lr/grad_norm，throughput 看 tokens/s/MFU/等待时间，state 看 checkpoint/resume/RNG/sampler，evaluation 看 held-out、能力、安全和格式回归。
 
 课堂 demo：
@@ -366,13 +366,14 @@ Quick check：
 - 给定 1B 参数、bf16 参数/梯度、fp32 AdamW moments，计算训练显存和 optimizer-state sharding 后的单卡估算。
 - 给定 7B 模型、8 卡、bf16 参数/梯度和 fp32 AdamW states，比较 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存。
 - 填写 `distributed_training_strategy_report`：判断一个 FSDP2 rehearsal 是否通过显存和 MFU gate。
+- 填写 `checkpoint_resume_integrity_report`：判断一个 FSDP2 checkpoint 是否包含 optimizer/scheduler/RNG/sampler/scaler state、是否能 reshard、保存间隔和 overhead 是否可接受。
 - 给定 `tokens/s`、GPU 峰值算力和参数量，手算 MFU，并列出 batch 太小、通信等待、dataloader 慢和 checkpoint 写盘四类诊断信号。
 - 给定一份训练日志，填 `training_system_gate_report`：判断哪些 gate 通过、哪些 action item 必须先处理。
 - 修改 learning rate 观察 loss 异常。
 
 Quick check：
 
-- resume 时只恢复 model 权重够不够？
+- resume 时只恢复 model 权重够不够？缺 optimizer、scheduler、RNG、sampler 或 GradScaler 时会看到什么信号？
 - token budget 翻倍时，step count、FLOPs 和 GPU hours 分别怎样变化？
 - val loss 很低但 eval overlap gate 失败时，为什么这不能证明泛化能力？
 - tokens/s 下降可能来自哪些非模型原因？
@@ -382,7 +383,7 @@ Quick check：
 
 课后产出：
 
-- 训练日志、data curation report、distributed strategy report、checkpoint、resume 证明。
+- 训练日志、data curation report、distributed strategy report、checkpoint integrity report、resume 证明。
 - 阅读复盘：DCLM/FineWeb、Chinchilla、ZeRO/FSDP、MegaScale 或 DeepSeek-V3 中一个工程假设，并说明它在课程项目中的简化边界。
 
 ## Week 6 Lecture 11: Decoding、Sampling 与 Search

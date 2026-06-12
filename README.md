@@ -49,7 +49,7 @@
 |------|----------|----------|
 | 表示层 | Ch01-Ch02 | 文本如何变成 token，token 如何变成向量，模型如何获得位置信息 |
 | Transformer 核心 | Ch03-Ch06 | 注意力、mask、多头、GQA/MLA、Norm、FFN、MoE 和 GPT 前向传播如何组合 |
-| 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器和 checkpoint 如何工作 |
+| 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器、checkpoint/resume integrity 和分布式训练 gate 如何工作 |
 | 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG 和推理服务如何取舍 |
 | 微调与对齐 | Ch09 | SFT chat template/mask/packing gate、偏好数据 gate、LoRA、偏好建模、DPO、GRPO、RLVR/RFT 如何改变模型行为 |
 | 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | RNN/LSTM、dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
@@ -69,7 +69,7 @@
 |------|----------------|--------------------|
 | Ch01-Ch02 | Python 数据结构、矩阵查表、向量点积、位置旋转和 shape trace | token 成本、embedding 参数、context 利用率和 prefix cache 前提 |
 | Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差路径和资源估算 | attention 正确性、GQA/MLA 显存收益、block 稳定性和 FLOPs 预算 |
-| Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性和实验统计 | GPT 组装、训练曲线解释、checkpoint/resume、数据 gate 和扩容判断 |
+| Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性和实验统计 | GPT 组装、训练曲线解释、checkpoint/resume integrity、数据 gate 和扩容判断 |
 | Ch08-Ch09 | logits 分布、采样方差、KL/reference model、chat template、assistant mask、偏好数据和 reward 假设 | 生成策略上线、reasoning 预算、SFT/DPO/GRPO 质量与安全边界 |
 | Ch10 | 排队、显存/带宽、KV cache、压测指标、RAG 检索指标、准入控制、发布 gate 和过载响应 | TTFT/TPOT/P95、continuous batching admission、P/D 解耦、容量规划、canary/control、load shedding 和回退 |
 | Ch11 | 序列建模、结构化预测、encoder-only、传统指标和 judge 可靠性 | 选择生成/抽取/排序/结构化解码，判断评测结果能否支持上线结论 |
@@ -110,12 +110,12 @@
 |------|----------|----------------|
 | 数据与 Token 预算 | Ch01, Ch07 | 分析样本、重复、质量过滤、eval contamination、领域混合、长度分布和 token 规模，估算训练 step |
 | 训练循环工程 | Ch06-Ch07 | 组织 PyTorch Dataset/DataLoader、forward、loss、backward、optimizer、scheduler |
-| 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint、resume 和异常排查保护训练 |
+| 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint integrity、distributed resume 和异常排查保护训练 |
 | 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
 | 微调与对齐 | Ch09 | 区分 SFT/偏好数据 gate、LoRA、DPO、GRPO、RLVR/RFT 的数据格式、损失和适用场景 |
-| 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、MFU、GPU hours、checkpoint 存储和 scale rehearsal |
+| 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、MFU、GPU hours、distributed checkpoint、checkpoint 存储和 scale rehearsal |
 
-**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、data curation gate、训练、开发集监控、checkpoint、resume、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下数据过滤/去重/混合、DDP/ZeRO/FSDP、低精度、MFU 和 checkpoint state 的工程边界。
+**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、data curation gate、训练、开发集监控、checkpoint/resume integrity、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下数据过滤/去重/混合、DDP/ZeRO/FSDP、低精度、MFU、checkpoint state 和 reshard 的工程边界。
 
 **能力视图：**按 [LLM 训练工程师能力视图](training-engineer-curriculum.html)（详细版在 [docs/training-engineer-curriculum.html](docs/training-engineer-curriculum.html)）检查训练报告、指标日志、checkpoint 恢复说明和成本规划是否覆盖完整。
 

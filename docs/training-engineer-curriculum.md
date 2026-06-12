@@ -4,18 +4,18 @@
 
 ## 目标画像
 
-完成课程后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存 checkpoint、从中断恢复、做开发集评估，提出 baseline/ablation，并能解释显存、吞吐、分布式策略、MFU、GPU 小时和训练成本之间的关系。
+完成课程后，你应该能独立设计和维护一个小型 LLM 训练任务：准备数据、配置训练、监控 loss/throughput/grad norm、保存完整 checkpoint、从中断恢复、做开发集评估，提出 baseline/ablation，并能解释显存、吞吐、分布式策略、MFU、GPU 小时、checkpoint overhead 和训练成本之间的关系。
 
 ## 章节能力映射
 
 | 阶段 | 章节与项目 | 主要问题 | 学习产出 |
 |------|------------|----------|----------|
 | 1. 模型可训练性 | Ch01-Ch07 | 数据如何变成 logits，梯度如何穿过模型 | 能解释 token、shape、参数量、梯度路径和数据策展 gate |
-| 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint |
+| 2. 单机训练循环 | Ch07 | 如何让 loss 稳定下降 | DataLoader、loss、optimizer、scheduler、AMP、checkpoint/resume gate |
 | 3. 微调与对齐 | Ch09 | 如何把预训练模型变成可用助手 | SFT/偏好数据 gate、LoRA/DPO/GRPO 训练数据、loss masking、偏好优化 |
 | 4. 实验设计与评估 | Ch08-Ch09、Capstone | 如何证明训练或对齐方法真的更好 | research question、baseline、ablation、对齐评估和结论边界 |
 | 5. 大规模训练效率 | Ch07、Ch10 | 如何解决显存、通信、吞吐、精度和成本问题 | ZeRO/FSDP2/TP/PP、FP8/MXFP8、MFU、tokens/s 解释 |
-| 6. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint、训练规划与 strategy report |
+| 6. 工程实践 | Training Capstone | 如何证明训练任务可复现、可恢复、可观测 | acceptance 输出、metrics.jsonl、checkpoint integrity、训练规划与 strategy report |
 
 ## 能力目标
 
@@ -40,11 +40,13 @@
 
 ### C. Checkpoint 与可恢复性
 
-- 能保存 model/optimizer/scheduler/global_step/random seed/config。
+- 能保存 model/optimizer/scheduler/global_step/random seed/config、sampler/data cursor 和低精度 scaler/scale history。
 - 能从 checkpoint resume，并保证 step、lr、best metric 和日志连续。
-- 能区分 latest、best、periodic checkpoint 的保留策略。
+- 能区分 latest、best、periodic checkpoint 和 model-only export；知道 export 权重不能替代可恢复训练状态。
+- 能检查 atomic write、latest pointer、checkpoint interval、checkpoint overhead 和 async/overlap 保存策略。
+- 能说明 FSDP/ZeRO 下 checkpoint 还需要 shard metadata、sharded/DCP 类格式和 load-time reshard 能力。
 
-**对应内容：**Ch07，Training Capstone `train.py` 与 `acceptance.py`。
+**对应内容：**Ch07，`checkpoint_resume_integrity_report`，Training Capstone `train.py` 与 `acceptance.py`。
 
 ### D. 监控与实验管理
 
@@ -62,6 +64,7 @@
 - 能估算 parameters、gradients、AdamW moments、activations、temporary buffers 和 checkpoint 对单卡显存的影响。
 - 能说明 ZeRO/FSDP 分别切分哪些训练状态，TP/PP 如何改变通信路径和 pipeline bubble。
 - 能用 `distributed_training_strategy_report` 或等价表格比较 per-rank memory、global batch tokens、MFU、显存 gate 和 scale rehearsal action item。
+- 能把 `checkpoint_resume_integrity_report` 或等价表格接到分布式策略报告中，说明目标 world size 下是否能安全恢复和 reshard。
 
 **对应内容：**Ch07 7.10、7.15，Ch10 10.15。
 
@@ -91,11 +94,11 @@
 | SFT 数据协议 gate | 能报告 chat template、assistant spans、supervised token ratio、assistant truncation、packing mode 和 block-diagonal attention 使用情况 | `sft_chat_template_mask_report` 表 |
 | Post-training 数据 gate | 能报告 SFT/偏好/RLVR 数据的任务覆盖、安全切片、长度偏差、标签冲突、eval overlap 和 unsafe chosen 风险 | `post_training_data_audit` 表 |
 | 训练运行 | 能跑完整训练并持续记录 metrics | `train.py` + `metrics.jsonl` |
-| Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复 | `acceptance.py` resume 检查 |
+| Checkpoint | 能保存 latest checkpoint，并从中断 step 恢复；能证明 optimizer/scheduler/RNG/sampler/scaler state 完整、写入原子、分布式 checkpoint 可 reshard | `acceptance.py` resume 检查 + checkpoint integrity 表 |
 | 开发集 | 能记录 val_loss / perplexity / ECE | `metrics.jsonl` |
 | 监控指标 | 至少记录 loss、lr、grad_norm、tokens/s | `metrics.jsonl` |
 | 显存规划 | 能拆分参数、梯度、optimizer state、activation 和 checkpoint 存储 | 显存估算表 |
-| 分布式规划 | 能解释 ZeRO/FSDP2/TP/PP 选择、per-rank memory、tokens/s/GPU、MFU 和 action item | strategy report + 训练规划说明 |
+| 分布式规划 | 能解释 ZeRO/FSDP2/TP/PP 选择、per-rank memory、tokens/s/GPU、MFU、sharded checkpoint 和 action item | strategy report + checkpoint integrity + 训练规划说明 |
 | 训练规划 | 能估算 steps、GPU hours、成本、checkpoint 存储 | `plan_training.py` 输出 |
 | 实验结论 | 项目有研究问题、baseline、ablation 和结论边界 | proposal / milestone / final report |
 | 异常处理 | 能说明 nan/loss spike/吞吐下降时的排查顺序 | 复盘文档 |
@@ -110,8 +113,8 @@
 | 3 | Ch07 前半 | 实现 DataLoader、cross entropy、AdamW、scheduler |
 | 4 | Ch07 后半 | 实现 AMP、gradient clipping、训练日志和 loss 曲线 |
 | 5 | Ch09 | 跑 SFT/post-training data audit/LoRA/DPO/GRPO 练习，理解不同 loss |
-| 6 | Ch07 分布式专题 | 学 ZeRO/FSDP2/TP/PP、FP8/MXFP8、MFU |
-| 7 | Training Capstone | 跑数据分析、训练、checkpoint/resume、规划脚本和 strategy report |
+| 6 | Ch07 分布式专题 | 学 ZeRO/FSDP2/TP/PP、FP8/MXFP8、MFU、distributed checkpoint/resume |
+| 7 | Training Capstone | 跑数据分析、训练、checkpoint/resume integrity、规划脚本和 strategy report |
 | 8 | 复盘 | 写训练报告：配置、曲线、成本、失败排查、下一步 |
 
 ## 最终交付模板
@@ -133,6 +136,7 @@ global batch tokens：
 分布式策略 / MFU：
 optimizer state / activation memory：
 checkpoint 策略：
+checkpoint integrity gate：
 resume 是否验证：
 train loss：
 val loss / ppl：

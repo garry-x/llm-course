@@ -170,7 +170,8 @@
 选读：
 
 - Huang et al. [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://arxiv.org/abs/1811.06965). 重点看 micro-batch、pipeline bubble 和 activation rematerialization。
-- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, [FSDP2](https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html)、[DTensor](https://docs.pytorch.org/docs/stable/distributed.tensor.html) 和 Distributed Checkpoint。重点看 FSDP2 如何用 DTensor 风格分片参数、梯度和 optimizer state，以及 resume parity 如何验证。
+- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, [FSDP2](https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html)、[DTensor](https://docs.pytorch.org/docs/stable/distributed.tensor.html) 和 [Distributed Checkpoint](https://docs.pytorch.org/docs/stable/distributed.checkpoint.html)。重点看 FSDP2 如何用 DTensor 风格分片参数、梯度和 optimizer state，DCP 如何做多 rank checkpoint 与 load-time resharding，以及 resume parity 如何验证。
+- PyTorch [TorchTitan checkpoint guide](https://github.com/pytorch/torchtitan/blob/main/docs/checkpoint.md)。重点看 model-only save 与完整训练状态保存的差异，以及 checkpoint interval/async/keep-latest 这类工程参数如何进入训练可靠性。
 - NVIDIA Transformer Engine documentation on [FP8/MXFP8/NVFP4](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html)。重点看低精度训练不仅是 dtype 选择，还包括 scaling、amax history、kernel 支持和 checkpoint state。
 - NVIDIA Megatron Core parallelism guide。重点看 DP、TP、PP、CP、EP 和 sequence parallelism 分别切什么维度，什么时候组合。
 - DeepSeek-V3 Technical Report 中 FP8 mixed precision、DualPipe、MLA/MoE 和 MTP。重点看这些设计如何共同服务训练效率和稳定性。
@@ -187,10 +188,12 @@
 - 参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？
 - DDP、ZeRO/FSDP、tensor parallel 和 pipeline parallel 分别解决容量、通信还是吞吐中的哪一类瓶颈？
 - `distributed_training_strategy_report` 中每卡模型状态、global batch tokens、MFU 和 action item 分别对应训练系统的哪个风险？
+- `checkpoint_resume_integrity_report` 中 state completeness、write integrity、distributed reshard、interval 和 overhead gate 分别阻止哪类恢复失败？
 - MFU 低时，如何区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合？
 - FP8/MXFP8 带来吞吐收益时，为什么仍要单独检查 loss spike、scale/amax history、梯度范围和 checkpoint resume？
 - 一次训练 run 的 optimization、throughput、state/checkpoint 和 evaluation gate 分别需要哪些最低证据？
 - FSDP2 / Distributed Checkpoint / Megatron Core 这类工具解决的是课程 tiny train 中哪一个被简化掉的问题？
+- 为什么 model-only export 不能替代可恢复训练 checkpoint？FSDP/ZeRO 下为什么还要检查 sharded/DCP 格式和 shard metadata？
 - Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？
 
 ## Week 6: Generation、Search 与 Speculative Decoding

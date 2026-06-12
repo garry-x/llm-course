@@ -11,8 +11,8 @@
 | Data Profile | 样本数、空样本、重复率、长度分布、字符/token 规模 | `python data_profile.py` 输出 JSON |
 | Data Curation Gate | 报告数据源、过滤、去重、eval overlap、domain mixture 和 privacy 风险是否支持训练 | 报告中的 data curation 表 |
 | Training | PyTorch 训练循环，记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s | `metrics.jsonl` |
-| Checkpoint | 保存 latest checkpoint，包含 model/optimizer/config/global_step | `checkpoints/latest.pt` |
-| Resume | 从 checkpoint 恢复并继续训练，global_step 单调增加 | `python acceptance.py` |
+| Checkpoint | 保存 latest checkpoint，包含 model/optimizer/scheduler/config/global_step/RNG/sampler；低精度训练保存 scaler/scale history | `checkpoints/latest.pt` + checkpoint integrity 表 |
+| Resume | 从 checkpoint 恢复并继续训练，global_step 单调增加，lr/loss/数据进度连续 | `python acceptance.py` |
 | Planning | 估算 steps、GPU hours、成本、checkpoint 存储 | `python plan_training.py` |
 | Strategy Report | 对照 Ch07 的 `distributed_training_strategy_report`，估算 DDP/ZeRO/FSDP 类策略的每卡模型状态、global batch tokens、MFU 和 scale rehearsal 风险 | 报告中的 strategy 表 |
 | Industrial Gate | 把训练 run 拆成 optimization、throughput、state/checkpoint、evaluation gate | 报告中的 gate 表 |
@@ -90,7 +90,7 @@ python plan_training.py \
 - 固定随机种子、训练配置和数据版本。
 - 数据报告包含 source inventory、过滤规则、重复率、eval overlap、domain mixture、PII/凭据风险和未覆盖风险。
 - `metrics.jsonl` 至少包含 train_loss、val_loss、ppl、lr、grad_norm、tokens/s。
-- `checkpoints/latest.pt` 能恢复训练，resume 后 global_step 增加。
+- `checkpoints/latest.pt` 能恢复训练，resume 后 global_step 增加；报告说明不是 model-only export，并检查 optimizer/scheduler/RNG/sampler/scaler state、atomic write、latest pointer、保存间隔和 checkpoint overhead。
 - 能解释 global batch tokens、总 step、tokens/s/GPU、GPU hours 和预计成本。
 - 能用 strategy report 说明 DDP、ZeRO/FSDP、TP/PP 或低精度训练分别解决的是容量、通信、吞吐还是 checkpoint 状态问题。
 - 能说明 loss spike、nan、吞吐下降、开发集退化时的排查顺序。
@@ -103,7 +103,7 @@ python plan_training.py \
 - 数据分析结果：长度分布、重复、异常样本、过滤/去重规则、eval overlap、domain mixture、PII/凭据风险和 token 预算。
 - Data curation gate：按 Ch07 `training_data_curation_report` 或等价表格报告 size、dedup、quality filter、eval contamination、mixture balance 和 privacy gate；未通过时不能把训练曲线当作可扩容证据。
 - 训练曲线：train loss、val loss、perplexity、lr、grad_norm 和 tokens/s。
-- checkpoint resume 产出：恢复后 step 单调增加，配置和优化器状态被恢复。
+- checkpoint resume 产出：恢复后 step 单调增加，配置、优化器、scheduler、RNG、sampler/data cursor 和低精度 scaler/scale history 被恢复；若讨论 FSDP/ZeRO，说明 sharded/DCP 类 checkpoint、shard metadata 和 reshard 能力。
 - 至少一个 ablation，例如学习率、batch size、seq_len 或 dropout。
 - loss spike、NaN、过拟合或吞吐下降的排查记录。
 - 若使用 SFT 数据做 post-training，必须报告 chat template、assistant spans、assistant-only label mask、supervised token ratio、assistant truncation、packing mode 和是否使用 block-diagonal attention；任一 gate 未通过时，SFT loss 下降不能作为指令跟随改进证据。
@@ -126,9 +126,10 @@ python plan_training.py \
 8. **Data curation gate.** 报告 total tokens/documents、weighted duplicate rate、quality pass rate、max eval overlap、domain token shares、PII/凭据风险和 action items；若做 SFT，还要报告 template/mask/packing gate。
 9. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
 10. **Strategy report.** 用 `distributed_training_strategy_report` 或等价表格报告每卡模型状态、global batch tokens、MFU、显存 gate 和 action item；若讨论 FP8/MXFP8，写清 scale/amax/checkpoint state 如何验证。
-11. **Industrial gates.** 用表格报告 data curation、optimization、throughput、state/checkpoint、evaluation gate：每个 gate 的信号、阈值、通过/失败和下一步动作。
-12. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
-13. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
+11. **Checkpoint integrity report.** 用 `checkpoint_resume_integrity_report` 或等价表格报告 state completeness、write integrity、distributed reshard、checkpoint interval 和 overhead gate；说明哪些 checkpoint 是 resume state，哪些只是 export artifact。
+12. **Industrial gates.** 用表格报告 data curation、optimization、throughput、state/checkpoint、evaluation gate：每个 gate 的信号、阈值、通过/失败和下一步动作。
+13. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
+14. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
 
 ### 结果表模板
 
@@ -150,6 +151,12 @@ SFT template/mask/packing gate：
 |----------|--------------|---------------------|-----|-----------|-------------|
 | DDP / ZeRO / FSDP | | | | | |
 
+### Checkpoint/resume integrity gate 模板
+
+| Checkpoint | Step | Components | Format | Reshardable | Interval | Overhead | Gate / action |
+|------------|------|------------|--------|-------------|----------|----------|---------------|
+| latest | | model/optimizer/scheduler/global_step/RNG/sampler/scaler | sharded/DCP/single | | | | |
+
 ### Data curation gate 模板
 
 | Source/mix | tokens | documents | duplicate rate | quality pass rate | eval overlap | PII/secret risk | domain share | Gate | 下一步 |
@@ -163,7 +170,7 @@ SFT template/mask/packing gate：
 | Data curation | tokens/documents、duplicate、quality、eval overlap、domain mix、PII | | | |
 | Optimization | train/val loss、grad_norm、NaN/loss spike | | | |
 | Throughput | tokens/s、step time、dataloader wait、checkpoint overhead | | | |
-| State | checkpoint/resume、lr 连续性、optimizer/scheduler/RNG/sampler state | | | |
+| State | checkpoint/resume、lr 连续性、optimizer/scheduler/RNG/sampler/scaler state、atomic write、sharded/DCP reshard | | | |
 | Evaluation | 固定 benchmark、格式/安全回归、baseline 对比 | | | |
 
 如果两个 run 的差异小于随机波动，报告应写“不足以支持改动有效”，而不是强行给出优化结论。一个严谨的负结果仍然是合格的训练工程结论。

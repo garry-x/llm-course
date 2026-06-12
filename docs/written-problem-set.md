@@ -81,6 +81,7 @@
 14. 给定 train loss 下降但 val loss 上升的曲线，判断它更可能是过拟合、数据切分问题还是训练目标错误；说明你会先检查哪些数据和日志字段。
 15. 给定 7B 参数模型、8 张 GPU、bf16 参数/梯度、fp32 AdamW `m/v` states，分别计算 DDP、ZeRO-1、ZeRO-2、ZeRO-3/FSDP 的每卡模型状态显存；再按 `distributed_training_strategy_report` 的格式写出 strategy、global batch tokens、memory gate 和 action item，并说明这些估算没有包含 activation、通信 buffer、临时张量和 allocator fragmentation，因此不能单独证明训练可行。
 16. 给定模型参数量 `N=7B`、吞吐 `tokens/s=20000`、GPU 数 `8`、单卡峰值 `300 TFLOP/s`，按 `6N` FLOPs/token 粗估 MFU；若 MFU 只有 18%，列出至少 4 个可能原因，并说明如何用 profiler 或日志区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合。若策略使用 FP8/MXFP8，还要写出 scale/amax history、loss spike、梯度范围和 checkpoint state 的验证证据。
+17. 给定两个 checkpoint：A 为 `step=100`、`type=export`、`format=single_file`、`components=[model]`、`write_complete=false`、`checkpoint_overhead_pct=0.12`；B 为 `step=90`、`type=resume`、`format=single_file`、`components=[model, optimizer, scheduler, global_step]`、`interval_steps=500`、`checkpoint_overhead_pct=0.08`。目标策略为 `world_size=4` 的 ZeRO/FSDP，要求组件为 model、optimizer、scheduler、global_step、RNG、sampler、grad_scaler，最大 checkpoint interval 为 200 steps，最大 overhead 为 5%，并要求 async/overlap 保存。按 `checkpoint_resume_integrity_report` 的格式判断 state completeness、write integrity、distributed reshard、interval、overhead gate 和 action items；解释为什么 model-only export 不能支持恢复训练，以及为什么 sharded/DCP 类 checkpoint 对 FSDP/ZeRO reshard 很重要。
 
 ## Ch08 Generation / Decoding
 

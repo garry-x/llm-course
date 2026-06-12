@@ -251,6 +251,33 @@ report = distributed_training_strategy_report(
 )
 assert report["decision"] == "strategy_ready_for_rehearsal"</div>
   <p>这个练习要求学生看到：同样是 8 卡训练，DDP 复制完整模型状态，FSDP/ZeRO-3 分片参数、梯度和 optimizer state；但是能不能扩大训练还要看激活显存、通信等待、checkpoint 开销和 MFU，而不是只看每卡状态显存。</p>
+  <h4>Checkpoint/resume：不是只保存 model weights</h4>
+  <p>大规模训练常被抢占、节点故障、OOM 或集群维护打断。能恢复训练的 checkpoint 必须保存 <code>model</code>、<code>optimizer</code>、<code>scheduler</code>、<code>global_step</code>、RNG、sampler/data cursor，低精度训练还要保存 GradScaler、FP8 scale 或 amax history；FSDP/ZeRO 这类分片策略还要保存 shard metadata，并使用能在 load 时重新分片的格式。只导出推理权重可以用于 serving，但不能证明训练能从同一状态继续。</p>
+  <p>Ch07 作业中的 <code>checkpoint_resume_integrity_report</code> 把这些要求落成 gate：<code>state_completeness</code> 检查训练状态是否完整，<code>write_integrity</code> 检查 atomic write 与 step 单调性，<code>distributed_reshard</code> 检查 sharded/DCP 类格式是否支持不同 world size 恢复，<code>checkpoint_interval</code> 控制抢占后的最大 token 损失，<code>checkpoint_overhead</code> 则约束保存开销和 async/overlap 策略。</p>
+  <div class="code-block" data-lang="python">
+report = checkpoint_resume_integrity_report(
+    checkpoints=[{
+        "step": 2000,
+        "components": [
+            "model", "optimizer", "scheduler", "global_step",
+            "rng", "sampler", "grad_scaler",
+        ],
+        "format": "dcp",
+        "reshardable": True,
+        "checkpoint_overhead_pct": 0.03,
+        "async_save": True,
+    }],
+    expected={
+        "strategy": "fsdp2",
+        "world_size": 8,
+        "required_components": [
+            "model", "optimizer", "scheduler", "global_step",
+            "rng", "sampler", "grad_scaler",
+        ],
+        "require_async_or_overlap": True,
+    },
+)
+assert report["decision"] == "resume_checkpoint_ready"</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么这很重要：</strong>learning rate schedule、checkpoint 间隔、日志频率和训练成本都依赖 step count。只报告 epoch 不足以复现 LLM 训练，因为同一语料在不同 packing、sequence length、重复采样和数据配比下会产生不同 token 分布。</div></div>
 
   <h4>Data mixture：不是所有 token 等价</h4>
@@ -887,6 +914,7 @@ scheduler.step()</div>
 
   <h4>4. Resume 后曲线不连续，要先查状态完整性</h4>
   <p>恢复训练后的 loss 突然跳变，并不总是模型坏了。常见原因是 checkpoint 只恢复了 model weights，没有恢复 optimizer moments、scheduler step、RNG 和 dataloader position。一个可恢复 checkpoint 的验证方式是：在同一 checkpoint 上跑“连续训练 20 steps”和“训练 10 steps、保存、恢复、再训练 10 steps”，比较 step、lr、loss 序列、consumed tokens 和 eval 结果是否在允许随机误差内一致。</p>
+  <p>如果使用 DDP/FSDP/ZeRO，还要检查 checkpoint 格式是否能保存分片 optimizer state 和 shard metadata，并能在 world size、rank layout 或包裹策略变化时安全 reshard。Ch07 作业的 <code>checkpoint_resume_integrity_report</code> 会把缺失状态、model-only export、非单调 step、写入未完成、保存间隔过长和 checkpoint overhead 统一转成 action items。</p>
 
   <div class="table-wrap">
     <table>

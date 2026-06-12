@@ -376,6 +376,173 @@ def distributed_training_strategy_report(
     }
 
 
+def checkpoint_resume_integrity_report(checkpoints, expected=None):
+    """Audit whether checkpoints contain enough state to resume distributed training safely."""
+    if not checkpoints:
+        raise ValueError("checkpoints must not be empty")
+    expected = dict(expected or {})
+    required_components_raw = expected.get(
+        "required_components",
+        ["model", "optimizer", "scheduler", "global_step", "rng", "sampler"],
+    )
+    if isinstance(required_components_raw, str):
+        raise ValueError("required_components must be a collection of component names")
+    required_components = set(required_components_raw)
+    if not required_components:
+        raise ValueError("required_components must not be empty")
+    strategy = str(expected.get("strategy", "single")).lower().replace("-", "_")
+    world_size = int(expected.get("world_size", 1))
+    max_checkpoint_interval_steps = int(expected.get("max_checkpoint_interval_steps", 1000))
+    max_checkpoint_overhead_pct = float(expected.get("max_checkpoint_overhead_pct", 0.05))
+    require_distributed_checkpoint = bool(expected.get("require_distributed_checkpoint", world_size > 1))
+    require_async_or_overlap = bool(expected.get("require_async_or_overlap", False))
+    allow_export_only = bool(expected.get("allow_export_only", False))
+    if world_size <= 0 or max_checkpoint_interval_steps <= 0:
+        raise ValueError("world_size and max checkpoint interval must be positive")
+    if not 0.0 <= max_checkpoint_overhead_pct <= 1.0:
+        raise ValueError("max_checkpoint_overhead_pct must be in [0, 1]")
+
+    rows = []
+    missing_counts = {component: 0 for component in sorted(required_components)}
+    incomplete_count = 0
+    corrupt_count = 0
+    export_only_count = 0
+    reshard_unsafe_count = 0
+    interval_violations = 0
+    overhead_violations = 0
+    async_missing_count = 0
+    last_step = None
+    non_monotonic_steps = False
+    total_size_gb = 0.0
+
+    for index, checkpoint in enumerate(checkpoints):
+        if not isinstance(checkpoint, dict):
+            raise ValueError("each checkpoint must be a dict")
+        step = int(checkpoint.get("step", checkpoint.get("global_step", -1)))
+        if step < 0:
+            raise ValueError("each checkpoint must include non-negative step/global_step")
+        components_raw = checkpoint.get("components", checkpoint.get("state", []))
+        if isinstance(components_raw, str):
+            raise ValueError("components/state must be a collection of component names")
+        components = set(components_raw)
+        if not components:
+            raise ValueError("each checkpoint must include components/state")
+        missing = sorted(required_components - components)
+        for component in missing:
+            missing_counts[component] += 1
+        if missing:
+            incomplete_count += 1
+        if bool(checkpoint.get("corrupt", False)) or bool(checkpoint.get("write_complete", True)) is False:
+            corrupt_count += 1
+        checkpoint_type = str(checkpoint.get("type", checkpoint.get("checkpoint_type", "resume"))).lower()
+        if checkpoint_type == "export":
+            export_only_count += 1
+        checkpoint_format = str(checkpoint.get("format", checkpoint.get("checkpoint_format", "single_file"))).lower()
+        reshardable = bool(checkpoint.get("reshardable", checkpoint_format in {"distributed", "dcp", "sharded"}))
+        if require_distributed_checkpoint and not reshardable:
+            reshard_unsafe_count += 1
+        interval_steps = int(checkpoint.get("interval_steps", 0))
+        if interval_steps <= 0:
+            if last_step is None:
+                interval_steps = step if step > 0 else max_checkpoint_interval_steps
+            else:
+                interval_steps = step - last_step
+        if interval_steps <= 0:
+            non_monotonic_steps = True
+        if interval_steps > max_checkpoint_interval_steps:
+            interval_violations += 1
+        overhead_pct = float(checkpoint.get("checkpoint_overhead_pct", checkpoint.get("save_time_pct", 0.0)))
+        if not 0.0 <= overhead_pct <= 1.0:
+            raise ValueError("checkpoint overhead must be in [0, 1]")
+        if overhead_pct > max_checkpoint_overhead_pct:
+            overhead_violations += 1
+        async_or_overlap = bool(checkpoint.get("async_save", False) or checkpoint.get("overlap_with_training", False))
+        if require_async_or_overlap and not async_or_overlap:
+            async_missing_count += 1
+        size_gb = float(checkpoint.get("size_gb", 0.0))
+        if size_gb < 0:
+            raise ValueError("checkpoint size_gb must be non-negative")
+        total_size_gb += size_gb
+        if last_step is not None and step <= last_step:
+            non_monotonic_steps = True
+        last_step = step
+        rows.append(
+            {
+                "checkpoint_id": checkpoint.get("id", index),
+                "step": step,
+                "type": checkpoint_type,
+                "format": checkpoint_format,
+                "missing_components": missing,
+                "reshardable": reshardable,
+                "interval_steps": interval_steps,
+                "checkpoint_overhead_pct": overhead_pct,
+                "async_or_overlap": async_or_overlap,
+                "size_gb": size_gb,
+            }
+        )
+
+    gates = {
+        "state_completeness": {
+            "pass": incomplete_count == 0 and (allow_export_only or export_only_count == 0),
+            "signals": {
+                "required_components": sorted(required_components),
+                "incomplete_count": incomplete_count,
+                "missing_counts": missing_counts,
+                "export_only_count": export_only_count,
+            },
+        },
+        "write_integrity": {
+            "pass": corrupt_count == 0 and not non_monotonic_steps,
+            "signals": {"corrupt_count": corrupt_count, "non_monotonic_steps": non_monotonic_steps},
+        },
+        "distributed_reshard": {
+            "pass": reshard_unsafe_count == 0,
+            "signals": {
+                "strategy": strategy,
+                "world_size": world_size,
+                "require_distributed_checkpoint": require_distributed_checkpoint,
+                "reshard_unsafe_count": reshard_unsafe_count,
+            },
+        },
+        "checkpoint_interval": {
+            "pass": interval_violations == 0,
+            "signals": {
+                "max_checkpoint_interval_steps": max_checkpoint_interval_steps,
+                "interval_violations": interval_violations,
+            },
+        },
+        "checkpoint_overhead": {
+            "pass": overhead_violations == 0 and async_missing_count == 0,
+            "signals": {
+                "max_checkpoint_overhead_pct": max_checkpoint_overhead_pct,
+                "overhead_violations": overhead_violations,
+                "require_async_or_overlap": require_async_or_overlap,
+                "async_missing_count": async_missing_count,
+                "total_size_gb": total_size_gb,
+            },
+        },
+    }
+    action_items = []
+    if not gates["state_completeness"]["pass"]:
+        action_items.append("save_full_resume_state_model_optimizer_scheduler_rng_sampler")
+    if not gates["write_integrity"]["pass"]:
+        action_items.append("use_atomic_checkpoint_writes_and_validate_latest_pointer")
+    if not gates["distributed_reshard"]["pass"]:
+        action_items.append("use_distributed_checkpoint_or_sharded_state_for_resharding")
+    if not gates["checkpoint_interval"]["pass"]:
+        action_items.append("shorten_checkpoint_interval_or_reduce_preemption_loss")
+    if not gates["checkpoint_overhead"]["pass"]:
+        action_items.append("reduce_checkpoint_overhead_with_async_or_sharded_saves")
+
+    return {
+        "overall_pass": not action_items,
+        "decision": "resume_checkpoint_ready" if not action_items else "fix_checkpointing_before_scale_run",
+        "rows": rows,
+        "gates": gates,
+        "action_items": action_items,
+    }
+
+
 def cross_entropy_manual(logits, targets):
     batch, seq_len, vocab_size = logits.shape
     logits_flat = logits.reshape(batch * seq_len, vocab_size)

@@ -11,7 +11,7 @@
 | API | `POST /v1/chat/completions`，兼容 OpenAI 风格请求/响应 | `curl` 能返回 `choices[0].message.content` |
 | Streaming | `stream=true` 返回 SSE token 流 | 客户端逐 chunk 收到 `data: ...` |
 | RAG | 能注入检索上下文，记录命中文档 | 响应里返回 `x_retrieved_docs` |
-| Structured Output | `response_format={"type":"json_object"}` 返回可解析 JSON | `evaluate.py` 检查 JSON key |
+| Structured Output | `response_format={"type":"json_object"}` 或 JSON schema / guided decoding 返回可解析且满足 schema 的结果 | `evaluate.py` 检查 JSON key，报告 structured output gate |
 | Tool / MCP Calling | 接收 OpenAI 风格 `tools` schema 或 MCP-style tool registry，返回 `tool_calls`，并在执行前做 schema/权限/预算和 runtime security gate | `evaluate.py` 检查工具名，报告记录 gate |
 | Reasoning Budget | 对 greedy、self-consistency、best-of-N 或 verifier rerank 做 quality/token/latency/cost gate | 报告中的 generation policy 表 |
 | Speculative Decoding | 若采用或讨论 draft/EAGLE/MTP/n-gram/suffix 推测解码，做 acceptance/speedup/draft overhead/quality/workload gate | 报告中的 speculative gate 表 |
@@ -154,7 +154,7 @@ python capacity_plan.py \
 - 最大 prompt 长度、最大输出长度、并发上限已测。
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
 - 每 1M tokens 的 GPU 成本已估算，且知道成本对 tokens/s 和 GPU 小时价格的敏感性。
-- RAG 命中率、JSON 格式正确率、安全拒答率有固定回归集。
+- RAG 命中率、structured output 的 JSON parse/schema valid/retry/fallback/safety、安全拒答率有固定回归集。
 - 工具调用能校验 schema、权限和循环预算，返回 `tool_calls`，并记录工具执行结果。
 - 若使用 MCP 或 remote tool，必须报告 server trust/allowlist、用户同意、敏感数据外发、外部 observation isolation、递归 LLM sampling 和 observation token budget；schema 通过不能替代 runtime security gate。
 - 候选发布包与 stable baseline 已在同一 policy 下比较：离线 pass rate、安全通过率、P95/P99、错误率、成本、canary 样本量/流量、control 对照、per-version monitoring 和 rollback readiness 均有记录。
@@ -169,7 +169,7 @@ python capacity_plan.py \
 - 若使用 LLM-as-judge 或人工偏好近似指标，必须报告 position/verbosity bias、swapped-order consistency 和少量 human label agreement；未通过时不能把 judge win rate 作为上线依据。
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
-- RAG、JSON structured output、tool/MCP calling 和 reasoning budget 的回归用例。
+- RAG、JSON structured output schema gate、tool/MCP calling 和 reasoning budget 的回归用例。
 - Canary/control/rollback 发布判断：候选版本不能只凭离线 eval 提升上线，必须写清 production rollout gate 的通过项、失败项和 action items。
 - Overload response runbook：SLO 变坏时要能从 queue/KV/decode/error/quota 信号判断是限流、降级、扩容、回滚还是 page owner，不能只写“增加机器”。
 - 超时、限流、降级、格式错误和安全拒答策略。
@@ -185,14 +185,15 @@ python capacity_plan.py \
 4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON、是否多样本 reasoning 或 verifier rerank。
 5. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
-7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题、MCP/runtime security gate、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
+7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、structured output 的 parse/schema/retry/fallback/safety gate、tool call schema/permission/budget 问题、MCP/runtime security gate、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
 9. **Continuous batching admission.** 若采用或讨论 high-concurrency serving，报告 `max_num_seqs`、`max_num_batched_tokens`、prefix cache、chunked prefill、admitted/queued、queue wait 和 active KV gate。
 10. **Speculative decoding gate.** 若采用或讨论 speculative decoding，报告 acceptance rate、speedup、draft overhead、tokens per verify step、quality regression、memory overhead 和 QPS/workload fit，并说明是否启用。
 11. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
-12. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
-13. **Production rollout gate.** 将 stable baseline 与 candidate 放进同一张表，报告 offline quality、安全、SLO、错误率、成本、canary traffic/sample、control comparison、required monitors 和 rollback readiness；结论只能是 promote、继续低流量 canary、降级或 block/rollback。
-14. **Overload response.** 报告 queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness；每个失败项必须有明确动作，例如 load shedding、排队隔离、上下文截断、max-token 降级、扩容、回滚或 incident page。
+12. **Structured output gate.** 若服务返回 JSON、工具参数或结构化抽取结果，报告 JSON parse rate、schema valid rate、retry rate、avg retries、P95 latency、fallback/refusal rate、safety violation rate 和 action items。
+13. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
+14. **Production rollout gate.** 将 stable baseline 与 candidate 放进同一张表，报告 offline quality、安全、SLO、错误率、成本、canary traffic/sample、control comparison、required monitors 和 rollback readiness；结论只能是 promote、继续低流量 canary、降级或 block/rollback。
+15. **Overload response.** 报告 queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness；每个失败项必须有明确动作，例如 load shedding、排队隔离、上下文截断、max-token 降级、扩容、回滚或 incident page。
 15. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
 16. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 

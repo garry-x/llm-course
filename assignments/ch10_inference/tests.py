@@ -298,6 +298,106 @@ class TestRetrievalMetrics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.rag_answer_diagnostics(["doc1"], set(), [], False, k=1)
 
+    def test_structured_output_reliability_report_passes_schema_path(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "answer": {"type": "string", "minLength": 3},
+                "status": {"type": "string", "enum": ["ok", "needs_review"]},
+                "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                "citations": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            },
+            "required": ["answer", "status", "confidence"],
+            "additionalProperties": False,
+        }
+        records = [
+            {
+                "id": "json_schema",
+                "strategy": "strict_json_schema",
+                "output": '{"answer":"use KV cache","status":"ok","confidence":0.82,"citations":["doc1"]}',
+                "latency_ms": 120,
+            },
+            {
+                "id": "parsed",
+                "strategy": "guided_json",
+                "parsed": {"answer": "use batching", "status": "needs_review", "confidence": 0.67, "citations": ["doc2"]},
+                "latency_ms": 150,
+                "retry_count": 1,
+            },
+        ]
+        report = submission.structured_output_reliability_report(
+            records,
+            schema,
+            {
+                "min_json_valid_rate": 1.0,
+                "min_schema_valid_rate": 1.0,
+                "max_retry_rate": 0.6,
+                "max_avg_retries": 0.6,
+                "max_p95_latency_ms": 200,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "promote_structured_output_path")
+        self.assertAlmostEqual(report["metrics"]["schema_valid_rate"], 1.0)
+        self.assertTrue(report["gates"]["json_parse"]["pass"])
+        self.assertEqual(report["invalid_examples"], [])
+
+    def test_structured_output_reliability_report_flags_schema_retry_and_safety(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string", "enum": ["allow", "deny"]},
+                "score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            },
+            "required": ["label", "score"],
+            "additionalProperties": False,
+        }
+        records = [
+            {"id": "bad_json", "output": '{"label": "allow"', "retry_count": 2, "latency_ms": 800, "fallback_used": True},
+            {"id": "bad_enum", "parsed": {"label": "maybe", "score": 0.5}, "latency_ms": 700, "safety_violation": True},
+            {"id": "extra", "parsed": {"label": "deny", "score": 1.2, "reason": "extra"}, "latency_ms": 900},
+        ]
+        report = submission.structured_output_reliability_report(
+            records,
+            schema,
+            {
+                "min_json_valid_rate": 0.9,
+                "min_schema_valid_rate": 0.9,
+                "max_retry_rate": 0.2,
+                "max_avg_retries": 0.2,
+                "max_p95_latency_ms": 500,
+                "max_fallback_rate": 0.0,
+                "max_safety_violation_rate": 0.0,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "revise_structured_output_path")
+        self.assertFalse(report["gates"]["json_parse"]["pass"])
+        self.assertFalse(report["gates"]["schema_adherence"]["pass"])
+        self.assertFalse(report["gates"]["retry_latency"]["pass"])
+        self.assertFalse(report["gates"]["fallback"]["pass"])
+        self.assertFalse(report["gates"]["safety"]["pass"])
+        self.assertIn("enable_json_mode_or_constrained_decoding", report["action_items"])
+        self.assertIn("enable_strict_schema_or_repair_invalid_fields", report["action_items"])
+        self.assertIn("simplify_schema_or_reduce_repair_retries", report["action_items"])
+        self.assertIn("block_release_until_structured_output_safety_passes", report["action_items"])
+        self.assertIn("json_parse", report["invalid_examples"][0]["errors"][0])
+        self.assertTrue(any("not in enum" in error for error in report["rows"][1]["errors"]))
+
+    def test_structured_output_reliability_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.structured_output_reliability_report([], {"type": "object"})
+        with self.assertRaises(ValueError):
+            submission.structured_output_reliability_report([{"output": "{}"}], {"type": "array"})
+        with self.assertRaises(ValueError):
+            submission.structured_output_reliability_report([{"output": "{}"}], {"type": "object"}, {"min_json_valid_rate": 1.2})
+        with self.assertRaises(ValueError):
+            submission.structured_output_reliability_report([{"output": "{}"}], {"type": "object"}, {"max_p95_latency_ms": -1})
+        with self.assertRaises(ValueError):
+            submission.structured_output_reliability_report([{"latency_ms": -1, "output": "{}"}], {"type": "object"})
+        with self.assertRaises(ValueError):
+            submission.structured_output_reliability_report([{"latency_ms": 1}], {"type": "object"})
+
     def test_validate_tool_call_plan_accepts_schema_and_budget(self):
         registry = {
             "search_docs": {

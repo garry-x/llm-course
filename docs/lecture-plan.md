@@ -628,6 +628,7 @@ Quick check：
 - MMR 在 query 相关性和 chunk 去冗余之间做贪心折中。
 - RAG context packing 在 context budget 与 reserved output budget 下选择带 citation 的 chunk；Recall 命中但没有进入 prompt 仍然会失败。
 - Tool call gate：schema validation、permission check、loop budget 和 observation injection 必须在工具执行前后分开处理。
+- Structured output gate：JSON parse、schema adherence、repair retry/P95 latency、fallback/refusal 和 safety violation 必须分开报告。
 - MCP/runtime gate：server trust、用户同意、敏感数据外发、外部 observation 隔离、recursive LLM sampling 和 runtime budget 不能由 schema 通过来替代。
 - Production rollout gate：候选发布包先与 stable baseline 比较 offline quality、安全、SLO、错误率和成本，再用 canary sample、流量比例、control comparison、required monitors 和 rollback readiness 决定 promote、继续低流量灰度或 block/rollback。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
@@ -641,6 +642,7 @@ Quick check：
 - 给定 dense/BM25 排序，手算 RRF 分数，再用 reranker 分数调整 top-k。
 - 给定 query-doc 和 doc-doc 相似度，手算 MMR 选择顺序。
 - 给定候选 chunk、token 预算和预留输出预算，手算哪些 citation 进入 prompt。
+- 给定结构化输出记录，填写 `structured_output_reliability_report`，判断 parse、schema、retry、fallback 和 safety gate。
 - 给定一组工具调用，填写 `validate_tool_call_plan` 输出，判断 schema、permission 和 budget gate。
 - 给定一个 remote MCP tool event，填写 `tool_runtime_security_report` 输出，判断 server trust、consent、data privacy、observation isolation 和 sampling/budget gate。
 - 给定 stable baseline、candidate metrics 和 rollout policy，填写 `production_rollout_gate_report`，判断 offline quality、安全、SLO、cost、canary、rollback/monitoring gate。

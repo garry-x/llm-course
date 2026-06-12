@@ -1,6 +1,6 @@
 # Chapter 10 Assignment: Inference Engineering
 
-本作业对应第 10 章推理优化与工程落地。目标是实现 KV Cache、显存估算、prefix cache 复用估算、continuous batching admission gate、INT8 量化、最小 RAG、contrastive retrieval training、pairwise reranker training、检索质量指标、hybrid retrieval / reranking、MMR 多样化选择、RAG context packing、RAG 失败归因、tool use 工程协议校验、MCP/tool runtime security gate、基准指标、production rollout gate、serving overload response gate、prefill/decode 解耦 trace 报告、P/D worker pool 容量规划、speculative decoding 服务 gate 和 LSH 检索。
+本作业对应第 10 章推理优化与工程落地。目标是实现 KV Cache、显存估算、prefix cache 复用估算、continuous batching admission gate、INT8 量化、最小 RAG、contrastive retrieval training、pairwise reranker training、检索质量指标、hybrid retrieval / reranking、MMR 多样化选择、RAG context packing、RAG 失败归因、structured output reliability gate、tool use 工程协议校验、MCP/tool runtime security gate、基准指标、production rollout gate、serving overload response gate、prefill/decode 解耦 trace 报告、P/D worker pool 容量规划、speculative decoding 服务 gate 和 LSH 检索。
 
 ## Files
 
@@ -33,6 +33,7 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 - `maximal_marginal_relevance` 必须在 query 相似度和已选文档冗余度之间做贪心折中，避免 prompt 中塞入近重复 chunk。
 - `build_rag_context` 必须在 context token budget 和预留输出 token 约束下装配带 citation 的 chunk，并报告 selected citations、used tokens 和 skipped chunks。
 - `rag_answer_diagnostics` 必须把端到端 RAG 结果拆成 retrieval recall/MRR、citation precision/recall 和 failure mode，区分 retrieval miss、context/citation miss、generation error 和 success。
+- `structured_output_reliability_report` 必须把 JSON parse、schema adherence、repair retry/latency、fallback/refusal 和 safety violation 分开做 gate；可解析 JSON 不等于满足业务 schema，更不能替代 safety/output guardrail。
 - `validate_tool_call_plan` 必须在执行前校验 tool registry、参数 schema、权限风险、调用次数和重复循环预算；tool use 设计题还必须写清 observation 回填和失败恢复。
 - `tool_runtime_security_report` 必须把 MCP/远程工具的 server trust、权限/用户同意、敏感数据外发、外部 observation 隔离、递归 LLM sampling 和 runtime budget 分开做 gate；schema 通过不代表工具可执行。
 - `prefix_cache_savings` 必须按请求到达顺序计算最长可复用历史前缀、每条请求新增 prefill token、总节省 token 和 prefix cache hit rate。
@@ -50,6 +51,6 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch10_inference/tests.py
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导 KV cache 显存、prefix cache 节省率、continuous batching token/seq/KV admission、量化误差、InfoNCE/in-batch negatives、pairwise reranker loss、RAG chunk/overlap、Recall@k/MRR/nDCG、MMR、context packing、RAG 失败分解、tool schema/权限/循环预算、MCP trust/consent/data-egress/observation isolation、canary/rollback release gate、过载/load shedding/租户隔离 gate、多模态 token 成本、TTFT/TPOT/tokens/s、prefill/decode 解耦、KV transfer、P/D pool sizing 和 speculative decoding gate 的上线意义 |
-| Programming parts | 55 | 实现 KV cache、显存估算、prefix cache 复用估算、`continuous_batching_admission_report`、INT8 量化、contrastive retrieval loss、pairwise reranker loss、RAG/LSH、检索质量指标、RRF/rerank/MMR、context packing、RAG 失败归因、`validate_tool_call_plan`、`tool_runtime_security_report`、benchmark 指标汇总、`production_rollout_gate_report`、`serving_overload_response_report`、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report` 和结论边界摘要 |
-| Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、tool use 的 schema/权限/预算/失败恢复、MCP/remote tool trust boundary、canary/control/rollback 发布判断、queue/KV/decode/error/quota 过载响应、continuous batching/prefix cache/chunked prefill/prefill-decode/KV transfer/active KV memory/speculative decoding 的瓶颈归因、多模态失败模式和前沿 benchmark 适用范围 |
+| Written questions | 35 | 推导 KV cache 显存、prefix cache 节省率、continuous batching token/seq/KV admission、量化误差、InfoNCE/in-batch negatives、pairwise reranker loss、RAG chunk/overlap、Recall@k/MRR/nDCG、MMR、context packing、RAG 失败分解、structured output parse/schema/retry gate、tool schema/权限/循环预算、MCP trust/consent/data-egress/observation isolation、canary/rollback release gate、过载/load shedding/租户隔离 gate、多模态 token 成本、TTFT/TPOT/tokens/s、prefill/decode 解耦、KV transfer、P/D pool sizing 和 speculative decoding gate 的上线意义 |
+| Programming parts | 55 | 实现 KV cache、显存估算、prefix cache 复用估算、`continuous_batching_admission_report`、INT8 量化、contrastive retrieval loss、pairwise reranker loss、RAG/LSH、检索质量指标、RRF/rerank/MMR、context packing、RAG 失败归因、`structured_output_reliability_report`、`validate_tool_call_plan`、`tool_runtime_security_report`、benchmark 指标汇总、`production_rollout_gate_report`、`serving_overload_response_report`、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report` 和结论边界摘要 |
+| Analysis / style | 10 | 说明 latency/cost/quality/safety 的上线取舍、RAG 检索与生成错误边界、structured output 的 schema adherence/repair/fallback/safety trade-off、tool use 的 schema/权限/预算/失败恢复、MCP/remote tool trust boundary、canary/control/rollback 发布判断、queue/KV/decode/error/quota 过载响应、continuous batching/prefix cache/chunked prefill/prefill-decode/KV transfer/active KV memory/speculative decoding 的瓶颈归因、多模态失败模式和前沿 benchmark 适用范围 |

@@ -1,6 +1,7 @@
 """Reference solution for Chapter 10 inference-engineering assignment."""
 
 from collections import defaultdict
+import json
 
 import numpy as np
 import torch
@@ -338,6 +339,235 @@ def rag_answer_diagnostics(retrieved_ids, relevant_ids, cited_ids, answer_correc
         "cited_relevant_ids": sorted(cited_relevant),
         "missing_relevant_ids": sorted(relevant - set(retrieved_top_k)),
         "failure_mode": failure_mode,
+    }
+
+
+def structured_output_reliability_report(records, schema, policy=None):
+    """Gate JSON/schema-constrained outputs with parse, schema, retry, fallback, and safety signals."""
+    if not records:
+        raise ValueError("records must not be empty")
+    if not isinstance(schema, dict) or schema.get("type") != "object":
+        raise ValueError("schema must be an object JSON schema")
+    policy = dict(policy or {})
+    min_json_valid_rate = float(policy.get("min_json_valid_rate", 0.99))
+    min_schema_valid_rate = float(policy.get("min_schema_valid_rate", 0.98))
+    max_retry_rate = float(policy.get("max_retry_rate", 0.10))
+    max_avg_retries = float(policy.get("max_avg_retries", 0.25))
+    max_p95_latency_ms = float(policy.get("max_p95_latency_ms", float("inf")))
+    max_fallback_rate = float(policy.get("max_fallback_rate", 0.05))
+    max_refusal_rate = float(policy.get("max_refusal_rate", 1.0))
+    max_safety_violation_rate = float(policy.get("max_safety_violation_rate", 0.0))
+    for name, value in [
+        ("min_json_valid_rate", min_json_valid_rate),
+        ("min_schema_valid_rate", min_schema_valid_rate),
+        ("max_retry_rate", max_retry_rate),
+        ("max_fallback_rate", max_fallback_rate),
+        ("max_refusal_rate", max_refusal_rate),
+        ("max_safety_violation_rate", max_safety_violation_rate),
+    ]:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1]")
+    if max_avg_retries < 0 or max_p95_latency_ms < 0:
+        raise ValueError("retry and latency thresholds must be non-negative")
+
+    def validate_value(value, node, path):
+        errors = []
+        expected_type = node.get("type")
+        if expected_type == "object":
+            if not isinstance(value, dict):
+                return [f"{path}: expected object"]
+            properties = node.get("properties", {})
+            for field in node.get("required", []):
+                if field not in value:
+                    errors.append(f"{path}.{field}: missing required")
+            if node.get("additionalProperties", True) is False:
+                for field in sorted(set(value) - set(properties)):
+                    errors.append(f"{path}.{field}: unexpected field")
+            for field, child_schema in properties.items():
+                if field in value:
+                    errors.extend(validate_value(value[field], child_schema, f"{path}.{field}"))
+            return errors
+        if expected_type == "array":
+            if not isinstance(value, list):
+                return [f"{path}: expected array"]
+            if "minItems" in node and len(value) < int(node["minItems"]):
+                errors.append(f"{path}: fewer than minItems")
+            if "maxItems" in node and len(value) > int(node["maxItems"]):
+                errors.append(f"{path}: more than maxItems")
+            item_schema = node.get("items")
+            if item_schema:
+                for index, item in enumerate(value):
+                    errors.extend(validate_value(item, item_schema, f"{path}[{index}]"))
+            return errors
+        if expected_type == "string":
+            if not isinstance(value, str):
+                return [f"{path}: expected string"]
+            if "minLength" in node and len(value) < int(node["minLength"]):
+                errors.append(f"{path}: shorter than minLength")
+            if "maxLength" in node and len(value) > int(node["maxLength"]):
+                errors.append(f"{path}: longer than maxLength")
+            if "enum" in node and value not in set(node["enum"]):
+                errors.append(f"{path}: not in enum")
+            return errors
+        if expected_type == "integer":
+            if not isinstance(value, int) or isinstance(value, bool):
+                return [f"{path}: expected integer"]
+            if "minimum" in node and value < int(node["minimum"]):
+                errors.append(f"{path}: below minimum")
+            if "maximum" in node and value > int(node["maximum"]):
+                errors.append(f"{path}: above maximum")
+            if "enum" in node and value not in set(node["enum"]):
+                errors.append(f"{path}: not in enum")
+            return errors
+        if expected_type == "number":
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                return [f"{path}: expected number"]
+            if "minimum" in node and float(value) < float(node["minimum"]):
+                errors.append(f"{path}: below minimum")
+            if "maximum" in node and float(value) > float(node["maximum"]):
+                errors.append(f"{path}: above maximum")
+            return errors
+        if expected_type == "boolean":
+            if not isinstance(value, bool):
+                return [f"{path}: expected boolean"]
+            return errors
+        return errors
+
+    rows = []
+    json_valid = 0
+    schema_valid = 0
+    retried = 0
+    total_retries = 0
+    fallbacks = 0
+    refusals = 0
+    safety_violations = 0
+    latencies = []
+
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise ValueError("each record must be a dict")
+        retry_count = int(record.get("retry_count", record.get("retries", 0)))
+        latency_ms = float(record.get("latency_ms", 0.0))
+        if retry_count < 0 or latency_ms < 0:
+            raise ValueError("retry_count and latency_ms must be non-negative")
+        total_retries += retry_count
+        retried += int(retry_count > 0)
+        fallbacks += int(bool(record.get("fallback_used", False)))
+        refusals += int(bool(record.get("refused", False)))
+        safety_violations += int(bool(record.get("safety_violation", False)))
+        latencies.append(latency_ms)
+
+        parsed = record.get("parsed")
+        parse_error = None
+        if parsed is None:
+            raw = record.get("output", record.get("text", record.get("content")))
+            if not isinstance(raw, str):
+                raise ValueError("each record must contain parsed data or output text")
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                parse_error = str(exc)
+
+        schema_errors = []
+        is_json_valid = parse_error is None
+        if is_json_valid:
+            json_valid += 1
+            schema_errors = validate_value(parsed, schema, "$")
+            if not schema_errors:
+                schema_valid += 1
+        rows.append(
+            {
+                "record_id": record.get("id", index),
+                "strategy": record.get("strategy", "unknown"),
+                "json_valid": is_json_valid,
+                "schema_valid": is_json_valid and not schema_errors,
+                "retry_count": retry_count,
+                "latency_ms": latency_ms,
+                "fallback_used": bool(record.get("fallback_used", False)),
+                "refused": bool(record.get("refused", False)),
+                "safety_violation": bool(record.get("safety_violation", False)),
+                "errors": ([f"json_parse: {parse_error}"] if parse_error else []) + schema_errors,
+            }
+        )
+
+    total = len(records)
+    json_valid_rate = json_valid / total
+    schema_valid_rate = schema_valid / total
+    retry_rate = retried / total
+    avg_retries = total_retries / total
+    p95_latency_ms = float(np.percentile(latencies, 95)) if latencies else 0.0
+    fallback_rate = fallbacks / total
+    refusal_rate = refusals / total
+    safety_violation_rate = safety_violations / total
+
+    gates = {
+        "json_parse": {
+            "pass": json_valid_rate >= min_json_valid_rate,
+            "signals": {"json_valid_rate": json_valid_rate, "min_json_valid_rate": min_json_valid_rate},
+        },
+        "schema_adherence": {
+            "pass": schema_valid_rate >= min_schema_valid_rate,
+            "signals": {"schema_valid_rate": schema_valid_rate, "min_schema_valid_rate": min_schema_valid_rate},
+        },
+        "retry_latency": {
+            "pass": retry_rate <= max_retry_rate and avg_retries <= max_avg_retries and p95_latency_ms <= max_p95_latency_ms,
+            "signals": {
+                "retry_rate": retry_rate,
+                "avg_retries": avg_retries,
+                "p95_latency_ms": p95_latency_ms,
+                "max_retry_rate": max_retry_rate,
+                "max_avg_retries": max_avg_retries,
+                "max_p95_latency_ms": max_p95_latency_ms,
+            },
+        },
+        "fallback": {
+            "pass": fallback_rate <= max_fallback_rate and refusal_rate <= max_refusal_rate,
+            "signals": {
+                "fallback_rate": fallback_rate,
+                "refusal_rate": refusal_rate,
+                "max_fallback_rate": max_fallback_rate,
+                "max_refusal_rate": max_refusal_rate,
+            },
+        },
+        "safety": {
+            "pass": safety_violation_rate <= max_safety_violation_rate,
+            "signals": {
+                "safety_violation_rate": safety_violation_rate,
+                "max_safety_violation_rate": max_safety_violation_rate,
+            },
+        },
+    }
+
+    action_items = []
+    if not gates["json_parse"]["pass"]:
+        action_items.append("enable_json_mode_or_constrained_decoding")
+    if not gates["schema_adherence"]["pass"]:
+        action_items.append("enable_strict_schema_or_repair_invalid_fields")
+    if not gates["retry_latency"]["pass"]:
+        action_items.append("simplify_schema_or_reduce_repair_retries")
+    if not gates["fallback"]["pass"]:
+        action_items.append("investigate_fallback_or_refusal_policy_drift")
+    if not gates["safety"]["pass"]:
+        action_items.append("block_release_until_structured_output_safety_passes")
+
+    return {
+        "overall_pass": not action_items,
+        "decision": "promote_structured_output_path" if not action_items else "revise_structured_output_path",
+        "metrics": {
+            "total_records": total,
+            "json_valid_rate": json_valid_rate,
+            "schema_valid_rate": schema_valid_rate,
+            "retry_rate": retry_rate,
+            "avg_retries": avg_retries,
+            "p95_latency_ms": p95_latency_ms,
+            "fallback_rate": fallback_rate,
+            "refusal_rate": refusal_rate,
+            "safety_violation_rate": safety_violation_rate,
+        },
+        "gates": gates,
+        "rows": rows,
+        "invalid_examples": [row for row in rows if not row["schema_valid"]][:5],
+        "action_items": action_items,
     }
 
 

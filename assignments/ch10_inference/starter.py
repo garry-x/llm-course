@@ -80,6 +80,11 @@ def rag_answer_diagnostics(retrieved_ids, relevant_ids, cited_ids, answer_correc
     raise NotImplementedError
 
 
+def structured_output_reliability_report(records, schema, policy=None):
+    """Gate JSON/schema-constrained outputs with parse, schema, retry, fallback, and safety signals."""
+    raise NotImplementedError
+
+
 def validate_tool_call_plan(tool_registry, proposed_calls, budgets=None):
     """Validate tool names, arguments, permissions, and loop budgets before execution."""
     raise NotImplementedError

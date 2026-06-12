@@ -651,6 +651,27 @@ class SimpleRAG:
   <h4>循环预算：防止 agent 把系统拖入不可控状态</h4>
   <p>Agent 循环必须有硬预算。常见预算包括最大 tool calls、最大 wall-clock time、最大 observation tokens、最大外部 API cost、最大失败重试次数和最大连续同类工具调用次数。预算不是产品体验细节，而是推理服务的容量控制：一个请求如果反复搜索、读长文档、执行代码，会同时拉高 TTFT、总延迟、外部服务成本和上下文 token 数。</p>
 
+  <h4>编程练习：结构化输出可靠性 gate</h4>
+  <p>结构化输出不只是“模型看起来输出了 JSON”。生产服务至少要区分五类信号：JSON 是否可解析、字段是否满足业务 schema、repair retry 是否把延迟推高、fallback/refusal 是否异常增加，以及格式路径是否绕过 safety/output guardrail。Ch10 作业中的 <code>structured_output_reliability_report</code> 把这些信号放进一张 gate 表，适用于 JSON mode、JSON schema、guided decoding、regex/grammar constrained decoding 或工具调用前的参数生成。</p>
+  <pre><code class="language-python">schema = {
+    "type": "object",
+    "properties": {
+        "answer": {"type": "string"},
+        "status": {"type": "string", "enum": ["ok", "needs_review"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    },
+    "required": ["answer", "status", "confidence"],
+    "additionalProperties": False,
+}
+report = structured_output_reliability_report(records, schema, policy={
+    "min_json_valid_rate": 0.99,
+    "min_schema_valid_rate": 0.98,
+    "max_retry_rate": 0.10,
+    "max_p95_latency_ms": 500,
+})
+assert report["decision"] in {"promote_structured_output_path", "revise_structured_output_path"}</code></pre>
+  <p>这个 gate 的关键是把“格式正确率”从单一指标拆开。一个系统可能 JSON parse rate 很高，但 enum 值漂移、必填字段缺失、retry 后 P95 变差，或 fallback 过多导致用户拿到非结构化文本。只有 parse、schema、retry/latency、fallback/refusal 和 safety 同时可控，结构化输出才适合进入发布 gate。</p>
+
   <h4>编程练习：执行前验证 tool call plan</h4>
   <p>Ch10 作业中的 <code>validate_tool_call_plan</code> 把上面的协议变成一个可测试 gate：输入工具 registry、模型提出的 tool calls 和预算，输出 schema、permission、budget 三类 gate。它不执行工具，而是在执行前拦截未知工具、缺失参数、越界参数、高风险权限和重复循环。</p>
   <pre><code class="language-python">registry = {

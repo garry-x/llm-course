@@ -556,6 +556,7 @@ Quick check：
 - 解释 FlashAttention 的 IO-aware 动机。
 - 判断什么时候需要 prefill/decode 解耦，并把 KV transfer 作为新的系统边界计入报告。
 - 把 Ch08 speculative decoding 的接受率账本升级为服务 gate，判断它是否真的改善当前 workload。
+- 把长上下文服务拆成 context fit、position robustness、citation recall、TTFT 和 KV cost gate。
 - 把运行期 queue、KV、swapping、decode、错误率和租户配额转成 overload response runbook。
 
 核心推导：
@@ -568,6 +569,7 @@ Quick check：
 - Disaggregated serving 指标：`TTFT = queue + prefill + KV transfer + decode admission + first decode token`，`TPOT` 单独约束 decode worker。
 - P/D pool sizing：effective prefill token rate、decode output token rate、KV transfer token rate 和 active KV memory 必须分别过 target utilization gate。
 - Speculative serving gate：接受率、端到端 speedup、draft overhead、额外显存、QPS/workload fit 和质量/分布校验必须同时报告。
+- Long-context serving gate：truncation/overflow、answer/citation recall、head/middle/tail bucket accuracy、P95 TTFT、P95 latency、KV usage 和 prefix cache hit rate 必须同时报告。
 - Overload response gate：queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness 分开判断；不同失败项对应限流、load shedding、上下文截断、max_tokens 降级、扩容、回滚或 page owner。
 - tail latency 与并发队列的关系。
 
@@ -583,6 +585,7 @@ Quick check：
 - 给定 workload、prefix cache hit rate、prefill/decode worker 吞吐、KV transfer link 吞吐和 decode KV 容量，填写 `pd_pool_capacity_plan` 并决定是否需要调整 P/D worker pool。
 - 给定 queue、TTFT、TPOT、KV usage、swapped requests、error/timeout 和 tenant quota，填写 `serving_overload_response_report`，区分 degraded mode、load shedding、noisy-neighbor isolation 和 incident response。
 - 给定 baseline/speculative trace、accepted/draft token、draft_ms、quality regression、memory overhead 和 QPS，填写 `speculative_serving_gate_report` 并决定是否启用推测解码。
+- 给定长上下文 needle/citation trace，填写 `long_context_serving_gate_report`，判断 max context length 是否真的支持上线。
 - 把一次 benchmark 结果改写成结构化结论摘要，区分任务、baseline、指标和结论边界。
 
 Quick check：
@@ -597,11 +600,12 @@ Quick check：
 - P/D 解耦后，为什么 prefill worker 够用不代表 decode worker 或 KV transfer link 够用？
 - queue backlog、TPOT 变差、KV swapping 和租户超配额分别指向哪些不同动作？
 - speculative decoding 接受率高时，为什么仍可能不改善 P95 TPOT 或吞吐？
+- 为什么 128K/1M context window 不能替代 long-context recall、citation 和 SLO gate？
 - 为什么固定开发集上的 pass rate 不能证明开放域能力？
 
 课后产出：
 
-- Ch10 KV cache、benchmark summary、overload response、P/D pool plan 和 speculative serving gate 测试通过。
+- Ch10 KV cache、benchmark summary、overload response、P/D pool plan、speculative serving gate 和 long-context serving gate 测试通过。
 - 推理项目提案，若 workload 有长 prompt/RAG/多模态/agent 请求，附 prefill、KV transfer、decode queue、TPOT、active KV tokens 和 overload runbook 的测量计划。
 
 ## Week 8 Lecture 16: RAG、Quantization、多模态输入与 Production Readiness

@@ -12,7 +12,7 @@
 |------|------------|----------|----------|
 | 1. 模型内部结构 | Ch01-Ch06 | Token 如何进入模型，attention/FFN/MoE 如何产生 logits | 能从 shape 和参数量解释一次前向传播 |
 | 2. 生成链路 | Ch08-Ch10 | Prefill、decode、采样、reasoning 和推测解码如何影响用户体验 | 能解释 TTFT、TPOT、TPS、质量、随机性、test-time compute 和 speculative gate 的 trade-off |
-| 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化、active KV tokens 和 admission control 如何降低成本 | 能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽还是显存 |
+| 3. 显存与吞吐 | Ch03-Ch04、Ch10 | KV Cache、FlashAttention、GQA/MLA、量化、long-context gate、active KV tokens 和 admission control 如何降低成本 | 能手算 KV Cache 显存，设置准入阈值，并说明瓶颈在算力、带宽、显存还是长上下文质量 |
 | 4. 服务化工程 | Ch10、Capstone | 如何把模型包装成可观测、可压测、可回归、可降级的 API | 跑通 OpenAI-compatible Chat API、SSE、metrics、benchmark 和 overload response runbook |
 | 5. 多模态与质量评估 | Ch09-Ch11、Capstone | 如何评测文本、RAG、结构化输出、多模态任务、安全和成本 | 有固定评测集、canary/control/rollback 上线方案和压测报告 |
 
@@ -32,9 +32,10 @@
 - 能定义并测量 TTFT、TPOT、tokens/s、P50/P95/P99、错误率。
 - 能解释 batch size、continuous batching admission、chunked prefill、prefix cache、speculative decoding 对吞吐和延迟的影响。
 - 能用 acceptance rate、speedup、draft overhead、quality regression、额外显存和 workload QPS 判断是否启用 speculative decoding。
+- 能用 context fit、needle/citation recall、head/middle/tail position robustness、P95 TTFT、KV usage 和 prefix cache hit rate 判断长上下文路径是否可上线。
 - 能用 active KV tokens 和 admission limit 描述容量，而不是只用并发请求数。
 
-**对应内容：**Ch08，Ch10 10.1、10.10-10.13、10.17A，Capstone `benchmark.py`、`slo_check.py` 与 speculative gate 表。
+**对应内容：**Ch08，Ch10 10.1、10.10-10.13、10.17A，Capstone `benchmark.py`、`slo_check.py`、speculative gate 表与 long-context gate 表。
 
 ### C. 显存与成本预算
 
@@ -91,6 +92,7 @@
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
 | 调度准入 | 能用 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens 和 queue wait 判断哪些请求进入 continuous batch | admission gate 表 |
+| 长上下文上线 | 能证明长文档/长会话没有截断，head/middle/tail 位置召回稳定，引用正确，且 P95 TTFT、latency、KV usage 和 prefix cache hit rate 满足 SLO | long-context gate 表 |
 | 过载响应 | 能用 queue/KV/decode/error/quota 信号判断 load shedding、降级、扩容、回滚或 page owner | overload response 表 |
 | 准入控制 | 能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit | 容量规划说明 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
@@ -111,7 +113,7 @@
 | 4 | Ch07 | 跑微型训练循环，理解优化器和混合精度 |
 | 5 | Ch08 | 实现生成、采样、TTFT/TPS 分析 |
 | 6 | Ch09 | 跑 SFT/LoRA/DPO/GRPO 概念练习，理解质量评测 |
-| 7 | Ch10 | 完成 KV Cache、continuous batching admission、量化、RAG、speculative gate、benchmark、服务蓝图 |
+| 7 | Ch10 | 完成 KV Cache、continuous batching admission、量化、RAG、speculative gate、long-context gate、benchmark、服务蓝图 |
 | 8 | Ch11 + Capstone | 把结构化任务与评测指标接回服务决策，跑通 `acceptance.py`，完成服务、压测、评测、容量估算和上线复盘 |
 
 ## 常见误区
@@ -142,6 +144,7 @@ P50/P95/P99 latency：
 P95 TTFT：
 P95 TPOT：
 speculative decoding gate：
+long-context serving gate：
 continuous batching admission：
 overload response：
 production rollout gate：

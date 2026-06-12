@@ -285,6 +285,8 @@
 - Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) 与 [Implementing SLOs](https://sre.google/workbook/implementing-slos/). 重点看 canary/control、流量分阶段、SLO/SLI 和 error budget 如何转成发布 gate。
 - Google SRE. [Handling Overload](https://sre.google/sre-book/handling-overload/) 与 [Addressing Cascading Failures](https://sre.google/sre-book/addressing-cascading-failures/). 重点看 degraded responses、load shedding、动态超时和防止过载级联。
 - vLLM documentation: [Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/) 与 [V1 Metrics design](https://docs.vllm.ai/en/latest/design/v1/metrics.html). 重点看推理引擎的 request/engine metrics 如何服务生产监控、capacity planning 和 incident triage。
+- Google Gemini API [Long context](https://ai.google.dev/gemini-api/docs/long-context) 与 Anthropic Claude API [Context windows](https://platform.claude.com/docs/en/build-with-claude/context-windows). 重点看 1M+ context 带来的产品形态、context rot、context management、token counting 和长上下文并不自动等于稳定召回。
+- vLLM [Automatic Prefix Caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/) 与 [serve scheduler arguments](https://docs.vllm.ai/en/stable/cli/serve/). 重点看长文档重复查询、prefix cache、chunked prefill、long-prefill scheduling 和 full input sequence length KV admission。
 
 选读：
 
@@ -320,6 +322,7 @@
 - prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？
 - SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？
 - speculative decoding 的 acceptance rate、draft overhead、QPS 和 quality regression 如何共同决定是否启用，而不是只看 `num_speculative_tokens`？
+- 长上下文上线时，为什么不能只报告 max context length？`long_context_serving_gate_report` 的 context fit、quality、position robustness 和 serving cost 分别挡住哪类失败？
 
 ## Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics
 

@@ -152,6 +152,11 @@ def speculative_serving_gate_report(records, thresholds=None):
     raise NotImplementedError
 
 
+def long_context_serving_gate_report(records, policy=None):
+    """Gate long-context serving with fit, retrieval quality, position robustness, and cost signals."""
+    raise NotImplementedError
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         raise NotImplementedError

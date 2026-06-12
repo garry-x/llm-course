@@ -2,7 +2,7 @@
 
 这个项目把课程最后几章落成一个可运行的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线准备说明。
 
-默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目重点覆盖 OpenAI-compatible API、RAG/JSON/tool/MCP runtime 回归、continuous batching admission、speculative decoding gate、TTFT/TPOT/P95/P99、tokens/s、显存估算和容量规划。
+默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目重点覆盖 OpenAI-compatible API、RAG/JSON/tool/MCP runtime 回归、continuous batching admission、speculative decoding gate、long-context serving gate、TTFT/TPOT/P95/P99、tokens/s、显存估算和容量规划。
 
 ## 你要交付什么
 
@@ -15,6 +15,7 @@
 | Tool / MCP Calling | 接收 OpenAI 风格 `tools` schema 或 MCP-style tool registry，返回 `tool_calls`，并在执行前做 schema/权限/预算和 runtime security gate | `evaluate.py` 检查工具名，报告记录 gate |
 | Reasoning Budget | 对 greedy、self-consistency、best-of-N 或 verifier rerank 做 quality/token/latency/cost gate | 报告中的 generation policy 表 |
 | Speculative Decoding | 若采用或讨论 draft/EAGLE/MTP/n-gram/suffix 推测解码，做 acceptance/speedup/draft overhead/quality/workload gate | 报告中的 speculative gate 表 |
+| Long Context | 若采用或讨论 32K/128K/1M 级上下文，报告截断、needle/citation recall、head/middle/tail 位置鲁棒性、P95 TTFT、KV usage 和 prefix cache hit rate | 报告中的 long-context gate 表 |
 | Admission Control | 若采用 vLLM/SGLang/TensorRT-LLM 或讨论高并发服务，报告 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens、chunked prefill 和 queue wait gate | 报告中的 admission 表 |
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
@@ -37,6 +38,7 @@
 | 结构化输出策略是否可靠 | prompt-only JSON vs JSON mode / retry | JSON 有效率、重试次数、latency | MockEngine 的格式稳定性不能代表真实模型 |
 | 并发增加如何影响尾延迟 | concurrency 1/2/5/10 | P50/P95/P99、tokens/s、error rate | 本地 CPU 网络开销与 GPU serving 不同 |
 | 容量规划对上下文长度多敏感 | context 4K/8K/32K | KV Cache GB、max batch、$/1M tokens | 估算公式不包含全部 runtime overhead |
+| 长上下文是否真的可上线 | 32K/128K/1M window vs RAG/context packing | answer recall、citation recall、head/middle/tail recall、P95 TTFT、KV usage、truncation rate | 最大 context length 不能证明稳定召回或可承担成本 |
 | prefill/decode 解耦是否值得 | single pool vs P/D pool sizing | required prefill/decode workers、KV transfer utilization、active KV tokens、SLO pass | KV transfer 或 decode KV memory 可能抵消 prefill 分离收益 |
 | continuous batching 参数是否合理 | base config vs tuned `max_num_seqs` / `max_num_batched_tokens` / chunked prefill | admitted/queued、queue wait、active KV tokens、P95 TTFT/TPOT | 更大 batch 可能提高吞吐但破坏尾延迟或 KV 预算 |
 | speculative decoding 是否值得启用 | baseline vs draft/EAGLE/MTP/n-gram/suffix | acceptance rate、speedup、draft overhead、P95 TPOT、quality regression、memory overhead | 高接受率仍可能被 draft 成本、高 QPS batch、额外显存或质量回归抵消 |
@@ -148,6 +150,7 @@ python capacity_plan.py \
 - P95 TTFT、P95 TPOT、P99 total latency 已测。
 - 若采用或讨论 prefill/decode 解耦，必须单独报告 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，不能只给端到端 P95。
 - 若采用或讨论 speculative decoding，必须单独报告 accepted/draft tokens、target verify steps、draft_ms、speedup、quality regression、memory overhead 和 QPS/workload fit，不能只给引擎支持或 `num_speculative_tokens`。
+- 若采用或讨论长上下文，必须单独报告 context fit、truncation/overflow、needle/citation recall、head/middle/tail 位置覆盖、P95 TTFT/latency、KV cache usage 和 prefix cache hit rate，不能只写支持的最大 token 数。
 - 若采用或讨论 continuous batching，必须单独报告 `max_num_seqs`、`max_num_batched_tokens`、chunked prefill、admitted/queued、queue wait、active KV tokens 和 queued reasons，不能只给平均 tokens/s。
 - 若服务面向多个租户或开放流量，必须报告运行期过载响应：queue backlog、P95 TTFT/TPOT、KV cache usage、swapped requests、错误率、timeout、tenant quota/noisy neighbor、degraded mode 和 load shedding 动作。
 - SLO 目标可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
@@ -169,6 +172,7 @@ python capacity_plan.py \
 - 若使用 LLM-as-judge 或人工偏好近似指标，必须报告 position/verbosity bias、swapped-order consistency 和少量 human label agreement；未通过时不能把 judge win rate 作为上线依据。
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
+- 若服务支持长文档或长会话，报告 long-context gate：截断率、answer/citation recall、position robustness、P95 TTFT/latency、KV usage、prefix cache hit rate 和 action items。
 - RAG、JSON structured output schema gate、tool/MCP calling 和 reasoning budget 的回归用例。
 - Canary/control/rollback 发布判断：候选版本不能只凭离线 eval 提升上线，必须写清 production rollout gate 的通过项、失败项和 action items。
 - Overload response runbook：SLO 变坏时要能从 queue/KV/decode/error/quota 信号判断是限流、降级、扩容、回滚还是 page owner，不能只写“增加机器”。
@@ -189,13 +193,14 @@ python capacity_plan.py \
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
 9. **Continuous batching admission.** 若采用或讨论 high-concurrency serving，报告 `max_num_seqs`、`max_num_batched_tokens`、prefix cache、chunked prefill、admitted/queued、queue wait 和 active KV gate。
 10. **Speculative decoding gate.** 若采用或讨论 speculative decoding，报告 acceptance rate、speedup、draft overhead、tokens per verify step、quality regression、memory overhead 和 QPS/workload fit，并说明是否启用。
-11. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
-12. **Structured output gate.** 若服务返回 JSON、工具参数或结构化抽取结果，报告 JSON parse rate、schema valid rate、retry rate、avg retries、P95 latency、fallback/refusal rate、safety violation rate 和 action items。
-13. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
-14. **Production rollout gate.** 将 stable baseline 与 candidate 放进同一张表，报告 offline quality、安全、SLO、错误率、成本、canary traffic/sample、control comparison、required monitors 和 rollback readiness；结论只能是 promote、继续低流量 canary、降级或 block/rollback。
-15. **Overload response.** 报告 queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness；每个失败项必须有明确动作，例如 load shedding、排队隔离、上下文截断、max-token 降级、扩容、回滚或 incident page。
-15. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
-16. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
+11. **Long-context gate.** 若服务承诺长文档、长代码库或长会话，报告 context fit、needle/citation recall、head/middle/tail position robustness、P95 TTFT/latency、KV usage、prefix cache hit rate 和是否需要 RAG/context packing/compaction。
+12. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
+13. **Structured output gate.** 若服务返回 JSON、工具参数或结构化抽取结果，报告 JSON parse rate、schema valid rate、retry rate、avg retries、P95 latency、fallback/refusal rate、safety violation rate 和 action items。
+14. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
+15. **Production rollout gate.** 将 stable baseline 与 candidate 放进同一张表，报告 offline quality、安全、SLO、错误率、成本、canary traffic/sample、control comparison、required monitors 和 rollback readiness；结论只能是 promote、继续低流量 canary、降级或 block/rollback。
+16. **Overload response.** 报告 queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness；每个失败项必须有明确动作，例如 load shedding、排队隔离、上下文截断、max-token 降级、扩容、回滚或 incident page。
+17. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
+18. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 
 ### 结果表模板
 
@@ -222,6 +227,12 @@ python capacity_plan.py \
 | Run | method | acceptance rate | speedup | draft overhead | tokens/verify step | quality regression | memory overhead | QPS fit | 结论 |
 |-----|--------|-----------------|---------|----------------|--------------------|--------------------|-----------------|---------|------|
 | baseline vs speculative | | | | | | | | | |
+
+### Long-context gate 模板
+
+| Run | context window | truncation rate | answer recall | citation recall | position buckets | P95 TTFT | max KV usage | prefix hit rate | action |
+|-----|----------------|-----------------|---------------|-----------------|------------------|----------|--------------|-----------------|--------|
+| long-context path | | | | | head/middle/tail | | | | |
 
 ### Continuous batching admission 模板
 

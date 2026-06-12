@@ -1136,6 +1136,35 @@ summary = build_benchmark_summary(
     </table>
   </div>
 
+  <h4>长上下文上线 Gate：context length 不等于可用记忆</h4>
+  <p>1M token 级上下文让“把整本文档、代码库或长会话直接放进 prompt”成为可行产品形态，但长上下文不是免费内存。上下文越长，prefill、KV cache、TTFT、引用定位和位置鲁棒性都会变成独立风险；如果只看 <code>max_model_len</code>，很容易把截断、context rot、引用错误或 KV OOM 误判为模型能力问题。</p>
+  <p>Ch10 作业中的 <code>long_context_serving_gate_report</code> 把长上下文路径拆成四个 gate：<code>context_fit</code> 检查输入和预留输出是否导致截断或溢出；<code>long_context_quality</code> 检查 needle/答案召回和 citation hit；<code>position_robustness</code> 要求 head/middle/tail 不同位置都有覆盖且准确率稳定；<code>serving_cost</code> 把 P95 TTFT、总延迟、KV cache usage 和 prefix cache hit rate 放进同一张上线表。</p>
+  <div class="code-block" data-lang="python">
+report = long_context_serving_gate_report(
+    records=[
+        {
+            "context_tokens": 96000,
+            "max_context_tokens": 128000,
+            "reserved_output_tokens": 2048,
+            "needle_position_pct": 0.9,
+            "answer_correct": True,
+            "citation_hit": True,
+            "ttft_ms": 1000,
+            "latency_ms": 2600,
+            "kv_cache_usage_pct": 0.74,
+            "prefix_cache_hit_rate": 0.6,
+        }
+    ],
+    policy={
+        "min_answer_recall": 0.95,
+        "min_citation_recall": 0.95,
+        "min_position_buckets": 3,
+        "max_p95_ttft_ms": 1200,
+        "max_kv_cache_usage_pct": 0.8,
+    },
+)</div>
+  <p>这个 gate 的目标不是鼓励学生追逐最大窗口，而是让他们学会提出上线前必须回答的问题：长 prompt 是否真的没有截断，关键事实在开头/中间/末尾都能被找回吗，引用是否指向正确证据，prefix cache 是否足以摊薄 prefill 成本，active KV tokens 是否还有安全余量。</p>
+
   <h4>上线方案</h4>
   <ul>
     <li><strong>容量：</strong>测过目标 prompt 长度、输出长度、并发数下的 P50/P95/P99。</li>

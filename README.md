@@ -160,7 +160,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
 | 9 | **微调与对齐** — SFT/偏好数据 Gate/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + post-training data audit + LoRA + GRPO/RLVR ~240行 | 8+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Structured Output/Tool/MCP Gate/vLLM/Triton/生产发布/多模态 | KV Cache + 量化 + RAG + structured output gate + Tool/MCP Gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + LSH + 服务蓝图 | 11+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Structured Output/Tool/MCP Gate/vLLM/Triton/生产发布/长上下文/多模态 | KV Cache + 量化 + RAG + structured output gate + Tool/MCP Gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + 服务蓝图 | 11+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 
 > **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**

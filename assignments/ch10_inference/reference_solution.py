@@ -1905,6 +1905,205 @@ def speculative_serving_gate_report(records, thresholds=None):
     }
 
 
+def long_context_serving_gate_report(records, policy=None):
+    """Gate long-context requests before promoting a large-window serving path."""
+    if not records:
+        raise ValueError("records must not be empty")
+    policy = dict(policy or {})
+    min_answer_recall = float(policy.get("min_answer_recall", 0.8))
+    min_citation_recall = float(policy.get("min_citation_recall", 0.8))
+    max_truncation_rate = float(policy.get("max_truncation_rate", 0.0))
+    min_position_bucket_accuracy = float(policy.get("min_position_bucket_accuracy", 0.6))
+    min_position_buckets = int(policy.get("min_position_buckets", 1))
+    max_position_bucket_share = float(policy.get("max_position_bucket_share", 1.0))
+    max_p95_ttft_ms = float(policy.get("max_p95_ttft_ms", float("inf")))
+    max_p95_latency_ms = float(policy.get("max_p95_latency_ms", float("inf")))
+    max_kv_cache_usage_pct = float(policy.get("max_kv_cache_usage_pct", 1.0))
+    min_prefix_cache_hit_rate = policy.get("min_prefix_cache_hit_rate")
+    if min_prefix_cache_hit_rate is not None:
+        min_prefix_cache_hit_rate = float(min_prefix_cache_hit_rate)
+
+    for name, value in [
+        ("min_answer_recall", min_answer_recall),
+        ("min_citation_recall", min_citation_recall),
+        ("max_truncation_rate", max_truncation_rate),
+        ("min_position_bucket_accuracy", min_position_bucket_accuracy),
+        ("max_position_bucket_share", max_position_bucket_share),
+        ("max_kv_cache_usage_pct", max_kv_cache_usage_pct),
+    ]:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1]")
+    if min_prefix_cache_hit_rate is not None and not 0.0 <= min_prefix_cache_hit_rate <= 1.0:
+        raise ValueError("min_prefix_cache_hit_rate must be in [0, 1]")
+    if min_position_buckets <= 0 or min_position_buckets > 3:
+        raise ValueError("min_position_buckets must be between 1 and 3")
+    if max_p95_ttft_ms < 0 or max_p95_latency_ms < 0:
+        raise ValueError("latency thresholds must be non-negative")
+
+    rows = []
+    bucket_counts = defaultdict(int)
+    bucket_correct = defaultdict(int)
+    for idx, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise ValueError("each record must be a dict")
+        if "context_tokens" not in record or "max_context_tokens" not in record:
+            raise ValueError("each record must include context_tokens and max_context_tokens")
+        context_tokens = int(record["context_tokens"])
+        max_context_tokens = int(record["max_context_tokens"])
+        reserved_output_tokens = int(record.get("reserved_output_tokens", record.get("max_output_tokens", 0)))
+        dropped_context_tokens = int(record.get("dropped_context_tokens", 0))
+        needle_position_pct = float(record.get("needle_position_pct", 0.5))
+        ttft_ms = float(record.get("ttft_ms", 0.0))
+        latency_ms = float(record.get("latency_ms", ttft_ms))
+        kv_cache_usage_pct = float(record.get("kv_cache_usage_pct", 0.0))
+        prefix_cache_hit_rate = float(record.get("prefix_cache_hit_rate", 0.0))
+        if context_tokens <= 0 or max_context_tokens <= 0:
+            raise ValueError("context token counts must be positive")
+        if reserved_output_tokens < 0 or dropped_context_tokens < 0:
+            raise ValueError("reserved output and dropped context tokens must be non-negative")
+        if not 0.0 <= needle_position_pct <= 1.0:
+            raise ValueError("needle_position_pct must be in [0, 1]")
+        if min(ttft_ms, latency_ms) < 0:
+            raise ValueError("latency values must be non-negative")
+        if not 0.0 <= kv_cache_usage_pct <= 1.0:
+            raise ValueError("kv_cache_usage_pct must be in [0, 1]")
+        if not 0.0 <= prefix_cache_hit_rate <= 1.0:
+            raise ValueError("prefix_cache_hit_rate must be in [0, 1]")
+
+        overflow_tokens = max(0, context_tokens + reserved_output_tokens - max_context_tokens)
+        truncated = bool(record.get("truncated", False)) or dropped_context_tokens > 0 or overflow_tokens > 0
+        answer_correct = bool(record.get("answer_correct", record.get("retrieval_correct", False)))
+        citation_hit = bool(record.get("citation_hit", record.get("citation_correct", answer_correct)))
+        if needle_position_pct < 1 / 3:
+            bucket = "head"
+        elif needle_position_pct < 2 / 3:
+            bucket = "middle"
+        else:
+            bucket = "tail"
+        bucket_counts[bucket] += 1
+        if answer_correct:
+            bucket_correct[bucket] += 1
+
+        rows.append(
+            {
+                "record_id": record.get("record_id", idx),
+                "context_tokens": context_tokens,
+                "max_context_tokens": max_context_tokens,
+                "reserved_output_tokens": reserved_output_tokens,
+                "dropped_context_tokens": dropped_context_tokens,
+                "overflow_tokens": overflow_tokens,
+                "truncated": truncated,
+                "needle_position_pct": needle_position_pct,
+                "position_bucket": bucket,
+                "answer_correct": answer_correct,
+                "citation_hit": citation_hit,
+                "ttft_ms": ttft_ms,
+                "latency_ms": latency_ms,
+                "kv_cache_usage_pct": kv_cache_usage_pct,
+                "prefix_cache_hit_rate": prefix_cache_hit_rate,
+            }
+        )
+
+    total = len(rows)
+    truncation_rate = sum(row["truncated"] for row in rows) / total
+    answer_recall = sum(row["answer_correct"] for row in rows) / total
+    citation_recall = sum(row["citation_hit"] for row in rows) / total
+    p95_ttft_ms = float(np.percentile(np.asarray([row["ttft_ms"] for row in rows], dtype=np.float64), 95))
+    p95_latency_ms = float(np.percentile(np.asarray([row["latency_ms"] for row in rows], dtype=np.float64), 95))
+    max_kv_cache_usage_observed = max(row["kv_cache_usage_pct"] for row in rows)
+    avg_prefix_cache_hit_rate = sum(row["prefix_cache_hit_rate"] for row in rows) / total
+    bucket_accuracy = {
+        bucket: bucket_correct[bucket] / count
+        for bucket, count in sorted(bucket_counts.items())
+    }
+    observed_position_buckets = len(bucket_counts)
+    largest_bucket_share = max(bucket_counts.values()) / total
+    bucket_accuracy_pass = all(value >= min_position_bucket_accuracy for value in bucket_accuracy.values())
+
+    gates = {
+        "context_fit": {
+            "pass": truncation_rate <= max_truncation_rate,
+            "signals": {
+                "truncation_rate": truncation_rate,
+                "max_truncation_rate": max_truncation_rate,
+                "truncated_count": sum(row["truncated"] for row in rows),
+            },
+        },
+        "long_context_quality": {
+            "pass": answer_recall >= min_answer_recall and citation_recall >= min_citation_recall,
+            "signals": {
+                "answer_recall": answer_recall,
+                "min_answer_recall": min_answer_recall,
+                "citation_recall": citation_recall,
+                "min_citation_recall": min_citation_recall,
+            },
+        },
+        "position_robustness": {
+            "pass": (
+                observed_position_buckets >= min_position_buckets
+                and largest_bucket_share <= max_position_bucket_share
+                and bucket_accuracy_pass
+            ),
+            "signals": {
+                "bucket_accuracy": bucket_accuracy,
+                "bucket_counts": dict(sorted(bucket_counts.items())),
+                "observed_position_buckets": observed_position_buckets,
+                "min_position_buckets": min_position_buckets,
+                "largest_bucket_share": largest_bucket_share,
+                "max_position_bucket_share": max_position_bucket_share,
+                "min_position_bucket_accuracy": min_position_bucket_accuracy,
+            },
+        },
+        "serving_cost": {
+            "pass": (
+                p95_ttft_ms <= max_p95_ttft_ms
+                and p95_latency_ms <= max_p95_latency_ms
+                and max_kv_cache_usage_observed <= max_kv_cache_usage_pct
+                and (min_prefix_cache_hit_rate is None or avg_prefix_cache_hit_rate >= min_prefix_cache_hit_rate)
+            ),
+            "signals": {
+                "p95_ttft_ms": p95_ttft_ms,
+                "max_p95_ttft_ms": max_p95_ttft_ms,
+                "p95_latency_ms": p95_latency_ms,
+                "max_p95_latency_ms": max_p95_latency_ms,
+                "max_kv_cache_usage_pct": max_kv_cache_usage_observed,
+                "max_allowed_kv_cache_usage_pct": max_kv_cache_usage_pct,
+                "avg_prefix_cache_hit_rate": avg_prefix_cache_hit_rate,
+                "min_prefix_cache_hit_rate": min_prefix_cache_hit_rate,
+            },
+        },
+    }
+    action_items = []
+    if not gates["context_fit"]["pass"]:
+        action_items.append("reduce_context_or_add_retrieval_and_context_packing")
+    if not gates["long_context_quality"]["pass"]:
+        action_items.append("add_needle_recall_citation_and_distractor_eval")
+    if not gates["position_robustness"]["pass"]:
+        action_items.append("rebalance_head_middle_tail_cases_or_add_context_engineering")
+    if not gates["serving_cost"]["pass"]:
+        action_items.append("enable_prefix_cache_chunked_prefill_or_limit_long_context")
+
+    overall_pass = not action_items
+    return {
+        "records": rows,
+        "metrics": {
+            "truncation_rate": truncation_rate,
+            "answer_recall": answer_recall,
+            "citation_recall": citation_recall,
+            "p95_ttft_ms": p95_ttft_ms,
+            "p95_latency_ms": p95_latency_ms,
+            "max_kv_cache_usage_pct": max_kv_cache_usage_observed,
+            "avg_prefix_cache_hit_rate": avg_prefix_cache_hit_rate,
+            "bucket_accuracy": bucket_accuracy,
+            "largest_bucket_share": largest_bucket_share,
+        },
+        "gates": gates,
+        "overall_pass": overall_pass,
+        "action_items": action_items,
+        "decision": "long_context_path_ready" if overall_pass else "revise_long_context_serving_plan",
+    }
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         generator = torch.Generator().manual_seed(seed)

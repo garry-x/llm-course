@@ -1230,6 +1230,156 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
                 ]
             )
 
+    def test_long_context_serving_gate_report_passes_balanced_long_context_path(self):
+        records = [
+            {
+                "record_id": "head",
+                "context_tokens": 32000,
+                "max_context_tokens": 128000,
+                "reserved_output_tokens": 2048,
+                "needle_position_pct": 0.1,
+                "answer_correct": True,
+                "citation_hit": True,
+                "ttft_ms": 720.0,
+                "latency_ms": 1800.0,
+                "kv_cache_usage_pct": 0.55,
+                "prefix_cache_hit_rate": 0.4,
+            },
+            {
+                "record_id": "middle",
+                "context_tokens": 64000,
+                "max_context_tokens": 128000,
+                "reserved_output_tokens": 2048,
+                "needle_position_pct": 0.5,
+                "answer_correct": True,
+                "citation_hit": True,
+                "ttft_ms": 900.0,
+                "latency_ms": 2200.0,
+                "kv_cache_usage_pct": 0.68,
+                "prefix_cache_hit_rate": 0.5,
+            },
+            {
+                "record_id": "tail",
+                "context_tokens": 96000,
+                "max_context_tokens": 128000,
+                "reserved_output_tokens": 2048,
+                "needle_position_pct": 0.9,
+                "answer_correct": True,
+                "citation_hit": True,
+                "ttft_ms": 1000.0,
+                "latency_ms": 2600.0,
+                "kv_cache_usage_pct": 0.74,
+                "prefix_cache_hit_rate": 0.6,
+            },
+        ]
+        report = submission.long_context_serving_gate_report(
+            records,
+            {
+                "min_answer_recall": 0.95,
+                "min_citation_recall": 0.95,
+                "min_position_bucket_accuracy": 0.8,
+                "min_position_buckets": 3,
+                "max_position_bucket_share": 0.5,
+                "max_p95_ttft_ms": 1100,
+                "max_p95_latency_ms": 3000,
+                "max_kv_cache_usage_pct": 0.8,
+                "min_prefix_cache_hit_rate": 0.4,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "long_context_path_ready")
+        self.assertEqual(report["metrics"]["answer_recall"], 1.0)
+        self.assertEqual(report["metrics"]["citation_recall"], 1.0)
+        self.assertEqual(set(report["metrics"]["bucket_accuracy"]), {"head", "middle", "tail"})
+        self.assertTrue(all(gate["pass"] for gate in report["gates"].values()))
+
+    def test_long_context_serving_gate_report_flags_context_quality_position_and_cost(self):
+        records = [
+            {
+                "record_id": "overflow",
+                "context_tokens": 130000,
+                "max_context_tokens": 128000,
+                "reserved_output_tokens": 4096,
+                "needle_position_pct": 0.1,
+                "answer_correct": False,
+                "citation_hit": False,
+                "ttft_ms": 2500.0,
+                "latency_ms": 5200.0,
+                "kv_cache_usage_pct": 0.96,
+                "prefix_cache_hit_rate": 0.0,
+            },
+            {
+                "record_id": "middle-miss",
+                "context_tokens": 96000,
+                "max_context_tokens": 128000,
+                "dropped_context_tokens": 1200,
+                "needle_position_pct": 0.5,
+                "answer_correct": True,
+                "citation_hit": False,
+                "ttft_ms": 1600.0,
+                "latency_ms": 4000.0,
+                "kv_cache_usage_pct": 0.90,
+                "prefix_cache_hit_rate": 0.1,
+            },
+            {
+                "record_id": "tail-miss",
+                "context_tokens": 80000,
+                "max_context_tokens": 128000,
+                "needle_position_pct": 0.9,
+                "answer_correct": False,
+                "citation_hit": False,
+                "ttft_ms": 1800.0,
+                "latency_ms": 4200.0,
+                "kv_cache_usage_pct": 0.91,
+                "prefix_cache_hit_rate": 0.2,
+            },
+        ]
+        report = submission.long_context_serving_gate_report(
+            records,
+            {
+                "min_answer_recall": 0.8,
+                "min_citation_recall": 0.8,
+                "max_truncation_rate": 0.0,
+                "min_position_bucket_accuracy": 0.7,
+                "min_position_buckets": 3,
+                "max_p95_ttft_ms": 1600,
+                "max_p95_latency_ms": 4500,
+                "max_kv_cache_usage_pct": 0.85,
+                "min_prefix_cache_hit_rate": 0.4,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "revise_long_context_serving_plan")
+        self.assertFalse(report["gates"]["context_fit"]["pass"])
+        self.assertFalse(report["gates"]["long_context_quality"]["pass"])
+        self.assertFalse(report["gates"]["position_robustness"]["pass"])
+        self.assertFalse(report["gates"]["serving_cost"]["pass"])
+        self.assertIn("reduce_context_or_add_retrieval_and_context_packing", report["action_items"])
+        self.assertIn("add_needle_recall_citation_and_distractor_eval", report["action_items"])
+        self.assertIn("rebalance_head_middle_tail_cases_or_add_context_engineering", report["action_items"])
+        self.assertIn("enable_prefix_cache_chunked_prefill_or_limit_long_context", report["action_items"])
+
+    def test_long_context_serving_gate_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.long_context_serving_gate_report([])
+        with self.assertRaises(ValueError):
+            submission.long_context_serving_gate_report([{"context_tokens": 1}])
+        with self.assertRaises(ValueError):
+            submission.long_context_serving_gate_report([{"context_tokens": 0, "max_context_tokens": 1}])
+        with self.assertRaises(ValueError):
+            submission.long_context_serving_gate_report(
+                [{"context_tokens": 1, "max_context_tokens": 1, "needle_position_pct": 1.5}]
+            )
+        with self.assertRaises(ValueError):
+            submission.long_context_serving_gate_report(
+                [{"context_tokens": 1, "max_context_tokens": 1, "kv_cache_usage_pct": 1.2}]
+            )
+        with self.assertRaises(ValueError):
+            submission.long_context_serving_gate_report(
+                [{"context_tokens": 1, "max_context_tokens": 1}],
+                {"min_position_buckets": 4},
+            )
+
     def test_lsh_returns_best_same_bucket_candidate(self):
         memory = submission.LSHMemory(dim=2, n_bits=1, seed=0)
         memory.planes = torch.tensor([[1.0, 0.0]])

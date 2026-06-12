@@ -12,6 +12,7 @@
 </head>
 <body data-ch="0">
 
+<button class="menu-toggle" aria-label="菜单">☰</button>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <h1>LLM 深度学习</h1>
@@ -33,127 +34,31 @@
 
 <main class="main">
   <section class="hero">
-    <div class="hero-tags">
-      <span class="hero-tag">🐍 可运行 Python 代码</span>
-      <span class="hero-tag">🧪 编程作业 + 书面推导 + Capstone</span>
-      <span class="hero-tag">🧭 对齐高校 NLP/LLM 课程主线</span>
-      <span class="hero-tag">🛠 训练工程 + 推理工程路线</span>
-      <span class="hero-tag">🔬 Reasoning / Interpretability / Multimodal</span>
+    <div class="hero-copy">
+      <div class="hero-tags">
+        <span class="hero-tag">可运行 Python 代码</span>
+        <span class="hero-tag">编程作业 + 书面推导</span>
+        <span class="hero-tag">训练工程 + 推理工程路线</span>
+      </div>
+      <h2>系统学习大语言模型：表示、架构、训练、生成、对齐与服务</h2>
+      <p>11 章 · 编程练习 · 书面推导 · 两个工程 Capstone<br>先建立 LLM 的完整计算图，再进入训练工程、推理工程、对齐评估和经典 NLP 专题。</p>
+      <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
     </div>
-    <h2>系统学习大语言模型：表示、架构、训练、生成、对齐与服务</h2>
-    <p>11 章 · 编程练习 · 书面推导 · 两个工程 Capstone<br>先建立 LLM 的完整计算图，再进入训练工程、推理工程、对齐评估和经典 NLP 专题。</p>
-    <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
-    <div class="hero-deep-links" aria-label="章节首节快速入口">
-      <a href="chapters/ch01.html#s1-1">Ch01</a>
-      <a href="chapters/ch02.html#s2-1">Ch02</a>
-      <a href="chapters/ch03.html#s3-1">Ch03</a>
-      <a href="chapters/ch04.html#s4-1">Ch04</a>
-      <a href="chapters/ch05.html#s5-1">Ch05</a>
-      <a href="chapters/ch06.html#s6-1">Ch06</a>
-      <a href="chapters/ch07.html#s7-1">Ch07</a>
-      <a href="chapters/ch08.html#s8-1">Ch08</a>
-      <a href="chapters/ch09.html#s9-1">Ch09</a>
-      <a href="chapters/ch10.html#s10-1">Ch10</a>
-      <a href="chapters/ch11.html#s11-1">Ch11</a>
-    </div>
-  </section>
-
-  <section class="learning-path">
-    <h3>LLM 知识主线</h3>
-    <div class="path-grid">
-      <div class="path-step"><strong>1. 表示层</strong><span>Ch01-Ch02：BPE、token id、embedding lookup、位置编码与 RoPE，回答“文本如何进入神经网络”。</span></div>
-      <div class="path-step"><strong>2. Transformer 核心</strong><span>Ch03-Ch06：Q/K/V、causal mask、MHA/GQA/MLA、Norm、FFN、MoE、机制可解释性与完整 GPT 前向传播。</span></div>
-      <div class="path-step"><strong>3. 训练闭环</strong><span>Ch07：next-token maximum likelihood、CE 梯度路径、PPL、AdamW、scheduler、checkpoint、ZeRO/FSDP/TP/PP、低精度和 MFU 诊断。</span></div>
-      <div class="path-step"><strong>4. 生成与推理</strong><span>Ch08-Ch10：prefill/decode、sampling、reasoning/test-time compute、speculative decoding、KV cache、FlashAttention、active KV tokens、admission control、RAG 与推理服务。</span></div>
-      <div class="path-step"><strong>5. 微调与对齐</strong><span>Ch09：SFT、LoRA、preference modeling、DPO、GRPO、偏好数据质量、对齐评估和能力退化权衡。</span></div>
-      <div class="path-step"><strong>6. 经典 NLP 与评测</strong><span>Ch11：RNN、dependency parsing、seq2seq、BERT/encoder-only、BLEU/ROUGE/EM/F1/UAS/LAS、LLM-as-judge、安全拒答与过度拒答。</span></div>
-    </div>
-  </section>
-
-  <section class="learning-path">
-    <h3>三遍学习法</h3>
-    <div class="path-grid">
-      <div class="path-step"><strong>第一遍：能画出计算图</strong><span>读 Ch01-Ch06，手写核心模块，重点检查每一步输入、输出、shape、mask、参数来源和梯度路径。</span></div>
-      <div class="path-step"><strong>第二遍：能解释实验</strong><span>读 Ch07-Ch08，跑训练和生成实验，解释 PPL、CE 梯度、采样参数、reasoning 成本和失败模式。</span></div>
-      <div class="path-step"><strong>第三遍：能做系统取舍</strong><span>读 Ch09-Ch11，对比微调/对齐/RAG/多模态/推理引擎和 classic NLP 模型族，在质量、延迟、显存、成本之间做工程判断。</span></div>
-    </div>
-  </section>
-
-  <section class="learning-path">
-    <h3>训练到推理的课程闭环</h3>
-    <div class="path-grid">
-      <div class="path-step"><strong>1. 数据进入模型</strong><span>Ch01、Ch07：多语 tokenizer、数据质量、去重、隐私、packing 和 token budget 决定训练样本真正进入模型的形态。</span></div>
-      <div class="path-step"><strong>2. 架构决定成本</strong><span>Ch03-Ch06：attention、GQA/MLA、FFN、MoE、norm、checkpoint 兼容性和 interpretability 共同决定参数量、FLOPs、KV Cache 与可诊断性。</span></div>
-      <div class="path-step"><strong>3. 训练产生可交付产物</strong><span>Ch07、Ch09：预训练、SFT、LoRA、DPO/GRPO 不是孤立实验；它们必须输出可恢复 checkpoint、训练记录、对齐评估和能力保留结论。</span></div>
-      <div class="path-step"><strong>4. 发布包进入服务</strong><span>Ch10：模型权重、config、tokenizer、chat template、adapter、量化配置、固定样本和回滚版本共同定义一个可上线模型。</span></div>
-      <div class="path-step"><strong>5. 服务用实验约束结论</strong><span>Ch08-Ch11：生成策略、RAG、多模态、benchmark validity、safety/social impact 和 LLM-as-judge 必须和 TTFT、TPOT、显存、成本一起报告。</span></div>
-      <div class="path-step"><strong>6. Capstone 收束能力</strong><span>训练 Capstone 交付可复现训练闭环；推理 Capstone 交付 OpenAI-compatible API、压测、评测、容量规划和上线复盘；Ch11 要求最终报告给出 baseline、ablation、失败分析和结论边界。</span></div>
-    </div>
-  </section>
-
-  <section class="role-path">
-    <h3>课程材料</h3>
-    <div class="role-grid">
-      <span><a href="docs/syllabus.html">Syllabus</a></span>
-      <span><a href="docs/lecture-plan.html">Lecture Plan</a></span>
-      <span><a href="docs/reading-list.html">Reading List</a></span>
-      <span><a href="docs/written-problem-set.html">书面题库</a></span>
-      <span><a href="docs/worked-example-pack.html">Worked Examples</a></span>
-      <span><a href="docs/math-prerequisites.html">数学先修</a></span>
-    </div>
-  </section>
-
-  <section class="role-path">
-    <h3>LLM 推理工程师能力地图</h3>
-    <div class="role-grid">
-      <span>模型结构读懂</span>
-      <span>TTFT / TPOT / TPS 拆解</span>
-      <span>KV Cache 与显存预算</span>
-      <span>Active KV / Admission Control</span>
-      <span>量化与推理内核</span>
-      <span>vLLM / SGLang 服务架构</span>
-      <span>RAG / 多模态 / LLM 评测</span>
-      <span>LLM-as-judge / Safety</span>
-    </div>
-    <div class="role-actions">
-      <a class="role-project-link" href="inference-engineer-curriculum.html">学习路线 →</a>
-      <a class="role-project-link" href="projects/inference-engineering-capstone/">最终项目：部署 OpenAI-compatible 推理服务 →</a>
-    </div>
-  </section>
-
-  <section class="role-path">
-    <h3>LLM 训练工程师能力地图</h3>
-    <div class="role-grid">
-      <span>数据分析与 Token 预算</span>
-      <span>PyTorch 训练循环</span>
-      <span>Loss / Optimizer / Scheduler</span>
-      <span>Checkpoint 与 Resume</span>
-      <span>Metrics 与开发集监控</span>
-      <span>ZeRO / FSDP / TP / PP</span>
-      <span>MFU / 吞吐诊断</span>
-      <span>实验设计 / Ablation / 成本</span>
-    </div>
-    <div class="role-actions">
-      <a class="role-project-link" href="training-engineer-curriculum.html">学习路线 →</a>
-      <a class="role-project-link" href="projects/training-engineering-capstone/">最终项目：交付 PyTorch 训练闭环 →</a>
-    </div>
-  </section>
-
-  <section class="role-path">
-    <h3>经典 NLP 与评测专题</h3>
-    <div class="role-grid">
-      <span>Dependency Parsing</span>
-      <span>Seq2Seq / NMT</span>
-      <span>BERT / MLM</span>
-      <span>BLEU / ROUGE</span>
-      <span>QA EM / F1</span>
-      <span>LLM 评测局限</span>
-    </div>
-    <div class="role-actions">
-      <a class="role-project-link" href="chapters/ch11.html">正式章节 →</a>
-      <a class="role-project-link" href="docs/classic-nlp-handout.html">专题讲义 →</a>
-      <a class="role-project-link" href="docs/classic-nlp-deep-dive-module.html">扩展模块 →</a>
-      <a class="role-project-link" href="assignments/ch11_classic_nlp/">Ch11 作业 →</a>
+    <div class="hero-jump" aria-label="章节首节快速入口">
+      <span>章节入口</span>
+      <div class="hero-deep-links">
+        <a href="chapters/ch01.html#s1-1">Ch01</a>
+        <a href="chapters/ch02.html#s2-1">Ch02</a>
+        <a href="chapters/ch03.html#s3-1">Ch03</a>
+        <a href="chapters/ch04.html#s4-1">Ch04</a>
+        <a href="chapters/ch05.html#s5-1">Ch05</a>
+        <a href="chapters/ch06.html#s6-1">Ch06</a>
+        <a href="chapters/ch07.html#s7-1">Ch07</a>
+        <a href="chapters/ch08.html#s8-1">Ch08</a>
+        <a href="chapters/ch09.html#s9-1">Ch09</a>
+        <a href="chapters/ch10.html#s10-1">Ch10</a>
+        <a href="chapters/ch11.html#s11-1">Ch11</a>
+      </div>
     </div>
   </section>
 
@@ -180,7 +85,55 @@
     </div>
   </div>
 
-  <div class="chapter-list" id="chapter-list"></div>
+  <section class="learning-path">
+    <h3>推荐学习路线</h3>
+    <div class="path-grid">
+      <div class="path-step"><strong>主线入门</strong><span>按 Ch01-Ch06 顺序完成 tokenizer、embedding、attention、Transformer Block 和 GPT 前向传播，先能画出完整计算图。</span></div>
+      <div class="path-step"><strong>训练方向</strong><span>重点推进 Ch07、Ch09 和训练 Capstone，交付数据分析、训练日志、checkpoint/resume、指标曲线和成本规划。</span></div>
+      <div class="path-step"><strong>推理方向</strong><span>重点推进 Ch08-Ch10 和推理 Capstone，拆解 TTFT/TPOT、KV Cache、量化、RAG、压测、容量规划和上线复盘。</span></div>
+    </div>
+  </section>
+
+  <section class="learning-path">
+    <h3>LLM 知识主线</h3>
+    <div class="path-grid">
+      <div class="path-step"><strong>1. 文本表示</strong><span>Ch01-Ch02：BPE、token id、embedding lookup、RoPE 和长上下文表示。</span></div>
+      <div class="path-step"><strong>2. Transformer 核心</strong><span>Ch03-Ch06：Q/K/V、causal mask、MHA/GQA/MLA、Norm、FFN、MoE 和完整 GPT。</span></div>
+      <div class="path-step"><strong>3. 训练闭环</strong><span>Ch07：loss、PPL、AdamW、scheduler、checkpoint、分布式、低精度和 MFU。</span></div>
+      <div class="path-step"><strong>4. 生成与推理</strong><span>Ch08-Ch10：sampling、speculative decoding、KV Cache、FlashAttention、RAG 和推理服务。</span></div>
+      <div class="path-step"><strong>5. 微调与对齐</strong><span>Ch09：SFT、LoRA、DPO、GRPO、偏好数据质量、对齐评估和能力保留。</span></div>
+      <div class="path-step"><strong>6. 经典 NLP 与评测</strong><span>Ch11：RNN、Parsing、Seq2Seq、BERT、BLEU/ROUGE/EM/F1 和 LLM-as-judge。</span></div>
+    </div>
+  </section>
+
+  <section class="learning-path">
+    <h3>课程交付产出</h3>
+    <div class="path-grid">
+      <div class="path-step"><strong>核心代码</strong><span>BPE tokenizer、RoPE、attention、Transformer Block、GPTModel、生成器、KV Cache 和 LoRA/GRPO 练习。</span></div>
+      <div class="path-step"><strong>书面推导</strong><span>shape 账本、复杂度分析、loss 梯度、优化器推导、KV Cache 显存预算和评测误差分析。</span></div>
+      <div class="path-step"><strong>工程报告</strong><span>训练 Capstone 与推理 Capstone 分别输出可复现实验、指标、压测、容量估算和上线检查。</span></div>
+    </div>
+  </section>
+
+  <section class="role-path">
+    <h3>资料入口</h3>
+    <div class="role-grid">
+      <span><a href="docs/syllabus.html">Syllabus</a></span>
+      <span><a href="docs/lecture-plan.html">Lecture Plan</a></span>
+      <span><a href="docs/reading-list.html">Reading List</a></span>
+      <span><a href="docs/written-problem-set.html">书面题库</a></span>
+      <span><a href="docs/worked-example-pack.html">Worked Examples</a></span>
+      <span><a href="docs/math-prerequisites.html">数学先修</a></span>
+      <span><a href="inference-engineer-curriculum.html">推理工程师路线</a></span>
+      <span><a href="training-engineer-curriculum.html">训练工程师路线</a></span>
+      <span><a href="docs/classic-nlp-handout.html">经典 NLP 专题</a></span>
+    </div>
+  </section>
+
+  <section class="role-path">
+    <h3>章节目录</h3>
+    <div class="chapter-list" id="chapter-list"></div>
+  </section>
 </main>
 
 <script src="js/db.js"></script>

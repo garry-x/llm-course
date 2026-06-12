@@ -152,9 +152,10 @@ body{
 
 /* ---- Main Content ---- */
 .main{
-  margin-left:240px;flex:1;padding:40px 44px;max-width:860px
+  margin-left:240px;flex:1;padding:40px 44px 64px;max-width:1040px
 }
-.chapter{margin-bottom:48px}
+body[data-ch="0"] .main{max-width:1120px}
+.chapter{max-width:920px;margin-bottom:48px}
 .chapter h2{
   font-family:var(--font-heading);font-size:2rem;font-weight:700;
   letter-spacing:-.02em;margin-bottom:6px;line-height:1.25;
@@ -563,51 +564,57 @@ td{color:var(--text-secondary)}
 
 /* ---- Hero Enhancements ---- */
 .hero{
-  position:relative;overflow:hidden;
-  background:
-    radial-gradient(ellipse 80% 60% at 30% 20%,rgba(179,92,34,.06),transparent),
-    radial-gradient(ellipse 60% 80% at 80% 70%,rgba(179,92,34,.04),transparent),
-    var(--surface);
-  border-radius:var(--radius);padding:60px 40px 48px;margin-bottom:32px;
-  box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:center
+  position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.45fr) 320px;
+  gap:36px;align-items:center;
+  background:var(--surface);
+  border-radius:var(--radius);padding:48px 52px;margin-bottom:18px;
+  box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:left
 }
 .hero::before{
   content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,transparent,var(--accent),transparent)
 }
-.hero h2{font-size:2.4rem;font-weight:700;margin-bottom:12px;position:relative}
-.hero p{color:var(--text-secondary);font-size:1.05rem;max-width:520px;margin:0 auto 28px;position:relative;line-height:1.7}
+.hero h2{font-size:2.35rem;font-weight:700;margin-bottom:14px;position:relative;line-height:1.25;text-wrap:balance}
+.hero p{color:var(--text-secondary);font-size:1.02rem;max-width:620px;margin:0 0 28px;position:relative;line-height:1.75}
 .hero .btn{position:relative;padding:12px 32px;font-size:.95rem}
-.hero-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;position:relative}
+.hero-tags{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;margin-bottom:20px;position:relative}
 .hero-tag{
-  padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;
+  padding:5px 12px;border-radius:999px;font-size:.75rem;font-weight:600;
   background:var(--accent-light);color:var(--accent);border:1px solid rgba(179,92,34,.15)
 }
+.hero-jump{
+  position:relative;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:20px
+}
+.hero-jump>span{
+  display:block;margin-bottom:12px;color:var(--text);
+  font-size:.86rem;font-weight:700
+}
 .hero-deep-links{
-  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
-  max-width:620px;margin:20px auto 0;position:relative
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  max-width:none;margin:0;position:relative
 }
 .hero-deep-links a{
   display:inline-flex;align-items:center;justify-content:center;
-  min-width:48px;min-height:36px;padding:4px 10px;
+  min-height:38px;padding:4px 10px;
   border:1px solid var(--border);border-radius:var(--radius-sm);
-  color:var(--text-secondary);background:var(--bg);
+  color:var(--text-secondary);background:var(--surface);
   font-size:.76rem;font-weight:700;text-decoration:none
 }
 .hero-deep-links a:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ---- Dashboard Cards (homepage) ---- */
 .dashboard{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px
 }
 .dash-card{
-  background:var(--surface);border-radius:var(--radius);padding:20px 18px;
+  background:var(--surface);border-radius:8px;padding:16px 18px;
   box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:center;
   transition:transform var(--transition),box-shadow var(--transition)
 }
 .dash-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.dash-card .dash-icon{font-size:1.6rem;margin-bottom:6px}
-.dash-card .num{font-size:2rem;font-weight:800;color:var(--accent);font-family:var(--font-heading)}
+.dash-card .dash-icon{font-size:1.25rem;margin-bottom:4px}
+.dash-card .num{font-size:1.72rem;font-weight:800;color:var(--accent);font-family:var(--font-heading)}
 .dash-card .label{font-size:.78rem;color:var(--text-secondary);margin-top:2px}
 @media(max-width:959px){.dashboard{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:639px){.dashboard{grid-template-columns:1fr}}
@@ -664,12 +671,11 @@ td{color:var(--text-secondary)}
 
 /* ---- Beginner learning path ---- */
 .learning-path{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:24px 28px;margin:0 0 24px;box-shadow:var(--shadow-card)
+  padding:8px 0 0;margin:0 0 28px
 }
 .learning-path h3{
   font-family:var(--font-heading);font-size:1.15rem;font-weight:700;
-  margin-bottom:14px;color:var(--text)
+  margin-bottom:12px;color:var(--text)
 }
 .path-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .path-step{
@@ -682,12 +688,11 @@ td{color:var(--text-secondary)}
 
 /* ---- Role competency map ---- */
 .role-path{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:22px 28px;margin:0 0 24px;box-shadow:var(--shadow-card)
+  padding:8px 0 0;margin:0 0 28px
 }
 .role-path h3{
   font-family:var(--font-heading);font-size:1.1rem;font-weight:700;
-  margin-bottom:14px;color:var(--text)
+  margin-bottom:12px;color:var(--text)
 }
 .role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .role-grid span{
@@ -815,6 +820,96 @@ td{color:var(--text-secondary)}
 @media(max-width:639px){
   .notes-panel{ width:100%; right:0 }
   .note-toggle-btn{ right:68px }
+}
+
+@media(max-width:639px){
+  .main{
+    padding:72px 16px 96px;
+    max-width:100%
+  }
+  .hero{
+    display:block;
+    padding:34px 20px 32px;
+    margin-bottom:22px;
+    border-radius:8px
+  }
+  .hero h2{
+    font-size:1.72rem;
+    line-height:1.42;
+    margin-bottom:14px
+  }
+  .hero p{
+    font-size:.96rem;
+    line-height:1.72;
+    margin-bottom:22px
+  }
+  .hero-tags{
+    gap:6px;
+    margin-bottom:22px
+  }
+  .hero-tag{
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:.7rem;
+    line-height:1.35
+  }
+  .hero-deep-links{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+    margin-top:18px
+  }
+  .hero-jump{
+    margin-top:20px;
+    padding:14px
+  }
+  .hero-deep-links a{
+    min-width:44px;
+    min-height:34px;
+    padding:4px 8px
+  }
+  .learning-path,.role-path{
+    padding:18px 16px;
+    margin-bottom:18px;
+    border-radius:8px
+  }
+  .path-step{
+    min-height:0;
+    padding:12px 14px
+  }
+  .chapter-item{
+    align-items:flex-start;
+    gap:12px;
+    padding:16px 14px
+  }
+  .chapter-item .ch-num-big{
+    width:40px;
+    height:40px;
+    font-size:.95rem
+  }
+  .chapter-item .ch-info h4{
+    line-height:1.45
+  }
+  .chapter-item .ch-meta{
+    display:none
+  }
+  .font-controls{
+    align-items:center;
+    margin-bottom:18px
+  }
+  .svg-diagram{
+    padding:10px;
+    margin:12px -2px
+  }
+  .code-block{
+    font-size:.78rem;
+    white-space:pre;
+    -webkit-overflow-scrolling:touch
+  }
+  .notes-panel{
+    max-height:68vh
+  }
 }
 
 /* ---- Print ---- */

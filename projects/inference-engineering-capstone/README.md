@@ -12,7 +12,7 @@
 | Streaming | `stream=true` 返回 SSE token 流 | 客户端逐 chunk 收到 `data: ...` |
 | RAG | 能注入检索上下文，记录命中文档 | 响应里返回 `x_retrieved_docs` |
 | Structured Output | `response_format={"type":"json_object"}` 返回可解析 JSON | `evaluate.py` 检查 JSON key |
-| Tool Calling | 接收 OpenAI 风格 `tools` schema，返回 `tool_calls` | `evaluate.py` 检查工具名 |
+| Tool Calling | 接收 OpenAI 风格 `tools` schema，返回 `tool_calls`，并在执行前做 schema/权限/预算 gate | `evaluate.py` 检查工具名，报告记录 gate |
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
 | PD Breakdown | 拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens | 报告中的 PD 指标表 |
@@ -142,7 +142,7 @@ python capacity_plan.py \
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
 - 每 1M tokens 的 GPU 成本已估算，且知道成本对 tokens/s 和 GPU 小时价格的敏感性。
 - RAG 命中率、JSON 格式正确率、安全拒答率有固定回归集。
-- 工具调用能校验 schema、返回 `tool_calls`，并记录工具执行结果。
+- 工具调用能校验 schema、权限和循环预算，返回 `tool_calls`，并记录工具执行结果。
 - 指标能按模型、租户、状态码、错误类型聚合。
 - 限流、超时、降级和错误响应格式明确。
 
@@ -167,7 +167,7 @@ python capacity_plan.py \
 4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON。
 5. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
-7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema 问题和安全拒答/过度拒答。
+7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
 9. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
 10. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。

@@ -651,6 +651,30 @@ class SimpleRAG:
   <h4>循环预算：防止 agent 把系统拖入不可控状态</h4>
   <p>Agent 循环必须有硬预算。常见预算包括最大 tool calls、最大 wall-clock time、最大 observation tokens、最大外部 API cost、最大失败重试次数和最大连续同类工具调用次数。预算不是产品体验细节，而是推理服务的容量控制：一个请求如果反复搜索、读长文档、执行代码，会同时拉高 TTFT、总延迟、外部服务成本和上下文 token 数。</p>
 
+  <h4>编程练习：执行前验证 tool call plan</h4>
+  <p>Ch10 作业中的 <code>validate_tool_call_plan</code> 把上面的协议变成一个可测试 gate：输入工具 registry、模型提出的 tool calls 和预算，输出 schema、permission、budget 三类 gate。它不执行工具，而是在执行前拦截未知工具、缺失参数、越界参数、高风险权限和重复循环。</p>
+  <pre><code class="language-python">registry = {
+    "search_docs": {
+        "risk": "read_only",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "minLength": 3, "maxLength": 200},
+                "top_k": {"type": "integer", "minimum": 1, "maximum": 8},
+            },
+            "required": ["query"],
+            "additionalProperties": False,
+        },
+    }
+}
+report = validate_tool_call_plan(
+    registry,
+    [{"name": "search_docs", "arguments": {"query": "rag metrics", "top_k": 4}}],
+    budgets={"max_calls": 2, "allowed_risks": ["read_only"]},
+)
+assert report["decision"] == "execute_tool_calls"</code></pre>
+  <p>这个练习对应线上系统中的“工具执行前置网关”。OpenAI structured outputs / function calling、MCP tool manifests 和 Agent guardrails 的接口形式会变化，但核心不变：模型生成的工具调用只是提案，服务端必须把 schema、权限和预算当作硬边界。</p>
+
   <div class="table-wrap">
     <table>
       <tr><th>失败模式</th><th>表现</th><th>工程缓解</th><th>评测指标</th></tr>

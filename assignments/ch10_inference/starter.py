@@ -80,6 +80,11 @@ def rag_answer_diagnostics(retrieved_ids, relevant_ids, cited_ids, answer_correc
     raise NotImplementedError
 
 
+def validate_tool_call_plan(tool_registry, proposed_calls, budgets=None):
+    """Validate tool names, arguments, permissions, and loop budgets before execution."""
+    raise NotImplementedError
+
+
 def prefix_cache_savings(tokenized_prompts):
     """Estimate reusable prefix tokens and effective prefill work for a request stream."""
     raise NotImplementedError

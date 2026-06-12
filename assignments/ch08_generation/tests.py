@@ -16,19 +16,23 @@ MODULE_NAME = os.environ.get("STUDENT_MODULE", "reference_solution")
 submission = importlib.import_module(MODULE_NAME) if torch is not None else None
 
 
-class ScriptedModel(nn.Module):
-    def __init__(self, vocab_size=6, eos_token_id=None):
-        super().__init__()
-        self.anchor = nn.Parameter(torch.zeros(()))
-        self.vocab_size = vocab_size
-        self.tokenizer = type("Tok", (), {"eos_token_id": eos_token_id})() if eos_token_id is not None else None
+if nn is not None:
+    class ScriptedModel(nn.Module):
+        def __init__(self, vocab_size=6, eos_token_id=None):
+            super().__init__()
+            self.anchor = nn.Parameter(torch.zeros(()))
+            self.vocab_size = vocab_size
+            self.tokenizer = type("Tok", (), {"eos_token_id": eos_token_id})() if eos_token_id is not None else None
 
-    def forward(self, input_ids):
-        batch, seq = input_ids.shape
-        logits = torch.full((batch, seq, self.vocab_size), -10.0, device=input_ids.device)
-        next_id = min(seq, self.vocab_size - 1)
-        logits[:, -1, next_id] = 10.0
-        return logits + self.anchor
+        def forward(self, input_ids):
+            batch, seq = input_ids.shape
+            logits = torch.full((batch, seq, self.vocab_size), -10.0, device=input_ids.device)
+            next_id = min(seq, self.vocab_size - 1)
+            logits[:, -1, next_id] = 10.0
+            return logits + self.anchor
+else:
+    class ScriptedModel:
+        pass
 
 
 class TinyTokenizer:
@@ -48,28 +52,32 @@ class TinyTokenizer:
         return "".join(self.itos.get(int(i), "?") for i in ids)
 
 
-class BeamToyModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.anchor = nn.Parameter(torch.zeros(()))
-        self.vocab_size = 4
-        self.tokenizer = type("Tok", (), {"eos_token_id": 3})()
+if nn is not None:
+    class BeamToyModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.anchor = nn.Parameter(torch.zeros(()))
+            self.vocab_size = 4
+            self.tokenizer = type("Tok", (), {"eos_token_id": 3})()
 
-    def forward(self, input_ids):
-        batch, seq = input_ids.shape
-        logits = torch.full((batch, seq, self.vocab_size), -20.0, device=input_ids.device)
-        last = int(input_ids[0, -1].item())
-        if seq == 1:
-            logits[:, -1, 1] = 3.0
-            logits[:, -1, 3] = 2.8
-        elif last == 1:
-            logits[:, -1, 2] = 3.0
-            logits[:, -1, 3] = 1.0
-        elif last == 2:
-            logits[:, -1, 3] = 3.0
-        else:
-            logits[:, -1, 3] = 3.0
-        return logits + self.anchor
+        def forward(self, input_ids):
+            batch, seq = input_ids.shape
+            logits = torch.full((batch, seq, self.vocab_size), -20.0, device=input_ids.device)
+            last = int(input_ids[0, -1].item())
+            if seq == 1:
+                logits[:, -1, 1] = 3.0
+                logits[:, -1, 3] = 2.8
+            elif last == 1:
+                logits[:, -1, 2] = 3.0
+                logits[:, -1, 3] = 1.0
+            elif last == 2:
+                logits[:, -1, 3] = 3.0
+            else:
+                logits[:, -1, 3] = 3.0
+            return logits + self.anchor
+else:
+    class BeamToyModel:
+        pass
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch08 generation tests")

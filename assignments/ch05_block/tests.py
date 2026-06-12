@@ -176,6 +176,7 @@ class TestTransformerBlock(unittest.TestCase):
         self.assertEqual(block.attention.n_heads, 5)
 
 
+@unittest.skipIf(torch is None, "PyTorch is required for Ch05 block tests")
 class TestBlockResourceEstimates(unittest.TestCase):
     def test_estimates_params_flops_and_activation_memory(self):
         result = submission.estimate_block_resources(

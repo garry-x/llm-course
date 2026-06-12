@@ -298,6 +298,80 @@ class TestRetrievalMetrics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.rag_answer_diagnostics(["doc1"], set(), [], False, k=1)
 
+    def test_validate_tool_call_plan_accepts_schema_and_budget(self):
+        registry = {
+            "search_docs": {
+                "risk": "read_only",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "minLength": 3, "maxLength": 64},
+                        "top_k": {"type": "integer", "minimum": 1, "maximum": 8},
+                        "source": {"type": "string", "enum": ["chapters", "assignments", "docs"]},
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            }
+        }
+        report = submission.validate_tool_call_plan(
+            registry,
+            [{"name": "search_docs", "arguments": {"query": "rag metrics", "top_k": 4, "source": "assignments"}}],
+            budgets={"max_calls": 2, "allowed_risks": ["read_only"]},
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "execute_tool_calls")
+        self.assertTrue(report["gates"]["schema"]["pass"])
+        self.assertTrue(report["gates"]["permission"]["pass"])
+        self.assertTrue(report["gates"]["budget"]["pass"])
+
+    def test_validate_tool_call_plan_attributes_schema_permission_and_loop_failures(self):
+        registry = {
+            "search_docs": {
+                "risk": "read_only",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "minLength": 3},
+                        "top_k": {"type": "integer", "minimum": 1, "maximum": 8},
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+            "send_email": {
+                "risk": "write",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"to": {"type": "string"}, "body": {"type": "string"}},
+                    "required": ["to", "body"],
+                },
+            },
+        }
+        report = submission.validate_tool_call_plan(
+            registry,
+            [
+                {"name": "search_docs", "arguments": {"query": "ok", "top_k": 99}},
+                {"name": "search_docs", "arguments": {"query": "same", "top_k": 2}},
+                {"name": "send_email", "arguments": {"to": "a@example.com", "body": "hi"}},
+            ],
+            budgets={"max_calls": 2, "max_consecutive_same_tool": 1, "allowed_risks": ["read_only"]},
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "reject_or_repair_before_execution")
+        self.assertFalse(report["gates"]["schema"]["pass"])
+        self.assertFalse(report["gates"]["permission"]["pass"])
+        self.assertFalse(report["gates"]["budget"]["pass"])
+        self.assertIn("repair_or_constrain_tool_arguments", report["action_items"])
+        self.assertIn("request_permission_or_remove_high_risk_tool", report["action_items"])
+        self.assertIn("stop_or_summarize_agent_loop_before_more_tool_calls", report["action_items"])
+
+    def test_validate_tool_call_plan_rejects_empty_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.validate_tool_call_plan({}, [{"name": "search_docs", "arguments": {}}])
+        with self.assertRaises(ValueError):
+            submission.validate_tool_call_plan({"search_docs": {}}, [])
+
     def test_prefix_cache_savings_counts_longest_previous_prefix(self):
         prompts = [
             [1, 2, 3, 4],

@@ -341,6 +341,169 @@ def rag_answer_diagnostics(retrieved_ids, relevant_ids, cited_ids, answer_correc
     }
 
 
+def validate_tool_call_plan(tool_registry, proposed_calls, budgets=None):
+    if not proposed_calls:
+        raise ValueError("proposed_calls must not be empty")
+    budgets = dict(budgets or {})
+
+    if isinstance(tool_registry, dict):
+        registry = tool_registry
+    else:
+        registry = {}
+        for spec in tool_registry:
+            if not isinstance(spec, dict) or "name" not in spec:
+                raise ValueError("each tool spec must contain a name")
+            registry[spec["name"]] = spec
+    if not registry:
+        raise ValueError("tool_registry must not be empty")
+
+    max_calls = int(budgets.get("max_calls", len(proposed_calls)))
+    max_consecutive_same_tool = int(budgets.get("max_consecutive_same_tool", len(proposed_calls)))
+    allowed_risks = set(budgets.get("allowed_risks", ["read_only"]))
+    if max_calls <= 0 or max_consecutive_same_tool <= 0:
+        raise ValueError("budget limits must be positive")
+
+    calls = []
+    invalid_call_count = 0
+    denied_call_count = 0
+    action_items = []
+    consecutive_tool = None
+    consecutive_count = 0
+    loop_violation = False
+
+    def validate_value(value, schema, path):
+        errors = []
+        expected_type = schema.get("type")
+        if expected_type == "object":
+            if not isinstance(value, dict):
+                return [f"{path}: expected object"]
+            properties = schema.get("properties", {})
+            for field in schema.get("required", []):
+                if field not in value:
+                    errors.append(f"{path}.{field}: missing required")
+            additional = schema.get("additionalProperties", True)
+            if additional is False:
+                extra = sorted(set(value) - set(properties))
+                errors.extend(f"{path}.{field}: unexpected field" for field in extra)
+            for field, field_schema in properties.items():
+                if field in value:
+                    errors.extend(validate_value(value[field], field_schema, f"{path}.{field}"))
+            return errors
+        if expected_type == "string":
+            if not isinstance(value, str):
+                return [f"{path}: expected string"]
+            if "minLength" in schema and len(value) < int(schema["minLength"]):
+                errors.append(f"{path}: shorter than minLength")
+            if "maxLength" in schema and len(value) > int(schema["maxLength"]):
+                errors.append(f"{path}: longer than maxLength")
+            if "enum" in schema and value not in set(schema["enum"]):
+                errors.append(f"{path}: not in enum")
+            return errors
+        if expected_type == "integer":
+            if not isinstance(value, int) or isinstance(value, bool):
+                return [f"{path}: expected integer"]
+            if "minimum" in schema and value < int(schema["minimum"]):
+                errors.append(f"{path}: below minimum")
+            if "maximum" in schema and value > int(schema["maximum"]):
+                errors.append(f"{path}: above maximum")
+            if "enum" in schema and value not in set(schema["enum"]):
+                errors.append(f"{path}: not in enum")
+            return errors
+        if expected_type == "number":
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                return [f"{path}: expected number"]
+            if "minimum" in schema and float(value) < float(schema["minimum"]):
+                errors.append(f"{path}: below minimum")
+            if "maximum" in schema and float(value) > float(schema["maximum"]):
+                errors.append(f"{path}: above maximum")
+            return errors
+        if expected_type == "boolean":
+            if not isinstance(value, bool):
+                return [f"{path}: expected boolean"]
+        return errors
+
+    for idx, call in enumerate(proposed_calls):
+        if not isinstance(call, dict):
+            raise ValueError("each proposed call must be a dict")
+        name = call.get("name") or call.get("tool_name")
+        arguments = call.get("arguments", call.get("args", {}))
+        errors = []
+        allowed = True
+        risk = None
+        if not isinstance(arguments, dict):
+            errors.append("arguments: expected object")
+        if not name or name not in registry:
+            errors.append("tool_name: unknown tool")
+            spec = {}
+        else:
+            spec = registry[name]
+            parameters = spec.get("parameters", {})
+            if parameters:
+                errors.extend(validate_value(arguments, parameters, "arguments"))
+            risk = spec.get("risk", "read_only")
+            if risk not in allowed_risks:
+                allowed = False
+
+        if name == consecutive_tool:
+            consecutive_count += 1
+        else:
+            consecutive_tool = name
+            consecutive_count = 1
+        if consecutive_count > max_consecutive_same_tool:
+            loop_violation = True
+            errors.append("loop: repeated same tool beyond budget")
+
+        valid = not errors
+        if not valid:
+            invalid_call_count += 1
+        if not allowed:
+            denied_call_count += 1
+        calls.append(
+            {
+                "index": idx,
+                "name": name,
+                "valid": valid,
+                "allowed": allowed,
+                "risk": risk,
+                "errors": errors,
+            }
+        )
+
+    if invalid_call_count:
+        action_items.append("repair_or_constrain_tool_arguments")
+    if denied_call_count:
+        action_items.append("request_permission_or_remove_high_risk_tool")
+    if len(proposed_calls) > max_calls or loop_violation:
+        action_items.append("stop_or_summarize_agent_loop_before_more_tool_calls")
+
+    gates = {
+        "schema": {
+            "pass": invalid_call_count == 0,
+            "signals": {"invalid_call_count": invalid_call_count},
+        },
+        "permission": {
+            "pass": denied_call_count == 0,
+            "signals": {"denied_call_count": denied_call_count, "allowed_risks": sorted(allowed_risks)},
+        },
+        "budget": {
+            "pass": len(proposed_calls) <= max_calls and not loop_violation,
+            "signals": {
+                "call_count": len(proposed_calls),
+                "max_calls": max_calls,
+                "max_consecutive_same_tool": max_consecutive_same_tool,
+                "loop_violation": loop_violation,
+            },
+        },
+    }
+    return {
+        "overall_pass": not action_items,
+        "gates": gates,
+        "calls": calls,
+        "action_items": action_items,
+        "decision": "execute_tool_calls" if not action_items else "reject_or_repair_before_execution",
+    }
+
+
 def prefix_cache_savings(tokenized_prompts):
     if not tokenized_prompts:
         raise ValueError("tokenized_prompts must not be empty")

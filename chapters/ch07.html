@@ -43,6 +43,7 @@
     <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
     <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
+  <div class="dependency-note"><strong>本章依赖：</strong>训练循环依赖概率分解、cross entropy、optimizer state、随机性控制和实验统计。若只会让 loss 下降，还不够；必须能解释 train/val split、seed、baseline、曲线方差和 checkpoint 恢复。薄弱时同步补 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 的 CE 梯度，以及 <a href="../docs/ml-foundations-prerequisite-bridge.html">ML foundations bridge</a> 的泛化、评测和 ablation。</div>
 </section>
 
 <!-- ================================================================ -->
@@ -1267,6 +1268,50 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     </table>
   </div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>训练工程能力不是“跑完一个脚本”，而是能解释这次训练消耗了多少 token 和 GPU 小时、为什么这个 checkpoint 可恢复、为什么扩容后优化轨迹仍然可比，以及当 loss、吞吐或评估异常时该先查哪一层。</div></div>
+</section>
+
+<section class="card" id="s7-15b">
+  <h3>7.15B 工业训练系统 Gate：数据、并行、容错与评测闭环</h3>
+  <p>最新工业训练系统的共同点不是某一个并行策略，而是把<strong>数据质量、模型并行、通信重叠、checkpoint、可观测性和评测 gate</strong>连成闭环。MegaScale 把 10K+ GPU 训练中的稳定性、straggler 诊断和容错作为核心问题；DeepSeek-V3 把 MLA、MoE、FP8、DualPipe 和稳定长跑结合起来；PyTorch Distributed Checkpoint 和 Megatron Core 则把分片 checkpoint、多维并行和专家并行变成工程接口。课程项目不需要复刻这些系统，但必须学会它们解决的同一类问题。</p>
+
+  <h4>1. 训练系统不是只选 DDP/FSDP/TP/PP</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>系统层</th><th>训练工程师要能回答</th><th>最低证据</th></tr>
+      <tr><td>Data plane</td><td>数据从哪里来、如何过滤、如何去重、如何混合、是否污染评测集</td><td>mixture 表、过滤命中率、split 规则、样本审计</td></tr>
+      <tr><td>Compute plane</td><td>DP/FSDP/TP/PP/EP/SP 如何组合，瓶颈是计算、通信还是内存</td><td>tokens/s/GPU、MFU、通信等待、显存峰值</td></tr>
+      <tr><td>State plane</td><td>模型、优化器、scheduler、RNG、sampler 和 FP8 scale 如何保存和恢复</td><td>resume parity、checkpoint 时长、恢复命令</td></tr>
+      <tr><td>Control plane</td><td>异常发生后如何暂停、降级、回滚、换节点或继续训练</td><td>runbook、告警阈值、最近一次恢复记录</td></tr>
+      <tr><td>Eval plane</td><td>什么时候保存、什么时候评测、哪些 gate 决定继续训练或停止</td><td>dev loss、任务 benchmark、安全/格式回归、结论边界</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 并行策略要绑定模型结构和集群拓扑</h4>
+  <p>Dense Transformer、MoE、长上下文和多模态模型的最优并行配置不同。Dense 模型常先用 FSDP/ZeRO 降低状态显存，再用 TP/PP 扩展到多节点；MoE 还需要 expert parallel 和 all-to-all 负载均衡；长上下文会放大 activation、attention 和 checkpointing 压力。不要把“开启 FSDP”当成训练系统设计，真正的问题是：哪个张量太大、哪条通信太频繁、哪个阶段阻塞了 critical path。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>工业参照：</strong><a href="https://arxiv.org/abs/2402.15627" target="_blank">MegaScale</a> 强调全栈观测和 straggler/故障诊断；<a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3</a> 展示了 FP8、DualPipe、MoE/MLA 与稳定训练的组合；<a href="https://docs.nvidia.com/megatron-core/developer-guide/0.16.0/user-guide/parallelism-guide.html" target="_blank">Megatron Core</a> 把 DP/TP/PP/SP/EP 作为可组合策略。</div></div>
+
+  <h4>3. Checkpoint gate 要同时覆盖恢复和发布</h4>
+  <p>训练中断恢复关注 optimizer、scheduler、RNG 和 sampler；推理发布关注权重格式、tokenizer、模板、量化和服务参数。两者不能混用。分布式训练中，checkpoint 还要处理参数分片、优化器分片、world size 变化和异步保存开销。PyTorch Distributed Checkpoint 的价值在于把这些分片状态作为可组合对象保存，而不是让每个训练脚本手写一套 fragile 的 rank-local 保存逻辑。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Gate</th><th>通过标准</th><th>失败时先查</th></tr>
+      <tr><td>Resume parity</td><td>恢复后 step、lr、loss、sample order 在容差内连续</td><td>optimizer/scheduler/RNG/sampler state</td></tr>
+      <tr><td>Checkpoint overhead</td><td>保存不长期压低 MFU，不造成训练周期性停顿</td><td>同步写盘、对象存储带宽、异步保存内存开销</td></tr>
+      <tr><td>World-size change</td><td>扩缩容后能重新加载分片状态并保持 token 进度</td><td>shard metadata、global batch tokens、data offset</td></tr>
+      <tr><td>Serving export</td><td>导出权重能通过 logit parity、模板一致性和行为回归</td><td>权重合并、dtype、LoRA merge、tokenizer/template</td></tr>
+    </table>
+  </div>
+  <p>课程项目的最低要求是：至少做一次 checkpoint/resume 证明，并在报告中说明保存了哪些状态、没保存哪些状态、这个缺口会怎样影响可复现实验。分布式项目还应记录 checkpoint 大小、保存耗时、恢复耗时和失败重跑成本。</p>
+
+  <h4>4. 评测 gate 决定“继续训练”还是“停止损失”</h4>
+  <p>高阶训练工程师必须能把训练目标和工程决策分开。loss 降低不一定代表模型更适合目标 workload；benchmark 上升也可能来自污染、prompt 过拟合或输出长度变化。一个实用 gate 至少包含：</p>
+  <ul>
+    <li><strong>Optimization gate：</strong>train/val loss、grad norm、lr、loss scale、tokens/s 是否稳定。</li>
+    <li><strong>Capability gate：</strong>固定任务集上是否优于 baseline，且方差和样本量支持结论。</li>
+    <li><strong>Regression gate：</strong>安全拒答、格式遵循、长上下文、工具/RAG 输入是否退化。</li>
+    <li><strong>Cost gate：</strong>新增能力是否值得训练 token、GPU 小时、推理延迟和显存成本。</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>工业训练系统的目标不是“把模型跑大”，而是让每一次数据、模型、并行和优化改动都能被恢复、观测、评估和复盘。训练工程师要能把一次 run 讲成可审计的工程过程，而不是一条 loss 曲线。</div></div>
 </section>
 
 

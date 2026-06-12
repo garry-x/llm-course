@@ -43,6 +43,7 @@
     <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
     <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标、约束 token mask，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
   </ul>
+  <div class="dependency-note"><strong>本章依赖：</strong>生成依赖概率分布、logits 变换、采样方差和自回归状态管理。temperature/top-k/top-p 不是魔法参数，而是在改变候选集和概率质量；speculative decoding 还要求理解目标模型分布不应被草稿模型破坏。概率和指标基础不稳时回看 <a href="../docs/ml-foundations-prerequisite-bridge.html">ML foundations bridge</a> 的 probability、statistics 和 evaluation 小节。</div>
 </section>
 
 <!-- ================================================================ -->

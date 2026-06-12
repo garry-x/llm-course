@@ -43,6 +43,7 @@
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
     <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、tool schema 设计、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
+  <div class="dependency-note"><strong>本章依赖：</strong>推理工程依赖前面所有计算图基础，还额外需要系统指标：TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。不会写服务报告时，先把一个请求拆成 prefill、decode、RAG/tool、网络流式输出和排队时间；统计与 SLO 基础可回看 <a href="../docs/ml-foundations-prerequisite-bridge.html">ML foundations bridge</a> 的 statistics/evaluation 部分。</div>
 </section>
 
 <!-- ================================================================ -->
@@ -1155,6 +1156,54 @@ summary = build_benchmark_summary(
   <p>这个例子说明：训练方法、权重格式、tokenizer、量化和服务参数共同定义最终模型。任何一项改变都可能影响质量、延迟、显存和安全行为，因此发布包必须把它们一起版本化。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>LLM 工程的交付物不是“一个 checkpoint 文件”，而是一套可加载、可复现、可压测、可灰度、可回滚的模型发布包。训练指标只有在这个发布包内复现，才真正能转化为线上能力。</div></div>
+</section>
+
+<section class="card" id="s10-13c">
+  <h3>10.13C Prefill/Decode 解耦：把服务拆成两种资源池</h3>
+  <p>传统 serving engine 把 prefill 和 decode 放在同一组 worker 里调度。问题是这两个阶段的资源画像完全不同：prefill 要处理整段 prompt，更像大矩阵乘和上下文构建；decode 每步只生成一个 token，更像长期占用 KV cache 的内存带宽和调度问题。当长 prompt、RAG、多模态或高并发混在一起时，prefill 可能阻塞交互请求的 TTFT，decode 又可能因为活跃序列太多把 KV 显存压满。工业系统开始把两者拆成独立资源池：prefill worker 负责生成初始 KV cache，decode worker 接收 KV cache 后持续生成输出 token。</p>
+
+  <h4>1. 什么时候需要解耦</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>症状</th><th>统一引擎中的常见原因</th><th>解耦后的观察重点</th></tr>
+      <tr><td>TTFT P95 高，但 TPOT 正常</td><td>长 prompt prefill 抢占 batch 或排队</td><td>prefill queue、KV transfer time、decode admission</td></tr>
+      <tr><td>decode tokens/s 不稳</td><td>prefill 和 decode 混合 batch 造成占用波动</td><td>decode worker active sequences、KV bandwidth</td></tr>
+      <tr><td>长上下文拖慢短请求</td><td>请求只按数量排队，没有按 prompt tokens 分流</td><td>按 prompt length、SLO、tenant 分队列</td></tr>
+      <tr><td>GPU 利用率高但 goodput 低</td><td>计算忙但没有满足 latency 约束的有效输出</td><td>throughput@latency、丢弃/超时请求比例</td></tr>
+    </table>
+  </div>
+  <p>这不是“所有服务都应该拆”。如果请求短、并发低、模型小或 KV 传输成本高，统一引擎更简单。解耦只有在 prefill 与 decode 的负载差异足够大、网络/进程间 KV 传输可控、并且调度器能按 SLO 做 admission control 时才值得。</p>
+
+  <h4>2. KV cache 传输是新的系统边界</h4>
+  <p>解耦后，请求路径变成：router 接收请求，prefill worker 处理 prompt 并产生 KV blocks，然后把 KV cache 和少量元数据传给 decode worker。这里新增了三类工程问题：</p>
+  <ul>
+    <li><strong>一致性：</strong>decode worker 必须使用同一模型权重、tokenizer、RoPE 配置、cache layout 和 dtype 解释 KV。</li>
+    <li><strong>传输成本：</strong>KV cache 可能很大，传输必须和其他请求计算重叠，否则 TTFT 省下的时间会被网络吃掉。</li>
+    <li><strong>路由语义：</strong>router 要知道哪些 decode worker 有显存余量、哪些请求属于同一 prefix/cache 域、哪些租户不能共享缓存。</li>
+  </ul>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>工业参照：</strong><a href="https://docs.vllm.ai/en/latest/features/disagg_prefill.html" target="_blank">vLLM</a> 把 disaggregated prefilling 实现为 prefill/decode 实例和 KV transfer connector；<a href="https://github.com/sgl-project/sglang/blob/main/docs/advanced_features/pd_disaggregation.md" target="_blank">SGLang</a> 明确把 prefill 描述为计算密集、decode 描述为 KV cache 管理密集；<a href="https://github.com/NVIDIA/TensorRT-LLM/blob/main/docs/source/features/disagg-serving.md" target="_blank">TensorRT-LLM</a> 强调 KV cache 传输与计算重叠。</div></div>
+
+  <h4>3. 报告里必须分开算 prefill、transfer 和 decode</h4>
+  <p>如果项目只报告端到端 P95，很难判断解耦是否真的有效。一个可复现报告至少要拆以下指标：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>指标</th><th>含义</th><th>决策用途</th></tr>
+      <tr><td>prefill_ms</td><td>prompt 处理和初始 KV 生成耗时</td><td>决定是否需要更强 prefill 池或 chunked prefill</td></tr>
+      <tr><td>kv_transfer_ms</td><td>KV blocks 从 prefill 到 decode 的传输耗时</td><td>判断网络/connector 是否抵消收益</td></tr>
+      <tr><td>decode_queue_ms</td><td>KV 到达后等待 decode worker admission 的时间</td><td>发现 decode 池是否饱和</td></tr>
+      <tr><td>TPOT</td><td>decode 阶段相邻 token 间隔</td><td>衡量 decode worker 的稳定吞吐</td></tr>
+      <tr><td>active_kv_tokens</td><td>decode 池当前持有的上下文 token 数</td><td>比请求数更接近显存压力</td></tr>
+    </table>
+  </div>
+
+  <h4>4. 最小设计题：什么时候拆，拆多少</h4>
+  <p>给定一个 workload：80% 请求是 1K prompt + 128 output，15% 是 16K prompt + 256 output，5% 是 RAG/多模态长输入 + 512 output。一个合理方案不是直接“开更多 GPU”，而是先做三步：</p>
+  <ol>
+    <li>按 prompt tokens、output tokens、RAG/多模态路径分桶，分别测 TTFT、TPOT、active KV tokens 和错误率。</li>
+    <li>在统一引擎下确认瓶颈：长 prompt 是否抬高短请求 TTFT，decode 是否在高并发时先饱和。</li>
+    <li>若 prefill 和 decode 明显互相干扰，再尝试 1:1、1:2、2:1 的 prefill/decode worker 比例，并报告 throughput@latency，而不是只报告 tokens/s。</li>
+  </ol>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Prefill/decode 解耦把 LLM serving 从“一个模型进程”变成“带 KV cache 传输协议的分布式系统”。高阶推理工程师要能判断拆分是否值得、KV 传输是否成为新瓶颈、以及不同 SLO 的请求应该如何分流。</div></div>
 </section>
 
 <!-- ================================================================ -->

@@ -43,6 +43,7 @@
     <li><strong>完成标准：</strong>你能判断一个需求应该用 SFT、LoRA、DPO 还是 RL 类方法。</li>
     <li><strong>练习产出：</strong>提交 masked SFT、LoRA 参数统计、DPO/GRPO toy 实验、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
   </ul>
+  <div class="dependency-note"><strong>本章依赖：</strong>对齐依赖 log probability、sequence loss、reference model、KL、偏好数据统计和评测切片。DPO/GRPO 公式看起来复杂，但底层问题是“训练目标是否真的支持想要的行为变化”。若目标函数和评估指标容易混淆，先补 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 的 DPO/GRPO 推导检查，以及 <a href="../docs/ml-foundations-prerequisite-bridge.html">ML foundations bridge</a> 的 metric limit、leakage 和 ablation。</div>
 </section>
 
 <!-- ================================================================ -->

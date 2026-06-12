@@ -43,6 +43,7 @@
     <li><strong>完成标准：</strong>你能说明为什么 Block 输入和输出都保持 <code>[batch, seq, d_model]</code>。</li>
     <li><strong>练习产出：</strong>提交 Block 实现、梯度检查、归一化 ablation，以及 FFN 参数量、FLOPs、激活显存分析；配套作业见 <a href="../assignments/ch05_block/">assignments/ch05_block/</a>。</li>
   </ul>
+  <div class="dependency-note"><strong>本章依赖：</strong>需要把 PyTorch Module、残差相加、LayerNorm/RMSNorm、矩阵参数量和反向传播检查连起来。Pre-Norm 稳定性依赖梯度路径直觉，FFN/SwiGLU 依赖矩阵乘法和激活函数。若 gradcheck、LayerNorm 推导或参数/FLOPs 账本不稳，优先补 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 的反向传播和 LayerNorm 检查。</div>
 </section>
 
 <!-- ================================================================ -->

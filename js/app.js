@@ -5,17 +5,17 @@
   'use strict';
 
   var CHAPTERS = [
-    {id:1, file:'ch01.html', title:'环境搭建与分词', desc:'BPE、多语 tokenizer、特殊 token 与模型接口契约', sections:16},
-    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding、word vectors、上下文化表示、RoPE、长上下文与 prompt 表示', sections:19},
-    {id:3, file:'ch03.html', title:'单头自注意力', desc:'Scaled Dot-Product Attention、mask、masked softmax、诊断账本与复杂度边界', sections:19},
-    {id:4, file:'ch04.html', title:'多头注意力与 MLA', desc:'MHA、GQA、MLA、KV Cache 预算与 checkpoint 转换', sections:12},
-    {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm、SwiGLU、资源估算、稳定性与 interpretability', sections:15},
-    {id:6, file:'ch06.html', title:'组装完整 GPT 模型', desc:'GPT-2 124M、MoE、权重加载、logit parity 与 checkpoint 兼容', sections:12},
-    {id:7, file:'ch07.html', title:'训练循环', desc:'数据管线、AdamW、scheduler、checkpoint、异常诊断、分布式、MFU 与训练成本', sections:20},
-    {id:8, file:'ch08.html', title:'文本生成', desc:'采样、beam、reasoning/test-time compute、speculative 与结构化解码', sections:15},
-    {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT、LoRA、DPO、GRPO、偏好数据、对齐评估与能力保留', sections:18},
-    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache、量化、RAG、tool use、服务压测、模型发布包、多模态与推理引擎', sections:23},
-    {id:11, file:'ch11.html', title:'经典神经 NLP 与评测', desc:'RNN、Parsing、Seq2Seq、BERT、评测有效性、安全与 Capstone 报告', sections:14}
+    {id:1, file:'ch01.html', title:'环境搭建与分词', desc:'BPE、多语 tokenizer、特殊 token 与模型接口契约', sections:19},
+    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding、word vectors、上下文化表示、RoPE、长上下文与 prompt 表示', sections:20},
+    {id:3, file:'ch03.html', title:'单头自注意力', desc:'Scaled Dot-Product Attention、mask、masked softmax、诊断账本与复杂度边界', sections:20},
+    {id:4, file:'ch04.html', title:'多头注意力与 MLA', desc:'MHA、GQA、MLA、KV Cache 预算与 checkpoint 转换', sections:18},
+    {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm、SwiGLU、资源估算、稳定性与 interpretability', sections:20},
+    {id:6, file:'ch06.html', title:'组装完整 GPT 模型', desc:'GPT-2 124M、MoE、权重加载、logit parity 与 checkpoint 兼容', sections:18},
+    {id:7, file:'ch07.html', title:'训练循环', desc:'数据管线、AdamW、checkpoint、分布式、MFU、工业训练系统 gate', sections:26},
+    {id:8, file:'ch08.html', title:'文本生成', desc:'采样、beam、reasoning/test-time compute、speculative 与结构化解码', sections:21},
+    {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT、LoRA、DPO、GRPO、偏好数据、对齐评估与能力保留', sections:24},
+    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache、量化、RAG、tool use、服务压测、PD 解耦与推理引擎', sections:29},
+    {id:11, file:'ch11.html', title:'经典神经 NLP 与评测', desc:'RNN、Parsing、Seq2Seq、BERT、评测有效性、安全与 Capstone 报告', sections:19}
   ];
 
   // ---- State helpers (IndexedDB-backed) ----

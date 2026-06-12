@@ -648,7 +648,7 @@ td{color:var(--text-secondary)}
 .chapter-item:nth-child(10){animation-delay:.5s}
 @keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
 
-/* ---- Beginner learning path ---- */
+/* ---- Learning path ---- */
 .learning-path{
   padding:8px 0 0;margin:0 0 28px
 }
@@ -663,7 +663,18 @@ td{color:var(--text-secondary)}
 }
 .path-step strong{display:block;color:var(--accent);font-size:.9rem;margin-bottom:6px}
 .path-step span{display:block;color:var(--text-secondary);font-size:.82rem;line-height:1.65}
-@media(max-width:959px){.path-grid{grid-template-columns:1fr}}
+@media(max-width:959px){
+  .path-grid{grid-template-columns:1fr}
+}
+
+.dependency-note{
+  margin-top:14px;padding:12px 14px;background:var(--bg);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text-secondary);font-size:.82rem;line-height:1.65
+}
+.dependency-note strong{color:var(--text);font-weight:700}
+.dependency-note a{color:var(--accent);font-weight:700;text-decoration:none}
+.dependency-note a:hover{text-decoration:underline}
 
 /* ---- Course index ---- */
 .course-index{

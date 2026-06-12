@@ -43,6 +43,7 @@
     <li><strong>完成标准：</strong>你能解释 <code>logits.shape == [batch, seq, vocab_size]</code> 为什么是语言模型的最终输出。</li>
     <li><strong>练习产出：</strong>提交 GPTModel forward 测试、参数量逐项表、weight tying 验证和一次小 batch logits sanity check；配套作业见 <a href="../assignments/ch06_gpt/">assignments/ch06_gpt/</a>。</li>
   </ul>
+  <div class="dependency-note"><strong>本章依赖：</strong>这是前六章的第一次系统集成：token id、embedding、block 堆叠、LM head、label shift 和 state_dict 必须同时对齐。基础薄弱时不要先追 MoE，先确保能手写一次 <code>[B,T] → [B,T,D] → [B,T,V]</code> 的 shape trace，并用 <a href="../docs/python-pytorch-review-session.html">Python/PyTorch review</a> 中的 PyTorch drill 排查 dtype、device、contiguous 和模块注册错误。</div>
 </section>
 
 <!-- ================================================================ -->

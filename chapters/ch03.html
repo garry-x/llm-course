@@ -43,6 +43,7 @@
     <li><strong>完成标准：</strong>你能解释为什么生成第 t 个 token 时不能看未来 token。</li>
     <li><strong>练习产出：</strong>提交手写 attention、mask 单元测试、缩放因子的方差推导，以及一张 attention heatmap 分析；可用 <a href="../assignments/ch03_attention/" target="_blank">Ch03 注意力作业测试</a> 检查核心实现。</li>
   </ul>
+  <div class="dependency-note"><strong>本章依赖：</strong>需要把矩阵乘法、softmax、mask 语义和概率归一化连起来。任何 attention bug 都先回到四个问题：score shape 是否正确，mask 是否在 softmax 前生效，概率行和是否为 1，padding/causal 语义是否混用。相关基础见 <a href="../docs/math-prerequisites.html">数学与 PyTorch 先修</a> 的 mask、softmax 和 cross entropy 部分。</div>
 </section>
 
 <!-- ================================================================ -->

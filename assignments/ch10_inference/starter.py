@@ -107,6 +107,11 @@ def build_benchmark_summary(task, metrics, baseline, sample_size, risks=None, un
     raise NotImplementedError
 
 
+def prefill_decode_disaggregation_report(requests, slo=None):
+    """Summarize prefill/decode disaggregation metrics and likely bottleneck."""
+    raise NotImplementedError
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         raise NotImplementedError

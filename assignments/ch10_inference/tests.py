@@ -408,6 +408,67 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.build_benchmark_summary("qa", {"acc": 1.0}, "baseline", 0)
 
+    def test_prefill_decode_report_splits_latency_and_slo(self):
+        requests = [
+            {
+                "request_id": "short",
+                "prefill_ms": 120.0,
+                "kv_transfer_ms": 15.0,
+                "decode_queue_ms": 20.0,
+                "decode_token_ms": [25.0, 30.0, 35.0],
+                "prompt_tokens": 1000,
+                "output_tokens": 3,
+                "active_kv_tokens": 1003,
+            },
+            {
+                "request_id": "long",
+                "prefill_ms": 900.0,
+                "kv_transfer_ms": 240.0,
+                "decode_queue_ms": 80.0,
+                "decode_token_ms": [45.0, 50.0, 55.0],
+                "prompt_tokens": 16000,
+                "output_tokens": 3,
+                "active_kv_tokens": 16003,
+            },
+        ]
+        report = submission.prefill_decode_disaggregation_report(
+            requests,
+            slo={
+                "max_p95_ttft_ms": 1000.0,
+                "max_p95_tpot_ms": 60.0,
+                "max_p95_kv_transfer_ms": 200.0,
+                "max_active_kv_tokens": 20000,
+            },
+        )
+        self.assertEqual(report["total_prompt_tokens"], 17000)
+        self.assertEqual(report["total_output_tokens"], 6)
+        self.assertEqual(report["max_active_kv_tokens"], 16003)
+        self.assertGreater(report["p95"]["ttft_ms"], report["p95"]["prefill_ms"])
+        self.assertEqual(report["likely_bottleneck"], "prefill_ms")
+        self.assertFalse(report["slo_pass"])
+        self.assertIn("max_p95_ttft_ms", report["slo_violations"])
+        self.assertIn("max_p95_kv_transfer_ms", report["slo_violations"])
+
+    def test_prefill_decode_report_rejects_bad_requests(self):
+        with self.assertRaises(ValueError):
+            submission.prefill_decode_disaggregation_report([])
+        with self.assertRaises(ValueError):
+            submission.prefill_decode_disaggregation_report([{"prefill_ms": 1.0}])
+        with self.assertRaises(ValueError):
+            submission.prefill_decode_disaggregation_report(
+                [
+                    {
+                        "prefill_ms": 1.0,
+                        "kv_transfer_ms": 1.0,
+                        "decode_queue_ms": 1.0,
+                        "decode_token_ms": [],
+                        "prompt_tokens": 1,
+                        "output_tokens": 1,
+                        "active_kv_tokens": 1,
+                    }
+                ]
+            )
+
     def test_lsh_returns_best_same_bucket_candidate(self):
         memory = submission.LSHMemory(dim=2, n_bits=1, seed=0)
         memory.planes = torch.tensor([[1.0, 0.0]])

@@ -13,6 +13,7 @@
 | Checkpoint | 保存 latest checkpoint，包含 model/optimizer/config/global_step | `checkpoints/latest.pt` |
 | Resume | 从 checkpoint 恢复并继续训练，global_step 单调增加 | `python acceptance.py` |
 | Planning | 估算 steps、GPU hours、成本、checkpoint 存储 | `python plan_training.py` |
+| Industrial Gate | 把训练 run 拆成 optimization、throughput、state/checkpoint、evaluation gate | 报告中的 gate 表 |
 | Acceptance | 串联数据分析、训练、resume、规划和指标检查 | `python acceptance.py` 输出 `ACCEPTANCE: PASS` |
 
 ## 项目问题设计
@@ -88,6 +89,7 @@ python plan_training.py \
 - `checkpoints/latest.pt` 能恢复训练，resume 后 global_step 增加。
 - 能解释 global batch tokens、总 step、tokens/s/GPU、GPU hours 和预计成本。
 - 能说明 loss spike、nan、吞吐下降、开发集退化时的排查顺序。
+- 能把训练 run 映射到 optimization、throughput、state/checkpoint、evaluation 四类 gate，并说明哪些 gate 支持继续扩容，哪些 gate 要先 debug。
 
 ## 项目报告要求
 
@@ -112,8 +114,9 @@ python plan_training.py \
 6. **Ablation.** 一次只改一个主要因素；若同时改多个因素，要说明为什么无法归因。
 7. **Results.** 用表格报告 train loss、val loss/PPL、grad norm、tokens/s、step time、是否出现 NaN/loss spike。
 8. **Error analysis.** 至少解释一个失败 run：学习率过高、数据重复、train/val 分叉、batch 太小、吞吐下降或 resume 异常。
-9. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
-10. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
+9. **Industrial gates.** 用表格报告 optimization、throughput、state/checkpoint、evaluation gate：每个 gate 的信号、阈值、通过/失败和下一步动作。
+10. **Cost and scaling.** 把实验中的 tokens/s、global batch tokens、steps 和 `plan_training.py` 的 GPU hours/cost 联系起来。
+11. **Limitations and reproducibility.** 明确哪些结论只适用于 tiny corpus、字符级 tokenizer、CPU/GPU 环境或这个模型规模，并列出复现命令、配置和 checkpoint/resume 路径。
 
 ### 结果表模板
 
@@ -121,5 +124,14 @@ python plan_training.py \
 |-----|----------|------------|----------|-----|-----------|----------|------|------|
 | baseline | 默认配置 | | | | | | | |
 | ablation | 例如 `seq_len=128` | | | | | | | |
+
+### Industrial gate 模板
+
+| Gate | 信号 | 阈值/判断 | 状态 | 下一步 |
+|------|------|-----------|------|--------|
+| Optimization | train/val loss、grad_norm、NaN/loss spike | | | |
+| Throughput | tokens/s、step time、dataloader wait、checkpoint overhead | | | |
+| State | checkpoint/resume、lr 连续性、optimizer/scheduler/RNG/sampler state | | | |
+| Evaluation | 固定 benchmark、格式/安全回归、baseline 对比 | | | |
 
 如果两个 run 的差异小于随机波动，报告应写“不足以支持改动有效”，而不是强行给出优化结论。一个严谨的负结果仍然是合格的训练工程结论。

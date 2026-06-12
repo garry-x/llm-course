@@ -36,11 +36,12 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 - 调度器必须先 warmup 到 1，再 cosine decay 到 `min_lr_ratio`；`lr_schedule_trace` 必须能按 optimizer step 返回 lr multiplier、实际 lr 和累计 consumed tokens。
 - `train` 必须执行 `zero_grad -> forward -> loss -> backward -> clip -> step -> scheduler.step`，并记录 loss history。
 - 训练异常分析题必须能把 loss spike、NaN/Inf、resume 不连续和 tokens/s 下降分别归因到数据、数值精度、优化器状态、checkpoint 完整性或系统吞吐瓶颈。
+- `training_system_gate_report` 必须把训练 run 拆成 optimization、throughput、state/checkpoint 和 evaluation gate，输出 `overall_pass`、每个 gate 的信号和需要 debug 的 action items。
 
 ## 评分 Rubric
 
 | 项目 | 分值 | 标准 |
 |------|:--:|------|
-| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、gradient accumulation loss scaling、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、AdamW 偏置修正、warmup+cosine 边界与 token 进度、n-gram 泄漏诊断、grad clipping 的诊断意义和异常 runbook |
-| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、optimizer state 显存估算、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、gradient accumulation step accounting、AdamW、scheduler、lr schedule trace 和训练循环 |
-| Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、tokens/s、resume 行为和最小修复实验 |
+| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、gradient accumulation loss scaling、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、AdamW 偏置修正、warmup+cosine 边界与 token 进度、n-gram 泄漏诊断、grad clipping 的诊断意义、异常 runbook 和训练 gate 判定 |
+| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、训练预算计算、optimizer state 显存估算、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、gradient accumulation step accounting、AdamW、scheduler、lr schedule trace、训练循环和 `training_system_gate_report` |
+| Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、tokens/s、resume 行为、评测 gate 和最小修复实验 |

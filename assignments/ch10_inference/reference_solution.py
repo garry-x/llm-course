@@ -496,6 +496,82 @@ def build_benchmark_summary(task, metrics, baseline, sample_size, risks=None, un
     }
 
 
+def prefill_decode_disaggregation_report(requests, slo=None):
+    if not requests:
+        raise ValueError("requests must not be empty")
+    slo = dict(slo or {})
+    rows = []
+    for idx, req in enumerate(requests):
+        if not isinstance(req, dict):
+            raise ValueError("each request must be a dict")
+        required = ["prefill_ms", "kv_transfer_ms", "decode_queue_ms", "decode_token_ms", "prompt_tokens", "output_tokens", "active_kv_tokens"]
+        missing = [name for name in required if name not in req]
+        if missing:
+            raise ValueError(f"request {idx} missing fields: {', '.join(missing)}")
+        decode_token_ms = list(req["decode_token_ms"])
+        if not decode_token_ms:
+            raise ValueError("decode_token_ms must not be empty")
+        numeric = [req["prefill_ms"], req["kv_transfer_ms"], req["decode_queue_ms"], req["prompt_tokens"], req["output_tokens"], req["active_kv_tokens"], *decode_token_ms]
+        if any(float(value) < 0 for value in numeric):
+            raise ValueError("request metrics must be non-negative")
+        if int(req["output_tokens"]) <= 0:
+            raise ValueError("output_tokens must be positive")
+        first_decode = float(decode_token_ms[0])
+        tpot = float(np.mean(np.asarray(decode_token_ms, dtype=np.float64)))
+        rows.append(
+            {
+                "request_id": req.get("request_id", idx),
+                "ttft_ms": float(req["prefill_ms"]) + float(req["kv_transfer_ms"]) + float(req["decode_queue_ms"]) + first_decode,
+                "prefill_ms": float(req["prefill_ms"]),
+                "kv_transfer_ms": float(req["kv_transfer_ms"]),
+                "decode_queue_ms": float(req["decode_queue_ms"]),
+                "tpot_ms": tpot,
+                "prompt_tokens": int(req["prompt_tokens"]),
+                "output_tokens": int(req["output_tokens"]),
+                "active_kv_tokens": int(req["active_kv_tokens"]),
+            }
+        )
+
+    def p95(field):
+        return float(np.percentile(np.asarray([row[field] for row in rows], dtype=np.float64), 95))
+
+    p95s = {
+        "prefill_ms": p95("prefill_ms"),
+        "kv_transfer_ms": p95("kv_transfer_ms"),
+        "decode_queue_ms": p95("decode_queue_ms"),
+        "tpot_ms": p95("tpot_ms"),
+        "ttft_ms": p95("ttft_ms"),
+    }
+    bottleneck = max(["prefill_ms", "kv_transfer_ms", "decode_queue_ms", "tpot_ms"], key=lambda name: p95s[name])
+    slo_pass = True
+    violations = []
+    checks = {
+        "max_p95_ttft_ms": ("ttft_ms", "<="),
+        "max_p95_tpot_ms": ("tpot_ms", "<="),
+        "max_p95_kv_transfer_ms": ("kv_transfer_ms", "<="),
+    }
+    for key, (field, _op) in checks.items():
+        if key in slo and p95s[field] > float(slo[key]):
+            slo_pass = False
+            violations.append(key)
+    if "max_active_kv_tokens" in slo:
+        max_active = max(row["active_kv_tokens"] for row in rows)
+        if max_active > int(slo["max_active_kv_tokens"]):
+            slo_pass = False
+            violations.append("max_active_kv_tokens")
+
+    return {
+        "requests": rows,
+        "p95": p95s,
+        "total_prompt_tokens": sum(row["prompt_tokens"] for row in rows),
+        "total_output_tokens": sum(row["output_tokens"] for row in rows),
+        "max_active_kv_tokens": max(row["active_kv_tokens"] for row in rows),
+        "likely_bottleneck": bottleneck,
+        "slo_pass": slo_pass,
+        "slo_violations": violations,
+    }
+
+
 class LSHMemory:
     def __init__(self, dim, n_bits=8, seed=0):
         generator = torch.Generator().manual_seed(seed)

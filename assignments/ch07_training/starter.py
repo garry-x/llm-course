@@ -100,6 +100,11 @@ def lr_schedule_trace(base_lr, num_warmup_steps, num_training_steps, min_lr_rati
     raise NotImplementedError
 
 
+def training_system_gate_report(metrics, thresholds=None):
+    """Summarize optimization, throughput, checkpoint, and evaluation gates for a training run."""
+    raise NotImplementedError
+
+
 @dataclass
 class TrainConfig:
     num_epochs: int = 1

@@ -339,6 +339,77 @@ def lr_schedule_trace(base_lr, num_warmup_steps, num_training_steps, min_lr_rati
     }
 
 
+def training_system_gate_report(metrics, thresholds=None):
+    """Summarize whether a training run is ready to continue, stop, or debug."""
+    if not isinstance(metrics, dict):
+        raise ValueError("metrics must be a dict")
+    thresholds = dict(thresholds or {})
+    required = ["train_loss", "val_loss", "grad_norm", "tokens_per_second", "checkpoint_resume_ok"]
+    missing = [name for name in required if name not in metrics]
+    if missing:
+        raise ValueError(f"missing required metrics: {', '.join(missing)}")
+
+    train_loss = float(metrics["train_loss"])
+    val_loss = float(metrics["val_loss"])
+    grad_norm = float(metrics["grad_norm"])
+    tokens_per_second = float(metrics["tokens_per_second"])
+    if not all(math.isfinite(value) for value in [train_loss, val_loss, grad_norm, tokens_per_second]):
+        raise ValueError("loss, grad_norm, and tokens_per_second must be finite")
+
+    max_train_val_gap = float(thresholds.get("max_train_val_gap", 1.0))
+    max_grad_norm = float(thresholds.get("max_grad_norm", 10.0))
+    min_tokens_per_second = float(thresholds.get("min_tokens_per_second", 1.0))
+    min_eval_pass_rate = float(thresholds.get("min_eval_pass_rate", 0.0))
+    if max_train_val_gap < 0 or max_grad_norm <= 0 or min_tokens_per_second <= 0:
+        raise ValueError("thresholds must be positive")
+    if not 0.0 <= min_eval_pass_rate <= 1.0:
+        raise ValueError("min_eval_pass_rate must be in [0, 1]")
+
+    gates = {
+        "optimization": {
+            "pass": val_loss <= train_loss + max_train_val_gap and grad_norm <= max_grad_norm,
+            "signals": {"train_loss": train_loss, "val_loss": val_loss, "grad_norm": grad_norm},
+        },
+        "throughput": {
+            "pass": tokens_per_second >= min_tokens_per_second,
+            "signals": {"tokens_per_second": tokens_per_second},
+        },
+        "state": {
+            "pass": bool(metrics["checkpoint_resume_ok"]),
+            "signals": {"checkpoint_resume_ok": bool(metrics["checkpoint_resume_ok"])},
+        },
+        "evaluation": {
+            "pass": True,
+            "signals": {},
+        },
+    }
+    if "eval_pass_rate" in metrics:
+        eval_pass_rate = float(metrics["eval_pass_rate"])
+        if not 0.0 <= eval_pass_rate <= 1.0:
+            raise ValueError("eval_pass_rate must be in [0, 1]")
+        gates["evaluation"] = {
+            "pass": eval_pass_rate >= min_eval_pass_rate,
+            "signals": {"eval_pass_rate": eval_pass_rate},
+        }
+
+    action_items = []
+    if not gates["optimization"]["pass"]:
+        action_items.append("debug_loss_or_grad_norm")
+    if not gates["throughput"]["pass"]:
+        action_items.append("profile_dataloader_compute_communication_or_checkpoint")
+    if not gates["state"]["pass"]:
+        action_items.append("fix_checkpoint_optimizer_scheduler_rng_or_sampler_state")
+    if not gates["evaluation"]["pass"]:
+        action_items.append("inspect_eval_regression_baseline_or_data_leakage")
+
+    return {
+        "overall_pass": not action_items,
+        "gates": gates,
+        "action_items": action_items,
+        "decision": "continue_or_scale" if not action_items else "debug_before_scale",
+    }
+
+
 @dataclass
 class TrainConfig:
     num_epochs: int = 1

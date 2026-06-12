@@ -336,14 +336,18 @@ class TestLossOptimizerScheduler(unittest.TestCase):
             submission.lr_schedule_trace(0.2, 2, 6, tokens_per_step=0)
 
 
-class TinyLanguageModel(nn.Module):
-    def __init__(self, vocab_size=8, d_model=12):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, d_model)
-        self.proj = nn.Linear(d_model, vocab_size)
+if nn is not None:
+    class TinyLanguageModel(nn.Module):
+        def __init__(self, vocab_size=8, d_model=12):
+            super().__init__()
+            self.embedding = nn.Embedding(vocab_size, d_model)
+            self.proj = nn.Linear(d_model, vocab_size)
 
-    def forward(self, input_ids):
-        return self.proj(self.embedding(input_ids))
+        def forward(self, input_ids):
+            return self.proj(self.embedding(input_ids))
+else:
+    class TinyLanguageModel:
+        pass
 
 
 @unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
@@ -413,6 +417,59 @@ class TestCalibrationMetrics(unittest.TestCase):
             submission.expected_calibration_error(torch.randn(2, 3), torch.randn(2, 2).long())
         with self.assertRaises(ValueError):
             submission.expected_calibration_error(logits, torch.full((1, 3), -100), ignore_index=-100)
+
+
+@unittest.skipIf(torch is None, "PyTorch is required for Ch07 training tests")
+class TestTrainingSystemGateReport(unittest.TestCase):
+    def test_training_system_gate_report_passes_healthy_run(self):
+        report = submission.training_system_gate_report(
+            {
+                "train_loss": 2.1,
+                "val_loss": 2.25,
+                "grad_norm": 0.9,
+                "tokens_per_second": 1200.0,
+                "checkpoint_resume_ok": True,
+                "eval_pass_rate": 0.72,
+            },
+            thresholds={
+                "max_train_val_gap": 0.3,
+                "max_grad_norm": 5.0,
+                "min_tokens_per_second": 1000.0,
+                "min_eval_pass_rate": 0.7,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "continue_or_scale")
+        self.assertEqual(report["action_items"], [])
+        self.assertTrue(report["gates"]["state"]["pass"])
+
+    def test_training_system_gate_report_attributes_failures(self):
+        report = submission.training_system_gate_report(
+            {
+                "train_loss": 1.0,
+                "val_loss": 2.4,
+                "grad_norm": 20.0,
+                "tokens_per_second": 50.0,
+                "checkpoint_resume_ok": False,
+                "eval_pass_rate": 0.2,
+            },
+            thresholds={
+                "max_train_val_gap": 0.5,
+                "max_grad_norm": 5.0,
+                "min_tokens_per_second": 100.0,
+                "min_eval_pass_rate": 0.5,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "debug_before_scale")
+        self.assertIn("debug_loss_or_grad_norm", report["action_items"])
+        self.assertIn("profile_dataloader_compute_communication_or_checkpoint", report["action_items"])
+        self.assertIn("fix_checkpoint_optimizer_scheduler_rng_or_sampler_state", report["action_items"])
+        self.assertIn("inspect_eval_regression_baseline_or_data_leakage", report["action_items"])
+
+    def test_training_system_gate_report_rejects_missing_metrics(self):
+        with self.assertRaises(ValueError):
+            submission.training_system_gate_report({"train_loss": 1.0})
 
 
 if __name__ == "__main__":

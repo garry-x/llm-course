@@ -15,6 +15,7 @@
 | Tool Calling | 接收 OpenAI 风格 `tools` schema，返回 `tool_calls` | `evaluate.py` 检查工具名 |
 | Metrics | 暴露请求数、token 数、TTFT、TPOT | `GET /metrics` 有 JSON 指标 |
 | Benchmark | 生成 P50/P95/P99、tokens/s、错误率 | `python benchmark.py` 输出报告 |
+| PD Breakdown | 拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens | 报告中的 PD 指标表 |
 | SLO Check | 将压测 JSON 与延迟/吞吐/错误率目标对比 | `python slo_check.py` 输出 PASS/FAIL |
 | Evaluation | 跑固定评测集，检查 JSON/事实/拒答 | `python evaluate.py` 输出 pass rate |
 | Capacity | 估算权重显存、KV Cache、最大 batch、token 成本 | `python capacity_plan.py` 输出容量计划 |
@@ -135,6 +136,7 @@ python capacity_plan.py \
 ## 上线准备
 
 - P95 TTFT、P95 TPOT、P99 total latency 已测。
+- 若采用或讨论 prefill/decode 解耦，必须单独报告 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，不能只给端到端 P95。
 - SLO 目标可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
 - 最大 prompt 长度、最大输出长度、并发上限已测。
 - 显存预算包含权重、KV Cache、batch 峰值和 10-20% 安全余量。
@@ -167,8 +169,9 @@ python capacity_plan.py \
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
 7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema 问题和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
-9. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
-10. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
+9. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
+10. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
+11. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 
 ### 结果表模板
 
@@ -176,6 +179,13 @@ python capacity_plan.py \
 |-----|------|-----------|----------|----------|-------------|----------|------------|----------------|
 | baseline | 默认配置 | | | | | | | |
 | ablation | 例如 RAG top-k=8 | | | | | | | |
+
+### Prefill/Decode 解耦指标模板
+
+| Run | P95 prefill | P95 KV transfer | P95 decode queue | P95 TPOT | max active KV tokens | likely bottleneck | SLO 结论 |
+|-----|-------------|-----------------|------------------|----------|----------------------|-------------------|----------|
+| unified baseline | | | | | | | |
+| PD experiment / estimate | | | | | | | |
 
 ### 失败分类模板
 

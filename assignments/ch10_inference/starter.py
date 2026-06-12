@@ -85,6 +85,11 @@ def validate_tool_call_plan(tool_registry, proposed_calls, budgets=None):
     raise NotImplementedError
 
 
+def tool_runtime_security_report(tool_registry, tool_events, policy=None):
+    """Audit MCP/tool runtime trust, consent, data egress, observation isolation, and budgets."""
+    raise NotImplementedError
+
+
 def prefix_cache_savings(tokenized_prompts):
     """Estimate reusable prefix tokens and effective prefill work for a request stream."""
     raise NotImplementedError

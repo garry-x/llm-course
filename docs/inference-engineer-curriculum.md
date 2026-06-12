@@ -59,6 +59,7 @@
 - 能解释 RAG 解决知识更新和可追溯问题，但不等于模型推理能力增强。
 - 能设计检索命中文档、prompt 注入、引用返回、结构化 JSON 响应、工具 schema 和失败兜底。
 - 能说明 JSON schema / constrained decoding 比“请输出 JSON”的 prompt 更可靠。
+- 能把工具调用拆成 schema gate 和 MCP/runtime gate，分别审计 server trust、用户同意、敏感数据外发、外部 observation 隔离、递归 LLM sampling 和 tool budget。
 
 **对应内容：**Ch08 约束生成，Ch10 10.8、10.13，Capstone RAG stub、`response_format` 与 `tools`。
 
@@ -92,7 +93,7 @@
 | 准入控制 | 能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit | 容量规划说明 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
-| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性、工具调用、LLM-as-judge 和安全/过度拒答，失败样例有记录 | `evaluate.py` 输出 |
+| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、JSON 格式正确性、工具调用、MCP/runtime gate、LLM-as-judge 和安全/过度拒答，失败样例有记录 | `evaluate.py` 输出 |
 | 实验结论 | 项目有 research question、baseline、workload、ablation 和结论边界 | proposal / milestone / final report |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |
 | 引擎替换 | 至少说明如何把 `MockEngine` 替换为一个真实推理引擎 | 代码 diff 或设计说明 |

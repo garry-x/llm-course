@@ -606,7 +606,7 @@ Quick check：
 - 比较 weight-only quantization、KV quantization、FP8/FP4。
 - 区分 VQA、OCR、图表理解、视觉定位和视频理解的评价方式。
 - 建立上线前的 latency、cost、quality 和 safety 判断框架。
-- 把 structured output / tool calling 拆成 schema、权限、预算、observation 和最终答案校验。
+- 把 structured output / tool calling 拆成 schema、权限、预算、MCP/runtime trust、observation 和最终答案校验。
 
 核心推导：
 
@@ -619,6 +619,7 @@ Quick check：
 - MMR 在 query 相关性和 chunk 去冗余之间做贪心折中。
 - RAG context packing 在 context budget 与 reserved output budget 下选择带 citation 的 chunk；Recall 命中但没有进入 prompt 仍然会失败。
 - Tool call gate：schema validation、permission check、loop budget 和 observation injection 必须在工具执行前后分开处理。
+- MCP/runtime gate：server trust、用户同意、敏感数据外发、外部 observation 隔离、recursive LLM sampling 和 runtime budget 不能由 schema 通过来替代。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
 课堂 demo：
@@ -631,6 +632,7 @@ Quick check：
 - 给定 query-doc 和 doc-doc 相似度，手算 MMR 选择顺序。
 - 给定候选 chunk、token 预算和预留输出预算，手算哪些 citation 进入 prompt。
 - 给定一组工具调用，填写 `validate_tool_call_plan` 输出，判断 schema、permission 和 budget gate。
+- 给定一个 remote MCP tool event，填写 `tool_runtime_security_report` 输出，判断 server trust、consent、data privacy、observation isolation 和 sampling/budget gate。
 - 对 per-channel INT8 权重做 roundtrip。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 
@@ -641,11 +643,12 @@ Quick check：
 - Recall@k 命中了相关 chunk，为什么答案仍然可能缺引用或编造？
 - INT8 降低的是权重显存、KV cache 还是两者？
 - 为什么 structured output 或 function calling 仍然需要服务端 schema 校验和权限检查？
+- 为什么 MCP server allowlist、用户批准和工具输出隔离是 runtime gate，而不是 prompt 文案？
 - 一个多模态模型 VQA 分数高，是否能推出 OCR 或视觉定位可靠？
 
 课后产出：
 
-- A8 RAG/context packing/tool gate/quantization/benchmark 测试通过。
+- A8 RAG/context packing/tool/MCP runtime gate/quantization/benchmark 测试通过。
 - 推理 capstone 初版，包含 RAG 或多模态输入的失败模式分析。
 
 ## Week 9 Lecture 17: RNN/LSTM、Dependency Parsing、Seq2Seq 与 BERT

@@ -2,7 +2,7 @@
 
 这个项目把课程最后几章落成一个可运行的推理工程作品：一个 OpenAI-compatible Chat API，带流式输出、RAG stub、基础指标、压测脚本和上线准备说明。
 
-默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目重点覆盖 OpenAI-compatible API、RAG/JSON/tool 回归、continuous batching admission、speculative decoding gate、TTFT/TPOT/P95/P99、tokens/s、显存估算和容量规划。
+默认实现使用 `MockEngine`，不需要 GPU 或真实模型。目标是先跑通推理服务工程骨架，再把 `MockEngine` 替换为 vLLM、SGLang、TensorRT-LLM 或 llama.cpp。推理项目重点覆盖 OpenAI-compatible API、RAG/JSON/tool/MCP runtime 回归、continuous batching admission、speculative decoding gate、TTFT/TPOT/P95/P99、tokens/s、显存估算和容量规划。
 
 ## 你要交付什么
 
@@ -12,7 +12,7 @@
 | Streaming | `stream=true` 返回 SSE token 流 | 客户端逐 chunk 收到 `data: ...` |
 | RAG | 能注入检索上下文，记录命中文档 | 响应里返回 `x_retrieved_docs` |
 | Structured Output | `response_format={"type":"json_object"}` 返回可解析 JSON | `evaluate.py` 检查 JSON key |
-| Tool Calling | 接收 OpenAI 风格 `tools` schema，返回 `tool_calls`，并在执行前做 schema/权限/预算 gate | `evaluate.py` 检查工具名，报告记录 gate |
+| Tool / MCP Calling | 接收 OpenAI 风格 `tools` schema 或 MCP-style tool registry，返回 `tool_calls`，并在执行前做 schema/权限/预算和 runtime security gate | `evaluate.py` 检查工具名，报告记录 gate |
 | Reasoning Budget | 对 greedy、self-consistency、best-of-N 或 verifier rerank 做 quality/token/latency/cost gate | 报告中的 generation policy 表 |
 | Speculative Decoding | 若采用或讨论 draft/EAGLE/MTP/n-gram/suffix 推测解码，做 acceptance/speedup/draft overhead/quality/workload gate | 报告中的 speculative gate 表 |
 | Admission Control | 若采用 vLLM/SGLang/TensorRT-LLM 或讨论高并发服务，报告 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens、chunked prefill 和 queue wait gate | 报告中的 admission 表 |
@@ -153,6 +153,7 @@ python capacity_plan.py \
 - 每 1M tokens 的 GPU 成本已估算，且知道成本对 tokens/s 和 GPU 小时价格的敏感性。
 - RAG 命中率、JSON 格式正确率、安全拒答率有固定回归集。
 - 工具调用能校验 schema、权限和循环预算，返回 `tool_calls`，并记录工具执行结果。
+- 若使用 MCP 或 remote tool，必须报告 server trust/allowlist、用户同意、敏感数据外发、外部 observation isolation、递归 LLM sampling 和 observation token budget；schema 通过不能替代 runtime security gate。
 - 指标能按模型、租户、状态码、错误类型聚合。
 - 限流、超时、降级和错误响应格式明确。
 
@@ -164,7 +165,7 @@ python capacity_plan.py \
 - 若使用 LLM-as-judge 或人工偏好近似指标，必须报告 position/verbosity bias、swapped-order consistency 和少量 human label agreement；未通过时不能把 judge win rate 作为上线依据。
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
-- RAG、JSON structured output、tool calling 和 reasoning budget 的回归用例。
+- RAG、JSON structured output、tool/MCP calling 和 reasoning budget 的回归用例。
 - 超时、限流、降级、格式错误和安全拒答策略。
 - 明确说明你的研究问题、baseline、workload、结论适用条件，以及哪些结果只在 MockEngine / 本地 CPU 下成立。
 
@@ -178,13 +179,14 @@ python capacity_plan.py \
 4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON、是否多样本 reasoning 或 verifier rerank。
 5. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
-7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
+7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、JSON 解析失败、tool call schema/permission/budget 问题、MCP/runtime security gate、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
 9. **Continuous batching admission.** 若采用或讨论 high-concurrency serving，报告 `max_num_seqs`、`max_num_batched_tokens`、prefix cache、chunked prefill、admitted/queued、queue wait 和 active KV gate。
 10. **Speculative decoding gate.** 若采用或讨论 speculative decoding，报告 acceptance rate、speedup、draft overhead、tokens per verify step、quality regression、memory overhead 和 QPS/workload fit，并说明是否启用。
 11. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
-12. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
-13. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
+12. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
+13. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。
+14. **Decision and reproducibility.** 给出上线判断：通过、需要灰度、需要降级策略，或不建议上线；同时写清不能外推到真实模型/GPU/更大知识库的部分，并列出服务启动、评测、压测、SLO 和容量估算命令。
 
 ### 结果表模板
 

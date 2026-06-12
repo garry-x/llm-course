@@ -372,6 +372,117 @@ class TestRetrievalMetrics(unittest.TestCase):
         with self.assertRaises(ValueError):
             submission.validate_tool_call_plan({"search_docs": {}}, [])
 
+    def test_tool_runtime_security_report_passes_trusted_mcp_read_only_flow(self):
+        registry = {
+            "search_docs": {
+                "server": "course-mcp",
+                "transport": "remote_mcp",
+                "risk": "read_only",
+                "permissions": ["read"],
+                "trusted": True,
+                "external_content": True,
+            }
+        }
+        report = submission.tool_runtime_security_report(
+            registry,
+            [
+                {
+                    "name": "search_docs",
+                    "server": "course-mcp",
+                    "observation_tokens": 320,
+                    "external_content": True,
+                    "observation_isolated": True,
+                }
+            ],
+            policy={
+                "allowed_servers": ["course-mcp"],
+                "trusted_servers": ["course-mcp"],
+                "approved_permissions": ["read"],
+                "max_calls": 2,
+                "max_observation_tokens": 1000,
+            },
+        )
+        self.assertTrue(report["overall_pass"])
+        self.assertEqual(report["decision"], "execute_with_runtime_guards")
+        self.assertTrue(report["gates"]["server_trust"]["pass"])
+        self.assertTrue(report["gates"]["observation_isolation"]["pass"])
+        self.assertEqual(report["events"][0]["issues"], [])
+
+    def test_tool_runtime_security_report_flags_mcp_agent_runtime_risks(self):
+        registry = {
+            "filesystem_write": {
+                "server": "unknown-marketplace-server",
+                "transport": "remote_mcp",
+                "risk": "write",
+                "permissions": ["read", "write"],
+                "trusted": False,
+                "requires_user_approval": True,
+                "external_content": True,
+            }
+        }
+        report = submission.tool_runtime_security_report(
+            registry,
+            [
+                {
+                    "name": "filesystem_write",
+                    "server": "unknown-marketplace-server",
+                    "observation_tokens": 900,
+                    "sensitive_data_sent": True,
+                    "data_sharing_approved": False,
+                    "contains_prompt_injection": True,
+                    "observation_isolated": False,
+                    "llm_sampling_requested": True,
+                    "llm_sampling_approved": False,
+                },
+                {
+                    "name": "filesystem_write",
+                    "server": "unknown-marketplace-server",
+                    "observation_tokens": 700,
+                },
+            ],
+            policy={
+                "allowed_servers": ["course-mcp"],
+                "approved_permissions": ["read"],
+                "max_calls": 1,
+                "max_observation_tokens": 1000,
+                "sensitive_data_allowed": False,
+                "allow_llm_sampling": False,
+            },
+        )
+        self.assertFalse(report["overall_pass"])
+        self.assertEqual(report["decision"], "block_or_escalate_before_tool_execution")
+        self.assertFalse(report["gates"]["server_trust"]["pass"])
+        self.assertFalse(report["gates"]["permission_and_consent"]["pass"])
+        self.assertFalse(report["gates"]["data_privacy"]["pass"])
+        self.assertFalse(report["gates"]["observation_isolation"]["pass"])
+        self.assertFalse(report["gates"]["sampling_and_budget"]["pass"])
+        self.assertIn("pin_or_remove_untrusted_mcp_server", report["action_items"])
+        self.assertIn("request_user_approval_or_downgrade_tool_risk", report["action_items"])
+        self.assertIn("redact_or_block_sensitive_data_egress", report["action_items"])
+        self.assertIn("isolate_tool_outputs_as_untrusted_observations", report["action_items"])
+        self.assertIn("disable_or_approve_recursive_llm_sampling", report["action_items"])
+        self.assertIn("stop_or_summarize_agent_loop_before_more_tool_calls", report["action_items"])
+        self.assertIn("server_not_allowlisted", report["events"][0]["issues"])
+        self.assertIn("missing_user_approval", report["events"][0]["issues"])
+        self.assertIn("untrusted_observation_not_isolated", report["events"][0]["issues"])
+
+    def test_tool_runtime_security_report_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            submission.tool_runtime_security_report({}, [{"name": "search_docs"}])
+        with self.assertRaises(ValueError):
+            submission.tool_runtime_security_report({"search_docs": {}}, [])
+        with self.assertRaises(ValueError):
+            submission.tool_runtime_security_report(
+                {"search_docs": {}},
+                [{"name": "search_docs", "observation_tokens": -1}],
+            )
+        with self.assertRaises(ValueError):
+            submission.tool_runtime_security_report(
+                {"search_docs": {}},
+                [{"name": "search_docs"}],
+                policy={"max_calls": 0},
+            )
+
     def test_prefix_cache_savings_counts_longest_previous_prefix(self):
         prompts = [
             [1, 2, 3, 4],

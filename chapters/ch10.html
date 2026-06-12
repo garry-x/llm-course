@@ -39,9 +39,9 @@
   <ul>
     <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
     <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、continuous batching admission、benchmark 与 SLO。</li>
-    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用设计、调度准入 gate、基准测试、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
+    <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用 schema gate、MCP runtime security gate、调度准入 gate、基准测试、推测解码服务 gate、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
-    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema 设计、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema/MCP runtime gate、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>前九章计算图、KV cache、生成策略、评测指标，以及 TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。<br><strong>本章内化：</strong>每个服务问题都会拆成 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和回退策略；KV、量化、prefix cache、RAG、tool gate 与多模态 token 都要进入同一张 SLO/成本账本。<br><strong>验收信号：</strong>你能写出一份上线报告，说明瓶颈在哪、优化改了哪个阶段、质量是否回归、容量边界是什么，以及何时拒绝“只看平均延迟”的结论。</div>
 </section>
@@ -612,7 +612,7 @@ class SimpleRAG:
 </section>
 
 <section class="card" id="s10-9a">
-  <h3>10.9A Tool Use 工程协议：schema、循环控制与失败恢复</h3>
+  <h3>10.9A Tool Use 工程协议：schema、MCP 边界、循环控制与失败恢复</h3>
   <p>把工具接进 LLM 服务时，核心难点不是让模型“想调用工具”，而是把一次工具调用变成可验证、可限权、可恢复的系统协议。模型输出只是候选行动；真正的执行必须经过 schema 校验、权限检查、预算控制、工具结果回填和最终答案约束。工程师需要把工具调用看成一个带状态的控制循环，而不是普通文本生成的附属功能。</p>
 
   <h4>一次工具调用的最小协议</h4>
@@ -674,6 +674,38 @@ report = validate_tool_call_plan(
 )
 assert report["decision"] == "execute_tool_calls"</code></pre>
   <p>这个练习对应线上系统中的“工具执行前置网关”。OpenAI structured outputs / function calling、MCP tool manifests 和 Agent guardrails 的接口形式会变化，但核心不变：模型生成的工具调用只是提案，服务端必须把 schema、权限和预算当作硬边界。</p>
+
+  <h4>MCP / remote tool 的第二层 gate</h4>
+  <p>schema 通过只说明“参数看起来合法”，不能说明工具可以安全执行。MCP 把 host、client、server、resources、prompts、tools、sampling 和 roots 标准化，适合把外部系统接入 AI 应用；但它也把 arbitrary data access、code execution path、server-initiated sampling 和外部 observation 带进了推理服务。课程中把这类风险放进第二层 runtime gate：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Gate</th><th>要检查什么</th><th>失败时动作</th></tr>
+      <tr><td>Server trust</td><td>MCP server 是否 allowlist/pinned，tool description 是否来自可信 registry</td><td>移除未知 server，固定版本，重新做安全评审</td></tr>
+      <tr><td>Permission / consent</td><td>工具权限是否超出用户、租户和任务范围；写入、发信、代码执行是否有用户批准</td><td>降级为 read-only、请求人工确认或拒绝执行</td></tr>
+      <tr><td>Data privacy</td><td>参数或上下文是否把 PII、凭据、私有文档外发给 remote tool</td><td>脱敏、阻断外发、改用本地工具或显式授权</td></tr>
+      <tr><td>Observation isolation</td><td>网页、检索片段、文件内容、工具输出是否被标为不可信数据，而不是新系统指令</td><td>结构化 observation、指令/数据分离、引用检查</td></tr>
+      <tr><td>Sampling / budget</td><td>MCP server 是否请求递归 LLM sampling；tool calls、observation tokens、wall time 是否超预算</td><td>禁用 sampling、要求审批、停止循环或摘要 observation</td></tr>
+    </table>
+  </div>
+  <p>Ch10 作业中的 <code>tool_runtime_security_report</code> 就是这层 gate：输入工具 registry、运行时 tool events 和 policy，输出 server trust、permission/consent、data privacy、observation isolation、sampling/budget 五类信号。它把 OWASP LLM Top 10 中的 prompt injection、insecure output handling、insecure plugin design 和 excessive agency 变成服务上线前可检查的表。</p>
+  <pre><code class="language-python">report = tool_runtime_security_report(
+    registry,
+    [{
+        "name": "search_docs",
+        "server": "course-mcp",
+        "external_content": True,
+        "observation_isolated": True,
+        "observation_tokens": 320,
+    }],
+    policy={
+        "allowed_servers": ["course-mcp"],
+        "trusted_servers": ["course-mcp"],
+        "approved_permissions": ["read"],
+        "max_calls": 2,
+        "max_observation_tokens": 1000,
+    },
+)
+assert report["decision"] == "execute_with_runtime_guards"</code></pre>
 
   <div class="table-wrap">
     <table>

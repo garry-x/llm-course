@@ -504,6 +504,182 @@ def validate_tool_call_plan(tool_registry, proposed_calls, budgets=None):
     }
 
 
+def tool_runtime_security_report(tool_registry, tool_events, policy=None):
+    if not tool_events:
+        raise ValueError("tool_events must not be empty")
+    policy = dict(policy or {})
+
+    if isinstance(tool_registry, dict):
+        registry = tool_registry
+    else:
+        registry = {}
+        for spec in tool_registry:
+            if not isinstance(spec, dict) or "name" not in spec:
+                raise ValueError("each tool spec must contain a name")
+            registry[spec["name"]] = spec
+    if not registry:
+        raise ValueError("tool_registry must not be empty")
+
+    allowed_servers = set(policy.get("allowed_servers", []))
+    trusted_servers = set(policy.get("trusted_servers", []))
+    approved_permissions = set(policy.get("approved_permissions", ["read"]))
+    high_risk_requires_approval = bool(policy.get("high_risk_requires_approval", True))
+    sensitive_data_allowed = bool(policy.get("sensitive_data_allowed", False))
+    require_observation_isolation = bool(policy.get("require_observation_isolation", True))
+    allow_llm_sampling = bool(policy.get("allow_llm_sampling", False))
+    max_calls = int(policy.get("max_calls", len(tool_events)))
+    max_observation_tokens = int(policy.get("max_observation_tokens", 10**12))
+    if max_calls <= 0 or max_observation_tokens < 0:
+        raise ValueError("runtime budgets must be positive")
+
+    high_risk_levels = {"write", "admin", "code_execution", "external_side_effect"}
+    event_rows = []
+    unknown_tools = 0
+    untrusted_server_count = 0
+    permission_violations = 0
+    consent_violations = 0
+    data_exposure_violations = 0
+    unisolated_observations = 0
+    sampling_violations = 0
+    total_observation_tokens = 0
+
+    for idx, event in enumerate(tool_events):
+        if not isinstance(event, dict):
+            raise ValueError("each tool event must be a dict")
+        name = event.get("name") or event.get("tool_name")
+        spec = registry.get(name)
+        issues = []
+
+        if spec is None:
+            unknown_tools += 1
+            spec = {}
+            issues.append("unknown_tool")
+
+        server = event.get("server", spec.get("server", "local"))
+        transport = event.get("transport", spec.get("transport", "local"))
+        trusted = bool(event.get("trusted", spec.get("trusted", server in trusted_servers or transport == "local")))
+        if allowed_servers and server not in allowed_servers:
+            untrusted_server_count += 1
+            issues.append("server_not_allowlisted")
+        elif not trusted:
+            untrusted_server_count += 1
+            issues.append("server_not_trusted")
+
+        permissions = set(event.get("permissions", spec.get("permissions", [])))
+        if not permissions and spec:
+            risk = spec.get("risk", "read_only")
+            permissions = {"read"} if risk == "read_only" else {risk}
+        unapproved_permissions = sorted(permissions - approved_permissions)
+        if unapproved_permissions:
+            permission_violations += 1
+            issues.append("permission_not_approved")
+
+        risk = event.get("risk", spec.get("risk", "read_only"))
+        user_approved = bool(event.get("user_approved", False))
+        requires_user_approval = bool(spec.get("requires_user_approval", risk in high_risk_levels))
+        if high_risk_requires_approval and (risk in high_risk_levels or requires_user_approval) and not user_approved:
+            consent_violations += 1
+            issues.append("missing_user_approval")
+
+        sensitive_data_sent = bool(event.get("sensitive_data_sent", False))
+        data_sharing_approved = bool(event.get("data_sharing_approved", False))
+        if sensitive_data_sent and not (sensitive_data_allowed and data_sharing_approved):
+            data_exposure_violations += 1
+            issues.append("sensitive_data_egress")
+
+        observation_tokens = int(event.get("observation_tokens", 0))
+        if observation_tokens < 0:
+            raise ValueError("observation_tokens must be non-negative")
+        total_observation_tokens += observation_tokens
+
+        external_content = bool(event.get("external_content", spec.get("external_content", transport != "local")))
+        contains_prompt_injection = bool(event.get("contains_prompt_injection", False))
+        observation_isolated = bool(event.get("observation_isolated", False))
+        if require_observation_isolation and (external_content or contains_prompt_injection) and not observation_isolated:
+            unisolated_observations += 1
+            issues.append("untrusted_observation_not_isolated")
+
+        llm_sampling_requested = bool(event.get("llm_sampling_requested", False))
+        llm_sampling_approved = bool(event.get("llm_sampling_approved", False))
+        if llm_sampling_requested and not (allow_llm_sampling and llm_sampling_approved):
+            sampling_violations += 1
+            issues.append("recursive_llm_sampling_not_approved")
+
+        event_rows.append(
+            {
+                "index": idx,
+                "name": name,
+                "server": server,
+                "transport": transport,
+                "risk": risk,
+                "permissions": sorted(permissions),
+                "observation_tokens": observation_tokens,
+                "issues": issues,
+                "pass": not issues,
+            }
+        )
+
+    budget_violations = 0
+    if len(tool_events) > max_calls:
+        budget_violations += 1
+    if total_observation_tokens > max_observation_tokens:
+        budget_violations += 1
+
+    action_items = []
+    if unknown_tools or untrusted_server_count:
+        action_items.append("pin_or_remove_untrusted_mcp_server")
+    if permission_violations or consent_violations:
+        action_items.append("request_user_approval_or_downgrade_tool_risk")
+    if data_exposure_violations:
+        action_items.append("redact_or_block_sensitive_data_egress")
+    if unisolated_observations:
+        action_items.append("isolate_tool_outputs_as_untrusted_observations")
+    if sampling_violations:
+        action_items.append("disable_or_approve_recursive_llm_sampling")
+    if budget_violations:
+        action_items.append("stop_or_summarize_agent_loop_before_more_tool_calls")
+
+    gates = {
+        "server_trust": {
+            "pass": unknown_tools == 0 and untrusted_server_count == 0,
+            "signals": {"unknown_tools": unknown_tools, "untrusted_server_count": untrusted_server_count},
+        },
+        "permission_and_consent": {
+            "pass": permission_violations == 0 and consent_violations == 0,
+            "signals": {
+                "permission_violations": permission_violations,
+                "consent_violations": consent_violations,
+            },
+        },
+        "data_privacy": {
+            "pass": data_exposure_violations == 0,
+            "signals": {"data_exposure_violations": data_exposure_violations},
+        },
+        "observation_isolation": {
+            "pass": unisolated_observations == 0,
+            "signals": {"unisolated_observations": unisolated_observations},
+        },
+        "sampling_and_budget": {
+            "pass": sampling_violations == 0 and budget_violations == 0,
+            "signals": {
+                "sampling_violations": sampling_violations,
+                "call_count": len(tool_events),
+                "max_calls": max_calls,
+                "total_observation_tokens": total_observation_tokens,
+                "max_observation_tokens": max_observation_tokens,
+            },
+        },
+    }
+    overall_pass = not action_items
+    return {
+        "overall_pass": overall_pass,
+        "gates": gates,
+        "events": event_rows,
+        "action_items": action_items,
+        "decision": "execute_with_runtime_guards" if overall_pass else "block_or_escalate_before_tool_execution",
+    }
+
+
 def prefix_cache_savings(tokenized_prompts):
     if not tokenized_prompts:
         raise ValueError("tokenized_prompts must not be empty")

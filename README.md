@@ -94,7 +94,7 @@
 | 模型结构读懂 | Ch01-Ch06 | 看懂 tokenizer、attention、KV Cache 来源、logits 输出和参数规模 |
 | 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐、采样质量和 reasoning 预算 |
 | 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、量化、FlashAttention 和显存瓶颈 |
-| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 continuous batching admission、prefix cache、并发调度、speculative decoding gate 和 tool-call gate |
+| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 continuous batching admission、prefix cache、并发调度、speculative decoding gate、tool-call gate 和 MCP runtime security |
 | 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链和失败兜底 |
 | 评测与上线 | Ch09-Ch10 | 设计质量/安全/延迟/成本指标，做压测、回归评估和上线检查 |
 
@@ -160,7 +160,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
 | 9 | **微调与对齐** — SFT/偏好数据 Gate/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + post-training data audit + LoRA + GRPO/RLVR ~240行 | 8+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool Gate + continuous batching admission + P/D pool plan + speculative gate + LSH + 服务蓝图 | 8+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Tool/MCP Gate/vLLM/Triton/生产服务/多模态 | KV Cache + 量化 + RAG + Tool/MCP Gate + continuous batching admission + P/D pool plan + speculative gate + LSH + 服务蓝图 | 9+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 
 > **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**

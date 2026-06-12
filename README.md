@@ -14,7 +14,6 @@
   <img src="https://img.shields.io/badge/sections-127-yellow" alt="127 sections">
   <img src="https://img.shields.io/badge/frontier-architecture_cases-green" alt="frontier architecture cases">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
-  <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker">
   <img src="https://img.shields.io/badge/db-IndexedDB-red" alt="IndexedDB">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="license">
 </p>
@@ -109,32 +108,11 @@
 
 ## 快速开始
 
-### Docker 部署（推荐）
-
-```bash
-git clone https://github.com/garry-x/llm-learner.git && cd llm-learner
-
-# 构建并启动 (默认 :8080)
-./serve.sh docker-build
-./serve.sh docker-up
-
-# 指定端口 (如 :3000)
-./serve.sh docker-build -p 3000
-./serve.sh docker-up -p 3000
-
-# 管理命令
-./serve.sh docker-logs        # 实时日志
-./serve.sh docker-restart     # 重启
-./serve.sh docker-down        # 停止并删除
-
-# 或使用 docker compose
-docker compose up -d
-PORT=3000 docker compose up -d
-```
-
 ### 本地开发
 
 ```bash
+git clone https://github.com/garry-x/llm-course.git && cd llm-course
+
 ./serve.sh                    # 默认 0.0.0.0:8080
 ./serve.sh serve -p 3000      # 指定端口
 ```
@@ -153,13 +131,8 @@ PORT=3000 docker compose up -d
 | 命令 | 说明 | 支持 `-p` |
 |------|------|:---------:|
 | `serve` | 本地 Python HTTP 服务器 | ✓ |
-| `docker-build` | 构建镜像 (`--build-arg LISTEN_PORT`) | ✓ |
-| `docker-up` | 启动容器 (自动检测/终止端口占用) | ✓ |
-| `docker-down` | 停止 + 删除容器 | |
-| `docker-logs` | 实时 nginx 日志 | |
-| `docker-restart` | = down + up | |
 
-**环境要求：** Docker 或 Python 3.10+ / 现代浏览器（Safari / Chrome / Edge）；推荐 iPad Pro 或桌面端阅读。
+**环境要求：** Python 3.10+ / 现代浏览器（Safari / Chrome / Edge）；推荐 iPad Pro 或桌面端阅读。
 
 ## 课程大纲
 
@@ -198,7 +171,7 @@ PORT=3000 docker compose up -d
 ## 项目结构
 
 ```
-llm-learner/
+llm-course/
 ├── index.html                # 课程首页：Hero + 仪表板 + 章节目录
 ├── inference-engineer-curriculum.html # 推理工程师学习路线
 ├── training-engineer-curriculum.html  # 训练工程师学习路线
@@ -246,10 +219,7 @@ llm-learner/
 │   ├── rlhf-dpo-grpo.svg      # RLHF / DPO / GRPO 对齐方法对比
 │   ├── gpu-memory.svg         # GPU 内存层次 — A100 架构
 │   └── favicon.svg/.png/.ico  # ComfyUI + FLUX.1-dev 生成
-├── Dockerfile                 # nginx:alpine, gzip, ARG LISTEN_PORT
-├── docker-compose.yml         # 一键部署，PORT 环境变量可配
-├── .dockerignore
-├── serve.sh                   # CLI: serve + docker-build/up/down/logs/restart
+├── serve.sh                   # CLI: 本地静态服务器
 └── README.md
 ```
 
@@ -260,7 +230,6 @@ llm-learner/
 | 👤 **用户账户** | 多账户切换，随机头像颜色，localStorage + IndexedDB 持久化 |
 | 📝 **章节笔记** | 右下角滑出面板，自动关联当前阅读小节，按用户隔离 |
 | 💾 **IndexedDB 存储** | 双写策略：localStorage 缓存(即时) + IDB 持久化(备份)，不丢数据 |
-| 🐳 **Docker 部署** | nginx:alpine，gzip 压缩，`LISTEN_PORT` 可配，<10MB 镜像 |
 | 🎨 **暗色/浅色双主题** | CSS 变量驱动，一键切换，localStorage 持久化 |
 | 📝 **编程练习驱动** | 每章 4-6 道编程题，参考解答可折叠（`LLM.toggleSolution`） |
 | 📐 **KaTeX 数学渲染** | 内联 + 块级公式，渲染失败红色降级显示 LaTeX 源码 |

@@ -2,12 +2,10 @@
 set -euo pipefail
 
 # ============================================================
-# LLM Learner — 本地开发 & Docker 部署
+# LLM Learner — 本地开发服务器
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-IMAGE_NAME="${LLM_IMAGE:-llm-learner}"
-CONTAINER_NAME="${LLM_CONTAINER:-llm-learner}"
 DEFAULT_HOST="${LLM_HOST:-0.0.0.0}"
 DEFAULT_PORT="${LLM_PORT:-8080}"
 
@@ -18,35 +16,22 @@ usage() {
   cat <<EOF
 用法: $0 <命令> [选项]
 
-LLM 深度学习课程 — 本地开发 & Docker 部署
+LLM 深度学习课程 — 本地开发服务器
 
 命令:
   serve               启动本地开发服务器 (python/http-server)
-  docker-build        构建 Docker 镜像
-  docker-up           启动 Docker 容器 (后台运行)
-  docker-down         停止 Docker 容器
-  docker-logs         查看 Docker 容器日志
-  docker-restart      重启 Docker 容器
 
 选项:
-  -h, --host HOST     监听地址 (默认: $DEFAULT_HOST, 仅 serve)
+  -h, --host HOST     监听地址 (默认: $DEFAULT_HOST)
   -p, --port PORT     监听端口 (默认: $DEFAULT_PORT)
   --help              显示此帮助信息
 
 环境变量:
   LLM_HOST / LLM_PORT  本地服务器地址/端口
-  LLM_IMAGE            Docker 镜像名 (默认: llm-learner)
-  LLM_CONTAINER        Docker 容器名 (默认: llm-learner)
 
 示例:
   $0 serve                       # 本地开发服务器 :8080
   $0 serve -p 3000               # 本地开发服务器 :3000
-  $0 docker-build                # 构建镜像 (默认端口 8080)
-  $0 docker-build -p 3000        # 构建镜像 (默认端口 3000)
-  $0 docker-up                   # Docker 启动 (:8080)
-  $0 docker-up -p 3000           # Docker 启动 (:3000)
-  $0 docker-logs                 # 查看日志
-  $0 docker-down                 # 停止容器
 
 EOF
   exit 0
@@ -126,84 +111,6 @@ cmd_serve() {
   fi
 }
 
-cmd_docker_build() {
-  local port="${DEFAULT_PORT}"
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -p|--port) port="$2"; shift 2 ;;
-      *) echo -e "${RED}未知参数: $1${NC}"; usage ;;
-    esac
-  done
-
-  banner
-  echo -e "  模式:    ${GREEN}Docker 构建${NC}"
-  echo -e "  镜像:    ${IMAGE_NAME}:latest"
-  echo -e "  默认端口: ${port}"
-  echo ""
-
-  cd "$SCRIPT_DIR"
-  docker build --build-arg LISTEN_PORT="${port}" -t "${IMAGE_NAME}:latest" .
-  echo ""
-  echo -e "${GREEN}✓ 镜像构建完成: ${IMAGE_NAME}:latest${NC}"
-  echo -e "  容器端口: ${port}"
-  echo -e "  运行: ${YELLOW}$0 docker-up -p ${port}${NC}"
-}
-
-cmd_docker_up() {
-  local port="${DEFAULT_PORT}"
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -p|--port) port="$2"; shift 2 ;;
-      *) echo -e "${RED}未知参数: $1${NC}"; usage ;;
-    esac
-  done
-
-  # 检查镜像是否存在
-  if ! docker image inspect "${IMAGE_NAME}:latest" &>/dev/null; then
-    echo -e "${YELLOW}镜像不存在，先构建...${NC}"
-    cmd_docker_build -p "$port"
-  fi
-
-  # 停止旧容器
-  docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-
-  check_port "$port" && kill_port "$port"
-
-  banner
-  echo -e "  模式:    ${GREEN}Docker 运行${NC}"
-  echo -e "  地址:    ${GREEN}http://0.0.0.0:${port}${NC}"
-  echo -e "  容器:    ${CONTAINER_NAME}"
-  echo -e "  日志:    ${YELLOW}$0 docker-logs${NC}"
-  echo ""
-
-  docker run -d \
-    --name "$CONTAINER_NAME" \
-    -p "${port}:${port}" \
-    --restart unless-stopped \
-    "${IMAGE_NAME}:latest"
-
-  echo -e "${GREEN}✓ 容器已启动${NC}"
-}
-
-cmd_docker_down() {
-  if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-    docker stop "$CONTAINER_NAME" 2>/dev/null || true
-    docker rm "$CONTAINER_NAME" 2>/dev/null || true
-    echo -e "${GREEN}✓ 容器已停止并删除${NC}"
-  else
-    echo -e "${YELLOW}容器 ${CONTAINER_NAME} 未运行${NC}"
-  fi
-}
-
-cmd_docker_logs() {
-  docker logs -f "$CONTAINER_NAME"
-}
-
-cmd_docker_restart() {
-  cmd_docker_down
-  cmd_docker_up
-}
-
 # ================================================================
 # 主入口
 # ================================================================
@@ -213,11 +120,6 @@ shift || true
 
 case "$CMD" in
   serve)           cmd_serve "$@" ;;
-  docker-build)    cmd_docker_build "$@" ;;
-  docker-up)       cmd_docker_up "$@" ;;
-  docker-down)     cmd_docker_down "$@" ;;
-  docker-logs)     cmd_docker_logs "$@" ;;
-  docker-restart)  cmd_docker_restart "$@" ;;
   -h|--help|help)  usage ;;
   *) echo -e "${RED}未知命令: $CMD${NC}"; usage ;;
 esac

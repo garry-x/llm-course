@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>第 3-4 章注意力输出、PyTorch Module、残差相加。</li>
     <li><strong>学习目标：</strong>解释 Transformer Block 的残差路径、归一化位置、FFN/SwiGLU 的容量作用、资源预算，以及 Pre-Norm 稳定深层训练的原因。</li>
-    <li><strong>课前阅读：</strong>阅读 LayerNorm、RMSNorm、SwiGLU 的核心公式，并复习残差网络和梯度传播。</li>
-    <li><strong>课后阅读：</strong>比较 Post-Norm、Pre-Norm、RMSNorm、DeepNorm/超连接思路在训练稳定性上的差异。</li>
     <li><strong>本章产出：</strong>LayerNorm/RMSNorm、SwiGLU FFN、TransformerBlock 和 block 资源估算。</li>
     <li><strong>完成标准：</strong>你能说明为什么 Block 输入和输出都保持 <code>[batch, seq, d_model]</code>。</li>
     <li><strong>练习产出：</strong>提交 Block 实现、梯度检查、归一化 ablation，以及 FFN 参数量、FLOPs、激活显存分析；配套作业见 <a href="../assignments/ch05_block/">assignments/ch05_block/</a>。</li>
@@ -352,7 +350,7 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
 <!-- ================================================================ -->
 <section class="card" id="s5-5a">
   <h3>5.5A 机制可解释性：从“看起来相关”到“改动会改变输出”</h3>
-  <p>把 FFN 看成键值存储器之后，一个自然问题是：怎样判断某个 neuron、head、layer 或 residual stream 方向真的参与了某个行为？高校课程需要区分三类问题：表示中是否包含信息、模型是否使用这些信息、改动这些信息是否会改变输出。</p>
+  <p>把 FFN 看成键值存储器之后，一个自然问题是：怎样判断某个 neuron、head、layer 或 residual stream 方向真的参与了某个行为？本课程区分三类问题：表示中是否包含信息、模型是否使用这些信息、改动这些信息是否会改变输出。</p>
 
   <h4>四类常用方法</h4>
   <div class="table-wrap">
@@ -382,7 +380,7 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
 
 <section class="card" id="s5-5b">
   <h3>5.5B Interpretability 方法谱系：从读出表示到干预行为</h3>
-  <p>机制可解释性不是单一技术，而是一组按证据强度递进的方法。高校课程中最重要的不是背术语，而是能说清每种方法回答什么问题、需要什么对照、结论能推到哪里。一个有用的排序是：先观察表示，再做归因，再做因果干预，最后才讨论 steering 或模型编辑。</p>
+  <p>机制可解释性不是单一技术，而是一组按证据强度递进的方法。本课程最重要的不是背术语，而是能说清每种方法回答什么问题、需要什么对照、结论能推到哪里。一个有用的排序是：先观察表示，再做归因，再做因果干预，最后才讨论 steering 或模型编辑。</p>
 
   <h4>1. 方法层级与结论强度</h4>
   <div class="table-wrap">

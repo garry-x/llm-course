@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>第 3 章 Q/K/V、reshape、transpose。</li>
     <li><strong>学习目标：</strong>解释多头注意力为什么保留参数量但提高表示能力，并定量比较 MHA、MQA、GQA、MLA 的 KV Cache 和质量取舍。</li>
-    <li><strong>课前阅读：</strong>阅读 Transformer 多头注意力段落、Shazeer (2019) MQA 和 Ainslie et al. (2023) GQA 摘要。</li>
-    <li><strong>课后阅读：</strong>阅读 DeepSeek-V2 MLA 技术段落，写出 latent cache、解压投影和 RoPE 解耦的关系。</li>
     <li><strong>本章产出：</strong>MultiHeadAttention、GQA 和简化版 MLA。</li>
     <li><strong>完成标准：</strong>你能画出 Q 头很多、K/V 头较少时缓存如何变小。</li>
     <li><strong>练习产出：</strong>提交 MHA/GQA/MLA 实现、参数量和 KV Cache 表格，以及一次不同 head 配置的 ablation 说明；可用 <a href="../assignments/ch04_multihead/" target="_blank">Ch04 多头注意力作业测试</a> 检查核心实现。</li>

@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>Python 列表、字典、字符串/bytes、简单循环。</li>
     <li><strong>学习目标：</strong>解释 tokenization 的信息论权衡，推导 BPE 训练/编码/解码流程，并能分析词表大小对序列长度、嵌入参数量和多语言成本的影响。</li>
-    <li><strong>课前阅读：</strong>先读 Sennrich et al. (2016) 的 BPE 原论文摘要与 GPT-2 tokenizer / tiktoken 文档，记录 byte-level BPE 与词级分词的差异。</li>
-    <li><strong>课后阅读：</strong>对比 WordPiece、Unigram LM、SentencePiece 与 tiktoken，写出各自的优化目标、可逆性和 OOV 处理方式。</li>
     <li><strong>本章产出：</strong>一个能训练、编码、解码的最小 BPE Tokenizer。</li>
     <li><strong>完成标准：</strong>你能说清楚一段文本如何变成 token ID，以及 token ID 如何还原成文本。</li>
     <li><strong>练习产出：</strong>提交 tokenizer 代码、3 组中英混合测试、复杂度分析，以及一段不同词表大小下 token 数变化的实验记录；可用 <a href="../assignments/ch01_bpe/" target="_blank">Ch01 BPE 作业测试</a> 检查核心实现。</li>
@@ -48,20 +46,17 @@
 </section>
 
 <!-- ================================================================ -->
-<!-- 1.1 课程概览 -->
+<!-- 1.1 Tokenizer 定位 -->
 <!-- ================================================================ -->
 <section class="card" id="s1-1">
-  <h3>1.1 课程概览：从 token 到参数</h3>
-  <p>这是一门<strong>从代码出发</strong>的 LLM 课程。我们不会停留在概念层面，而是用 Python 和 PyTorch 逐行实现大语言模型的每一个核心组件。到课程结束时，你将亲手构建：</p>
+  <h3>1.1 Tokenizer 定位：从文本接口到工程成本</h3>
+  <p>Tokenizer 是 LLM 的第一层接口。它把原始字符串变成 token ID，也同时决定了序列长度、嵌入矩阵大小、上下文窗口利用率和服务计费口径。本章不把分词当作预处理细节，而是把它作为训练工程和推理工程共同依赖的模型契约来实现。</p>
   <ul>
-    <li>一个从零手写的 BPE Tokenizer（第 1 章）</li>
-    <li>完整的 Embedding + RoPE 位置编码层（第 2 章）</li>
-    <li>手写注意力机制——单头、多头、GQA、MLA（第 3-4 章）</li>
-    <li>可训练的 Transformer Block + 完整 GPT 模型（第 5-6 章）</li>
-    <li>训练循环、采样策略、微调（LoRA/DPO/GRPO）、推理优化和经典 NLP 评测（第 7-11 章）</li>
+    <li>训练侧：分词规则改变会改变 token 分布、batch token 数、embedding 参数量和数据质量诊断。</li>
+    <li>推理侧：同一段文本的 token 数会影响上下文容量、KV Cache 显存、延迟和调用成本。</li>
+    <li>发布侧：checkpoint、chat template、特殊 token 和 tokenizer 文件必须一起版本化，否则模型接口会失配。</li>
   </ul>
-  <p>每章的练习是<strong>核心学习手段</strong>——不是"看完代码"，而是"手写代码"。理解每一行代码的"为什么"远比"是什么"重要。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>方法：</strong>遇到编程练习时，先自己写，再对照参考解答。动手写错比看对的学习效果强 10 倍。</div></div>
+  <p>接下来的实现只保留 BPE 的最小可解释内核：统计 pair 频率、按优先级合并、保存 merge 表，并用同一套规则完成编码和解码。理解这条链路后，再比较 WordPiece、Unigram LM 或 byte-level tokenizer 会更容易判断它们的工程取舍。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -683,7 +678,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
 
   <h4>3. Tokenizer 决策会传导到训练和推理</h4>
   <p>多语 tokenizer 的影响不是停留在第 1 章。第 7 章的数据 packing 会按 token 数而非字符数切 batch；第 9 章的 SFT/DPO 会在 token 序列上计算 loss 和 log probability；第 10 章的 KV Cache、TTFT、TPOT 和计费也都按 token 发生。一个语言的 fertility 更高，意味着同样文本会消耗更多训练 FLOPs、更多 KV Cache 和更高推理延迟。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级 LLM 课程不能把 tokenizer 当成“预处理细节”。对训练和推理工程师来说，tokenizer 是数据分布、模型参数、上下文容量、服务成本和多语体验之间的共同接口。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>不能把 tokenizer 当成“预处理细节”。对训练和推理工程师来说，tokenizer 是数据分布、模型参数、上下文容量、服务成本和多语体验之间的共同接口。</div></div>
 </section>
 
 <!-- ================================================================ -->

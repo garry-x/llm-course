@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>第 6 章 logits、softmax、概率采样。</li>
     <li><strong>学习目标：</strong>解释自回归生成、prefill/decode、采样分布截断、重复陷阱、曝光偏差、推测解码和结构化解码的数学基础。</li>
-    <li><strong>课前阅读：</strong>阅读 Holtzman et al. (2020) Nucleus Sampling、speculative decoding 摘要，并复习 categorical sampling。</li>
-    <li><strong>课后阅读：</strong>比较 greedy、beam、temperature、top-k、top-p、typical sampling 和约束解码在质量/多样性/可靠性上的取舍。</li>
     <li><strong>本章产出：</strong>一个能用不同采样策略生成文本的 Generator。</li>
     <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
     <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标、约束 token mask，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>

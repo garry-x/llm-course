@@ -39,10 +39,9 @@
   <ul>
     <li><strong>前置知识：</strong>Ch03 attention、Ch08 beam search、Ch10 RAG rerank 与检索评测。</li>
     <li><strong>学习目标：</strong>区分 recurrent、structured prediction、encoder-decoder、encoder-only 和 decoder-only 的建模假设。</li>
-    <li><strong>课前阅读：</strong>阅读 classic NLP handout 中 RNN、dependency parsing、seq2seq、BERT 和 evaluation 部分。</li>
     <li><strong>本章产出：</strong>RNN 梯度路径、arc-standard parsing trace、seq2seq additive attention、MLM mask、BERT QA span、NER span F1 和 BLEU/ROUGE/UAS/LAS/EM/F1 指标。</li>
     <li><strong>完成标准：</strong>你能为一个任务选择 BERT fine-tuning、seq2seq、decoder-only prompting 或结构化 parser，并解释选择依据。</li>
-    <li><strong>练习产出：</strong>配套作业见 <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>；专题讲义见 <a href="../docs/classic-nlp-handout.html">classic-nlp-handout.html</a>。</li>
+    <li><strong>练习产出：</strong>配套作业见 <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>。</li>
   </ul>
 </section>
 
@@ -363,7 +362,7 @@ labels:       None  None cat    sat    None</div>
 
 <section class="card" id="s11-6c">
   <h3>11.6C Safety &amp; Social Impact：风险分类、触发条件与工程缓解</h3>
-  <p>高校级 NLP/LLM 课程不能把 safety 当成上线前的附录。模型风险来自数据、训练目标、推理接口、应用场景和用户群体的组合；同一个模型在闲聊、医疗摘要、金融建议、教育辅导和代码执行中的错误成本完全不同。工程师需要能把“模型可能有害”拆成可讨论、可测量、可缓解的风险类别。</p>
+  <p>NLP/LLM 工程课程不能把 safety 当成上线前的附录。模型风险来自数据、训练目标、推理接口、应用场景和用户群体的组合；同一个模型在闲聊、医疗摘要、金融建议、教育辅导和代码执行中的错误成本完全不同。工程师需要能把“模型可能有害”拆成可讨论、可测量、可缓解的风险类别。</p>
 
   <h4>1. 风险不是一个维度</h4>
   <div class="table-wrap">
@@ -478,13 +477,13 @@ labels:       None  None cat    sat    None</div>
   </div>
 
   <h4>3. 负结果也可以是强结论</h4>
-  <p>高校课程项目不要求每个方法都“提升”。如果一个 ablation 没有带来显著改善，只要实验设计清楚，它仍然是有价值的结论。例如：<code>seq_len=128</code> 的 validation PPL 只降低 <code>0.03</code>，但 tokens/s 下降 <code>35%</code>，且三次 seed 波动约 <code>0.05</code>，那么合理结论是“当前设置不足以支持更长序列值得采用”。这比只挑一个最好数字更严谨。</p>
+  <p>课程项目不要求每个方法都“提升”。如果一个 ablation 没有带来显著改善，只要实验设计清楚，它仍然是有价值的结论。例如：<code>seq_len=128</code> 的 validation PPL 只降低 <code>0.03</code>，但 tokens/s 下降 <code>35%</code>，且三次 seed 波动约 <code>0.05</code>，那么合理结论是“当前设置不足以支持更长序列值得采用”。这比只挑一个最好数字更严谨。</p>
 
   <h4>4. 把结论绑定到复现命令和限制条件</h4>
   <p>报告最后必须说明复现路径：数据版本、commit、运行命令、seed、硬件、模型配置、checkpoint 或服务 URL、评测集和压测参数。也必须说明不能外推的地方：tiny corpus 不能代表万亿 token 训练，本地 MockEngine 不能代表真实 GPU serving，小知识库 RAG 不能代表企业知识库，单一安全集合不能代表所有用户风险。</p>
 
   <p>最终报告的读者应该能回答三件事：第一，项目提出的问题是否清楚；第二，实验是否足以支持结论；第三，如果把系统推向更大模型、更大数据或真实服务，哪些假设会最先失效。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Capstone 是课程能力的收束点。训练项目要证明训练过程可复现、可恢复、可解释；推理项目要证明服务质量、延迟、成本和风险在目标 workload 下可判断。没有 baseline、ablation、失败分析和结论边界的项目，只是 demo，不是高校课程级项目。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Capstone 是课程能力的收束点。训练项目要证明训练过程可复现、可恢复、可解释；推理项目要证明服务质量、延迟、成本和风险在目标 workload 下可判断。没有 baseline、ablation、失败分析和结论边界的项目，只是 demo，不是工程课程项目。</div></div>
 </section>
 
 <section class="card" id="s11-9">

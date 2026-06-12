@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>第 8 章生成流程、显存和 batch 的基本概念。</li>
     <li><strong>学习目标：</strong>把推理瓶颈拆成 compute、memory、IO、调度和检索问题，并能设计 KV Cache、量化、RAG、benchmark 与 SLO。</li>
-    <li><strong>课前阅读：</strong>阅读 vLLM/PagedAttention、FlashAttention、RAG 和 GPTQ/AWQ 摘要，记录每项技术主要优化哪个瓶颈。</li>
-    <li><strong>课后阅读：</strong>阅读 Triton 教程、TensorRT-LLM/SGLang 文档和当前模型卡，评估前沿声明的来源可信度与复现成本。</li>
     <li><strong>本章产出：</strong>KV Cache、量化、最小 RAG、工具调用设计、基准测试、指标结论摘要和 LSH 检索示例。</li>
     <li><strong>完成标准：</strong>你能看到一个推理慢/贵的问题时，判断瓶颈更可能在计算、显存、带宽还是检索。</li>
     <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、量化误差实验、RAG demo、tool schema 设计、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
@@ -1101,7 +1099,7 @@ summary = build_benchmark_summary(
     <li><strong>瓶颈归因：</strong>用上面的容量公式解释哪条曲线先坏、为什么坏。</li>
     <li><strong>工程动作：</strong>列出一次调参或架构修改，并说明它改善了哪个指标、牺牲了什么。</li>
   </ol>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级推理工程训练不应停留在“我会调用推理 API”。你需要能把一个真实服务拆成 workload、显存、调度、cache、质量和成本，并用实验结果支撑容量决策。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>推理工程训练不应停留在“我会调用推理 API”。你需要能把一个真实服务拆成 workload、显存、调度、cache、质量和成本，并用实验结果支撑容量决策。</div></div>
 </section>
 
 <section class="card" id="s10-13b">
@@ -1366,27 +1364,21 @@ class LSHMemory:
 </section>
 
 <!-- ================================================================ -->
-<!-- 10.19 课程总结 -->
+<!-- 10.19 推理优化总结 -->
 <!-- ================================================================ -->
 <section class="card" id="s10-19">
-  <h3>10.19 课程总结——你构建了什么</h3>
+  <h3>10.19 推理优化总结——你需要能判断什么</h3>
   <div class="table-wrap">
     <table>
-      <tr><th>章节</th><th>核心组件</th><th>关键概念</th></tr>
-      <tr><td>1. 环境搭建与分词</td><td>BPE Tokenizer</td><td>字节对编码、子词分词</td></tr>
-      <tr><td>2. 嵌入层与位置编码</td><td>TokenEmbedding + RoPE</td><td>分布式表示、旋转位置</td></tr>
-      <tr><td>3. 自注意力机制</td><td>Scaled Dot-Product Attention</td><td>QKV、因果掩码、√dₖ</td></tr>
-      <tr><td>4. 多头注意力与 MLA</td><td>MHA + GQA + MLA</td><td>多头拆分、分组 KV、潜空间压缩</td></tr>
-      <tr><td>5. Transformer 块与 FFN</td><td>TransformerBlock + SwiGLU</td><td>残差连接、门控激活</td></tr>
-      <tr><td>6. GPT-2 实现</td><td>完整 GPT-2 124M</td><td>权重共享、模型组装</td></tr>
-      <tr><td>7. 训练循环</td><td>Trainer + DataLoader + AMP</td><td>MLE、AdamW、学习率调度</td></tr>
-      <tr><td>8. 文本生成</td><td>Generator + Speculative Decoding</td><td>采样策略、MTP</td></tr>
-      <tr><td>9. 微调与对齐</td><td>SFT + LoRA + DPO + GRPO</td><td>参数高效微调、偏好优化</td></tr>
-      <tr><td>10. 推理优化</td><td>KV Cache + Quant + RAG + Agent</td><td>工程落地、长上下文和服务指标</td></tr>
+      <tr><th>问题</th><th>优先检查</th><th>应报告</th></tr>
+      <tr><td>首 token 慢</td><td>prefill、prompt token、排队、prefix cache</td><td>TTFT、prompt 长度分桶、cache hit rate</td></tr>
+      <tr><td>逐 token 慢</td><td>decode batch、KV 读写、kernel、量化配置</td><td>TPOT、tokens/s、GPU 利用率、显存峰值</td></tr>
+      <tr><td>成本过高</td><td>上下文长度、检索冗余、权重量化、batching</td><td>单位请求成本、输入/输出 token、吞吐曲线</td></tr>
+      <tr><td>质量不稳</td><td>采样、RAG 召回、tool schema、格式约束</td><td>pass rate、引用准确率、格式错误和失败类型</td></tr>
     </table>
   </div>
-  <p><strong>你已经亲手实现了一个现代 LLM 的核心流水线</strong>——从分词器到训练循环，从生成策略到微调对齐，从 KV Cache 到量化推理。每个组件虽然是教学简化版，但对应了主流模型和推理系统中的真实设计问题：表示、优化、采样、对齐、显存、延迟和评测。</p>
-  <div class="info-box key"><span class="icon">🚀</span><div><strong>最后的思考：</strong>LLM 技术变化很快，具体模型版本、上下文长度和 benchmark 名次都会变化。理解底层原理比追逐最新规格更重要：表示、优化、采样、对齐、显存、延迟和评测这些问题会长期存在。</div></div>
+  <p><strong>推理优化的核心不是背工具名，而是定位瓶颈。</strong>KV Cache、量化、RAG、tool use、推测解码和服务压测都应服务于同一个问题：在目标 workload 下，用可复现指标说明质量、延迟、吞吐、显存和成本之间的取舍。</p>
+  <div class="info-box key"><span class="icon">🚀</span><div><strong>最后的判断：</strong>具体引擎、模型版本和 benchmark 名次会变化，但 prompt 长度、KV 显存、batch 调度、检索质量、尾延迟和成本边界会长期存在。</div></div>
 </section>
 
 <!-- ================================================================ -->

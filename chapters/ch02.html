@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>张量形状、矩阵查表、sin/cos 的基本概念。</li>
     <li><strong>学习目标：</strong>从 One-Hot 推导到可训练嵌入，解释分布假说、静态词向量与上下文化表示的区别、位置编码必要性，并证明 RoPE 点积只依赖相对位置。</li>
-    <li><strong>课前阅读：</strong>阅读 word2vec/GloVe 的核心动机、Vaswani et al. (2017) 位置编码段落，以及 RoFormer 的 RoPE 定义。</li>
-    <li><strong>课后阅读：</strong>比较 Sinusoidal、Learned PE、RoPE、ALiBi、NTK-aware scaling 的外推能力和工程取舍。</li>
     <li><strong>本章产出：</strong>TokenEmbedding、Sinusoidal 位置编码和 RoPE。</li>
     <li><strong>完成标准：</strong>你能跟踪形状从 <code>[batch, seq]</code> 变成 <code>[batch, seq, d_model]</code>。</li>
     <li><strong>练习产出：</strong>提交嵌入/位置编码实现、RoPE 相对位置数值验证图，以及一页关于外推失败模式的短报告；可用 <a href="../assignments/ch02_embeddings/" target="_blank">Ch02 位置编码作业测试</a> 检查核心实现。</li>

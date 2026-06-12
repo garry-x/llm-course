@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>第 6 章 GPTModel、交叉熵、optimizer 的基本概念。</li>
     <li><strong>学习目标：</strong>从最大似然推导 next-token loss，搭建可复现训练循环，并解释 perplexity、calibration/ECE、AdamW、warmup、gradient clipping、混合精度与训练异常诊断。</li>
-    <li><strong>课前阅读：</strong>阅读 cross-entropy/MLE 复习材料、AdamW 论文摘要和 Chinchilla scaling law 摘要。</li>
-    <li><strong>课后阅读：</strong>阅读 DeepSpeed/ZeRO、FSDP、DeepSeek-V3 FP8 训练段落，区分单机教学实现与大规模训练系统。</li>
     <li><strong>本章产出：</strong>能训练小模型并观察 loss/perplexity/calibration 变化的训练循环。</li>
     <li><strong>完成标准：</strong>你能说清楚输入 <code>x</code> 和目标 <code>y</code> 为什么相差一位。</li>
     <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
@@ -314,7 +312,7 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   <h4>Worked Example：同样 20B tokens，不同数据管线会训练出不同模型</h4>
   <p>假设两个训练 run 都使用 <code>20B</code> token、同一模型和同一优化器。Run A 直接按原始体量混合网页、代码和百科；Run B 先做文档级去重、PII/凭据过滤，再用 <code>alpha=0.7</code> 的 temperature sampling 抬高代码和数学小源。即使 token budget 相同，两个 run 的梯度分布也不同：Run B 可能在代码和数学验证集上更好，网页风格更少重复，训练吞吐略降，因为过滤和分层采样增加了数据准备成本。报告中应把这种差异写成数据管线差异，而不是简单归因于“模型训练更久”或“学习率更好”。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级训练工程不只会跑 DataLoader，还要能说明训练 token 的来源、过滤、去重、风险、采样权重和 split 隔离。数据管线定义了模型学到什么，也定义了评测分数能被怎样解释。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>训练工程不只会跑 DataLoader，还要能说明训练 token 的来源、过滤、去重、风险、采样权重和 split 隔离。数据管线定义了模型学到什么，也定义了评测分数能被怎样解释。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -790,7 +788,7 @@ scheduler.step()</div>
 <!-- ================================================================ -->
 <section class="card" id="s7-11b">
   <h3>7.11B 如何读训练日志：从 loss 曲线到系统瓶颈</h3>
-  <p>能让 loss 下降只是训练工程的起点。高校级课程需要学生能解释<strong>为什么</strong>曲线这样变化：哪些现象是正常随机波动，哪些说明优化器、数据、数值精度或系统吞吐出了问题。训练日志至少应同时记录 <code>train_loss</code>、<code>val_loss</code>、<code>lr</code>、<code>grad_norm</code>、<code>tokens/s</code> 和 step。</p>
+  <p>能让 loss 下降只是训练工程的起点。工程师需要能解释<strong>为什么</strong>曲线这样变化：哪些现象是正常随机波动，哪些说明优化器、数据、数值精度或系统吞吐出了问题。训练日志至少应同时记录 <code>train_loss</code>、<code>val_loss</code>、<code>lr</code>、<code>grad_norm</code>、<code>tokens/s</code> 和 step。</p>
 
   <h4>先区分三类问题</h4>
   <div class="table-wrap">
@@ -829,7 +827,7 @@ scheduler.step()</div>
 <!-- ================================================================ -->
 <section class="card" id="s7-11c">
   <h3>7.11C 训练异常 Runbook：从 loss spike 到可恢复决策</h3>
-  <p>真实 LLM 训练不会一直平滑下降。工程师的价值在于异常出现后能快速判断：继续训练、回退 checkpoint、降低学习率、过滤数据、切换精度，还是暂停作业修系统。一个高校级训练课程应让学生掌握<strong>异常分类、信号记录、根因假设、最小修复实验和恢复决策</strong>，而不是看到 NaN 就重启。</p>
+  <p>真实 LLM 训练不会一直平滑下降。工程师的价值在于异常出现后能快速判断：继续训练、回退 checkpoint、降低学习率、过滤数据、切换精度，还是暂停作业修系统。本课程要求掌握<strong>异常分类、信号记录、根因假设、最小修复实验和恢复决策</strong>，而不是看到 NaN 就重启。</p>
 
   <h4>1. 先把异常定位到时间和 token 坐标</h4>
   <p>训练日志应同时记录 <code>step</code>、<code>consumed_tokens</code>、<code>epoch_or_shard</code>、<code>lr</code>、<code>train_loss</code>、<code>val_loss</code>、<code>grad_norm</code>、<code>tokens/s</code>、<code>loss_scale</code>、<code>checkpoint_id</code> 和数据 batch 摘要。只记录 wall-clock 时间不够，因为扩卡、gradient accumulation 或数据并行数变化后，同一 wall-clock 不对应同一训练进度。</p>
@@ -1268,7 +1266,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
       <tr><td>Final selection</td><td>选择 checkpoint 或继续训练</td><td>任务指标、PPL、生成质量和成本达到目标</td><td>只在训练集改善，开放式质量或安全指标退化</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高校级训练工程能力不是“跑完一个脚本”，而是能解释这次训练消耗了多少 token 和 GPU 小时、为什么这个 checkpoint 可恢复、为什么扩容后优化轨迹仍然可比，以及当 loss、吞吐或评估异常时该先查哪一层。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>训练工程能力不是“跑完一个脚本”，而是能解释这次训练消耗了多少 token 和 GPU 小时、为什么这个 checkpoint 可恢复、为什么扩容后优化轨迹仍然可比，以及当 loss、吞吐或评估异常时该先查哪一层。</div></div>
 </section>
 
 

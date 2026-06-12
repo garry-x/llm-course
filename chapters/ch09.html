@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>第 7 章训练循环、第 8 章生成，以及 log probability。</li>
     <li><strong>学习目标：</strong>区分预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO、GRPO 的损失信号。</li>
-    <li><strong>课前阅读：</strong>阅读 InstructGPT、LoRA、DPO 和 DeepSeek-R1/GRPO 摘要，列出每种方法需要的数据格式。</li>
-    <li><strong>课后阅读：</strong>阅读 alignment tax、reward hacking、RLHF 安全评估材料，并比较 offline preference learning 与 on-policy RL。</li>
     <li><strong>本章产出：</strong>SFT/LoRA/DPO/GRPO 的最小实现和适用场景地图。</li>
     <li><strong>完成标准：</strong>你能判断一个需求应该用 SFT、LoRA、DPO 还是 RL 类方法。</li>
     <li><strong>练习产出：</strong>提交 masked SFT、LoRA 参数统计、DPO/GRPO toy 实验、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
@@ -948,7 +946,7 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
 <!-- ================================================================ -->
 <section class="card" id="s9-10a">
   <h3>9.10A 对齐评估协议：不能只看 Preference Accuracy</h3>
-  <p>DPO 或 GRPO 训练日志里的 preference accuracy、reward mean、KL 值只说明模型在训练目标上发生了变化，不等于模型已经成为更好的助手。高校课程里需要把<strong>目标函数</strong>和<strong>评估问题</strong>分开：训练优化的是一个代理目标，最终关心的是 helpful、honest、harmless 以及原有能力是否退化。</p>
+  <p>DPO 或 GRPO 训练日志里的 preference accuracy、reward mean、KL 值只说明模型在训练目标上发生了变化，不等于模型已经成为更好的助手。工程课程里需要把<strong>目标函数</strong>和<strong>评估问题</strong>分开：训练优化的是一个代理目标，最终关心的是 helpful、honest、harmless 以及原有能力是否退化。</p>
 
   <h4>为什么单一 win rate 不够</h4>
   <ul>

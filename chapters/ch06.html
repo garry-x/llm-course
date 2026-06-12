@@ -39,8 +39,6 @@
   <ul>
     <li><strong>前置知识：</strong>Embedding、causal self-attention、GPT-2 Block、线性层输出 logits。</li>
     <li><strong>学习目标：</strong>把 tokenizer、embedding、block、LM head 串成完整 GPT 前向传播，并能分析参数量、初始化、weight tying 和 MoE 路由。</li>
-    <li><strong>课前阅读：</strong>阅读 GPT-2 论文模型结构部分和 nanoGPT 的 config/model 代码，标注每个超参数如何影响 shape。</li>
-    <li><strong>课后阅读：</strong>阅读 Switch Transformer/DeepSeekMoE 的稀疏激活动机，比较 dense FFN 与 MoE 的容量、通信和负载均衡问题。</li>
     <li><strong>本章产出：</strong>一个能接收 token 序列并输出下一 token logits 的 GPTModel。</li>
     <li><strong>完成标准：</strong>你能解释 <code>logits.shape == [batch, seq, vocab_size]</code> 为什么是语言模型的最终输出。</li>
     <li><strong>练习产出：</strong>提交 GPTModel forward 测试、参数量逐项表、weight tying 验证和一次小 batch logits sanity check；配套作业见 <a href="../assignments/ch06_gpt/">assignments/ch06_gpt/</a>。</li>

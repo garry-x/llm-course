@@ -132,7 +132,7 @@
   <g transform="translate(645,140)">
     <rect fill="#e08940" opacity="0.3" x="0" y="0" width="240" height="50" rx="2"/>
     <text class="t1" x="120" y="22" text-anchor="middle" style="font-weight:700">低维潜在向量 c_t^{KV}</text>
-    <text class="ts" x="120" y="40" text-anchor="middle">维度 d_c {"<<"} 8×d_k  (例如 d_c=512)</text>
+    <text class="ts" x="120" y="40" text-anchor="middle">维度 d_c &lt;&lt; 8×d_k  (例如 d_c=512)</text>
   </g>
 
   <g transform="translate(645,210)">

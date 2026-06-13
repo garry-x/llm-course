@@ -579,6 +579,7 @@ Quick check：
 - active KV tokens 与 admission control：按请求数限流、按活跃 token 限流和按 SLO 队列隔离的差异。
 - Disaggregated serving 指标：`TTFT = queue + prefill + KV transfer + decode admission + first decode token`，`TPOT` 单独约束 decode worker。
 - P/D pool sizing：effective prefill token rate、decode output token rate、KV transfer token rate 和 active KV memory 必须分别过 target utilization gate。
+- MoE serving gate：TP baseline、EP、DP+EP、EPLB、expert token skew、AllToAll/dispatch/combine 时间、KV cache per rank 和 P95 TPOT 必须放在同一 workload 下比较。
 - Speculative serving gate：接受率、端到端 speedup、draft overhead、额外显存、QPS/workload fit 和质量/分布校验必须同时报告。
 - Long-context serving gate：truncation/overflow、answer/citation recall、head/middle/tail bucket accuracy、P95 TTFT、P95 latency、KV usage 和 prefix cache hit rate 必须同时报告。
 - Overload response gate：queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness 分开判断；不同失败项对应限流、load shedding、上下文截断、max_tokens 降级、扩容、回滚或 page owner。
@@ -594,6 +595,7 @@ Quick check：
 - 给定每 token KV bytes、平均活跃上下文长度和 KV 显存预算，估算 admission limit，并说明为什么长请求不能和短请求只按请求数统一限流。
 - 给定一组 prefill/decode trace，填写 `prefill_decode_disaggregation_report`，判断 likely bottleneck、SLO violation 和 prefill/decode worker 配比是否合理。
 - 给定 workload、prefix cache hit rate、prefill/decode worker 吞吐、KV transfer link 吞吐和 decode KV 容量，填写 `pd_pool_capacity_plan` 并决定是否需要调整 P/D worker pool。
+- 给定 MoE expert token counts、TP/EP/DP+EP 配置和 AllToAll/dispatch/combine 时间，填写 MoE serving gate，判断瓶颈是专家负载偏斜、通信、KV cache 还是 MoE GEMM。
 - 给定 queue、TTFT、TPOT、KV usage、swapped requests、error/timeout 和 tenant quota，填写 `serving_overload_response_report`，区分 degraded mode、load shedding、noisy-neighbor isolation 和 incident response。
 - 给定一条慢请求 trace，按 gateway/router/LLM/retrieval/tool/guardrail spans 定位瓶颈，并说明哪些字段可聚合、哪些内容必须脱敏或采样。
 - 给定一次长会话 agent trace，填写 context engineering gate：active context、retrieved context、summary、memory、tool observation 和 cleared results 的 token 占比，以及引用保留、summary fidelity、权限和 P95 TTFT。
@@ -612,6 +614,8 @@ Quick check：
 - admission control 为什么要看 active KV tokens？
 - KV transfer 什么时候会抵消 prefill/decode 解耦收益？
 - P/D 解耦后，为什么 prefill worker 够用不代表 decode worker 或 KV transfer link 够用？
+- MoE 模型为什么不能只用 dense 模型的 TP 经验估算 serving 性能？
+- EPLB 为什么需要和 expert load、通信成本、KV cache、质量回归一起评估？
 - queue backlog、TPOT 变差、KV swapping 和租户超配额分别指向哪些不同动作？
 - 为什么 request metrics、engine metrics、trace spans 和 prompt/completion 内容事件不能混成同一种日志？
 - 为什么长会话/agent 不能只靠扩大 context window，而要单独管理 compaction、memory、tool-result clearing 和 observation isolation？
@@ -622,7 +626,7 @@ Quick check：
 
 课后产出：
 
-- Ch10 KV cache、benchmark summary、overload response、P/D pool plan、observability trace、context engineering gate、speculative serving gate 和 long-context serving gate 测试通过。
+- Ch10 KV cache、benchmark summary、overload response、P/D pool plan、MoE serving gate、observability trace、context engineering gate、speculative serving gate 和 long-context serving gate 测试通过。
 - 推理项目提案，若 workload 有长 prompt/RAG/多模态/agent 请求，附 prefill、KV transfer、decode queue、TPOT、active KV tokens、context token breakdown、trace span 和 overload runbook 的测量计划。
 
 ## Week 8 Lecture 16: RAG、Quantization、多模态输入与 Production Readiness

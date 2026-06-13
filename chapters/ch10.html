@@ -1116,6 +1116,40 @@ summary = build_benchmark_summary(
   </div></div>
 </section>
 
+<section class="card" id="s10-12a">
+  <h3>10.12A MoE Serving：Expert Parallelism、EPLB 与 KV 账本</h3>
+  <p>Ch06 已经解释了 MoE 的模型结构：总参数很多，但每个 token 只激活少数专家。到了线上推理，真正的问题变成：专家权重放在哪些 GPU 上，token 如何被 dispatch 到专家，AllToAll 通信是否压过了稀疏计算收益，KV cache 是否被并行策略重复存储，以及热门专家是否让少数 rank 变成尾延迟瓶颈。DeepSeek-V3/R1、Qwen MoE、Mixtral 这类模型上线时，不能只按 dense 模型的 tensor parallel 思路估算。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>策略</th><th>MoE 层怎么切</th><th>主要收益</th><th>主要风险</th></tr>
+      <tr><td>TP for MoE</td><td>每个 expert 的矩阵像 dense 层一样切到多个 GPU</td><td>实现简单，沿用 dense 模型并行</td><td>专家权重访问和 KV cache 可能重复，热门专家仍造成等待</td></tr>
+      <tr><td>Expert Parallelism (EP)</td><td>不同专家放在不同 GPU，token 路由到持有专家的 rank</td><td>扩大专家权重带宽，提升 MoE 层 locality</td><td>需要 dispatch/combine、AllToAll、专家负载均衡和跨节点拓扑优化</td></tr>
+      <tr><td>DP + EP</td><td>attention/KV 按数据并行分组，MoE 层用专家并行</td><td>减少 MLA/MQA 场景下 KV cache 重复，适合高吞吐 batch</td><td>请求路由、prefix cache、DP rank 负载和 expert all-to-all 要一起调度</td></tr>
+      <tr><td>EPLB</td><td>按历史 expert load 复制或重放置热门专家</td><td>降低热门专家造成的 straggler 和尾延迟</td><td>迁移/复制有内存和调度成本，静态分布变化时可能失效</td></tr>
+    </table>
+  </div>
+
+  <p>一个 MoE serving gate 至少应回答四个问题。第一，<strong>权重与 KV cache</strong>：EP 是否真的减少了专家权重访问瓶颈，还是因为 TP/DP 组合导致 KV cache 被重复存储。第二，<strong>专家负载</strong>：top-k 路由的 expert token count 分布是否偏斜，最忙 expert/rank 是否决定 TPOT。第三，<strong>通信</strong>：dispatch/combine、AllToAll、跨节点 RDMA 或 KV transfer 是否成为瓶颈。第四，<strong>质量与兼容性</strong>：EPLB、专家复制或路由重排是否改变了输出一致性、cache 命中、工具/schema 路径或安全回归。</p>
+
+  <pre><code class="language-text">moe_serving_gate:
+  parallelism: TP=2, DP=4, EP=8, PP=1
+  model: MoE, routed_experts=256, top_k=8, activated_params_per_token=37B
+  load:
+    expert_token_count_p50/p95/max
+    busiest_rank_tokens / average_rank_tokens
+    expert_skew_ratio
+  system:
+    all_to_all_ms, moe_gemm_ms, combine_ms, kv_cache_gb_per_rank
+    P95_TTFT, P95_TPOT, output_tokens_per_s, error_rate
+  decision:
+    compare TP baseline, EP, DP+EP, EP+EPLB under same workload</code></pre>
+
+  <p>读 vLLM、SGLang 或 TensorRT-LLM 的 MoE benchmark 时，不要只看总 tokens/s。需要知道 workload 是 interactive 低并发还是 batch 高吞吐，prompt/output 长度分布是否代表真实流量，专家激活密度是多少，是否启用 prefill/decode 解耦，是否启用 EPLB，AllToAll 在同节点 NVLink 还是跨节点网络上发生，以及每个 DP rank 的 KV cache 是否独立。若一个设置在 A100/H100/NVL72 上有效，不能自动外推到消费级 GPU、不同网络拓扑或超稀疏 MoE。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>MoE serving 的优化对象不是“参数量更大但每 token 更少”这一句话，而是专家权重带宽、token dispatch、AllToAll、KV cache、专家负载偏斜和尾延迟的组合。上线报告必须把 dense/TP baseline、EP、DP+EP、EPLB 放在同一 workload 下比较，否则无法判断 MoE 是否真的比 dense serving 更省、更快或更稳。</div></div>
+</section>
+
 <!-- ================================================================ -->
 <!-- 10.13 生产推理服务蓝图 -->
 <!-- ================================================================ -->

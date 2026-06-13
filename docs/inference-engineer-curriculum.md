@@ -34,8 +34,9 @@
 - 能用 acceptance rate、speedup、draft overhead、quality regression、额外显存和 workload QPS 判断是否启用 speculative decoding。
 - 能用 context fit、needle/citation recall、head/middle/tail position robustness、P95 TTFT、KV usage 和 prefix cache hit rate 判断长上下文路径是否可上线。
 - 能用 active KV tokens 和 admission limit 描述容量，而不是只用并发请求数。
+- 能针对 MoE 模型比较 TP baseline、EP、DP+EP 和 EPLB，解释 expert token skew、AllToAll、dispatch/combine、KV cache per rank 和 P95 TPOT 如何共同决定 serving 性能。
 
-**对应内容：**Ch08，Ch10 10.1、10.10-10.13、10.17A，Capstone `benchmark.py`、`slo_check.py`、speculative gate 表与 long-context gate 表。
+**对应内容：**Ch08，Ch10 10.1、10.10-10.13、10.17A，Capstone `benchmark.py`、`slo_check.py`、speculative gate 表、MoE serving gate 表与 long-context gate 表。
 
 ### C. 显存与成本预算
 
@@ -98,6 +99,7 @@
 | 量化发布 | 能说明候选量化方案作用在权重、激活还是 KV cache，并比较 baseline/quantized 的显存、TTFT/TPOT、tokens/s、质量、安全、structured output、RAG citation 和长上下文位置召回 | quantization release gate 表 |
 | 调度准入 | 能用 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens 和 queue wait 判断哪些请求进入 continuous batch | admission gate 表 |
 | 长上下文上线 | 能证明长文档/长会话没有截断，head/middle/tail 位置召回稳定，引用正确，且 P95 TTFT、latency、KV usage 和 prefix cache hit rate 满足 SLO | long-context gate 表 |
+| MoE serving | 能比较 dense/TP baseline、EP、DP+EP 和 EP+EPLB，报告 expert load skew、AllToAll/dispatch/combine 时间、KV cache per rank、P95 TTFT/TPOT、tokens/s 和质量回归 | MoE serving gate 表 |
 | 过载响应 | 能用 queue/KV/decode/error/quota 信号判断 load shedding、降级、扩容、回滚或 page owner | overload response 表 |
 | 准入控制 | 能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit | 容量规划说明 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |

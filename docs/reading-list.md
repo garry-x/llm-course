@@ -298,6 +298,8 @@
 - Chen, Zaharia, Zou. [FrugalGPT](https://arxiv.org/abs/2305.05176) 与 Ong et al. [RouteLLM](https://arxiv.org/abs/2406.18665). 重点看 LLM cascade、强/弱模型 query routing、成本-质量边界和为什么 router 需要偏好/质量数据验证。
 - LiteLLM [Router / Load Balancing](https://docs.litellm.ai/docs/routing) 与 [Fallbacks](https://docs.litellm.ai/docs/proxy/reliability). 重点看 load balancing、cooldowns、timeouts、retries、fallbacks 和 provider/model group 管理如何进入可靠性 gate。
 - vLLM documentation: [Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/) 与 [V1 Metrics design](https://docs.vllm.ai/en/latest/design/v1/metrics.html). 重点看推理引擎的 request/engine metrics 如何服务生产监控、capacity planning 和 incident triage。
+- vLLM. [Expert Parallel Deployment](https://docs.vllm.ai/en/latest/serving/expert_parallel_deployment/) 与 [Parallelism and Scaling](https://docs.vllm.ai/en/stable/serving/parallelism_scaling/). 重点看 MoE 层为什么需要 Expert Parallelism、DP+EP、`--enable-expert-parallel`、EPLB 和 KV cache/AllToAll 权衡。
+- SGLang Team. [Deploying DeepSeek with PD Disaggregation and Large-Scale Expert Parallelism](https://lmsys.org/blog/2025-05-05-large-scale-ep/) 与 DeepSeek-AI [EPLB](https://github.com/deepseek-ai/eplb). 重点看 DeepSeek-style MoE serving 中 prefill/decode 解耦、大规模 EP、专家复制/放置和负载均衡如何一起影响吞吐与成本。
 - Google Gemini API [Long context](https://ai.google.dev/gemini-api/docs/long-context) 与 Anthropic Claude API [Context windows](https://platform.claude.com/docs/en/build-with-claude/context-windows). 重点看 1M+ context 带来的产品形态、context rot、context management、token counting 和长上下文并不自动等于稳定召回。
 - vLLM [Automatic Prefix Caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/) 与 [serve scheduler arguments](https://docs.vllm.ai/en/stable/cli/serve/). 重点看长文档重复查询、prefix cache、chunked prefill、long-prefill scheduling 和 full input sequence length KV admission。
 
@@ -336,6 +338,7 @@
 - 模型路由或级联上线时，为什么平均成本下降不能替代 route branch 的质量、安全、schema、RAG 和高风险任务切片回归？
 - 服务运行中 queue backlog、KV cache nearing full、swapped requests、TPOT 变差、timeout 上升和单租户超配额分别指向哪些不同的 overload response？
 - prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？
+- MoE serving gate 为什么必须同时看 TP baseline、EP/DP+EP、expert token skew、AllToAll/dispatch/combine 时间、KV cache per rank、EPLB 和 P95 TPOT？
 - SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？
 - speculative decoding 的 acceptance rate、draft overhead、QPS 和 quality regression 如何共同决定是否启用，而不是只看 `num_speculative_tokens`？
 - 长上下文上线时，为什么不能只报告 max context length？`long_context_serving_gate_report` 的 context fit、quality、position robustness 和 serving cost 分别挡住哪类失败？

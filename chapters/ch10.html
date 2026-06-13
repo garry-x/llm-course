@@ -530,13 +530,15 @@ print(f"INT8 quantization error: {nrmse(weight, dq_w):.2f}%")
     <li><strong>Online Softmax:</strong> An algorithm for computing softmax in blocks—no need to compute all S first and then softmax; update softmax statistics as each block is processed</li>
   </ul>
 
-  <div class="diagram">
-    HBM Access Comparison (L=4096, d=128):
-    Standard Attention: ~4L² + 3Ld = ~68M bytes
-    FlashAttention: ~4Ld = ~2M bytes
-    IO read/write ratio is approximately L / 4d (this is just a memory traffic estimate)
-    Actual end-to-end speedup depends on GPU, dtype, kernel, batch, and sequence length
+  <div class="table-wrap">
+    <table>
+      <tr><th>Attention Kernel</th><th>HBM Traffic Intuition</th><th>Why It Matters</th><th>Boundary</th></tr>
+      <tr><td>Standard attention</td><td>Writes and rereads score and probability matrices; roughly dominated by terms proportional to <code>L^2</code></td><td>Long sequences become IO-heavy because the intermediate attention matrix is large</td><td>Actual memory movement depends on implementation, dtype, batch, and masking</td></tr>
+      <tr><td>FlashAttention</td><td>Tiles Q/K/V through on-chip memory and maintains online softmax statistics</td><td>Avoids materializing the full score/probability matrices in HBM</td><td>Speedup depends on GPU architecture, sequence length, head dimension, and kernel support</td></tr>
+      <tr><td>Rule of thumb</td><td>For long enough <code>L</code>, IO reduction is the main benefit</td><td>Explains why attention can become faster without changing the mathematical result</td><td>End-to-end service latency still includes queuing, prefill, decode, KV cache, and streaming</td></tr>
+    </table>
   </div>
+  <p class="diagram-caption">Figure 10-4: FlashAttention should be understood as IO-aware exact attention. The algorithm changes how data moves through memory, not the attention equation being computed.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>FlashAttention-3:</strong> Papers and projects report very high FLOPS utilization on specific Hopper/H100, dtype, and matrix sizes. The course focus is not on memorizing a single number, but on understanding how IO-aware tiling, online softmax, and hardware characteristics jointly affect the attention kernel.</div></div>
 </section>
 
@@ -1085,13 +1087,10 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
       </ul>
       <pre># Expected output (illustrative)
 Benchmark Results (generate 100 tokens, batch_size=1):
-┌─────────────────┬──────────┬──────────────┬──────────┐
-│ Configuration   │ TTFT(ms) │ ms/tok       │ Memory   │
-├─────────────────┼──────────┼──────────────┼──────────┤
-│ No Cache        │    45    │    32.5      │  4.2 GB  │
-│ + KV Cache      │    42    │    18.2      │  5.8 GB  │
-│ + Quant INT8    │    40    │    12.1      │  3.1 GB  │
-└─────────────────┴──────────┴──────────────┴──────────┘</pre>
+Configuration     TTFT(ms)   ms/tok   Memory
+No Cache          45         32.5     4.2 GB
++ KV Cache        42         18.2     5.8 GB
++ Quant INT8      40         12.1     3.1 GB</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">

@@ -697,16 +697,13 @@ print("Norm preserved ✅")</div>
         <li>Verify: values within each fixed-offset diagonal are the same; do not assume the main diagonal is the largest or that positive and negative offsets are symmetric</li>
         <li><strong>Core judgment should be done using tensor slicing; you may additionally loop to print offsets for observation</strong></li>
       </ul>
-      <pre># Expected result: Print an 8x8 attention score matrix
-# Should observe: All main diagonal (m=n) values are equal, all first sub-diagonal (m=n+1) values are equal, ...
-# Forming a Toeplitz matrix (Toeplitz matrix = elements on each diagonal are the same)
-# ┌─────────────────────────────────────────────┐
-# │ a     b     c     d     ...                │
-# │ e     a     b     c     ...                │
-# │ f     e     a     b     ...                │
-# │ g     f     e     a     ...                │
-# │ ...                                         │
-# └─────────────────────────────────────────────┘
+      <pre># Expected result: Print an 8x8 attention score matrix.
+# Should observe: all positions with the same diagonal offset share the same value.
+# Conceptual Toeplitz pattern:
+# row0: a  b  c  d  ...
+# row1: e  a  b  c  ...
+# row2: f  e  a  b  ...
+# row3: g  f  e  a  ...
 # Values on each fixed-offset diagonal should be equal; magnitudes for different offsets need not be monotonic.</pre>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>

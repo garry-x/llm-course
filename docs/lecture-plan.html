@@ -612,6 +612,7 @@
 <li>给定 workload、prefix cache hit rate、prefill/decode worker 吞吐、KV transfer link 吞吐和 decode KV 容量，填写 <code>pd_pool_capacity_plan</code> 并决定是否需要调整 P/D worker pool。</li>
 <li>给定 queue、TTFT、TPOT、KV usage、swapped requests、error/timeout 和 tenant quota，填写 <code>serving_overload_response_report</code>，区分 degraded mode、load shedding、noisy-neighbor isolation 和 incident response。</li>
 <li>给定一条慢请求 trace，按 gateway/router/LLM/retrieval/tool/guardrail spans 定位瓶颈，并说明哪些字段可聚合、哪些内容必须脱敏或采样。</li>
+<li>给定强/弱模型、router score、成本、SLO 和质量切片，判断 static routing、semantic routing、cascade escalation 或 reliability fallback 是否可上线。</li>
 <li>给定 baseline/speculative trace、accepted/draft token、draft_ms、quality regression、memory overhead 和 QPS，填写 <code>speculative_serving_gate_report</code> 并决定是否启用推测解码。</li>
 <li>给定长上下文 needle/citation trace，填写 <code>long_context_serving_gate_report</code>，判断 max context length 是否真的支持上线。</li>
 <li>把一次 benchmark 结果改写成结构化结论摘要，区分任务、baseline、指标和结论边界。</li>
@@ -628,6 +629,7 @@
 <li>P/D 解耦后，为什么 prefill worker 够用不代表 decode worker 或 KV transfer link 够用？</li>
 <li>queue backlog、TPOT 变差、KV swapping 和租户超配额分别指向哪些不同动作？</li>
 <li>为什么 request metrics、engine metrics、trace spans 和 prompt/completion 内容事件不能混成同一种日志？</li>
+<li>为什么模型路由不能只报告平均成本下降，而必须按任务/安全/schema/RAG/长上下文切片检查弱模型误路由？</li>
 <li>speculative decoding 接受率高时，为什么仍可能不改善 P95 TPOT 或吞吐？</li>
 <li>为什么 128K/1M context window 不能替代 long-context recall、citation 和 SLO gate？</li>
 <li>为什么固定开发集上的 pass rate 不能证明开放域能力？</li>
@@ -649,6 +651,7 @@
 <li>把 structured output / tool calling 拆成 schema、权限、预算、MCP/runtime trust、observation 和最终答案校验。</li>
 <li>把离线 eval、canary/control、per-version monitoring、成本 guardrail 和 rollback readiness 合成生产发布 gate。</li>
 <li>把 OpenTelemetry GenAI / serving engine metrics 映射到 request、engine、trace、quality/cost 四类遥测。</li>
+<li>区分 static routing、semantic/classifier routing、cascade escalation 和 reliability fallback，并说明每种模式需要哪些 route receipt。</li>
 </ul>
 <p>核心推导：</p>
 <ul>
@@ -665,6 +668,7 @@
 <li>MCP/runtime gate：server trust、用户同意、roots/elicitation、敏感数据外发、外部 observation 隔离、recursive LLM sampling 和 runtime budget 不能由 schema 通过来替代。</li>
 <li>Agent trace：输入/输出/tool guardrail events、tool spans、context budget、side-effect log 和最终 output status 必须能复盘整次 agent run。</li>
 <li>Observability：request metrics、engine metrics、trace spans 和 content/quality events 分别服务 SLO、容量、单请求归因和质量/安全抽样；prompt/completion/tool observation 默认需要脱敏、采样和访问控制。</li>
+<li>Model routing gate：route_reason、router score、branch sample size、quality/safety/schema/RAG regression、P95 latency、cost/request、fallback loop 和人工抽检必须与强模型 baseline 对照。</li>
 <li>Production rollout gate：候选发布包先与 stable baseline 比较 offline quality、安全、SLO、错误率和成本，再用 canary sample、流量比例、control comparison、required monitors 和 rollback readiness 决定 promote、继续低流量灰度或 block/rollback。</li>
 <li>视觉 token 数如何影响 prefill latency 和 KV cache 成本。</li>
 </ul>
@@ -682,6 +686,7 @@
 <li>给定一个 remote MCP tool event，填写 <code>tool_runtime_security_report</code> 输出，判断 server trust、consent、roots/elicitation、data privacy、observation isolation 和 sampling/budget gate。</li>
 <li>给定一条 agent trace，定位延迟、越权、上下文膨胀或 guardrail tripwire 来自哪一步。</li>
 <li>给定 stable baseline、candidate metrics 和 rollout policy，填写 <code>production_rollout_gate_report</code>，判断 offline quality、安全、SLO、cost、canary、rollback/monitoring gate。</li>
+<li>给定一组 route receipts，计算弱模型命中率、升级率、fallback error rate 和成本节省，判断是否因为某个高风险切片误路由而 block release。</li>
 <li>对 per-channel INT8 权重做 roundtrip；再给出一个 quantization release gate，包含校准集、engine/kernel、显存、TTFT/TPOT、tokens/s、RAG citation、structured output、安全和长上下文回归。</li>
 <li>对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。</li>
 </ul>
@@ -695,6 +700,7 @@
 <li>为什么 structured output 或 function calling 仍然需要服务端 schema 校验和权限检查？</li>
 <li>为什么 MCP server allowlist、用户批准、roots/elicitation 和工具输出隔离是 runtime gate，而不是 prompt 文案？</li>
 <li>为什么工具数量很多时，直接把所有 tool definitions 放进上下文会影响 TTFT、成本和工具选择准确率？</li>
+<li>为什么 fallback 到另一个模型时仍要检查 tokenizer、chat template、tool schema、response_format 和安全策略兼容性？</li>
 <li>为什么离线 eval 提升不能跳过 canary、control、per-version monitoring 和 rollback？</li>
 <li>一个多模态模型 VQA 分数高，是否能推出 OCR 或视觉定位可靠？</li>
 </ul>

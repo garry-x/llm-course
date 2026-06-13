@@ -54,8 +54,9 @@
 - 能把 mock engine 替换为 vLLM、SGLang、TensorRT-LLM、llama.cpp 或远程 OpenAI-compatible endpoint。
 - 能把 queue backlog、KV cache usage、swapping、TPOT、错误率、timeout 和租户配额映射成限流、load shedding、降级、扩容、回滚或 incident page。
 - 能把 request metrics、engine metrics、trace spans、quality/cost events 分层采集，并说明 prompt/completion/tool observation 的脱敏、采样、访问控制和保留期。
+- 能设计多模型路由、级联升级和 provider fallback，并用 route receipts 证明成本下降没有牺牲高风险任务质量、安全、schema 或工具兼容性。
 
-**对应内容：**Ch10 10.12-10.13，Capstone `app.py`、observability trace 与 overload response 表。
+**对应内容：**Ch10 10.12-10.13，Capstone `app.py`、observability trace、model routing gate 与 overload response 表。
 
 ### E. RAG、工具调用与输出约束
 
@@ -99,6 +100,7 @@
 | 准入控制 | 能用 active KV tokens、输入/输出长度分布和安全余量给出 admission limit | 容量规划说明 |
 | 服务运行 | Capstone API 能启动，`/health`、非流式、流式、`/metrics` 可用 | `curl` 输出或 `acceptance.py` |
 | Observability | 能展示 request/engine metrics 和 gateway/router/LLM/retrieval/tool/guardrail trace，并解释内容采集边界 | trace 截图或结构化 span 表 |
+| Model routing | 能比较强模型 baseline、弱模型分支、级联升级和 fallback provider，并报告 route_reason、成本、质量/安全/schema/RAG 切片和兼容性风险 | route receipt 表 |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
 | 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、structured output schema gate、工具调用、MCP/runtime gate、agent trace/guardrail、LLM-as-judge 和安全/过度拒答，失败样例有记录 | `evaluate.py` 输出 |
 | 发布 gate | baseline 与 candidate 的 quality/safety/SLO/error/cost/canary/monitoring/rollback 判断可复算 | production rollout gate 表 |
@@ -153,6 +155,7 @@ continuous batching admission：
 overload response：
 production rollout gate：
 observability trace：
+model routing gate：
 SLO 是否通过：
 tokens/s：
 显存峰值：

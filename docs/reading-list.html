@@ -305,6 +305,8 @@
 <li>Google SRE. <a href="https://sre.google/sre-book/handling-overload/">Handling Overload</a> 与 <a href="https://sre.google/sre-book/addressing-cascading-failures/">Addressing Cascading Failures</a>. 重点看 degraded responses、load shedding、动态超时和防止过载级联。</li>
 <li>OpenTelemetry. <a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/">Generative AI semantic conventions</a> 与 <a href="https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/">GenAI attributes</a>. 重点看 model、operation、token usage、finish reason、prompt/completion/tool event 和 trace span 如何变成跨平台遥测字段。</li>
 <li>OpenAI Agents SDK <a href="https://openai.github.io/openai-agents-python/tracing/">Tracing</a>. 重点看 agent run 中 LLM generation、tool calls、handoffs、guardrails 和 custom spans 如何帮助调试生产 workflow。</li>
+<li>Chen, Zaharia, Zou. <a href="https://arxiv.org/abs/2305.05176">FrugalGPT</a> 与 Ong et al. <a href="https://arxiv.org/abs/2406.18665">RouteLLM</a>. 重点看 LLM cascade、强/弱模型 query routing、成本-质量边界和为什么 router 需要偏好/质量数据验证。</li>
+<li>LiteLLM <a href="https://docs.litellm.ai/docs/routing">Router / Load Balancing</a> 与 <a href="https://docs.litellm.ai/docs/proxy/reliability">Fallbacks</a>. 重点看 load balancing、cooldowns、timeouts、retries、fallbacks 和 provider/model group 管理如何进入可靠性 gate。</li>
 <li>vLLM documentation: <a href="https://docs.vllm.ai/en/latest/usage/metrics/">Production Metrics</a> 与 <a href="https://docs.vllm.ai/en/latest/design/v1/metrics.html">V1 Metrics design</a>. 重点看推理引擎的 request/engine metrics 如何服务生产监控、capacity planning 和 incident triage。</li>
 <li>Google Gemini API <a href="https://ai.google.dev/gemini-api/docs/long-context">Long context</a> 与 Anthropic Claude API <a href="https://platform.claude.com/docs/en/build-with-claude/context-windows">Context windows</a>. 重点看 1M+ context 带来的产品形态、context rot、context management、token counting 和长上下文并不自动等于稳定召回。</li>
 <li>vLLM <a href="https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/">Automatic Prefix Caching</a> 与 <a href="https://docs.vllm.ai/en/stable/cli/serve/">serve scheduler arguments</a>. 重点看长文档重复查询、prefix cache、chunked prefill、long-prefill scheduling 和 full input sequence length KV admission。</li>
@@ -340,6 +342,7 @@
 <li>MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、roots/elicitation、敏感数据外发、observation isolation 和 recursive sampling？</li>
 <li>agent trace 为什么要记录 guardrail events、tool spans、context budget 和 side-effect log？这些字段分别帮助定位哪类生产事故？</li>
 <li>生产发布时，为什么候选模型即使离线 pass rate 更高，也必须经过 canary/control、per-version quality/safety/SLO/cost monitoring 和 rollback readiness gate？</li>
+<li>模型路由或级联上线时，为什么平均成本下降不能替代 route branch 的质量、安全、schema、RAG 和高风险任务切片回归？</li>
 <li>服务运行中 queue backlog、KV cache nearing full、swapped requests、TPOT 变差、timeout 上升和单租户超配额分别指向哪些不同的 overload response？</li>
 <li>prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？</li>
 <li>SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？</li>

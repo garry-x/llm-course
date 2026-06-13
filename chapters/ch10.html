@@ -1127,6 +1127,20 @@ summary = build_benchmark_summary(
   <p>Agent 和 tool 系统尤其需要 trace，而不只是最终答案。一次 agent run 应该能看到 LLM generation、tool proposal、schema/permission gate、tool execution、guardrail event、handoff 或 retry 的父子关系。若只记录最终文本，当用户报告“回答慢且越权”时，工程师无法判断是模型规划、工具 API、权限校验、检索、上下文膨胀还是输出 guardrail 造成的。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>观测原则：</strong>指标用于 SLO 和容量趋势，trace 用于单请求归因，内容事件用于质量/安全抽样。三者不能互相替代；同时，prompt、工具参数和用户数据默认应脱敏或采样采集，不能为了调试把敏感内容无边界写进日志。</div></div>
 
+  <h4>模型路由与级联：不要把所有请求都交给最大模型</h4>
+  <p>生产系统常同时拥有多个模型：低延迟小模型、强推理模型、专用代码模型、视觉模型、合规区域模型和备用 provider。模型路由的目标不是“隐藏模型选择”，而是在质量、成本、延迟、可用性和数据边界之间做可审计决策。FrugalGPT 把 LLM cascade 写成成本优化问题；RouteLLM 用偏好数据学习强/弱模型之间的 query router；LiteLLM 这类网关提供 load balancing、fallback、timeout、retry 和 provider cooldown。课程中要掌握的是通用 gate，而不是绑定某个路由产品。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>路由模式</th><th>适合场景</th><th>必须记录</th><th>失败模式</th></tr>
+      <tr><td>Static rules</td><td>任务类型、租户、地区、数据边界明确</td><td>route_rule、model、tenant、region、policy version</td><td>规则过时，复杂请求被送到弱模型</td></tr>
+      <tr><td>Cost/latency routing</td><td>同等质量下选择更便宜或更快的模型/副本</td><td>estimated cost、queue wait、SLO class、fallback target</td><td>只追求便宜导致质量或安全回归</td></tr>
+      <tr><td>Semantic/classifier routing</td><td>请求难度或任务类别不能由调用方可靠标注</td><td>router score、threshold、route_reason、router latency</td><td>router 误判、分类器漂移、prompt injection 诱导错误路由</td></tr>
+      <tr><td>Cascade / escalation</td><td>先用小模型，低置信或失败时升级强模型</td><td>first-pass result、confidence/verifier、escalation reason、total cost</td><td>级联延迟过高，verifier 自身不可靠，fallback loop</td></tr>
+      <tr><td>Reliability fallback</td><td>provider 超时、限流、区域故障或模型版本回退</td><td>error class、retry count、fallback model、final status</td><td>不同模型模板/工具能力不兼容，输出格式漂移</td></tr>
+    </table>
+  </div>
+  <p>上线一个 router 时，必须和“全部走强模型”的 baseline 比较。最低报告包括：每个路由分支的样本数、质量/安全/schema/RAG 指标、P95 TTFT/TPOT、平均成本、升级率、错误 fallback 率、router latency、不可路由样本和人工抽检。若 router 让总体 pass rate 不变但把医疗、金融、代码执行或长上下文切片送错模型，不能发布。若 fallback 模型不支持相同 tokenizer、tool schema、response_format 或安全策略，也不能把它当作透明替换。</p>
+
   <h4>SLO：推理服务应该承诺什么？</h4>
   <p>不要只看平均延迟。线上用户感知的是尾延迟和稳定性。一个合理的课程级 SLO 示例：</p>
   <div class="table-wrap">

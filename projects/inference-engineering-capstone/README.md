@@ -164,6 +164,7 @@ python capacity_plan.py \
 - 候选发布包与 stable baseline 已在同一 policy 下比较：离线 pass rate、安全通过率、P95/P99、错误率、成本、canary 样本量/流量、control 对照、per-version monitoring 和 rollback readiness 均有记录。
 - 指标能按模型、租户、状态码、错误类型聚合。
 - 观测数据能分清 request metrics、engine metrics、trace spans 和 quality/cost events；若采集 prompt、completion、tool 参数或 observation，必须说明脱敏、采样、访问控制和保留期。
+- 若采用或讨论多模型路由、级联或 provider fallback，必须报告 route_reason/router score、每个分支样本数、升级率、fallback error rate、质量/安全/schema/RAG/长上下文切片、P95 延迟和成本，不能只报告平均成本下降。
 - 限流、超时、降级和错误响应格式明确。
 
 ## 项目报告要求
@@ -178,6 +179,7 @@ python capacity_plan.py \
 - 若服务支持长文档或长会话，报告 long-context gate：截断率、answer/citation recall、position robustness、P95 TTFT/latency、KV usage、prefix cache hit rate 和 action items。
 - RAG、JSON structured output schema gate、tool/MCP calling 和 reasoning budget 的回归用例。
 - Observability 截面：至少展示一次请求的 gateway/router/LLM/retrieval/tool/guardrail trace，和一组 request/engine metrics，说明如何定位 TTFT、TPOT、queue、KV cache 或 tool latency 问题。
+- Model routing / cascade 判断：若使用多个模型或 provider，报告路由策略、强模型 baseline、弱模型误路由、高风险切片、fallback 兼容性和 route receipts。
 - Canary/control/rollback 发布判断：候选版本不能只凭离线 eval 提升上线，必须写清 production rollout gate 的通过项、失败项和 action items。
 - Overload response runbook：SLO 变坏时要能从 queue/KV/decode/error/quota 信号判断是限流、降级、扩容、回滚还是 page owner，不能只写“增加机器”。
 - 超时、限流、降级、格式错误和安全拒答策略。

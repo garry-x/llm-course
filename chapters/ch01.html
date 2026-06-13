@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 1 BPE Tokenizer</h2>
   <p class="subtitle">Implementing Byte Pair Encoding from Scratch — The Text Interface of LLMs</p>
-  <div class="reading-time">⏱ Estimated reading: 110 minutes · 16 sections · 5 programming exercises · 5 concept exercises</div>
+  <div class="reading-time">⏱ Estimated reading: 120 minutes · 17 sections · 5 programming exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -672,7 +672,98 @@ round-trip tests pass for multilingual and tool-call samples</div>
 </section>
 
 <section class="card" id="s1-12c">
-  <h3>1.12C Multilingual Tokenizer Training: From Corpus Ratio to Token Cost</h3>
+  <h3>1.12C Chat Template and Multimodal Interface Ledger: One Message, One Token Contract</h3>
+  <p>A production tokenizer does more than convert plain text into token IDs. It also defines how a structured conversation becomes a single sequence: system instructions, user messages, assistant answers, tool calls, tool results, multimodal placeholders, stop tokens, and masked training spans. The same message object must serialize to the same token boundary in pre-training adapters, SFT, preference training, evaluation, and online inference. If it does not, the model is being trained and served through different interfaces.</p>
+
+  <div class="svg-diagram">
+    <svg viewBox="0 0 980 360" role="img" aria-label="Chat template interface ledger from message objects to token ids, model generation, and parsers">
+      <defs>
+        <marker id="chat-ledger-arrow-01" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .ledger-box{fill:#fffaf4;stroke:#d8c9b9;stroke-width:1.5}
+        .ledger-core{fill:#eef6ff;stroke:var(--accent);stroke-width:2}
+        .ledger-risk{fill:rgba(245,158,11,.13);stroke:rgba(245,158,11,.7);stroke-width:1.4}
+        .ledger-text{fill:#241f1a;font-size:18px;font-weight:700}
+        .ledger-sub{fill:#554a41;font-size:13px}
+        .ledger-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#chat-ledger-arrow-01)}
+      </style>
+      <rect class="ledger-box" x="34" y="58" width="160" height="88" rx="10"/>
+      <text class="ledger-text" text-anchor="middle" x="114" y="92">Messages</text>
+      <text class="ledger-sub" text-anchor="middle" x="114" y="116">role, content, tool</text>
+      <text class="ledger-sub" text-anchor="middle" x="114" y="134">image/audio slots</text>
+
+      <path class="ledger-line" d="M198 102 H274"/>
+      <rect class="ledger-core" x="278" y="42" width="182" height="120" rx="12"/>
+      <text class="ledger-text" text-anchor="middle" x="369" y="79">Chat Template</text>
+      <text class="ledger-sub" text-anchor="middle" x="369" y="105">stable role markers</text>
+      <text class="ledger-sub" text-anchor="middle" x="369" y="124">label mask spans</text>
+      <text class="ledger-sub" text-anchor="middle" x="369" y="143">tool/schema tokens</text>
+
+      <path class="ledger-line" d="M464 102 H540"/>
+      <rect class="ledger-box" x="544" y="58" width="154" height="88" rx="10"/>
+      <text class="ledger-text" text-anchor="middle" x="621" y="92">Token IDs</text>
+      <text class="ledger-sub" text-anchor="middle" x="621" y="116">BOS/EOS/PAD</text>
+      <text class="ledger-sub" text-anchor="middle" x="621" y="134">special ids fixed</text>
+
+      <path class="ledger-line" d="M702 102 H778"/>
+      <rect class="ledger-box" x="782" y="58" width="164" height="88" rx="10"/>
+      <text class="ledger-text" text-anchor="middle" x="864" y="92">Model Output</text>
+      <text class="ledger-sub" text-anchor="middle" x="864" y="116">assistant text</text>
+      <text class="ledger-sub" text-anchor="middle" x="864" y="134">or structured call</text>
+
+      <path class="ledger-line" d="M864 150 C864 184 798 190 746 208"/>
+      <rect class="ledger-core" x="620" y="210" width="252" height="70" rx="10"/>
+      <text class="ledger-text" text-anchor="middle" x="746" y="239">Parser and Stop Rules</text>
+      <text class="ledger-sub" text-anchor="middle" x="746" y="263">JSON schema, EOS, streaming chunks</text>
+
+      <rect class="ledger-risk" x="54" y="232" width="188" height="70" rx="10"/>
+      <text class="ledger-text" text-anchor="middle" x="148" y="261">Training Risk</text>
+      <text class="ledger-sub" text-anchor="middle" x="148" y="284">wrong assistant loss span</text>
+      <rect class="ledger-risk" x="282" y="232" width="188" height="70" rx="10"/>
+      <text class="ledger-text" text-anchor="middle" x="376" y="261">Serving Risk</text>
+      <text class="ledger-sub" text-anchor="middle" x="376" y="284">template drift at inference</text>
+      <rect class="ledger-risk" x="500" y="296" width="260" height="54" rx="10"/>
+      <text class="ledger-sub" text-anchor="middle" x="630" y="319">tool and multimodal placeholders</text>
+      <text class="ledger-sub" text-anchor="middle" x="630" y="337">must stay atomic</text>
+    </svg>
+    <p class="diagram-caption">Figure 1-2: Chat template and multimodal placeholders are part of the tokenizer contract, not display formatting.</p>
+  </div>
+
+  <h4>1. Interface components that must be versioned together</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Interface Component</th><th>Owned By</th><th>Must Align With</th><th>Failure if Inconsistent</th></tr>
+      <tr><td>Role serialization</td><td>Chat template</td><td>SFT data, inference API, evaluation prompts</td><td>The model sees different speaker boundaries during training and serving.</td></tr>
+      <tr><td>Assistant span and label mask</td><td>Training collator</td><td>Template delimiters and token offsets</td><td>Loss is applied to user or tool text, or the assistant answer is not trained.</td></tr>
+      <tr><td>Tool call markers</td><td>Tokenizer and parser</td><td>JSON schema, function registry, streaming parser</td><td>The service cannot reliably separate natural language from callable arguments.</td></tr>
+      <tr><td>Tool result markers</td><td>Serving runtime</td><td>Conversation serializer and next-turn context</td><td>The model treats tool output as user text or assistant text, corrupting state.</td></tr>
+      <tr><td>Multimodal placeholders</td><td>Tokenizer and modality processor</td><td>Image/audio encoder token budget and position mapping</td><td>Text tokens and modality tokens disagree about where visual or audio evidence belongs.</td></tr>
+      <tr><td>Stop and EOS policy</td><td>Generation runtime</td><td>BOS/EOS ids, chat template suffix, parser state</td><td>Responses stop too early, never stop, or emit control tokens as user-visible text.</td></tr>
+      <tr><td>Normalization and whitespace</td><td>Tokenizer config</td><td>Training data preparation and online request handling</td><td>Equivalent prompts produce different token IDs, hurting cache reuse and evaluation reproducibility.</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Training and inference parity checks</h4>
+  <p>The safest way to think about a chat template is to treat it as a small compiler from structured messages to token IDs. A compiler needs regression tests. The following checks should live next to the tokenizer release, not inside a separate notebook that nobody runs before deployment.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Workflow</th><th>Parity Check</th><th>What to Inspect</th></tr>
+      <tr><td>SFT</td><td>Serialize a multi-turn sample and decode the masked labels.</td><td>Only assistant answer tokens should contribute to supervised loss unless the training objective explicitly says otherwise.</td></tr>
+      <tr><td>DPO/GRPO log probability</td><td>Re-tokenize chosen and rejected answers with the exact same prompt prefix.</td><td>Prompt tokens must be identical; only answer spans should differ when comparing sequence log probabilities.</td></tr>
+      <tr><td>Tool calling</td><td>Round-trip a tool call and a tool result through serialize, tokenize, generate, parse.</td><td>Function name, argument JSON, and result boundaries must survive streaming and truncation.</td></tr>
+      <tr><td>Multimodal input</td><td>Tokenize text with image or audio placeholders and compare with processor output.</td><td>The number and position of modality placeholders must match the modality encoder's features.</td></tr>
+      <tr><td>Streaming and stop</td><td>Generate until EOS, a stop string, and a parser-complete state.</td><td>The runtime should not cut valid JSON early or leak EOS/control tokens to the client.</td></tr>
+    </table>
+  </div>
+
+  <p>Therefore, a tokenizer change is an interface migration. It can be safe only when the release artifact includes merge rules, special token IDs, chat template, normalization, processor placeholders, and compatibility tests. For training engineers, this defines the loss boundary. For inference engineers, it defines the parser boundary, tool execution boundary, and multimodal token budget. Treating the template as simple UI formatting is one of the fastest ways to create silent model behavior drift.</p>
+</section>
+
+<section class="card" id="s1-12d">
+  <h3>1.12D Multilingual Tokenizer Training: From Corpus Ratio to Token Cost</h3>
   <p>For real-world LLMs, the tokenizer is not a tool casually trained on an English corpus, but a data interface across languages, scripts, and domains. It determines how much information different languages can express within the same context window, and also affects the effective text volume in a training batch, inference billing, KV Cache memory, and long-context user experience. Multilingual models especially need to treat tokenizer training as a data engineering decision.</p>
 
   <h4>1. Corpus ratio changes merge rules</h4>
@@ -724,6 +815,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
     <li>✅ <strong>encode / decode</strong> — Inference using the trained merges and vocab</li>
     <li>✅ Understood the <strong>data compression essence</strong> of BPE and the <strong>information-theoretic basis</strong> of frequency selection</li>
     <li>✅ Can evaluate a tokenizer based on compression rate, reversibility, multilingual cost, vocabulary budget, and special tokens</li>
+    <li>✅ Can explain how chat templates, label masks, tool-call markers, and multimodal placeholders form one tokenizer interface contract</li>
     <li>✅ Can explain corpus ratio, Unicode normalization, byte fallback, and fertility metrics in multilingual tokenizer training</li>
   </ul>
   <p>The entire code is about <strong>50 lines</strong>, but this is a usable core of a BPE tokenizer. Production tokenizers (like tiktoken) build upon this same idea by adding regex pre-tokenization, special tokens, engineering optimizations, and compatibility handling; the course implementation retains only the minimal interpretable kernel.</p>

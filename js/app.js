@@ -68,15 +68,6 @@
     });
   }
 
-  function updateProgress(){
-    var bar = document.getElementById('progress-bar');
-    var txt = document.getElementById('progress-text');
-    if(!bar||!txt) return;
-    var pct = Math.round(completed.size/CHAPTERS.length*100);
-    bar.style.width = pct+'%';
-    txt.textContent = completed.size+' / '+CHAPTERS.length;
-  }
-
   function updateCompleteButton(){
     var btn = document.getElementById('mark-complete');
     if(btn) btn.textContent = completed.has(currentCh) ? '✅ Completed (Click to undo)' : '✓ Mark Complete';
@@ -87,7 +78,6 @@
     if(completed.has(currentCh)) completed.delete(currentCh);
     else completed.add(currentCh);
     safeSet('llm-done', [...completed]);
-    updateProgress();
     renderSidebar();
     updateCompleteButton();
     var btn = document.getElementById('mark-complete');
@@ -348,7 +338,6 @@
     initFontSize();
     initHomeLinks();
     renderSidebar();
-    updateProgress();
     updateCompleteButton();
     initBackToTop();
     initKeyboardNav();

@@ -32,7 +32,7 @@
 
 <section class="card">
   <h3>How to Learn This Chapter: Generation Means Repeatedly Selecting the Next Token</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> First master the four sampling methods: greedy, temperature, top-k, top-p. Speculative decoding, MTP, and Attention Sink are inference acceleration/long-context optimizations; on your first pass, focus on understanding the motivation, without striving to write an industrial-grade implementation immediately.</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> First master the four sampling methods: greedy, temperature, top-k, top-p. Speculative decoding, MTP, and Attention Sink are inference acceleration or long-context optimizations; on your first pass, focus on the motivation rather than an industrial-grade implementation.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Chapter 6 logits, softmax, probability sampling.</li>
     <li><strong>Learning Goals:</strong> Explain the mathematical foundations of autoregressive generation, prefill/decode, sampling distribution truncation, repetition traps, exposure bias, speculative decoding, and structured decoding.</li>
@@ -41,10 +41,10 @@
     <li><strong>Practice Artifacts:</strong> Build a generator, compare sampling strategies, measure distinct-n/repetition rate, apply constrained token masks, and analyze speculative decoding acceptance rates. Optional practice files are available at <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Required Prior Knowledge:</strong> Probability distributions, logits transformation, sampling variance, autoregressive state, KV cache intuition, and basic quality/latency metrics.<br><strong>Internalization for This Chapter:</strong> temperature, top-k, top-p, beam, self-consistency, reasoning budget, and speculative decoding will all be written as measurable strategies that "change the candidate distribution, recompute, or acceptance rate," rather than isolated tuning tricks.<br><strong>Validation Signal:</strong> You can decompose a generation strategy deployment decision into quality, output tokens, P95 latency, cost, marginal gain, and a fallback strategy, and connect it to the Ch10 service SLO.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter transforms the trained logits into user-visible behavior. Sampling, reasoning budgets, and speculative decoding simultaneously impact quality, latency, token cost, and safety boundaries, thus serving as the bridge between Ch09 alignment evaluation and Ch10 serving SLO.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter transforms trained logits into user-visible behavior. Sampling, reasoning budgets, and speculative decoding jointly affect quality, latency, token cost, and safety boundaries, making this chapter the bridge between Ch09 alignment evaluation and Ch10 serving SLO.</p>
   <div class="foundation-map">
     <h4>Learner Knowledge Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 8 Knowledge Map: Before learning this chapter, you need to understand logits distribution, autoregressive state, and KV cache. This chapter covers decoding strategies. After learning, you can continue to read about speculative decoding and verifiers">
+    <div class="foundation-graph" role="img" aria-label="Chapter 8 knowledge map: before this chapter, understand logit distributions, autoregressive state, and KV cache; in this chapter, learn decoding strategies; afterward, read about speculative decoding and verifiers.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-08" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -330,7 +330,7 @@ raw logits:  4.0   3.0   2.0   1.0  -1.0</div>
   <p>If a system claims "the model is very confident in this answer," but cites the probability after top-p truncation and JSON grammar mask, this statement is not rigorous. A high probability in a constrained distribution only indicates "it is the most likely within the valid set," which is not equivalent to the model being highly confident over the open vocabulary.</p>
 
   <h4>4. What to look at when tuning parameters</h4>
-  <p>When tuning temperature, top-p, repetition penalty, one should not just look at a few generated texts. At a minimum, the following should be recorded simultaneously:</p>
+  <p>When tuning temperature, top-p, and repetition penalty, do not judge from a few generated texts. At a minimum, record the following together:</p>
   <div class="code-block" data-lang="text">
 kept_token_count / vocab_size
 selected_token_probability
@@ -340,7 +340,7 @@ stop reason: eos / stop string / max_new_tokens / constraint failure
 generated tokens and latency</div>
   <p>These quantities help distinguish several types of problems: boring output might be due to too low temperature or too small a candidate set; off-topic output might be due to too high temperature or too wide top-p; repetition might require repetition penalty, stop conditions, or training data processing; format errors are better suited for constrained decoding rather than continuing to lower the temperature.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> Generation is not as simple as "sample after softmax." A rigorous generation experiment must report the transformation chain from raw logits to the processed distribution; otherwise, the experiment cannot be reproduced, and it is impossible to determine whether quality changes come from the model, the sampling strategy, or the constraint system.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Takeaway:</strong> Generation is not as simple as "sample after softmax." A rigorous generation experiment must report the transformation chain from raw logits to the processed distribution; otherwise, the experiment cannot be reproduced, and it is impossible to determine whether quality changes come from the model, the sampling strategy, or the constraint system.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -563,7 +563,7 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
 <!-- ================================================================ -->
 <section class="card" id="s8-7a">
   <h3>8.7A How to Evaluate Generation Strategies: Diversity is Not Quality, Low Repetition is Not Correctness</h3>
-  <p>When comparing decoding strategies, the most common mistake is to look at only one or two examples, or to only report distinct-n. Generation quality is a multi-objective problem: the same strategy might increase diversity while simultaneously reducing factuality, format stability, or reproducibility. Rigorous experiments need to fix the <strong>task type, sampling parameters, random seed, output length, and evaluation metrics</strong>.</p>
+  <p>When comparing decoding strategies, the most common mistake is to look at only one or two examples, or to report only distinct-n. Generation quality is a multi-objective problem: the same strategy might increase diversity while reducing factuality, format stability, or reproducibility. Rigorous experiments need to fix the <strong>task type, sampling parameters, random seed, output length, and evaluation metrics</strong>.</p>
 
   <h4>What Questions Do the Metrics Answer?</h4>
   <div class="table-wrap">
@@ -597,7 +597,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <h4>Practical Judgment for Strategy Selection</h4>
   <ul>
     <li><strong>Code, Math, Extraction:</strong> Prefer low temperature or beam / pass@k; diversity is not the primary goal, correctness and reproducibility are more important.</li>
-    <li><strong>Creative Writing, Brainstorming:</strong> Can increase temperature/top-p, but need to monitor repetition, going off-topic, and safety boundaries.</li>
+    <li><strong>Creative Writing, Brainstorming:</strong> Temperature/top-p can be increased, but repetition, topic drift, and safety boundaries must be monitored.</li>
     <li><strong>Structured Output:</strong> Sampling strategies cannot replace schema constraints; prioritize structured decoding or output validation.</li>
     <li><strong>Online Services:</strong> Need to consider both quality and TPOT/throughput; high top-p may increase output length and post-processing failure rate.</li>
   </ul>
@@ -683,7 +683,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
     <li><strong>Failure types:</strong> arithmetic errors, missing conditions, invalid code, incorrect votes, verifier misjudgments.</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Reasoning ability is not "outputting a longer explanation." Rigorous experiments must prove that more intermediate tokens or more candidates indeed improve the task success rate, and must state how much test-time compute was consumed.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Reasoning ability is not "outputting a longer explanation." Rigorous experiments must prove that more intermediate tokens or more candidates indeed improve the task success rate, and must state how much test-time compute was consumed.</div></div>
 </section>
 
 <section class="card" id="s8-7d">

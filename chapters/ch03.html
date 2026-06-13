@@ -41,10 +41,10 @@
     <li><strong>Exercise Output:</strong> Submit handwritten attention, mask unit tests, variance derivation of the scaling factor, and an attention heatmap analysis; use <a href="../assignments/ch03_attention/" target="_blank">Ch03 Attention Assignment Tests</a> to check core implementation.</li>
   </ul>
   <div class="dependency-note"><strong>Required Skills:</strong> Matrix multiplication, softmax, mask semantics, probability normalization, and basic broadcasting rules.<br><strong>Internalization in this Chapter:</strong> These fundamentals will be checked in the implementation of <code>QK^T / sqrt(d)</code>, mask-before-softmax, attention row sum, padding/causal distinction, and numerically stable softmax.<br><strong>Validation Signal:</strong> You can locate an attention bug as belonging to score shape, mask timing, probability normalization, or visibility constraints, and explain how it would affect Ch04 multi-head splitting, Ch06 causal LM, and Ch08 generation.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter is the computational core of the Transformer: turning the representation of each token into a differentiable retrieval. It depends forward on Ch02's vectors and positions, and supports backward multi-head compression, GPT causal training, generation visibility, and long-context serving costs.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter is the computational core of the Transformer: turning the representation of each token into a differentiable retrieval. It depends forward on Ch02's vectors and positions, and supports backward multi-head compression, GPT causal training, generation visibility, and long-context serving costs.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 3 knowledge map: Before learning this chapter, you need to understand matrix multiplication, softmax, and masks. This chapter teaches self-attention. After learning, you can continue to FlashAttention and sparse attention.">
+    <div class="foundation-graph" role="img" aria-label="Chapter 3 knowledge map: before this chapter, understand matrix multiplication, softmax, and masks; in this chapter, learn self-attention; afterward, read about FlashAttention and sparse attention.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-03" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -380,7 +380,7 @@ dL/dz_2 = 0.3 * (-3.0 - (-1.8)) = -0.36
 dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
     <p>The three logits gradients sum to zero, which is the translation invariance of softmax: adding the same constant to all logits simultaneously does not change the probability distribution. This example corresponds to <code>attention_logits_gradient</code> in the homework, and also illustrates that the value content influences which attention logits are pushed up or down.</p>
   </div>
-  <p>The <code>softmax_jacobian</code>, <code>attention_logits_gradient</code>, and <code>attention_qkv_gradients</code> in the Ch03 homework correspond to this path. Students do not need to write the full Transformer backward by hand, but should be able to explain: the gradient first passes through the value weighted sum, then through the softmax Jacobian, and finally back to the Q/K dot product.</p>
+  <p>The <code>softmax_jacobian</code>, <code>attention_logits_gradient</code>, and <code>attention_qkv_gradients</code> in the Ch03 homework correspond to this path. You do not need to write the full Transformer backward by hand, but you should be able to explain how the gradient first passes through the value weighted sum, then through the softmax Jacobian, and finally back to the Q/K dot product.</p>
   <div class="math-box"><div class="label">From logits gradients back to Q/K/V</div>
     <div class="katex" data-expr="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" aria-label="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" role="img"></div>
   </div>
@@ -554,7 +554,7 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
 <!-- ================================================================ -->
 <section class="card" id="s3-7a">
   <h3>3.7A Attention Implementation Boundaries: From Pedagogical Functions to Real Models</h3>
-  <p>A pedagogical version of attention can run with a few dozen lines of code, but attention in real models often fails due to boundary conditions, not the formula itself. Engineers need to know which parts can be simplified and which cannot: mask semantics, dtype, broadcasting, fully masked queries, mixed-precision sentinels, incremental decoding, and the API conventions of high-performance kernels.</p>
+  <p>A teaching version of attention can run in a few dozen lines of code, but real models often fail at boundary conditions rather than at the formula itself. Engineers need to know which parts can be simplified and which cannot: mask semantics, dtype, broadcasting, fully masked queries, mixed-precision sentinels, incremental decoding, and the API conventions of high-performance kernels.</p>
 
   <h4>1. Mask Semantics Must Be Fixed First</h4>
   <p>Different libraries do not have entirely consistent conventions for masks. The course assignment stipulates <code>True/1 = visible</code>, <code>False/0 = masked</code>, and sets masked positions to a large negative number before softmax. Some PyTorch APIs or model implementations use an additive mask: visible positions add <code>0</code>, masked positions add <code>-inf</code>. These two forms are equivalent but cannot be mixed.</p>
@@ -584,7 +584,7 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
   </ul>
 
   <h4>4. The Sentinel Value in Mixed Precision is Not Arbitrary</h4>
-  <p>Pedagogical code often uses <code>-1e9</code>, but in fp16/bf16, FlashAttention, or fused SDPA kernels, the recommended practice varies by implementation. The key principle is: the masked value must be small enough that <code>exp(masked_logit)</code> is approximately 0 in the current dtype; simultaneously, it must not introduce NaN or dtype overflow.</p>
+  <p>Teaching code often uses <code>-1e9</code>, but in fp16/bf16, FlashAttention, or fused SDPA kernels, the recommended practice varies by implementation. The key principle is that the masked value must be small enough for <code>exp(masked_logit)</code> to be approximately 0 in the current dtype, while still avoiding NaN and dtype overflow.</p>
   <div class="table-wrap">
     <table>
       <tr><th>Method</th><th>Advantage</th><th>Risk</th></tr>
@@ -606,7 +606,7 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
     <li><strong>Precision consistent:</strong> Whether softmax is performed with fp32 accumulation, and how the output dtype is written back.</li>
     <li><strong>Layout consistent:</strong> Whether the input is in <code>[B,T,H,D]</code>, <code>[B,H,T,D]</code>, or a packed varlen format.</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> The formula for Attention is only one line, but a reliable implementation depends on mask semantics, numerical stability, and shape contracts. Being able to write a pedagogical version of attention is the first step; being able to judge whether it is equivalent to a fused kernel, KV cache, and padding batch is engineering capability.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The formula for Attention is only one line, but a reliable implementation depends on mask semantics, numerical stability, and shape contracts. Being able to write a pedagogical version of attention is the first step; being able to judge whether it is equivalent to a fused kernel, KV cache, and padding batch is engineering capability.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -780,7 +780,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
 
   <h4>FlashAttention: An IO-Aware Solution</h4>
   <p>The core insight of FlashAttention (Dao et al., 2022): In many practical GPU configurations, the performance bottleneck of attention is not just FLOPs, but also the data movement between HBM (High Bandwidth Memory) and SRAM (on-chip cache). Traditional implementations materialize the full attention matrix, whereas FlashAttention uses tiling to split the computation into blocks, completing softmax within SRAM—without ever writing the full attention matrix to HBM.</p>
-  <p>This not only saves memory (from O(n²) to O(n)) but also becomes <strong>faster</strong> due to reduced HBM reads and writes.</p>
+  <p>This saves memory (from O(n²) to O(n)) and often becomes <strong>faster</strong> because it reduces HBM reads and writes.</p>
 
   <h4>DeepSeek MLA: From "Less Compute" to "Less Storage"</h4>
   <p>MLA (Multi-head Latent Attention), proposed by DeepSeek-V2, takes a different path: instead of optimizing the softmax computation, it <strong>fundamentally reduces the size of the KV Cache</strong>.</p>

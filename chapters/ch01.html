@@ -32,7 +32,7 @@
 
 <section class="card">
   <h3>How to Learn This Chapter: Start with How Text Becomes Numbers</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> This chapter only requires you to understand three questions: what a token is, why BPE repeatedly merges high-frequency pairs, and why encoding/decoding is reversible. Information theory, Zipf's law, and PMI can be treated as explanatory intuition for now; you don't need to master them completely on the first pass.</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> Start with three questions: what a token is, why BPE repeatedly merges high-frequency pairs, and why encoding/decoding is reversible. Information theory, Zipf's law, and PMI are useful intuition; you do not need to master them completely on the first pass.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Python lists, dictionaries, strings/bytes, simple loops.</li>
     <li><strong>Learning Goals:</strong> Explain the information-theoretic trade-off of tokenization, derive the BPE training/encoding/decoding pipeline, and analyze the impact of vocabulary size on sequence length, embedding parameter count, and multilingual cost.</li>
@@ -41,10 +41,10 @@
     <li><strong>Exercise Output:</strong> Submit tokenizer code, 3 sets of mixed text tests, complexity analysis, and an experimental record of token count variation under different vocabulary sizes; use <a href="../assignments/ch01_bpe/" target="_blank">Ch01 BPE Assignment Tests</a> to check core implementation.</li>
   </ul>
   <div class="dependency-note"><strong>Prerequisite Skills:</strong> Python lists/dictionaries, bytes/string boundaries, loop invariants, basic complexity, and test-driven implementation.<br><strong>Internalization in this Chapter:</strong> These fundamentals will be directly applied to pair counting, non-overlapping merge, encode/decode reversibility, special token contracts, and token cost estimation.<br><strong>Validation Signal:</strong> You can explain, without external supplementary material, why each intermediate structure exists in this chapter's code, and how a tokenizer change propagates to Ch02 embedding, Ch07 token budget, and Ch10 serving cost.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter defines the text interface contract for LLMs. Subsequent embeddings, training token budgets, chat templates, KV caches, and billing metrics all depend on the same token sequence. Therefore, tokenization is not a preprocessing accessory, but the first engineering boundary that runs through training and inference.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter defines the text interface contract for LLMs. Subsequent embeddings, training token budgets, chat templates, KV caches, and billing metrics all depend on the same token sequence. Therefore, tokenization is not a preprocessing accessory, but the first engineering boundary that runs through training and inference.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know Before / What to Learn in This Chapter / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 1 Knowledge Map: Need to understand bytes and data structures before this chapter, will learn BPE in this chapter, can continue to read about tokenizer evaluation and multilingual cost after">
+    <div class="foundation-graph" role="img" aria-label="Chapter 1 knowledge map: before this chapter, understand bytes and basic data structures; in this chapter, learn BPE; afterward, read about tokenizer evaluation and multilingual token cost.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-01" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -84,13 +84,13 @@
 <!-- ================================================================ -->
 <section class="card" id="s1-1">
   <h3>1.1 Tokenizer Positioning: From Text Interface to Engineering Cost</h3>
-  <p>The tokenizer is the first layer interface of an LLM. It converts raw strings into token IDs, and simultaneously determines sequence length, embedding matrix size, context window utilization, and service billing metrics. This chapter does not treat tokenization as a preprocessing detail, but implements it as a model contract that both training engineering and inference engineering depend on.</p>
+  <p>The tokenizer is the first interface layer of an LLM. It converts raw strings into token IDs and also determines sequence length, embedding matrix size, context window utilization, and service billing metrics. This chapter treats tokenization as a model contract shared by training and inference, not as a preprocessing detail.</p>
   <ul>
     <li>Training side: Changing tokenization rules changes token distribution, batch token count, embedding parameter count, and data quality diagnostics.</li>
     <li>Inference side: The token count of the same text affects context capacity, KV Cache memory, latency, and invocation cost.</li>
     <li>Release side: Checkpoints, chat templates, special tokens, and tokenizer files must be versioned together; otherwise, the model interface will mismatch.</li>
   </ul>
-  <p>The following implementation retains only the minimal interpretable kernel of BPE: counting pair frequencies, merging by priority, saving the merge table, and using the same set of rules for encoding and decoding. After understanding this pipeline, comparing WordPiece, Unigram LM, or byte-level tokenizers will make it easier to judge their engineering trade-offs.</p>
+  <p>The implementation below keeps only the minimal interpretable kernel of BPE: count pair frequencies, merge by priority, save the merge table, and use the same rules for encoding and decoding. Once this pipeline is clear, WordPiece, Unigram LM, and byte-level tokenizers become easier to compare as engineering trade-offs.</p>
 </section>
 
 <!-- ================================================================ -->
@@ -257,7 +257,7 @@ def _get_stats(ids):
 <!-- ================================================================ -->
 <section class="card" id="s1-6">
   <h3>1.6 Deep Dive: The Compression Heuristic of Frequency Selection</h3>
-  <p>The previous section implemented <code>_get_stats</code>. Next, we need to answer a core question: <strong>Why does BPE always merge the most frequent pair?</strong></p>
+  <p>The previous section implemented <code>_get_stats</code>. The next question is: <strong>Why does BPE always merge the most frequent pair?</strong></p>
 
   <h4>Compression Perspective</h4>
   <p>Each merge replaces all occurrences of <span class="katex-inline" data-expr="(a,b)" aria-label="(a,b)" role="img"></span> in the sequence with a new symbol <span class="katex-inline" data-expr="c" aria-label="c" role="img"></span>. After replacement, the sequence length decreases by <span class="katex-inline" data-expr="f" aria-label="f" role="img"></span> (where <span class="katex-inline" data-expr="f" aria-label="f" role="img"></span> is the frequency of that pair), and the vocabulary increases by 1. Choosing the most frequent pair means <strong>maximizing the marginal compression ratio</strong> <span class="katex-inline" data-expr="\Delta L / \Delta V" aria-label="\Delta L / \Delta V" role="img"></span> at each step. This is a simple and effective greedy heuristic; it does not guarantee global optimality, and practical effectiveness depends on the corpus, target vocabulary size, pre-tokenization, and tie-breaking rules.</p>
@@ -283,7 +283,7 @@ def _get_stats(ids):
 <!-- ================================================================ -->
 <section class="card" id="s1-7">
   <h3>1.7 Programming Exercise 2: Implementing Pair Replacement</h3>
-  <p>After finding the highest frequency pair, we need to <strong>replace in-place</strong> all occurrences in the sequence. This is the core operation of BPE training.</p>
+  <p>After finding the highest-frequency pair, the training loop must <strong>replace all non-overlapping occurrences</strong> in the sequence. This is the core operation of BPE training.</p>
 
   <div class="coding-exercise">
     <h4>🖥️ Exercise 2: Implement _merge</h4>
@@ -619,7 +619,7 @@ def encode(text, merges):
     <p>Grouping cost cannot be ignored either: Chinese <code>1.50</code> compared to English <code>0.30</code> gives a disparity of <code>1.50/0.30=5.0</code>. This means the same 8K token context can hold far fewer Chinese characters than English characters. When evaluating a tokenizer, you must consider compression rate, round-trip, and embedding parameters simultaneously, not just the vocabulary size.</p>
   </div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The tokenizer is part of the model architecture. It determines what "text length" means to the model, and also determines the actual cost of embeddings, attention, and KV Cache.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The tokenizer is part of the model architecture. It determines what "text length" means to the model, and also determines the actual cost of embeddings, attention, and KV Cache.</div></div>
 </section>
 
 <section class="card" id="s1-12b">
@@ -659,7 +659,7 @@ def encode(text, merges):
   <p>Therefore, production models typically freeze existing token IDs and only append new tokens at the end of the vocabulary. If a complete tokenizer replacement is needed, it usually implies the need for continued pre-training or at least a longer adaptation training, as the geometric structure of the entire embedding space has changed.</p>
 
   <h4>4. The tokenizer version must be released together with the model</h4>
-  <p>A reproducible model package must include at least <code>tokenizer.json</code> or the SentencePiece model, special token mapping, chat template, normalization rules, and model configuration simultaneously. Releasing only <code>model.safetensors</code> is insufficient to reproduce the same model behavior. When loading a model, the inference service should also check:</p>
+  <p>A reproducible model package must include the tokenizer artifact (<code>tokenizer.json</code> or a SentencePiece model), special token mapping, chat template, normalization rules, and model configuration. Releasing only <code>model.safetensors</code> is insufficient to reproduce model behavior. When loading a model, the inference service should also check:</p>
   <div class="code-block" data-lang="text">
 config.vocab_size == tokenizer.vocab_size
 special token ids match model config
@@ -668,7 +668,7 @@ pad/eos/bos ids are explicit
 round-trip tests pass for multilingual and tool-call samples</div>
   <p>These checks are not formalities. If the tokenizer changes how Chinese, code indentation, JSON quotes, or emojis are segmented, the model's context length, generation probability, and stopping behavior will all change; this will propagate all the way to weight loading in Chapter 6, sequence log probabilities in Chapter 9, and token costs in Chapter 10.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> The tokenizer defines the discrete interface the model can read and write. BPE merge rules, special tokens, chat templates, and vocab size must be versioned together with the model; otherwise, the training loss, alignment data, checkpoint loading, and inference service are not looking at the same task.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Takeaway:</strong> The tokenizer defines the discrete interface the model can read and write. BPE merge rules, special tokens, chat templates, and vocab size must be versioned together with the model; otherwise, the training loss, alignment data, checkpoint loading, and inference service are not looking at the same task.</div></div>
 </section>
 
 <section class="card" id="s1-12c">
@@ -759,15 +759,15 @@ round-trip tests pass for multilingual and tool-call samples</div>
     </table>
   </div>
 
-  <p>Therefore, a tokenizer change is an interface migration. It can be safe only when the release artifact includes merge rules, special token IDs, chat template, normalization, processor placeholders, and compatibility tests. For training engineers, this defines the loss boundary. For inference engineers, it defines the parser boundary, tool execution boundary, and multimodal token budget. Treating the template as simple UI formatting is one of the fastest ways to create silent model behavior drift.</p>
+  <p>Therefore, a tokenizer change is an interface migration. It is safe only when the release artifact includes merge rules, special token IDs, chat template, normalization, processor placeholders, and compatibility tests. For training engineers, this defines the loss boundary. For inference engineers, it defines the parser boundary, tool execution boundary, and multimodal token budget. Treating the template as simple UI formatting is one of the fastest ways to create silent model behavior drift.</p>
 </section>
 
 <section class="card" id="s1-12d">
   <h3>1.12D Multilingual Tokenizer Training: From Corpus Ratio to Token Cost</h3>
-  <p>For real-world LLMs, the tokenizer is not a tool casually trained on an English corpus, but a data interface across languages, scripts, and domains. It determines how much information different languages can express within the same context window, and also affects the effective text volume in a training batch, inference billing, KV Cache memory, and long-context user experience. Multilingual models especially need to treat tokenizer training as a data engineering decision.</p>
+  <p>For real-world LLMs, the tokenizer is not something to train casually on an English corpus; it is a data interface across languages, scripts, and domains. It determines how much information different languages can express within the same context window, and it affects effective text volume in a training batch, inference billing, KV Cache memory, and long-context user experience. Multilingual models especially need to treat tokenizer training as a data engineering decision.</p>
 
   <h4>1. Corpus ratio changes merge rules</h4>
-  <p>BPE only looks at the frequency of adjacent symbols in the training corpus. If English accounts for 95% of the tokenizer training corpus, while Chinese, Arabic, Hindi, code, and mathematical formulas account for a very small proportion, high-frequency merges will prioritize English patterns; other languages will more often fall back to bytes or short fragments, manifesting as more tokens and reduced context capacity. Conversely, blindly oversampling for a minority language will also sacrifice the compression rate for high-traffic languages and domain texts.</p>
+  <p>BPE only looks at the frequency of adjacent symbols in the training corpus. If English accounts for 95% of the tokenizer training corpus while Chinese, Arabic, Hindi, code, and mathematical formulas occupy only a small share, high-frequency merges will prioritize English patterns. Other languages will more often fall back to bytes or short fragments, which appears as higher token counts and reduced context capacity. Conversely, blindly oversampling a minority language can sacrifice compression for high-traffic languages and domain text.</p>
   <div class="table-wrap">
     <table>
       <tr><th>Design Item</th><th>Engineering Problem</th><th>Recommended Practice</th><th>Typical Failure</th></tr>
@@ -788,7 +788,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
   </ul>
   <p>Assume the same tokenizer produces an average of 300 tokens for 1,000 English characters and 1,500 tokens for 1,000 Chinese characters. In an 8K token context, English can accommodate approximately 26,666 characters, while Chinese can accommodate approximately 5,333 characters. This difference directly affects long-text Q&A, RAG chunk size, cache hit rate, and user-perceived cost.</p>
 
-  <h4>Worked Example: Why tokenizer training sampling cannot just look at total volume</h4>
+  <h4>Worked Example: Why tokenizer training should not follow raw volume alone</h4>
   <p>Suppose the tokenizer training budget is 10B characters, and the raw candidate data consists of 8B English, 1B Chinese, 0.8B code, and 0.2B other languages. If trained directly according to the raw proportions, English pairs will dominate the first tens of thousands of merges; if all languages are uniformly sampled, it will cause high-traffic languages to lose too much compression rate. A safer approach is to first define the service goals, then set the sampling ratio:</p>
   <ol>
     <li>Set minimum coverage for major service languages, e.g., English, Chinese, and code each account for at least a certain proportion of the tokenizer training samples.</li>
@@ -800,7 +800,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
 
   <h4>3. Tokenizer decisions propagate to training and inference</h4>
   <p>The impact of a multilingual tokenizer is not confined to Chapter 1. Data packing in Chapter 7 cuts batches by token count, not character count; SFT/DPO in Chapter 9 calculates loss and log probabilities on token sequences; KV Cache, TTFT, TPOT, and billing in Chapter 10 all occur per token. A higher fertility for a language means the same text consumes more training FLOPs, more KV Cache, and higher inference latency.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The tokenizer cannot be treated as a "preprocessing detail." For training and inference engineers, the tokenizer is the common interface between data distribution, model parameters, context capacity, service cost, and multilingual experience.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The tokenizer cannot be treated as a "preprocessing detail." For training and inference engineers, the tokenizer is the common interface between data distribution, model parameters, context capacity, service cost, and multilingual experience.</div></div>
 </section>
 
 <!-- ================================================================ -->

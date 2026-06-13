@@ -41,10 +41,10 @@
     <li><strong>Exercise Output:</strong> Submit implementations of MHA/GQA/MLA, a table of parameter counts and KV Cache sizes, and an ablation description with different head configurations; use <a href="../assignments/ch04_multihead/" target="_blank">Ch04 Multi-Head Attention Assignment Tests</a> to check core implementations.</li>
   </ul>
   <div class="dependency-note"><strong>Required Prior Skills:</strong> Ch03 single-head attention, reshape/transpose/contiguous, head dimension splitting, parameter count and KV cache byte estimation.<br><strong>Internalization for This Chapter:</strong> MHA, MQA, GQA, and MLA are uniformly decomposed into Q/K/V projections, head layout, RoPE positional channels, and cache accounting; each architecture name must be traced back to tensor shapes and bandwidth pressure.<br><strong>Validation Signal:</strong> You can manually calculate the parameters, K/V cache size, and decode bandwidth for one attention layer, and determine what a given head compression scheme saves and potentially loses in the Ch10 serving context.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter extends the single-head retrieval from Ch03 into multi-subspace representations and, for the first time, directly connects model architecture to inference memory. GQA/MLA are not just architecture names but foundational prerequisites for Ch10 KV cache, decode bandwidth, and serving capacity planning.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter extends the single-head retrieval from Ch03 into multi-subspace representations and, for the first time, directly connects model architecture to inference memory. GQA/MLA are not just architecture names but foundational prerequisites for Ch10 KV cache, decode bandwidth, and serving capacity planning.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 4 Knowledge Map: Before this chapter, you need to understand head layout and KV cache estimation. This chapter covers MHA, GQA, and MLA. Afterward, you can continue to KV quantization and serving kernels">
+    <div class="foundation-graph" role="img" aria-label="Chapter 4 knowledge map: before this chapter, understand head layout and KV cache estimation; in this chapter, learn MHA, GQA, and MLA; afterward, read about KV quantization and serving kernels.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-04" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -457,12 +457,12 @@ attn score: [B, H_q,  1, t]</div>
     </table>
   </div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> The mathematical differences between MHA/GQA/MLA must be mapped to two engineering problems: how to compute full sequences in parallel during training or prefill, and how to minimize the storage and reading of historical K/V during decode. Only by explaining these two layouts separately can one truly understand why KV cache compression is important.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Takeaway:</strong> The mathematical differences between MHA, GQA, and MLA matter because they change two engineering problems: how full sequences are computed in parallel during training or prefill, and how much historical K/V must be stored and read during decode. Keeping these layouts separate is the key to understanding KV cache compression.</div></div>
 </section>
 
 <section class="card" id="s4-5c">
   <h3>4.5C Converting an MHA Checkpoint to GQA: Compression Is Not Simply Changing the Config</h3>
-  <p>In practical engineering, a common need arises: you have an MHA checkpoint, but the inference service bottleneck is the KV Cache, so you want to change the model from <code>H_q=H_kv</code> to GQA with <code>H_q &gt; H_kv</code>. This process cannot simply change <code>n_kv_heads</code> in the config. The K/V projection weights, optimizer states, cache layout, and quality evaluation all need to be realigned.</p>
+  <p>A common production scenario is an MHA checkpoint whose inference bottleneck is the KV Cache. Converting it from <code>H_q=H_kv</code> to GQA with <code>H_q &gt; H_kv</code> cannot be done by simply changing <code>n_kv_heads</code> in the config. The K/V projection weights, optimizer states, cache layout, and quality evaluation all need to be realigned.</p>
 
   <h4>1. How to Fold the Weights</h4>
   <p>Suppose the original model has <code>H_q=8</code> K/V heads, and you want to convert it to <code>H_kv=2</code>. Every 4 original K/V heads will become 1 shared KV head. The most common initialization method is to average the original K/V projections by group:</p>

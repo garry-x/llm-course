@@ -41,10 +41,10 @@
     <li><strong>Exercise Outputs:</strong> Submit Block implementation, gradient check, normalization ablation, and analysis of FFN parameter count, FLOPs, and activation memory; supporting assignments are in <a href="../assignments/ch05_block/">assignments/ch05_block/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Prerequisite Skills:</strong> PyTorch Module, residual addition, matrix multiplication, activation functions, LayerNorm/RMSNorm statistics, and backpropagation checks.<br><strong>Internalization for This Chapter:</strong> Pre-Norm stability will trace back to the gradient path; FFN/SwiGLU will trace back to matrix parameters and activation gating; mHC will trace back to how residual connections are mixed under constraints.<br><strong>Validation Signal:</strong> You can explain the forward pass, parameter count, FLOPs, and gradient path of a Transformer block, and trace a norm or FFN implementation error back to a failed Ch06 GPT assembly.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter organizes attention, FFN, norm, and residuals into a stackable block. It is the direct building block for the Ch06 GPT assembly and a shared dependency for Ch07 training stability, Ch10 kernel fusion, and model interpretability analysis.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter organizes attention, FFN, norm, and residuals into a stackable block. It is the direct building block for the Ch06 GPT assembly and a shared dependency for Ch07 training stability, Ch10 kernel fusion, and model interpretability analysis.</p>
   <div class="foundation-map">
     <h4>Learner Knowledge Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 5 Knowledge Map: Before learning this chapter, you need to understand residuals, norm, FFN, and gradient paths. This chapter teaches the Transformer block. After learning, you can continue to read about norm, FFN variants, and kernel fusion.">
+    <div class="foundation-graph" role="img" aria-label="Chapter 5 knowledge map: before this chapter, understand residuals, normalization, FFN, and gradient paths; in this chapter, learn the Transformer block; afterward, read about normalization variants, FFN variants, and kernel fusion.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-05" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -453,14 +453,14 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
   </ol>
 
   <h4>Boundaries of Conclusions</h4>
-  <p>If the probe accuracy is very high, it only indicates that the hidden state contains linearly readable information; if patching can restore the output, it indicates that this activation has a causal effect on the behavior for this set of prompts; if ablation degrades performance, it indicates the component is important for the current task. However, these conclusions depend on the prompt distribution, layer position, replacement method, and evaluation metric, and cannot be directly generalized to "all of the model's syntactic ability is in this head."</p>
+  <p>High probe accuracy only shows that the hidden state contains linearly readable information. If patching restores the output, this activation has a causal effect on the behavior for this prompt set. If ablation degrades performance, the component matters for the current task. These conclusions still depend on prompt distribution, layer position, replacement method, and evaluation metric, so they cannot be generalized to "all of the model's syntactic ability is in this head."</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Interpretability is not about drawing a heatmap. A rigorous approach is to first define a behavioral metric, such as the target logit difference, and then use contrastive samples, patching, and ablation to determine which internal states have an effect on that behavior.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Interpretability is not about drawing a heatmap. A rigorous approach is to first define a behavioral metric, such as the target logit difference, and then use contrastive samples, patching, and ablation to determine which internal states have an effect on that behavior.</div></div>
 </section>
 
 <section class="card" id="s5-5b">
   <h3>5.5B The Spectrum of Interpretability Methods: From Reading Representations to Intervening on Behavior</h3>
-  <p>Mechanistic interpretability is not a single technique, but a set of methods with increasing evidence strength. The most important thing in this course is not to memorize terminology, but to be able to articulate what question each method answers, what controls are needed, and how far the conclusions can be pushed. A useful ordering is: first observe representations, then perform attribution, then causal intervention, and only then discuss steering or model editing.</p>
+  <p>Mechanistic interpretability is not a single technique, but a set of methods with increasing evidence strength. In this course, the priority is to articulate what question each method answers, what controls are needed, and how far the conclusions can be pushed. A useful ordering is: first observe representations, then perform attribution, then causal intervention, and only then discuss steering or model editing.</p>
 
   <h4>1. Method Hierarchy and Conclusion Strength</h4>
   <div class="table-wrap">
@@ -501,7 +501,7 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
     <li><strong>Capability retention:</strong> Do math, code, long context, and refusal boundaries degrade?</li>
     <li><strong>Rollback capability:</strong> Can the intervention be versioned, compared, and undone?</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The ultimate value of interpretability is not "naming neurons," but decomposing model behavior into testable hypotheses. The closer you get to intervention and editing, the more you must report side effects, generalization, and rollback boundaries.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The ultimate value of interpretability is not "naming neurons," but decomposing model behavior into testable hypotheses. The closer you get to intervention and editing, the more you must report side effects, generalization, and rollback boundaries.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -748,7 +748,7 @@ print(f"All parameters have gradients: {all(p.grad is not None for p in block.pa
   <div class="math-box"><div class="label">Residual update scale</div>
     <div class="katex" data-expr="x_{l+1}=x_l+\alpha_l f_l(\mathrm{Norm}(x_l))" aria-label="x_{l+1}=x_l+\alpha_l f_l(Norm(x_l))" role="img"></div>
   </div>
-  <p><span class="katex-inline" data-expr="\alpha_l" aria-label="alpha_l" role="img"></span> can be a fixed scaling, an implicit result of the initialization strategy, or an explicit gate. Its role is not to change the model's representational capacity, but to control the magnitude of each layer's perturbation to the residual stream during early training. If <code>grad_norm</code> spikes frequently in the first few hundred steps, besides checking the learning rate and data anomalies, one should also inspect the residual output scale and initialization.</p>
+  <p><span class="katex-inline" data-expr="\alpha_l" aria-label="alpha_l" role="img"></span> can be a fixed scaling, an implicit result of the initialization strategy, or an explicit gate. Its role is not to change the model's representational capacity, but to control the magnitude of each layer's perturbation to the residual stream during early training. If <code>grad_norm</code> spikes frequently in the first few hundred steps, inspect the residual output scale and initialization in addition to the learning rate and data anomalies.</p>
 
   <h4>2. Dropout Placement Affects Training and Inference Equivalence</h4>
   <p>Pedagogical code often places dropout after the attention/FFN output and before the residual addition:</p>
@@ -762,7 +762,7 @@ x = x + dropout(ffn(norm2(x)))</div>  <p>The meaning of this position is: during
     <li><strong>RMSNorm/LayerNorm statistical error:</strong> Low-precision sum of squares and mean accumulate errors over large dimensions, affecting scale stability.</li>
     <li><strong>Attention softmax overflow or underflow:</strong> Overly large logits, inappropriate mask sentinel values, or fully masked rows can produce NaN.</li>
   </ul>
-  <p>Many high-performance kernels handle these details internally; hand-written teaching implementations need to explicitly know which tensors should have their precision converted.</p>
+  <p>Many high-performance kernels handle these details internally; hand-written teaching implementations must explicitly choose which tensors are accumulated in higher precision.</p>
 
   <h4>4. Bias strategy must be consistent with the architecture convention</h4>
   <p>Modern decoder-only LLMs often omit bias in QKV, output projection, and SwiGLU linear layers, and use RMSNorm instead of LayerNorm with beta. This is not a hard theorem, but a set of engineering conventions: reduce parameters and kernel branches, and cooperate with the scale control of Pre-Norm/RMSNorm. If reproducing a specific checkpoint, the bias strategy must be consistent with the original model; otherwise, the parameter count, state_dict keys, and output distribution will all mismatch.</p>
@@ -790,7 +790,7 @@ x = x + dropout(ffn(norm2(x)))</div>  <p>The meaning of this position is: during
       <tr><td>Outputs differ between implementations</td><td>Bias, RMSNorm eps, mask semantics, dropout train/eval mode</td><td>Fix seed, compare hidden states and parameter names layer by layer</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The engineering quality of a Transformer Block is not just about whether the forward pass returns the correct shape. A reliable implementation should be able to explain residual update norm, norm precision, dropout position, bias strategy, and checkpointing decisions, and be able to locate the specific sublayer when loss or throughput is abnormal.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The engineering quality of a Transformer Block is not just about whether the forward pass returns the correct shape. A reliable implementation should be able to explain residual update norm, norm precision, dropout position, bias strategy, and checkpointing decisions, and be able to locate the specific sublayer when loss or throughput is abnormal.</div></div>
 </section>
 
 <!-- ================================================================ -->

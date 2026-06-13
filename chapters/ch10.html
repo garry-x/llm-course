@@ -32,7 +32,7 @@
 
 <section class="card">
   <h3>How to Learn This Chapter: Classify Engineering Optimizations by Bottleneck</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> Inference optimization is not a collection of isolated terms. KV Cache solves redundant computation, Quantization solves memory/bandwidth, FlashAttention solves attention IO, RAG solves knowledge updates, vLLM solves serving throughput. Sparse attention, linear attention, state-space models, external memory, Triton, and multimodality belong to the frontier map; first-time learners should establish a classification.</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> Inference optimization is not a collection of isolated terms. KV Cache removes redundant computation, quantization reduces memory and bandwidth pressure, FlashAttention improves attention IO, RAG updates knowledge without retraining, and vLLM improves serving throughput. Sparse attention, linear attention, state-space models, external memory, Triton, and multimodality belong to the frontier map; first-time learners should build a clear taxonomy before chasing individual techniques.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Basic concepts of the generation process, GPU memory, and batch from Chapter 8.</li>
     <li><strong>Learning Goals:</strong> Decompose inference bottlenecks into compute, memory, IO, scheduling, retrieval, deployment, and runtime overload issues, and design KV Cache, quantization, RAG, continuous batching admission, benchmarking, SLO monitoring, production release checks, and load-shedding responses.</li>
@@ -41,10 +41,10 @@
     <li><strong>Practice Artifacts:</strong> Build KV memory calculations, prefix cache savings estimates, continuous batching admission reports, quantization error experiments, RAG demos, tool schema and MCP runtime checks, production rollout reports, serving overload responses, stress test JSON, P50/P95/P99 reports, metric conclusion summaries, and deployment plans. Optional practice files are available at <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Required Prior Knowledge:</strong> Computation graph, KV cache, generation strategies, evaluation metrics from the first nine chapters, as well as TTFT, TPOT, throughput, P95/P99, active KV tokens, peak memory, and cache hit rate.<br><strong>Internalization for This Chapter:</strong> Every service problem will be decomposed into prefill, decode, RAG/tool, network streaming output, queuing, admission control, and fallback strategies; KV, quantization, prefix cache, RAG, tool checks, and multimodal tokens must all enter the same SLO/cost ledger.<br><strong>Validation Signal:</strong> You can write a deployment report explaining where the bottleneck is, which phase the optimization changed, whether quality regressed, what the capacity boundary is, and when to reject conclusions that "only look at average latency."</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter transforms the models, training, generation, and alignment results from the previous nine chapters into a service capable of handling traffic. It requires training engineers to understand how architecture choices change cache and sequence-state costs, and inference engineers to prove the system is deployable using workload, SLO, capacity, rollback, and security boundaries.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter transforms the models, training, generation, and alignment results from the previous nine chapters into a service capable of handling traffic. It requires training engineers to understand how architecture choices change cache and sequence-state costs, and inference engineers to prove the system is deployable using workload, SLO, capacity, rollback, and security boundaries.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 10 Knowledge Map: Before learning this chapter, you need to understand the model computation graph, KV cache, generation strategies, and SLO. This chapter teaches LLM serving. After learning, you can continue to read about disaggregated prefilling, MCP, and multimodal serving">
+    <div class="foundation-graph" role="img" aria-label="Chapter 10 knowledge map: before this chapter, understand model computation graphs, KV cache, generation strategies, and SLO; in this chapter, learn LLM serving; afterward, read about disaggregated prefilling, MCP, and multimodal serving.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-10" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -317,7 +317,7 @@ print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
   </div>
 
   <h4>How to Combine and How to Evaluate</h4>
-  <p>Sparse layers and global compression layers can be interleaved per layer, fused in parallel, or used only for some long-context layers. When analyzing such methods in the course, only three questions need to be asked: how many KV items are accessed reduced from <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> to, what is the additional indexing/compression overhead, and whether quality degrades on long-dependency, precise citation, and multi-hop tasks. Any claim of "1M context" or "inference FLOPs reduced to X" must be tied to a specific model, context length, hardware, kernel, and evaluation set.</p>
+  <p>Sparse layers and global compression layers can be interleaved per layer, fused in parallel, or used only for some long-context layers. When analyzing such methods in this course, ask three questions: from <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> KV items to how many accessed items, what additional indexing or compression overhead is introduced, and whether quality degrades on long-dependency, precise citation, or multi-hop tasks. Any claim of "1M context" or "inference FLOPs reduced to X" must be tied to a specific model, context length, hardware, kernel, and evaluation set.</p>
   <div class="info-box tip"><span class="icon">📚</span><div><strong>Reading Tip:</strong> Sparse attention, compressed attention, external memory, reasoning effort, and test-time compute are all suitable as engineering case studies of "how cutting-edge systems make trade-offs around long contexts, memory, throughput, and inference budget." When learning, separate the principles that can be reused long-term from the specifications that change with model versions.</div></div>
 </section>
 
@@ -419,7 +419,7 @@ print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
     <li><strong>Systems ledger:</strong> What is the actual state or cache size per token/layer, which kernels exist, and how do TTFT, TPOT, throughput, and memory change at the target context length?</li>
     <li><strong>Quality ledger:</strong> Are evaluations separated by short context, long context, multi-hop recall, citation, code, tool use, and RL/post-training tasks rather than only average benchmark scores?</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Full attention, sparse attention, linear attention, and SSMs are not interchangeable speed tricks. They define different memory contracts. Senior training and inference engineers should ask what state is preserved, what exact lookup path remains, what kernel makes it fast, and which task slices prove that the cheaper memory did not erase the information the product needs.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Full attention, sparse attention, linear attention, and SSMs are not interchangeable speed tricks. They define different memory contracts. Senior training and inference engineers should ask what state is preserved, what exact lookup path remains, what kernel makes it fast, and which task slices prove that the cheaper memory did not erase the information the product needs.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -638,7 +638,7 @@ Please provide an accurate and concise answer based on the document content. If 
 <!-- ================================================================ -->
 <section class="card" id="s10-8a">
   <h3>10.8A RAG Evaluation: Decomposing Errors into Retrieval Errors and Generation Errors</h3>
-  <p>The difficulty of an RAG system is not "stuffing documents into a prompt," but determining at which layer the failure occurred. If an answer is wrong, it could be because the document chunking cut off key information, the embedding didn't recall the correct chunk, the reranker ranked incorrectly, the assembled context exceeded the window, or the generation model didn't faithfully use the retrieved content. Course-level RAG evaluation must examine these components separately.</p>
+  <p>The difficulty of an RAG system is not "stuffing documents into a prompt," but determining where the failure occurred. If an answer is wrong, document chunking may have cut off key information, the embedding model may have missed the right chunk, the reranker may have ranked incorrectly, the assembled context may have exceeded the window, or the generation model may not have used the retrieved content faithfully. A course-level RAG evaluation must examine these components separately.</p>
 
   <h4>Failure Decomposition</h4>
   <div class="table-wrap">
@@ -730,7 +730,7 @@ Please provide an accurate and concise answer based on the document content. If 
     <li><strong>Record cost dimensions:</strong> A larger top-k is not always better; it increases token cost, TTFT, and context interference.</li>
   </ol>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The quality of RAG is not a single "similarity score." Before going live, you must at least know: whether relevant documents were recalled, whether they were ranked high, whether they entered the prompt, whether the model faithfully used them, and the impact of these changes on latency and cost.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The quality of RAG is not a single "similarity score." Before going live, you must at least know: whether relevant documents were recalled, whether they were ranked high, whether they entered the prompt, whether the model faithfully used them, and the impact of these changes on latency and cost.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -911,7 +911,7 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
 
   <p>If the model searches with the same query three times in a row, the system should stop the tool loop and require the model to answer based on existing observations or clarify with the user. If the retrieval result is empty, the model should not fabricate requirements, but should report "Insufficient evidence found" and suggest the next actionable step. This behavioral boundary is the same issue as the benchmark validity and safety assessment in Ch11: a high-scoring agent is not one that calls tools as many times as possible, but one that calls the right tool at the right time and stops when evidence is insufficient.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Tool use is part of reasoning engineering. It simultaneously changes quality, latency, cost, and risk: you need to evaluate tool selection, parameter correctness, loop budget, tool result fidelity, safety boundaries, agent trace, and tool context budget, not just whether the final answer looks reasonable.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Tool use is part of reasoning engineering. It simultaneously changes quality, latency, cost, and risk: you need to evaluate tool selection, parameter correctness, loop budget, tool result fidelity, safety boundaries, agent trace, and tool context budget, not just whether the final answer looks reasonable.</div></div>
 </section>
 
 <section class="card" id="s10-9b">
@@ -942,7 +942,7 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
   </ul>
 
   <p>A common failure is "the long-context path pass rate improves, but token cost and TTFT increase exponentially, and citations are unstable." In this case, the action item may not be to switch to a larger model, but rather to reduce tool schema, lazy-load tools, change chunk/rerank, compress history, clear re-fetchable observations, or write long-term state to permission-controlled memory. Context engineering is therefore the intersection of RAG, Agent, long-context serving, and observability.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Context is not an infinitely free "prompt space." It is the common carrier of the model's working memory, latency cost, privacy boundaries, and quality evidence; any agent or RAG launch report should explain where the context comes from, why it enters the window, when it is compressed or cleared, and whether these actions break citations, permissions, and SLOs.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Context is not an infinitely free "prompt space." It is the common carrier of the model's working memory, latency cost, privacy boundaries, and quality evidence; any agent or RAG launch report should explain where the context comes from, why it enters the window, when it is compressed or cleared, and whether these actions break citations, permissions, and SLOs.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1097,7 +1097,7 @@ summary = build_benchmark_summary(
     conclusion="hybrid+rerank improves this fixed support QA dev set, but does not prove open-domain QA quality",
 )</div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The goal of a benchmark is not to create a leaderboard, but to make an engineering decision debatable: whether it is worth adding rerank, whether it is worth increasing max tokens, whether it is worth sacrificing a bit of latency for higher citation accuracy.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The goal of a benchmark is not to create a leaderboard, but to make an engineering decision debatable: whether it is worth adding rerank, whether it is worth increasing max tokens, whether it is worth sacrificing a bit of latency for higher citation accuracy.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1119,11 +1119,11 @@ summary = build_benchmark_summary(
 
   <h4>Core Innovation 2: Continuous Batching</h4>
   <p>Traditional batch processing: Wait for all requests in a batch to finish before starting the next batch. Problem: A long sequence blocks the entire batch, while short sequences wait idly.</p>
-  <p>Continuous Batching: <strong>After each forward pass, sequences that have finished generation immediately exit the batch, and new requests immediately join</strong>. No need to wait for the entire batch to complete. This is like "table turnover" in a restaurant—guests who finish eating leave immediately, and waiting guests are seated immediately, rather than waiting for the entire table to finish.</p>
+  <p>Continuous Batching: <strong>After each forward pass, completed sequences leave the batch and new requests enter immediately</strong>. The scheduler no longer waits for every sequence in the batch to finish. The result is closer to table turnover: completed requests leave, waiting requests enter, and the GPU keeps useful work queued.</p>
   <p>Implementation key: Each step executes a "prefill + decode" mixed scheduling, and the kernel needs to support different sequence lengths and tensor shapes.</p>
 
   <h4>Scheduling Admission: max_num_seqs, max_num_batched_tokens, and active KV</h4>
-  <p>Continuous batching does not mean "stuff all requests into the GPU." Each scheduling step is constrained by at least three types of budgets simultaneously: how many sequences can be processed in this round, how many tokens can be processed, and how much KV cache has been committed to retain. vLLM's <code>max_num_seqs</code>, <code>max_num_batched_tokens</code>, SGLang's continuous decode / RadixAttention configuration, TensorRT-LLM's in-flight batching, all essentially answer the same engineering question: which requests enter the batch now, which requests continue queuing, and whether queuing has already broken the SLO.</p>
+  <p>Continuous batching does not mean "stuff all requests into the GPU." Each scheduling step is constrained by at least three budgets together: how many sequences can be processed in this round, how many tokens can be processed, and how much KV cache must be retained. vLLM's <code>max_num_seqs</code>, <code>max_num_batched_tokens</code>, SGLang's continuous decode / RadixAttention configuration, and TensorRT-LLM's in-flight batching all answer the same engineering question: which requests enter the batch now, which requests keep waiting, and whether the queue has already broken the SLO.</p>
 
   <table class="metrics-table">
     <thead><tr><th>Scheduling Budget</th><th>What it Constrains</th><th>Typical Failure</th><th>Priority Action</th></tr></thead>
@@ -1276,7 +1276,7 @@ summary = build_benchmark_summary(
 
   <p>When reading MoE benchmarks from vLLM, SGLang, or TensorRT-LLM, do not only look at total tokens/s. You need to know whether the workload is interactive low concurrency or batch high throughput, whether the prompt/output length distribution represents real traffic, what the expert activation density is, whether prefill/decode decoupling is enabled, whether EPLB is enabled, whether AllToAll occurs on same-node NVLink or across nodes, and whether the KV cache for each DP rank is independent. If a configuration works on A100/H100/NVL72, it cannot be automatically extrapolated to consumer-grade GPUs, different network topologies, or ultra-sparse MoE.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The optimization target for MoE serving is not the single statement "more parameters but fewer per token," but rather the combination of expert weight bandwidth, token dispatch, AllToAll, KV cache, expert load skew, and tail latency. An online report must compare the dense/TP baseline, EP, DP+EP, and EPLB under the same workload; otherwise, it is impossible to determine whether MoE is truly more economical, faster, or more stable than dense serving.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The optimization target for MoE serving is not the single statement "more parameters but fewer per token," but rather the combination of expert weight bandwidth, token dispatch, AllToAll, KV cache, expert load skew, and tail latency. An online report must compare the dense/TP baseline, EP, DP+EP, and EPLB under the same workload; otherwise, it is impossible to determine whether MoE is truly more economical, faster, or more stable than dense serving.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1533,7 +1533,7 @@ assert plan["overall_pass"]</div>
     <li><strong>Bottleneck Attribution:</strong> Use the capacity formulas above to explain which curve broke first and why.</li>
     <li><strong>Engineering Actions:</strong> List a parameter adjustment or architecture modification, and explain which metric it improved and what it sacrificed.</li>
   </ol>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> Inference engineering training should not stop at "I know how to call an inference API." You need to be able to decompose a real service into workload, memory, scheduling, cache, quality, and cost, and use experimental results to support capacity decisions.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Inference engineering training should not stop at "I know how to call an inference API." You need to be able to decompose a real service into workload, memory, scheduling, cache, quality, and cost, and use experimental results to support capacity decisions.</div></div>
 </section>
 
 <section class="card" id="s10-13b">
@@ -1631,7 +1631,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   </ol>
   <p>This example illustrates: training method, weight format, tokenizer, quantization, and serving parameters collectively define the final model. Any change can affect quality, latency, memory, and safety behavior, so the release package must version them together.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> The deliverable of LLM engineering is not "a checkpoint file", but a loadable, reproducible, stress-testable, canary-deployable, rollback-capable model release package. Training metrics only translate into online capability when they are reproduced within this release package.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The deliverable of LLM engineering is not "a checkpoint file", but a loadable, reproducible, stress-testable, canary-deployable, rollback-capable model release package. Training metrics only translate into online capability when they are reproduced within this release package.</div></div>
 </section>
 
 <section class="card" id="s10-13c">
@@ -1680,7 +1680,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
     <li>Identify the bottleneck under the unified engine: do long prompts raise the TTFT of short requests, and does decode saturate first under high concurrency?</li>
     <li>If prefill and decode clearly interfere with each other, then try prefill/decode worker ratios of 1:1, 1:2, 2:1, and report throughput@latency, not just tokens/s.</li>
   </ol>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> Prefill/decode disaggregation transforms LLM serving from "a single model process" into a "distributed system with a KV cache transfer protocol". Senior inference engineers must be able to judge whether the split is worthwhile, whether KV transfer becomes a new bottleneck, and how requests with different SLOs should be routed.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Prefill/decode disaggregation transforms LLM serving from "a single model process" into a "distributed system with a KV cache transfer protocol". Senior inference engineers must be able to judge whether the split is worthwhile, whether KV transfer becomes a new bottleneck, and how requests with different SLOs should be routed.</div></div>
 </section>
 
 <section class="card" id="s10-13d">
@@ -2142,8 +2142,8 @@ def forward(image, text_prompt):
       <tr><td>Open-source efficient VLM</td><td>Improve general multimodal capabilities through data ratios, training recipes, test-time strategies, and efficient inference</td><td>Open-source model reports are usually better for learning ablations: what do vision encoder, resolution, data mixture, and inference strategy each contribute?</td></tr>
     </table>
   </div>
-  <p>For example, the Qwen2.5-VL report places dynamic resolution, window attention, object localization, document/chart parsing, and absolute time encoding on the same line: it's not simply "higher image resolution," but answering how visual details, computational overhead, and temporal localization enter the model simultaneously. When reading such reports, break the mechanism into three questions: How are visual tokens generated, which tasks require preserving local pixel details, and how do temporal or positional encodings for video/long documents affect prefill cost?</p>
-  <p>These approaches are not mutually exclusive. A production system might use a strong multimodal model for open-ended visual QA, an OCR-first path for invoices and contracts, a lightweight vision model for routing or pre-filtering, and then pass key text and a few image crops to a long-context model. Engineers need to translate product requirements into "what visual information needs to be preserved, what information can be discarded, and which step is the most expensive."</p>
+  <p>For example, the Qwen2.5-VL report connects dynamic resolution, window attention, object localization, document/chart parsing, and absolute time encoding. The point is not simply "higher image resolution"; it is how visual detail, computational overhead, and temporal localization enter the model together. When reading such reports, break the mechanism into three questions: How are visual tokens generated, which tasks require preserving local pixel details, and how do temporal or positional encodings for video/long documents affect prefill cost?</p>
+  <p>These approaches are not mutually exclusive. A production system might use a strong multimodal model for open-ended visual QA, an OCR-first path for invoices and contracts, a lightweight vision model for routing or pre-filtering, and then pass key text and a few image crops to a long-context model. Engineers must translate product requirements into "what visual information must be preserved, what can be discarded, and which step is the most expensive."</p>
 
   <h4>Architecture Family: When Does Visual Information Enter the Language Model</h4>
   <p>The core difference between multimodal LLMs is not just "which vision encoder to use," but the form in which visual information enters the LLM during sequence modeling. This choice changes the training objective, inference cost, and scalability.</p>

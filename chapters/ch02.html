@@ -41,10 +41,10 @@
     <li><strong>Exercise Output:</strong> Submit embedding/positional encoding implementation, RoPE relative position numerical validation plot, and a one-page short report on extrapolation failure modes; use <a href="../assignments/ch02_embeddings/" target="_blank">Ch02 Positional Encoding Assignment Test</a> to check core implementation.</li>
   </ul>
   <div class="dependency-note"><strong>Required Skills:</strong> Matrix lookup, vector dot product, sin/cos periodicity, 2D rotation, and tensor shape tracking.<br><strong>Internalization for this Chapter:</strong> One-hot multiplied by the embedding matrix will be rewritten as a lookup table in 2.1; dot product and rotation matrix will prove in the RoPE derivation that "attention scores depend only on relative position"; shape discipline will run through token embedding, position ids, batch/seq dimensions, and extrapolation experiments.<br><strong>Validation Signal:</strong> You can trace from <code>[B,T]</code> to <code>[B,T,D]</code> and explain why a positional encoding bug affects Ch03 attention scores and Ch10 prefix cache.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter connects discrete tokens to a continuous vector space and gives each position a computable geometric semantics. It builds upon Ch01's token IDs and determines, going forward, Ch03's attention similarity computation, Ch08's long-context generation, and Ch10's prefix cache positional consistency.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter connects discrete tokens to a continuous vector space and gives each position a computable geometric semantics. It builds upon Ch01's token IDs and determines, going forward, Ch03's attention similarity computation, Ch08's long-context generation, and Ch10's prefix cache positional consistency.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 2 Knowledge Map: Before learning this chapter, you need to understand lookup tables, dot products, and rotation. This chapter teaches embeddings and positional encoding. After learning, you can continue to read about RoPE scaling and long contexts.">
+    <div class="foundation-graph" role="img" aria-label="Chapter 2 knowledge map: before this chapter, understand lookup tables, dot products, and rotation; in this chapter, learn embeddings and positional encoding; afterward, read about RoPE scaling and long contexts.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-02" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -205,7 +205,7 @@
 
 <section class="card" id="s2-1c">
   <h3>2.1C Embedding Space Diagnostics: Similarity, Anisotropy, and Frequency Effects</h3>
-  <p>After training an embedding matrix, one should not assume the representation is "well-learned" just because the loss has decreased. This course will repeatedly emphasize: the geometric structure of the vector space arises from the training objective and data distribution, and it also brings biases and failure modes. For LLM engineers, embedding diagnostics are early signals for discovering issues with the tokenizer, data mix, initialization, and weight tying.</p>
+  <p>After training an embedding matrix, do not assume the representation is "well-learned" just because the loss has decreased. This course repeatedly emphasizes that the geometric structure of the vector space comes from the training objective and data distribution, and it also carries biases and failure modes. For LLM engineers, embedding diagnostics are early signals for discovering issues with the tokenizer, data mix, initialization, and weight tying.</p>
 
   <h4>1. Row norm is not semantic strength</h4>
   <p>Each row in the embedding matrix <code>E[V, d]</code> corresponds to a token. A common phenomenon after training is that high-frequency tokens have larger row norms because they are updated more often; special tokens, spaces, punctuation, and common subwords may also form distinct clusters. A large norm does not mean greater semantic importance; it often mixes frequency, optimization history, and output layer gradients.</p>
@@ -244,7 +244,7 @@ cosine matrix excluding diagonal:
   </div>
 
   <h4>5. Engineering checkpoints for LLM embeddings</h4>
-  <p>When training or fine-tuning a model, it is recommended to run embedding diagnostics at least at the following times: after a tokenizer change, after adding special tokens, after enabling/disabling weight tying, before and after SFT starts, and when training loss is abnormal. Pay special attention to:</p>
+  <p>During training or fine-tuning, run embedding diagnostics after tokenizer changes, after adding special tokens, after changing weight tying, before and after SFT starts, and whenever training loss looks abnormal. Pay special attention to:</p>
   <ul>
     <li><strong>Whether new tokens are being trained:</strong> Do special tokens and domain terms have non-zero gradients and reasonable norms?</li>
     <li><strong>Whether padding leaks:</strong> Is the PAD row updated by the loss? Does the attention mask cause the model to attend to padding?</li>
@@ -252,7 +252,7 @@ cosine matrix excluding diagonal:
     <li><strong>Whether weight tying is consistent:</strong> When input embedding and LM head are shared, the output gradient updates all softmax rows; when not shared, the two spaces may gradually diverge.</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> Embeddings are not static semantic dictionaries, but parameter matrices shaped jointly by the training objective, tokenizer, frequency, and output layer. The value of diagnosing the embedding space lies in discovering systemic issues, not in using a single nearest neighbor or analogy example to prove the model "understands language."</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Takeaway:</strong> Embeddings are not static semantic dictionaries, but parameter matrices shaped jointly by the training objective, tokenizer, frequency, and output layer. The value of diagnosing the embedding space lies in discovering systemic issues, not in using a single nearest neighbor or analogy example to prove the model "understands language."</div></div>
 </section>
 
 <section class="card" id="s2-1d">
@@ -293,7 +293,7 @@ S2: I sat near the river bank.</div>
   <h4>4. Engineering Implication: Don't Mistake Embedding Similarity for Final Semantics</h4>
   <p>In fine-tuning, RAG reranking, or safety evaluation, if the nearest neighbors of a token's input embedding seem reasonable, it only indicates that the initial representation has no obvious anomaly. To truly understand model behavior, one must examine contextual hidden states, logits, task outputs, and failure examples. For instance, a domain term might be close to general words in embedding space but still be correctly extracted after contextualization; conversely, a newly added special token might have a normal embedding norm, yet the model may fail to use it as intended due to errors in the chat template or loss mask.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Static word vectors answer "who this word resembles in corpus statistics"; contextualized representations answer "what role this position plays in the current context." LLM engineers need to understand both; otherwise, they can easily conflate embedding diagnostics, attention diagnostics, and final task quality.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Static word vectors answer "who this word resembles in corpus statistics"; contextualized representations answer "what role this position plays in the current context." LLM engineers need to understand both; otherwise, they can easily conflate embedding diagnostics, attention diagnostics, and final task quality.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -761,7 +761,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
 <!-- ================================================================ -->
 <section class="card" id="s2-9a">
   <h3>2.9A Position Encoding Engineering Selection: Training Length, Extrapolation, and Serving Cost</h3>
-  <p>After learning to implement Sinusoidal and RoPE, an engineering question remains: given a model, training length, and serving scenario, how should one choose the position mechanism? Position encoding is not a decorative item. It determines how the model distinguishes order, how it handles tokens beyond the training length, how position indices continue in the KV cache, and the quality and cost boundaries of long-context serving.</p>
+  <p>After implementing Sinusoidal and RoPE, an engineering question remains: given a model, training length, and serving scenario, how should the position mechanism be chosen? Position encoding is not a decorative item. It determines how the model distinguishes order, how it handles tokens beyond the training length, how position indices continue in the KV cache, and the quality and cost boundaries of long-context serving.</p>
 
   <h4>Position Mechanism Comparison</h4>
   <div class="table-wrap">
@@ -776,7 +776,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
   </div>
 
   <h4>Three Levels of Long-Context Extrapolation</h4>
-  <p>Many model configurations specify <code>max_position_embeddings=32768</code> or larger, but engineers need to distinguish three levels:</p>
+  <p>Many model configurations specify <code>max_position_embeddings=32768</code> or larger, but that number alone is not a long-context guarantee. Separate three levels:</p>
   <ol>
     <li><strong>Mathematically computable:</strong> The position function can generate sin/cos or bias for longer positions; forward pass does not error.</li>
     <li><strong>Numerically stable:</strong> Angles, dtype, cache, softmax, and attention kernel remain stable under long sequences.</li>
@@ -803,7 +803,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
   <p>This is also why prefix cache must manage both the "content prefix" and the "position prefix." When reusing the KV cache of the same system prompt, the position indices of subsequent tokens in a new request must follow the shared prefix. If retrieval segments or tool results of different lengths are inserted, old positions cannot be blindly reused.</p>
 
   <h4>How to Evaluate Position Mechanisms</h4>
-  <p>Changes to position encoding should not be evaluated based on a single short-text PPL. It is recommended to evaluate at least three groups:</p>
+  <p>Changes to position encoding should not be evaluated with a single short-text PPL. Evaluate at least three groups:</p>
   <ul>
     <li><strong>Short-context retention:</strong> Whether PPL within training length, and regular QA/code/math metrics degrade.</li>
     <li><strong>Long-context retrieval:</strong> Needle-in-a-haystack, cross-section references, long-document QA, reported by answer position bucket.</li>

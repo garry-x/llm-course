@@ -32,7 +32,7 @@
 
 <section class="card">
   <h3>How to Learn This Chapter: View Alignment as Training Behavior Toward Human Intent</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> First distinguish what problems SFT, LoRA, DPO, and GRPO each solve: SFT learns format, LoRA reduces fine-tuning cost, DPO learns preferences, GRPO strengthens reasoning. There are many formulas, but when learning for the first time, first grasp what the data looks like and what the loss is comparing.</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> First distinguish what problems SFT, LoRA, DPO, and GRPO each solve: SFT learns format, LoRA reduces fine-tuning cost, DPO learns preferences, and GRPO strengthens reasoning. There are many formulas, but on the first pass, focus on what the data looks like and what the loss is comparing.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Chapter 7 training loop, Chapter 8 generation, and log probability.</li>
     <li><strong>Learning Goals:</strong> Distinguish between pre-training, SFT, PEFT, preference optimization, and reinforcement learning alignment, and derive the loss signals for SFT mask, LoRA, DPO, and GRPO.</li>
@@ -41,10 +41,10 @@
     <li><strong>Practice Artifacts:</strong> Build masked SFT, SFT chat template/mask/packing diagnostics, LoRA parameter statistics, post-training data audit, DPO/GRPO toy experiments, RLVR grader reliability reports, preference data error analysis, and safety risk explanations. Optional practice files are available at <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Prerequisite Skills:</strong> log probability, sequence loss, reference model, KL, preference data statistics, reward signal, and evaluation slices.<br><strong>Internalization for this Chapter:</strong> SFT, LoRA, DPO, GRPO, RLVR/RFT will all be reduced to five things: "data format, objective function, constraint term, sampling assumption, and evaluation slice"; the post-training data audit checks coverage, leakage, length bias, and safety slices before the objective function, rather than opening a separate remedial path.<br><strong>Validation Signal:</strong> You can determine whether an alignment experiment optimized target behavior, reward hacking, format bias, or evaluation leakage, and report quality changes alongside Ch08 generation cost and Ch10 service safety boundaries.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter transforms the Ch07 training loop and Ch08 generation behavior into a post-training system oriented towards tasks, preferences, safety, and reasoning ability. Synthetic data, distillation, rejection sampling, DPO/GRPO, and RLVR must all be traced back to data source, objective function, evaluation slice, and service cost, rather than being stacked as separate tricks.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter transforms the Ch07 training loop and Ch08 generation behavior into a post-training system oriented toward tasks, preferences, safety, and reasoning ability. Synthetic data, distillation, rejection sampling, DPO/GRPO, and RLVR must all be traced back to data source, objective function, evaluation slice, and service cost, rather than being stacked as separate tricks.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 9 Knowledge Map: Before learning this chapter, you need to understand log probability, KL, preference data, and reward signals. This chapter teaches post-training. After learning, you can continue to reasoning RL and reward modeling.">
+    <div class="foundation-graph" role="img" aria-label="Chapter 9 knowledge map: before this chapter, understand log probability, KL, preference data, and reward signals; in this chapter, learn post-training; afterward, read about reasoning RL and reward modeling.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -335,7 +335,7 @@ valid mask:       0    0      0      0      0     1          1        1        1
   <p>The difficulty of SFT is not just setting the prompt label to <code>-100</code>. Real instruction fine-tuning often fails due to data protocol issues: inconsistent chat templates, truncated assistant start tokens, incorrect masking in multi-turn dialogues, packing breaking the semantic boundaries between two samples, or high-quality data being overwhelmed by low-quality synthetic samples. Training engineers need to view SFT as a data pipeline, not just a single loss function.</p>
 
   <h4>1. Chat template is part of the model interface</h4>
-  <p>The same conversation may be serialized differently on different models. GPT style, Llama style, and ChatML style use different role tokens, newlines, BOS/EOS, and stop tokens. If one template is used during training and another during inference serving, the model may learn incorrect role boundaries, manifesting as repeating <code>user</code> before the response, missing end tokens, or treating the system prompt as ordinary text continuation.</p>
+  <p>The same conversation may be serialized differently across models. GPT-style, Llama-style, and ChatML-style formats use different role tokens, newlines, BOS/EOS, and stop tokens. If one template is used during training and another during inference serving, the model may learn incorrect role boundaries, which can show up as repeating <code>user</code> before the response, missing end tokens, or treating the system prompt as ordinary text continuation.</p>
   <div class="code-block" data-lang="text">
 messages:
   system: You are a careful assistant.
@@ -398,7 +398,7 @@ labels:      -100    -100    keep         -100    keep</div>
   <h4>5. SFT and Evaluation Contamination</h4>
   <p>Instruction fine-tuning data often includes problems, solutions, or near-paraphrases from public benchmarks. If contamination enters the training set, the model may appear to improve on the validation set, but it is merely memorizing the question surface or answer format. Contamination during the pre-training phase is difficult to completely eliminate, but the SFT phase has a smaller data volume and more controllable sources, so basic deduplication and split isolation should be performed: samples derived from the same prompt, the same question bank, or the same document should not appear in both training and validation.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong>The core engineering capability of SFT is to make "templates, masks, packing, truncation, data mixture, synthetic data sources, and validation slices" jointly serve the target behavior. If any one of these links is misaligned, the loss may still decrease, but the model will not learn the instruction following, reasoning ability, or safety boundaries you intended.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Takeaway:</strong> The core engineering capability of SFT is to make "templates, masks, packing, truncation, data mixture, synthetic data sources, and validation slices" jointly serve the target behavior. If any one of these links is misaligned, the loss may still decrease, but the model will not learn the instruction following, reasoning ability, or safety boundaries you intended.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -754,7 +754,7 @@ report = post_training_data_audit(records, thresholds={
   <h4>3. Reward improvement is not the same as capability improvement</h4>
   <p>A reward curve should be interpreted as a hypothesis, not as proof. The model may learn to write longer answers, satisfy a brittle format checker, exploit a unit test, imitate the judge's preferred style, or memorize public examples. A credible report must therefore separate the reward score from the target behavior: final-answer accuracy, process validity, safety/refusal calibration, latency, token cost, and out-of-distribution slices should all be measured after optimization.</p>
   <p>For this course, a reward design paragraph should have this shape: <code>For task X, the answer space is Y, the grader is Z, its audited false-pass rate is A, the reward variance is B, the known exploit risks are C, and the release claim is limited to D.</code> If one of these fields is missing, the RL experiment is not ready to be scaled.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The optimizer only amplifies the reward. Senior alignment engineers first prove that the reward is calibrated, hard to exploit, and connected to the real task; only then do they treat RL curves as evidence of improvement.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The optimizer only amplifies the reward. Senior alignment engineers first prove that the reward is calibrated, hard to exploit, and connected to the real task; only then do they treat RL curves as evidence of improvement.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1340,7 +1340,7 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
     <li><strong>Report failure types:</strong> Categorize errors into hallucination, false refusal, instruction not followed, capability degradation, reward hacking, or style bias, rather than just reporting average scores.</li>
   </ol>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Alignment evaluation is not about asking "Does the model look more like the preference data?", but rather "Is the model more reliably helpful to users, while maintaining boundaries in dangerous scenarios, and without significantly sacrificing existing capabilities?"</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Alignment evaluation is not about asking "Does the model look more like the preference data?", but rather "Is the model more reliably helpful to users, while maintaining boundaries in dangerous scenarios, and without significantly sacrificing existing capabilities?"</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1394,7 +1394,7 @@ behavior: task_success, hallucination_rate, unsafe_completion_rate, over_refusal
 retention: math/code/readcomp slices compared against SFT baseline</div>
   <p>If <code>approx_kl</code> is very low but behavior hasn't changed, the preference training might be too weak. If <code>approx_kl</code> is very high and math/code capabilities have decreased, an alignment tax has appeared. If the safe refusal rate increases but the benign sensitive request completion rate decreases, the model might have learned over-refusal. If a DAPO/GSPO-style RL curve looks better, it must also be checked whether the gains hold on held-out prompts, different length buckets, and MoE routing states. A complete result table should place these behavioral slices and optimization logs together to determine whether the alignment method is worth scaling up.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> Training records for preference optimization must include both internal objective function quantities and external behavioral quantities. Internal quantities indicate whether optimization is happening according to the formula; external behavioral quantities indicate whether it truly makes the model more useful, honest, and safe, without excessively sacrificing original capabilities.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Takeaway:</strong> Training records for preference optimization must include both internal objective function quantities and external behavioral quantities. Internal quantities indicate whether optimization is happening according to the formula; external behavioral quantities indicate whether it truly makes the model more useful, honest, and safe, without excessively sacrificing original capabilities.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1425,7 +1425,7 @@ retention: math/code/readcomp slices compared against SFT baseline</div>
       <tr><td>What must not be leaked?</td><td>Near duplicates, question bank sources, eval overlap, data ownership, and safety risk records</td><td>Benchmark scores are contaminated, or training data cannot be released/commercially used</td></tr>
     </table>
   </div>
-  <p>These fields are included in Ch09 because synthetic data has become a routine tool for post-training; it is not just a "data augmentation trick" outside the course. It directly changes the supervision target for SFT, the preference distribution for DPO, the exploration boundaries for GRPO/RLVR, and the model source and risks that need to be explained in Ch10 upon release.</p>
+  <p>These fields belong in Ch09 because synthetic data is now a routine post-training tool, not a "data augmentation trick" outside the course. It directly changes the supervision target for SFT, the preference distribution for DPO, the exploration boundaries for GRPO/RLVR, and the model-source risks that need to be explained in Ch10 at release time.</p>
 
   <h4>Adjustable Inference Budget</h4>
   <p>Many reasoning systems expose test-time compute as different tiers. In the course, this can be understood as a choice between quality, latency, and cost:</p>
@@ -1580,7 +1580,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
 
   <h4>Relationship with SFT / DPO / GRPO</h4>
   <p>SFT is suitable for teaching format and basic task behavior; DPO is suitable for converting chosen/rejected preferences into reference-relative updates; GRPO/RLVR is more suitable for tasks with verifiable rewards that require exploring multiple reasoning paths; subsequent recipes like DAPO/GSPO emphasize how to make RL runs stable, long, and reproducible. Industrial systems are usually not a three-way choice: first use SFT to establish readability and format, then use preference or rule-based reward for post-training, and finally use fixed eval, red teaming, safety/format regression, and cost accounting to decide whether to release.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> A senior alignment engineer must be able to prove that the reward itself is reliable. A beautiful RL curve, if it comes from guessable answers, leaked tests, longer outputs, or grader vulnerabilities, is not capability improvement, but reward hacking.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> A senior alignment engineer must be able to prove that the reward itself is reliable. A beautiful RL curve, if it comes from guessable answers, leaked tests, longer outputs, or grader vulnerabilities, is not capability improvement, but reward hacking.</div></div>
 </section>
 
 <!-- ================================================================ -->

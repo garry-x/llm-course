@@ -32,7 +32,7 @@
 
 <section class="card">
   <h3>How to Learn This Chapter: Focus on Model-Family Boundaries, Not History</h3>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> A modern LLM course cannot only cover decoder-only GPT. Real-world NLP systems still heavily use encoder-only representations, cross-encoder rerankers, extractive QA, sequence labeling, and structured prediction. This chapter fills in the objective functions, visibility constraints, and evaluation metrics for these model families.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> A modern LLM course cannot stop at decoder-only GPT. Real-world NLP systems still heavily use encoder-only representations, cross-encoder rerankers, extractive QA, sequence labeling, and structured prediction. This chapter fills in the objective functions, visibility constraints, and evaluation metrics for these model families.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Ch03 attention, Ch08 beam search, Ch10 RAG rerank and retrieval evaluation.</li>
     <li><strong>Learning Goals:</strong> Distinguish the modeling assumptions of recurrent, structured prediction, encoder-decoder, encoder-only, and decoder-only architectures.</li>
@@ -41,10 +41,10 @@
     <li><strong>Practice Artifacts:</strong> Runnable examples for RNN gradients, parsing traces, seq2seq attention, MLM masking, BERT QA spans, NER span F1, and evaluation summaries. Optional practice files are available at <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Prerequisite Skills:</strong> Sequence modeling, teacher forcing, encoder/decoder visibility, structured prediction, BLEU/ROUGE/EM/F1, LLM-as-judge, and confidence intervals.<br><strong>Internalization for This Chapter:</strong> RNN, seq2seq, BERT, CRF, span QA, and evaluation metrics will be embedded as engineering selection tools within this chapter, not as standalone historical topics: they help determine whether a task should use open-ended generation, retrieval ranking, extraction, classification, or structured decoding.<br><strong>Validation Signal:</strong> You can map an NLP/LLM task to the appropriate model family, decoding method, and metrics, and explain the respective applicability boundaries of traditional metrics and modern LLM evaluation.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter is not a history lesson, but a way to fill in the task boundaries and evaluation language for modern LLM engineering. Many production problems are not suited for free-form generation; understanding encoder-only models, structured prediction, and traditional metrics is necessary to decide when to use an LLM and when to use a smaller, more stable model family.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter is not a history lesson, but a way to fill in the task boundaries and evaluation language for modern LLM engineering. Many production problems are not suited for free-form generation; understanding encoder-only models, structured prediction, and traditional metrics is necessary to decide when to use an LLM and when to use a smaller, more stable model family.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 11 knowledge mind map: Before learning this chapter, you need to understand sequence modeling, visibility, structured outputs, and metrics. This chapter teaches NLP task boundaries and evaluation. After learning, you can continue with LLM-as-judge and reliable evaluation.">
+    <div class="foundation-graph" role="img" aria-label="Chapter 11 knowledge map: before this chapter, understand sequence modeling, visibility, structured outputs, and metrics; in this chapter, learn NLP task boundaries and evaluation; afterward, read about LLM-as-judge and reliable evaluation.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-11" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -311,7 +311,7 @@ labels:       None  None cat    sat    None</div>
 
 <section class="card" id="s11-6a">
   <h3>11.6A Modern LLM Evaluation Protocols: From a Single Score to Reproducible Conclusions</h3>
-  <p>BLEU, ROUGE, EM/F1, and UAS/LAS are suitable for well-defined traditional tasks; modern LLMs also need to evaluate open-ended responses, long contexts, tool calls, RAG, refusal to answer, safety, and multi-turn dialogues. The most common mistake here is to directly interpret a single benchmark score, a single LLM-as-judge win rate, or a set of human preferences as "the model is better." Course-level evaluation should first define the task, samples, inference settings, and judgment criteria before discussing conclusions.</p>
+  <p>BLEU, ROUGE, EM/F1, and UAS/LAS are suitable for well-defined traditional tasks; modern LLMs also require evaluation of open-ended responses, long contexts, tool calls, RAG, refusal behavior, safety, and multi-turn dialogue. The most common mistake is to interpret a single benchmark score, a single LLM-as-judge win rate, or a set of human preferences as "the model is better." A course-level evaluation should first define the task, samples, inference settings, and judgment criteria before discussing conclusions.</p>
 
   <h4>Minimum Components of an Evaluation Protocol</h4>
   <div class="table-wrap">
@@ -349,11 +349,11 @@ assert audit["overall_pass"]</div>
     <li><strong>Over-refusal rate:</strong> The proportion of benign requests that should have been helped but were incorrectly refused.</li>
     <li><strong>Task utility:</strong> The accuracy, helpfulness, or completion quality on ordinary tasks, to prevent safety optimization from sacrificing usability.</li>
   </ul>
-  <p>For example, Model X has a 95% refusal rate on the harmful set, but also a 60% refusal rate on the benign medical-summary set. This is not simply "safer," but a case of severe over-refusal. The alignment evaluation in Ch09 and the deployment SLO in Ch10 should be interpreted together with this section: safety, quality, latency, and cost must all pass muster simultaneously.</p>
+  <p>For example, Model X has a 95% refusal rate on the harmful set, but also a 60% refusal rate on the benign medical-summary set. This is not simply "safer"; it is severe over-refusal. The alignment evaluation in Ch09 and the deployment SLO in Ch10 should be interpreted together with this section: safety, quality, latency, and cost must all meet their targets.</p>
 
   <h4>Write modern evaluations as runnable diagnostics</h4>
   <p>A modern evaluation report should be reducible to runnable diagnostics. Pairwise judgment summaries calculate raw win rate, tie-adjusted win rate, and win rate grouped by task, showing that the same model might win on QA while tying or losing on math. Judge reliability audits check sample size, position bias, length bias, swap consistency, and human label agreement. Safety metrics split samples into harmful, benign sensitive, and ordinary groups, then report attack success, harmful refusal, over-refusal, and task utility. Benchmark summaries organize task, sample size, metrics, model, prompt, temperature, failure types, and non-extrapolable scope into a structured conclusion.</p>
-  <p>The common purpose of these diagnostics is to prevent misinterpreting "a single average score" as a complete engineering conclusion. Training engineers use them to judge whether alignment has harmed capability; inference engineers use them to judge whether quality, safety, latency, and cost simultaneously meet deployment requirements.</p>
+  <p>These diagnostics share one purpose: preventing a single average score from being mistaken for a complete engineering conclusion. Training engineers use them to judge whether alignment has harmed capability; inference engineers use them to judge whether quality, safety, latency, and cost meet deployment requirements together.</p>
 
   <h4>Worked Example: How to write a qualified conclusion from the same result</h4>
   <p>Less rigorous writing: <code>Model A is 8% better than Model B.</code></p>
@@ -363,7 +363,7 @@ assert audit["overall_pass"]</div>
 
 <section class="card" id="s11-6b">
   <h3>11.6B Benchmark Validity: Contamination, Confidence Intervals, and Ablation</h3>
-  <p>The difficulty of modern LLM evaluation is not just "which benchmark to choose," but judging whether the score can support an engineering decision. A model might win because its training data has seen the questions, its prompt is more suitable, its output is longer, it uses more sampling iterations, or the judge prefers its style. Course-level reports need to disentangle these factors; otherwise, benchmarks become leaderboard screenshots rather than scientific comparisons.</p>
+  <p>The difficulty of modern LLM evaluation is not just "which benchmark to choose," but judging whether the score can support an engineering decision. A model might win because its training data has seen the questions, its prompt is more suitable, its output is longer, it uses more sampling iterations, or the judge prefers its style. Course-level reports must disentangle these factors; otherwise, benchmarks become leaderboard screenshots rather than scientific comparisons.</p>
 
   <h4>1. Data contamination and split leakage are not the same problem</h4>
   <p><strong>Split leakage</strong> usually occurs within one's own data pipeline: the same document, user session, question bank, or near-paraphrase enters train/dev/test simultaneously. It can be mitigated through document-level splitting, URL/question ID deduplication, n-gram overlap checks, embedding nearest-neighbor search, and manual spot checks. <strong>Benchmark contamination</strong> is broader: public test questions, answer explanations, discussion posts, or code repositories may have already entered pre-training or SFT data. It cannot always be completely eliminated, so the report must specify the data source, publication date, deduplication method, and handling of high-similarity samples.</p>
@@ -397,7 +397,7 @@ assert audit["overall_pass"]</div>
   <div class="math-box"><div class="label">Accuracy standard error</div>
     <span class="katex-block" data-expr="\text{SE}(\hat p)=\sqrt{\frac{\hat p(1-\hat p)}{n}},\qquad \text{CI}_{95}\approx \hat p \pm 1.96\cdot \text{SE}" aria-label="SE(p hat)=sqrt(p hat(1-p hat)/n), CI95 approx p hat plus/minus 1.96 SE" role="img"></span>
   </div>
-  <p>When <code>n=100</code>, <code>p=0.61</code>, the standard error is approximately <code>0.049</code>, and the 95% interval is roughly <code>61% ± 9.6%</code>. This shows that 61% and 56% can hardly support a strong conclusion with this sample size. If the same set of questions evaluates both models simultaneously, one should also prioritize paired comparisons: which questions A got right and B got wrong, and vice versa, because question difficulty is shared. For open-ended generation or RAG tasks, bootstrap resampling of samples is commonly used to estimate intervals for win rate, accuracy, or error rate.</p>
+  <p>When <code>n=100</code>, <code>p=0.61</code>, the standard error is approximately <code>0.049</code>, and the 95% interval is roughly <code>61% ± 9.6%</code>. This shows that 61% and 56% can hardly support a strong conclusion with this sample size. If the same question set evaluates both models, prioritize paired comparisons: which questions A got right and B got wrong, and vice versa, because question difficulty is shared. For open-ended generation or RAG tasks, bootstrap resampling of samples is commonly used to estimate intervals for win rate, accuracy, or error rate.</p>
 
   <h4>3. Ablation experiments answer one question at a time</h4>
   <p>Ablation is not "running a few more configurations." It must make the effect of a single design variable interpretable. If you change the base model, prompt, retriever, reranker, temperature, and context length all at once, even if the score improves, you cannot know which change contributed. A rigorous LLM system ablation is usually organized in the following order:</p>
@@ -419,7 +419,7 @@ assert audit["overall_pass"]</div>
 
 <section class="card" id="s11-6c">
   <h3>11.6C Safety &amp; Social Impact: Risk Classification, Trigger Conditions, and Engineering Mitigations</h3>
-  <p>An NLP/LLM engineering course cannot treat safety as an appendix before deployment. Model risk arises from the combination of data, training objectives, inference interfaces, application scenarios, and user groups; the same model has vastly different error costs in casual conversation, medical summaries, financial advice, educational tutoring, and code execution. Engineers need to be able to break down "the model might be harmful" into risk categories that are discussable, measurable, and mitigable.</p>
+  <p>An NLP/LLM engineering course cannot treat safety as an appendix before deployment. Model risk arises from the combination of data, training objectives, inference interfaces, application scenarios, and user groups; the same model has vastly different error costs in casual conversation, medical summaries, financial advice, educational tutoring, and code execution. Engineers must be able to break down "the model might be harmful" into risk categories that are discussable, measurable, and mitigable.</p>
 
   <h4>1. Risk is not a single dimension</h4>
   <div class="table-wrap">
@@ -456,11 +456,11 @@ assert audit["overall_pass"]</div>
     <li><strong>Refusal Boundary:</strong> General educational questions should be answered, while requests regarding emergencies, self-harm, or prescription adjustments should be redirected to professional help.</li>
     <li><strong>Usability:</strong> Safety policies cannot refuse all medical questions; otherwise, the system becomes unusable for real user tasks.</li>
   </ol>
-  <p>Therefore, this system should at least report retrieval recall, citation accuracy, factual error rate, harmful advice rate, general medical education completion rate, emergency referral rate, PII log handling method, and limitation descriptions in the user interface. The key here is not to create more tables, but to enable model behavior, data sources, user risks, and deployment boundaries to be described using the same engineering language.</p>
+  <p>Therefore, this system should at least report retrieval recall, citation accuracy, factual error rate, harmful advice rate, general medical education completion rate, emergency referral rate, PII log handling method, and limitation descriptions in the user interface. The goal is not to create more tables; it is to describe model behavior, data sources, user risks, and deployment boundaries in the same engineering language.</p>
 
   <h4>3. Safety, Alignment, Evaluation, and Serving Are the Same Pipeline</h4>
   <p>Chapter 9 discusses how to use SFT/DPO/GRPO to change model behavior, Chapter 10 discusses how to turn a model into a serviceable system, and this section discusses the risk boundaries of these behaviors in real-world scenarios. A model can improve in harmlessness while over-refusing on benign sensitive questions; it can also perform well on an offline safety set but fail in an Agent scenario due to excessive tool permissions. A credible result table should include safety slices alongside quality, latency, and cost, rather than just writing "safety has been considered" in the conclusion.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Social impact is not an abstract moral discussion, nor is it a single safety score. LLM engineers must be able to map risks to data, objective functions, interface permissions, user scenarios, and evaluation slices, and explain what capabilities, latency, or cost each mitigation action will sacrifice.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Social impact is not an abstract moral discussion, nor is it a single safety score. LLM engineers must be able to map risks to data, objective functions, interface permissions, user scenarios, and evaluation slices, and explain what capabilities, latency, or cost each mitigation action will sacrifice.</div></div>
 </section>
 
 <section class="card" id="s11-6d">
@@ -610,7 +610,7 @@ assert audit["overall_pass"]</div>
   <p>Conclusions must specify the reproduction path: data version, commit, run command, seed, hardware, model configuration, checkpoint or service configuration, evaluation set, and stress test parameters. They must also specify where extrapolation is not valid: a tiny corpus cannot represent trillion-token training, a local MockEngine cannot represent real GPU serving, a small knowledge base RAG cannot represent an enterprise knowledge base, and a single safety set cannot represent all user risks.</p>
 
   <p>The reader should be able to answer three things: First, is the question clear? Second, is the experiment sufficient to support the conclusion? Third, if the system is scaled to a larger model, larger data, or a real service, which assumptions will break first?</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Training directions must prove the process is reproducible, recoverable, and interpretable; inference directions must prove that service quality, latency, cost, and risk are decidable under the target workload. Experiments without baselines, ablations, failure analysis, and conclusion boundaries cannot support engineering decisions.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Training directions must prove the process is reproducible, recoverable, and interpretable; inference directions must prove that service quality, latency, cost, and risk are decidable under the target workload. Experiments without baselines, ablations, failure analysis, and conclusion boundaries cannot support engineering decisions.</div></div>
 </section>
 
 <section class="card" id="s11-9">

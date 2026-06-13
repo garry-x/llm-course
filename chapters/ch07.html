@@ -32,7 +32,7 @@
 
 <section class="card">
   <h3>How to Learn This Chapter: First Make the Loss Decrease, Then Study Training Optimization</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> The main line of training has only four steps: take a segment of tokens, let the model predict the next token, compute the error with cross-entropy, and backpropagate to update parameters. Muon, FP8/FP4, DualPipe, and distributed training are large-scale optimization topics; for the first pass, treat them as "knowing why they are needed."</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> The main line of training has only four steps: take a segment of tokens, let the model predict the next token, compute the error with cross-entropy, and backpropagate to update parameters. Muon, FP8/FP4, DualPipe, and distributed training are large-scale optimization topics; on the first pass, focus on why they are needed.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Basic concepts from Chapter 6: GPTModel, cross-entropy, optimizer.</li>
     <li><strong>Learning Goals:</strong> Derive the next-token loss from maximum likelihood, build a reproducible training loop, and explain data curation diagnostics, perplexity, calibration/ECE, AdamW, warmup, gradient clipping, mixed precision, and training anomaly diagnosis.</li>
@@ -41,10 +41,10 @@
     <li><strong>Exercise Output:</strong> Submit training script, loss curve with fixed seed, checkpoint/resume proof, anomaly diagnosis runbook, tokens/s and GPU/CPU cost estimation; accompanying assignments at <a href="../assignments/ch07_training/">assignments/ch07_training/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Prerequisite Skills:</strong> Autoregressive probability decomposition, cross entropy, optimizer state, randomness control, train/val split, and experimental statistics.<br><strong>Internalized in This Chapter:</strong> These fundamentals will directly feed into data curation diagnostics, loss/ppl, AdamW/Muon, learning-rate schedule, gradient clipping, checkpoint resume, data packing, seed, and ablation report.<br><strong>Validation Signal:</strong> You don't just make loss drop; you can explain data source, filtering/deduplication, curve variance, baseline, recovery point, token budget, and training cost, and pass these results to Ch08 generation quality and Ch09 alignment experiments.</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter turns the Ch06 model into a reproducible training run. It not only teaches optimizers but also connects data curation, contamination investigation, complete checkpoint, experimental statistics, and cost ledger to Ch09 post-training.</p>
+  <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter turns the Ch06 model into a reproducible training run. It connects optimizers with data curation, contamination checks, complete checkpoints, experimental statistics, cost accounting, and the Ch09 post-training workflow.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
-    <div class="foundation-graph" role="img" aria-label="Chapter 7 Knowledge Map: Before learning this chapter, you need to understand autoregressive probability, cross-entropy, data splitting, and optimizer state. This chapter will teach the pretraining closed loop. After learning, you can continue to read about scaling laws and data mixing.">
+    <div class="foundation-graph" role="img" aria-label="Chapter 7 knowledge map: before this chapter, understand autoregressive probability, cross-entropy, data splitting, and optimizer state; in this chapter, learn the pretraining loop; afterward, read about scaling laws and data mixing.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-07" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -453,7 +453,7 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
   <h4>Worked Example: Same 20B tokens, different data pipelines train different models</h4>
   <p>Assume two training runs both use <code>20B</code> tokens, the same model, and the same optimizer. Run A directly mixes web, code, and encyclopedia by original volume; Run B first performs document-level deduplication, PII/credential filtering, and then uses temperature sampling with <code>alpha=0.7</code> to increase the weight of code and math small sources. Even with the same token budget, the gradient distributions of the two runs differ: Run B may perform better on code and math validation sets, have less repetitive web style, and have slightly lower training throughput due to the added data preparation cost of filtering and stratified sampling. The report should attribute this difference to data pipeline differences, rather than simply to "longer model training" or "better learning rate."</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Training engineering is not just about running a DataLoader; it must also be able to explain the source, filtering, deduplication, risk, sampling weights, and split isolation of training tokens. The data pipeline defines what the model learns and how evaluation scores can be interpreted.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Training engineering is not just about running a DataLoader; it must also be able to explain the source, filtering, deduplication, risk, sampling weights, and split isolation of training tokens. The data pipeline defines what the model learns and how evaluation scores can be interpreted.</div></div>
 </section>
 
 <section class="card" id="s7-3c">
@@ -553,7 +553,7 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
   </div>
 
   <p>For training engineers, the practical rule is simple: synthetic data should <strong>accumulate verified signal</strong>, not replace the empirical distribution with a teacher's favorite style. If adding generated traces improves math but increases verbosity, lowers factual precision, or reduces multilingual robustness, the correct response is not to declare the synthetic pipeline successful; it is to reweight, re-filter, or split the pipeline by capability.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Treat every synthetic dataset as a model-generated intervention with provenance, verifier quality, mixture weight, and held-out evidence. The question is not "is synthetic data good," but "which synthetic signal improves which behavior under which control checks."</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Treat every synthetic dataset as a model-generated intervention with provenance, verifier quality, mixture weight, and held-out evidence. The question is not "is synthetic data good," but "which synthetic signal improves which behavior under which control checks."</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1025,7 +1025,7 @@ scheduler.step()</div>  <p>If you don't divide the loss by <code>grad_accum_step
 <!-- ================================================================ -->
 <section class="card" id="s7-11b">
   <h3>7.11B How to Read Training Logs: From Loss Curves to System Bottlenecks</h3>
-  <p>Being able to decrease loss is just the starting point of training engineering. Engineers need to be able to explain <strong>why</strong> the curve changes in a certain way: which phenomena are normal random fluctuations, and which indicate problems with the optimizer, data, numerical precision, or system throughput. The training log should at least simultaneously record <code>train_loss</code>, <code>val_loss</code>, <code>lr</code>, <code>grad_norm</code>, <code>tokens/s</code>, and step.</p>
+  <p>Making loss decrease is only the starting point of training engineering. Engineers need to explain <strong>why</strong> the curve changes in a certain way: which phenomena are normal random fluctuations, and which indicate problems with the optimizer, data, numerical precision, or system throughput. The training log should record <code>train_loss</code>, <code>val_loss</code>, <code>lr</code>, <code>grad_norm</code>, <code>tokens/s</code>, and step together.</p>
 
   <h4>First, Distinguish Three Types of Problems</h4>
   <div class="table-wrap">
@@ -1041,12 +1041,12 @@ scheduler.step()</div>  <p>If you don't divide the loss by <code>grad_accum_step
   </div>
 
   <h4>How to Interpret Grad Norm</h4>
-  <p><code>grad_norm</code> is neither smaller nor larger being better. It represents the update intensity proposed by the current batch for the parameters. It is more meaningful when viewed in conjunction with the learning rate: high <code>grad_norm</code> + high lr easily causes spikes; high <code>grad_norm</code> but stably truncated by clipping might just be an occasional hard batch; low <code>grad_norm</code> + loss not decreasing is common when the learning rate is too low, the mask is incorrect, or the model path is disconnected.</p>
+  <p><code>grad_norm</code> is not better simply because it is smaller or larger. It represents the update intensity proposed by the current batch. It is most meaningful when interpreted together with the learning rate: high <code>grad_norm</code> plus high lr can cause spikes; high <code>grad_norm</code> that is consistently clipped may just indicate an occasional hard batch; low <code>grad_norm</code> plus stagnant loss is common when the learning rate is too low, the mask is incorrect, or the model path is disconnected.</p>
   <p>Global norm clipping first treats all parameter gradients as a long vector, calculates <span class="katex-inline" data-expr="\|g\|_2" aria-label="\|g\|_2" role="img"></span>, and then scales all gradients with the same coefficient:</p>
   <div class="math-box"><div class="label">Global grad norm clipping</div>
     <div class="katex" data-expr="g \leftarrow g \cdot \min\left(1,\frac{\tau}{\|g\|_2+\epsilon}\right)" aria-label="g \leftarrow g \cdot \min\left(1,\frac{\tau}{\|g\|_2+\epsilon}\right)" role="img"></div>
   </div>
-  <p>Clipping each parameter individually changes the gradient ratio between different layers; global clipping preserves the direction, only shortening the step size when the total update is too large. The <code>clip_grad_norm(parameters, max_norm)</code> in the Ch07 assignment requires students to manually calculate this coefficient and return the total norm before clipping and the actual clip coefficient used.</p>
+  <p>Clipping each parameter individually changes the gradient ratio between different layers; global clipping preserves the direction and only shortens the step when the total update is too large. The corresponding Ch07 practice asks you to calculate this coefficient manually and return both the total norm before clipping and the actual clip coefficient.</p>
 
   <h4>A Practical Troubleshooting Sequence</h4>
   <ol>
@@ -1064,10 +1064,10 @@ scheduler.step()</div>  <p>If you don't divide the loss by <code>grad_accum_step
 <!-- ================================================================ -->
 <section class="card" id="s7-11c">
   <h3>7.11C Training Anomaly Runbook: From Loss Spikes to Recoverable Decisions</h3>
-  <p>Real LLM training does not always decrease smoothly. The value of an engineer lies in quickly judging after an anomaly appears: continue training, revert checkpoint, reduce learning rate, filter data, switch precision, or pause the job to fix the system. This course requires mastering <strong>anomaly classification, signal recording, root cause hypothesis, minimal fix experiment, and recovery decision</strong>, rather than restarting upon seeing NaN.</p>
+  <p>Real LLM training does not always decrease smoothly. The engineering skill is to decide quickly after an anomaly appears: continue training, revert checkpoint, reduce learning rate, filter data, switch precision, or pause the job to fix the system. This course emphasizes <strong>anomaly classification, signal recording, root cause hypotheses, minimal fix experiments, and recovery decisions</strong>, rather than restarting every time NaN appears.</p>
 
   <h4>1. First, Locate the Anomaly in Time and Token Coordinates</h4>
-  <p>The training log should simultaneously record <code>step</code>, <code>consumed_tokens</code>, <code>epoch_or_shard</code>, <code>lr</code>, <code>train_loss</code>, <code>val_loss</code>, <code>grad_norm</code>, <code>tokens/s</code>, <code>loss_scale</code>, <code>checkpoint_id</code>, and a data batch summary. Recording only wall-clock time is insufficient because after scaling cards, gradient accumulation, or changing data parallelism, the same wall-clock time does not correspond to the same training progress.</p>
+  <p>The training log should record <code>step</code>, <code>consumed_tokens</code>, <code>epoch_or_shard</code>, <code>lr</code>, <code>train_loss</code>, <code>val_loss</code>, <code>grad_norm</code>, <code>tokens/s</code>, <code>loss_scale</code>, <code>checkpoint_id</code>, and a data batch summary together. Recording only wall-clock time is insufficient because after GPU scaling, gradient accumulation, or data parallelism changes, the same wall-clock time no longer corresponds to the same training progress.</p>
   <div class="math-box"><div class="label">Anomaly Location Coordinates</div>
     <div class="katex" data-expr="\text{tokens at incident}=s\cdot B_{\text{micro}}\cdot T_{\text{seq}}\cdot A_{\text{grad}}\cdot N_{\text{dp}}" aria-label="tokens_at_incident = s * B_micro * T_seq * A_grad * N_dp" role="img"></div>
   </div>
@@ -1083,7 +1083,7 @@ scheduler.step()</div>  <p>If you don't divide the loss by <code>grad_accum_step
     </table>
   </div>
 
-  <p>To judge whether a spike is "recoverable", you cannot just look at the loss in the next step. At least look at the train/val trends, grad_norm distribution, and task metrics over the next few eval windows. If open-ended generation or safety metrics significantly degrade, even if PPL recovers, continue investigating.</p>
+  <p>To judge whether a spike is recoverable, do not look only at the loss in the next step. Check train/val trends, grad_norm distribution, and task metrics over the next few eval windows. If open-ended generation or safety metrics degrade significantly, continue investigating even if PPL recovers.</p>
 
   <h4>3. Shortest Debugging Path for NaN/Inf</h4>
   <ol>
@@ -1113,7 +1113,7 @@ scheduler.step()</div>  <p>If you don't divide the loss by <code>grad_accum_step
   <p>When <code>tokens/s</code> drops, break it down into dataloader, H2D copy, forward, backward, optimizer, communication, eval, and checkpoint writing to disk. If GPU utilization is low but the dataloader queue is empty, prioritize optimizing data reading; if there is a long wait after backward, prioritize checking DDP/FSDP communication; if speed drops every time an eval or checkpoint cycle occurs, move slow evaluations to a separate worker or reduce checkpoint frequency.</p>
 
   <h4>6. Minimal Fix Experiment</h4>
-  <p>When fixing training anomalies, avoid changing many configurations at once. It is recommended to run short experiments in the following order:</p>
+  <p>When fixing training anomalies, avoid changing many configurations at once. Run short experiments in this order:</p>
   <ol>
     <li><strong>Bad batch replay:</strong> Use only batches near the anomalous step, reproduce forward/backward on a single GPU.</li>
     <li><strong>Precision ablation:</strong> Short FP32/BF16/FP16 comparison runs to determine if it's a dynamic range issue.</li>
@@ -1122,9 +1122,9 @@ scheduler.step()</div>  <p>If you don't divide the loss by <code>grad_accum_step
     <li><strong>Resume parity:</strong> Verify that continuous training and save-resume training are on the same track.</li>
   </ol>
 
-  <p>The final report should state "what I observed, what I ruled out, what I changed, and why this change is sufficient to support the conclusion." This is the core requirement of this course for implementation and analysis skills: students should not just submit code, but also be able to explain model training behavior.</p>
+  <p>The final report should state "what I observed, what I ruled out, what I changed, and why this change is sufficient to support the conclusion." The point is not only to submit code, but to explain model training behavior with evidence.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Handling training anomalies is not empirical mysticism. By binding anomalies to token coordinates, separating data, numerical values, optimizer, state recovery, and system throughput, and then verifying hypotheses with minimal ablation, you can decide whether to continue, revert, or restart.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Handling training anomalies is not empirical mysticism. By binding anomalies to token coordinates, separating data, numerical values, optimizer, state recovery, and system throughput, and then verifying hypotheses with minimal ablation, you can decide whether to continue, revert, or restart.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1395,7 +1395,7 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
   <div class="math-box"><div class="label">Global Batch Tokens</div>
     <div class="katex" data-expr="B_{\text{tokens}} = B_{\text{micro}} \cdot T_{\text{seq}} \cdot A_{\text{grad}} \cdot N_{\text{dp}}" aria-label="B_{\text{tokens}} = B_{\text{micro}} \cdot T_{\text{seq}} \cdot A_{\text{grad}} \cdot N_{\text{dp}}" role="img"></div>
   </div>
-  <p>Gradient accumulation does not change the activation peak for each micro-batch, but it changes the number of tokens consumed per optimizer step. When tuning the batch, a training engineer must consider three things simultaneously: whether the single-step memory fits, whether the global batch is suitable for optimization, and whether tokens/s scales with parallelism.</p>
+  <p>Gradient accumulation does not change the activation peak for each micro-batch, but it changes the number of tokens consumed per optimizer step. When tuning the batch, a training engineer must consider three constraints together: whether the single-step memory fits, whether the global batch is suitable for optimization, and whether tokens/s scales with parallelism.</p>
 
   <h4>MFU: Measuring Whether the Training System Fully Utilizes Hardware</h4>
   <p><strong>Model FLOPs Utilization (MFU)</strong> compares effective training FLOPs to the theoretical hardware peak:</p>
@@ -1406,7 +1406,7 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
   <div class="math-box"><div class="label">MFU Worked Example</div>
     <div class="katex" data-expr="\text{MFU} \approx \frac{6 \cdot 7\times10^9 \cdot 20000}{8 \cdot 300\times10^{12}} = 0.35" aria-label="\text{MFU} \approx \frac{6 \cdot 7\times10^9 \cdot 20000}{8 \cdot 300\times10^{12}} = 0.35" role="img"></div>
   </div>
-  <p>A low MFU does not necessarily mean the model code is wrong. Short sequences, small batches, cross-node communication, insufficient data loading, frequent eval/checkpointing, unfused kernels, and padding waste can all lower MFU. When diagnosing, one should also report tokens/s/GPU, GPU utilization, network utilization, dataloader wait time, and checkpoint duration.</p>
+  <p>A low MFU does not necessarily mean the model code is wrong. Short sequences, small batches, cross-node communication, insufficient data loading, frequent eval/checkpointing, unfused kernels, and padding waste can all lower MFU. A diagnosis should also report tokens/s/GPU, GPU utilization, network utilization, dataloader wait time, and checkpoint duration.</p>
 
   <h4>FP8/MXFP8 and DeepSeek DualPipe</h4>
   <p>Low-precision training and pipeline scheduling should be considered together. NVIDIA Transformer Engine makes formats like FP8, MXFP8, and NVFP4 available as usable interfaces; the DeepSeek-V3 technical report demonstrates a combination of FP8 mixed precision, MoE/MLA, and DualPipe. This course does not treat any format as a "free speedup" but requires students to check scale/amax history, loss spikes, gradient ranges, kernel support, communication data width, and state recovery. Traditional pipeline parallelism has <strong>bubbles</strong>. DualPipe aims to reduce bubbles by overlapping forward, backward, and MoE communication through <strong>bidirectional pipeline scheduling</strong>; the specific degree of overlap depends on model sharding, communication topology, micro-batches, and implementation details.</p>
@@ -1501,12 +1501,12 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
       <tr><td>Final selection</td><td>Select checkpoint or continue training</td><td>Task metrics, PPL, generation quality, and cost meet targets</td><td>Improvement only on training set, degradation in open-ended quality or safety metrics</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> Training engineering capability is not "running a script", but being able to explain how many tokens and GPU hours this training consumed, why this checkpoint is recoverable, why the optimization trajectory remains comparable after scaling, and which layer to check first when loss, throughput, or evaluation is abnormal.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Training engineering capability is not "running a script", but being able to explain how many tokens and GPU hours this training consumed, why this checkpoint is recoverable, why the optimization trajectory remains comparable after scaling, and which layer to check first when loss, throughput, or evaluation is abnormal.</div></div>
 </section>
 
 <section class="card" id="s7-15b">
   <h3>7.15B Industrial Training System Checks: Data, Parallelism, Fault Tolerance, and Evaluation Loop</h3>
-  <p>The commonality of the latest industrial training systems is not a single parallel strategy, but forming a closed loop of <strong>data quality, model parallelism, communication overlap, checkpointing, observability, and evaluation checks</strong>. MegaScale treats stability, straggler diagnosis, and fault tolerance in 10K+ GPU training as core issues; DeepSeek-V3 combines MLA, MoE, FP8, DualPipe, and stable long runs; PyTorch FSDP2/DTensor and Distributed Checkpoint turn sharded states into composable interfaces; NVIDIA Transformer Engine implements FP8/MXFP8/NVFP4 low-precision training down to kernels and scale management. Course projects do not need to replicate these systems, but must learn the same class of problems they solve.</p>
+  <p>Recent industrial training systems share a closed loop of <strong>data quality, model parallelism, communication overlap, checkpointing, observability, and evaluation checks</strong>, rather than a single preferred parallel strategy. MegaScale treats stability, straggler diagnosis, and fault tolerance in 10K+ GPU training as core issues; DeepSeek-V3 combines MLA, MoE, FP8, DualPipe, and stable long runs; PyTorch FSDP2/DTensor and Distributed Checkpoint turn sharded states into composable interfaces; NVIDIA Transformer Engine implements FP8/MXFP8/NVFP4 low-precision training down to kernels and scale management. You do not need to replicate these systems, but you do need to learn the same class of problems they solve.</p>
 
   <h4>1. Training systems are not just about choosing DDP/FSDP/TP/PP</h4>
   <div class="table-wrap">
@@ -1545,7 +1545,7 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
     <li><strong>Regression signals:</strong> Are safety refusals, format adherence, long context, or tool/RAG inputs degraded?</li>
     <li><strong>Cost signals:</strong> Is the new capability worth the cost in training tokens, GPU hours, inference latency, and memory?</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> The goal of an industrial training system is not "to make the model larger", but to ensure that every change in data, model, parallelism, and optimization can be recovered, observed, and evaluated. A training engineer must be able to describe a run as an auditable engineering process, not just a loss curve.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> The goal of an industrial training system is not "to make the model larger", but to ensure that every change in data, model, parallelism, and optimization can be recovered, observed, and evaluated. A training engineer must be able to describe a run as an auditable engineering process, not just a loss curve.</div></div>
 </section>
 
 

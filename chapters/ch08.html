@@ -670,6 +670,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
     <div class="katex" data-expr="\text{pass@3}=1-\frac{\binom{8}{3}}{\binom{10}{3}}=1-\frac{56}{120}=0.533" aria-label="\text{pass@3}=1-\frac{\binom{8}{3}}{\binom{10}{3}}=1-\frac{56}{120}=0.533" role="img"></div>
   </div>
   <p>So for the same set of candidates, pass@1 is <code>0.2</code>, and pass@3 is approximately <code>0.533</code>. This shows that pass@k measures the "probability of hitting at least once given a budget of k attempts," not the average accuracy of a single sample. When reporting reasoning experiments, you must clearly state <code>n</code>, <code>k</code>, sampling parameters, and the average number of generated tokens; otherwise, an accuracy improvement might simply be due to spending more test-time compute.</p>
+  <p>There is a second boundary: final-answer pass@k does not prove that the reasoning path is correct. A candidate can pass a unit test, match a numeric answer, or be selected by majority vote while containing an invalid chain of thought. Recent <a href="https://arxiv.org/abs/2506.14245" target="_blank">RLVR evaluation work</a> therefore argues for checking both the final answer and the reasoning trace when the task requires trustworthy reasoning. In course reports, separate <strong>answer correctness</strong>, <strong>trace validity</strong>, and <strong>cost per correct-and-valid answer</strong>; do not use a higher pass@k alone as evidence that the model has learned better reasoning.</p>
 
   <h4>How to Report the Compute Budget</h4>
   <p>If a method improves accuracy from 60% to 72%, but goes from 1 generation per problem to 32 generations, you cannot just report the accuracy. You should at least report:</p>
@@ -944,9 +945,9 @@ request_cost ~= prompt_tokens
              + retries * retry_cost</div>
   <p>If <code>samples</code> is increased from 1 to 16, pass@k might improve, but P95 latency and token cost will also increase nearly linearly, unless the system performs parallel sampling and has sufficient batch/hardware headroom. Speculative decoding can reduce the number of target model verifications, but it also introduces draft model computation and scheduling complexity.</p>
 
-  <h4>3A. Reasoning / test-time compute must first pass a budget gate</h4>
+  <h4>3A. Reasoning / Test-Time Compute Requires a Budget Decision</h4>
   <p>After OpenAI o1, DeepSeek-R1, and Kimi k1.5, many systems use "thinking a bit longer" as a quality improvement method: increasing reasoning tokens, sampling multiple solution paths, using a verifier or unit tests for best-of-N selection, or distilling long chains into short outputs. Engineering reports cannot just report accuracy improvements; they must also report samples per question, average output tokens, P95 latency, verifier calls, cost per correct answer, and marginal benefit.</p>
-  <p>The <code>test_time_compute_budget_report</code> in the Ch08 assignment formalizes this judgment into a testable gate. It compares greedy, self-consistency, best-of-N, verifier reranking, or reasoning model tiers, and outputs quality, token budget, latency, cost, and marginal efficiency gate, along with a recommended strategy for deployment.</p>
+  <p>The <code>test_time_compute_budget_report</code> in the Ch08 assignment formalizes this judgment into a deployment report. It compares greedy, self-consistency, best-of-N, verifier reranking, or reasoning model tiers, and outputs quality, token budget, latency, cost, and marginal efficiency signals, along with a recommended strategy for deployment.</p>
   <div class="code-block" data-lang="python">
 report = test_time_compute_budget_report(
     [

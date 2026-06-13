@@ -67,6 +67,7 @@
 - 能说明 JSON schema / constrained decoding 比“请输出 JSON”的 prompt 更可靠，并能报告 parse、schema、retry、fallback/refusal、latency 和 safety gate。
 - 能把工具调用拆成 schema gate、MCP/runtime gate 和 agent trace，分别审计 server trust、用户同意、roots/elicitation、敏感数据外发、外部 observation 隔离、递归 LLM sampling、tool context tokens、guardrail events 和 side-effect log。
 - 能把 long-running agent 的上下文管理拆成 select、compress、clear、write memory 和 isolate，并报告 token breakdown、summary fidelity、memory freshness、refetchability 和 observation isolation。
+- 能把 agent/workflow 评测拆成 final task success、tool trajectory、state delta、policy compliance、side effects、latency/cost 和 trace replay，而不是只看最终回答。
 
 **对应内容：**Ch08 约束生成，Ch10 10.8、10.9A、10.13，Capstone RAG stub、`response_format` 与 `tools`。
 
@@ -74,6 +75,7 @@
 
 - 能维护固定评测集，覆盖事实、格式、安全、拒答、工具调用和回归问题。
 - 能区分自动指标、LLM-as-judge、人审抽检、安全拒答、过度拒答和任务可用性。
+- 能为工具型或 agent 型服务设计任务级 eval gate：固定 tool registry、API schema、数据库/检索库 snapshot、hidden tests、judge rubric、随机性和环境版本，并报告公开 benchmark 不覆盖的私有生产风险。
 - 能用压测报告和 SLO 目标回答“最大并发多少、P95 是否达标、成本是否可接受”。
 - 能写上线方案：canary/control、per-version monitoring、限流、超时、降级、日志、告警、成本 guardrail 和回滚。
 
@@ -107,7 +109,7 @@
 | Context engineering | 能报告 active/retrieved/compressed/memory/tool observation token 占比、引用保留、summary fidelity、memory 权限与更新时间、tool-result clearing 是否可重取，以及 P95 TTFT/成本变化 | context engineering gate 表 |
 | Model routing | 能比较强模型 baseline、弱模型分支、级联升级和 fallback provider，并报告 route_reason、成本、质量/安全/schema/RAG 切片和兼容性风险 | route receipt 表 |
 | 压测报告 | 至少跑 3 组并发配置，输出 P50/P95/P99、TTFT/TPOT、tokens/s，并用 SLO 目标判定是否达标 | `benchmark.py` JSON + `slo_check.py` 输出 |
-| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、structured output schema gate、工具调用、MCP/runtime gate、agent trace/guardrail、LLM-as-judge 和安全/过度拒答，失败样例有记录 | `evaluate.py` 输出 |
+| 回归评测 | 固定评测集通过率可复现，覆盖 RAG 命中、structured output schema gate、工具调用、MCP/runtime gate、agent/workflow eval、trace/guardrail、LLM-as-judge 和安全/过度拒答，失败样例有记录 | `evaluate.py` 输出 + agent eval protocol 表 |
 | 发布 gate | baseline 与 candidate 的 quality/safety/SLO/error/cost/canary/monitoring/rollback 判断可复算 | production rollout gate 表 |
 | 实验结论 | 项目有 research question、baseline、workload、ablation 和结论边界 | proposal / milestone / final report |
 | 优化复盘 | 选择一个瓶颈，提出优化前后指标对比 | 简短复盘文档 |

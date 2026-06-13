@@ -375,6 +375,9 @@
 <li>Lin. <a href="https://aclanthology.org/W04-1013/">ROUGE: A Package for Automatic Evaluation of Summaries</a>.</li>
 <li>Zheng et al. <a href="https://papers.nips.cc/paper_files/paper/2023/hash/91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_Benchmarks.html">Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena</a>. 重点看 position、verbosity、self-enhancement bias 和与人工偏好的一致性验证。</li>
 <li>OpenAI. <a href="https://developers.openai.com/api/docs/guides/evaluation-best-practices">Evaluation best practices</a>. 重点看 model graders 需要先和 human labels 验证一致性，再用于优化。</li>
+<li>Jimenez et al. <a href="https://arxiv.org/abs/2310.06770">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</a>. 重点看真实代码库 issue、patch、测试验证和多文件修改如何把代码 agent 评测从“生成代码片段”变成任务级 workflow eval。</li>
+<li>Yao et al. <a href="https://arxiv.org/abs/2406.12045">tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains</a> 与 <a href="https://github.com/sierra-research/tau2-bench">tau-bench repository</a>. 重点看多轮用户、领域 policy、API tools、最终数据库状态、重复 trial 一致性和 task fixes 如何进入 agent eval protocol。</li>
+<li>OpenAI. <a href="https://openai.com/index/browsecomp/">BrowseComp: a benchmark for browsing agents</a>. 重点看难找但可验证的短答案、浏览深度、搜索策略、答案可验证性，以及为什么短答案 benchmark 不能代表所有开放式研究任务。</li>
 </ul>
 <p>复盘问题：</p>
 <ul>
@@ -386,6 +389,8 @@
 <li>什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？</li>
 <li>transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？</li>
 <li>LLM-as-judge 的 position bias、verbosity bias、swapped-order inconsistency 和 human-label disagreement 分别会让什么结论失真？</li>
+<li>agent/workflow eval 为什么要同时报告 final task success、tool trajectory、state delta、side effects、latency/cost 和环境版本？</li>
+<li>SWE-bench、tau-bench 和 BrowseComp 分别覆盖了 agent 能力的哪一部分？各自没有覆盖什么真实生产风险？</li>
 </ul>
 <h3 id="week-10-前沿方法-benchmark-边界与课程综合">Week 10: 前沿方法、Benchmark 边界与课程综合</h3>
 <p>对应材料：两个 capstone 方向、Ch10 前沿推理部分和前沿主题阅读。</p>

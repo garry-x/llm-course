@@ -761,6 +761,7 @@ Quick check：
 - 比较 perplexity、BLEU、ROUGE、F1、EM、LLM-as-judge。
 - 讨论隐私、偏见、幻觉、评测污染和安全拒答。
 - 区分自动指标、人工评测、系统指标和安全评估的适用边界。
+- 把 agent/workflow 评测拆成 final task success、tool trajectory、state delta、side effects 和 latency/cost。
 
 核心推导：
 
@@ -768,6 +769,7 @@ Quick check：
 - benchmark contamination 与 data leakage 的区别。
 - LLM-as-judge pairwise win rate：`(W + 0.5T) / (W + L + T)`，以及位置偏置、长度偏置和同源模型偏置。
 - safety evaluation 中的 attack success rate、refusal rate、over-refusal rate 和 task utility 不是同一个指标。
+- agent eval gate：`success = task_pass AND policy_pass AND side_effect_pass AND cost_pass`，其中每一项都要绑定固定环境版本、tool schema、数据 snapshot 和 trace replay。
 
 课堂 demo：
 
@@ -775,6 +777,8 @@ Quick check：
 - 构造一个“高 ROUGE 但事实错误”的摘要例子，并解释为什么需要事实性检查。
 - 给定 `W/L/T = 42/35/23` 的 pairwise judge 结果，手算 win rate，并讨论为什么它不能单独推出生产更优。
 - 把一个 benchmark 结论改写成包含样本量、prompt、temperature、失败类型、延迟和不可外推范围的合格结论。
+- 对比 SWE-bench、tau-bench 和 BrowseComp：分别标出测试验证、数据库最终状态、浏览证据和短答案验证对应的评测假设。
+- 给定一条 agent trace，判断最终答案正确但工具越权、状态写错、成本超限或引用缺失时是否允许上线。
 - 对一个安全拒答案例同时判断 helpfulness、harmlessness 和 over-refusal。
 
 Quick check：
@@ -783,11 +787,13 @@ Quick check：
 - 为什么高拒答率不等于高安全性？
 - LLM-as-judge 可能有哪些位置偏置或模型偏置？
 - win rate 高是否一定说明事实性、安全性和延迟都更好？
+- 为什么 agent/workflow 评测不能只看最终文本答案？
+- 公开 agent benchmark 为什么不能替代私有任务集、环境 snapshot、canary 和 trace replay？
 
 课后产出：
 
 - A9 经典 NLP/evaluation 作业与书面题。
-- 阅读复盘：一个 automatic metric failure case。
+- 阅读复盘：一个 automatic metric failure case，或一个 agent/workflow benchmark 的结论边界。
 
 ## Week 10 Lecture 19: Frontier Methods、Benchmark 边界与系统取舍
 

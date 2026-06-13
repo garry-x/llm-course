@@ -260,11 +260,33 @@ F1 = 2 * precision * recall / (precision + recall)
 | Long answer latency | quality score 高 | P95 latency 超 SLO | 质量指标必须配合系统指标 |
 | LLM judge preference | judge 偏好更长回答 | 可能冗余或幻觉 | 需要 blind pairwise、position swap 和人工抽查 |
 
+### Agent / Workflow Evaluation
+
+面向训练和推理工程师的 LLM 课程不能只评测“最终文本答案”。一旦系统包含工具、RAG、代码执行、浏览器、数据库写入或多轮用户交互，评测对象就变成有状态 workflow：模型不仅要答对，还要在正确时间调用正确工具、遵守策略、控制成本，并避免不可逆副作用。
+
+典型 benchmark 反映的是不同 workflow 能力：
+
+| Benchmark 类型 | 评测对象 | 课程中应抽象出的协议 |
+|----------------|----------|----------------------|
+| SWE-bench 类代码修复 | 给定真实 issue 和代码库，生成 patch 并通过测试 | 任务成功率必须由隐藏测试或回归测试判定，同时记录 repo 版本、工具环境、patch diff 和失败类型 |
+| tau-bench 类工具-用户交互 | 多轮用户、领域 policy、API tool 和最终数据库状态 | 不能只看回复文本，要检查 action correctness、policy compliance、state delta、重复 trial 的一致性和越权动作 |
+| BrowseComp 类浏览 agent | 在网页中寻找难找但可验证的短答案 | 需要记录搜索策略、引用证据、浏览深度、时间/调用预算和答案可验证性；短答案高分不等于开放式研究可靠 |
+
+课程评测协议应至少分四层：
+
+1. **Task success.** 是否解决用户任务：测试通过、目标状态达到、答案可验证或人工验收通过。
+2. **Trajectory quality.** 工具选择、参数、顺序、重试、循环、handoff、检索和引用是否合理。
+3. **Safety and side effects.** 是否违反权限、泄漏数据、执行不可逆动作、污染状态或绕过 policy。
+4. **System cost.** wall time、LLM calls、tool calls、prompt/completion tokens、P95 latency、外部 API 成本和失败重试成本。
+
+发布前的 agent eval gate 应固定环境和任务版本：tool registry、API schema、数据库 snapshot、检索库、浏览器/网络条件、hidden tests、judge rubric、随机 seed 和 temperature。公开 benchmark 只能作为回归信号，不能替代私有任务集、生产 canary 和 trace replay；否则模型可能只是适配了题库、工具环境或评分器。
+
 课堂检查：
 
 - 指标是任务假设的压缩，不是“真实质量”的同义词。
 - 报告平均值时必须说明样本数、split、置信区间或 single_seed_limit。
 - 对开放式 LLM 任务，自动指标、人工错误分析和资源指标应同时出现。
+- 对 agent/workflow 任务，最终答案、轨迹、状态变更、安全副作用和系统成本必须分开报告。
 
 ## 5. Ethics / Safety
 
@@ -285,6 +307,7 @@ LLM 课程的工程项目必须覆盖以下风险：
 2. 用 15 分钟比较同一句翻译的 BLEU 与人工偏好差异。
 3. 用 15 分钟把一个文本分类任务分别设计成 BERT fine-tuning 和 GPT prompting。
 4. 用 20 分钟分析一个 RAG 失败案例，标出 retrieval、generation 和 evaluation 的责任边界。
+5. 用 20 分钟分析一条 agent trace，标出 tool schema、policy、state delta、side effect、latency 和最终 task success 的责任边界。
 
 ## Mini-Recitation Activities
 
@@ -294,4 +317,5 @@ LLM 课程的工程项目必须覆盖以下风险：
 | Seq2Seq / NMT | beam table with sum and normalized score | 解释 length bias 和 length penalty |
 | BERT / MLM | masked input + labels table | 区分 MLM loss positions 与 causal LM labels |
 | Evaluation | metric failure-case table | 判断哪个指标支持结论、哪个指标失效 |
+| Agent evaluation | trace + state delta + tool call table | 判断最终成功、轨迹质量、安全副作用和成本是否同时过 gate |
 | Ethics / Safety | risk / trigger / mitigation table | 把 failure case 连接到数据、模型、系统或评测原因 |

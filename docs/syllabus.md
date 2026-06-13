@@ -11,7 +11,7 @@
 - 推导或解释关键公式：BPE merge、RoPE 相对位置、attention scaling、LayerNorm/RMSNorm、cross entropy、DPO/GRPO、KV Cache 显存。
 - 读懂 LLM 论文和模型报告中的核心技术选择，区分数学假设、实验结论和工程取舍。
 - 设计训练与推理实验，解释 loss、PPL、latency、throughput、quality、safety 和 cost 指标。
-- 理解经典 NLP 专题与现代 LLM 的关系：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT/encoder-only、BLEU/ROUGE/F1/EM 和安全评测。
+- 理解经典 NLP 专题与现代 LLM 的关系：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT/encoder-only、BLEU/ROUGE/F1/EM、agent/workflow eval 和安全评测。
 
 ## 先修要求
 
@@ -41,7 +41,7 @@
 | 生成方法 | Week 6 | Ch08 | greedy、temperature、top-k/top-p、speculative decoding、structured decoding |
 | 微调与对齐 | Week 7 | Ch09 | SFT chat template/mask/packing、合成数据与蒸馏、偏好数据、LoRA、preference model、DPO、GRPO/DAPO/GSPO、RLVR/RFT、alignment tax |
 | 推理工程 | Week 8 | Ch10 | KV Cache、continuous batching admission、MoE serving gate、long-context serving gate、context engineering gate、quantization release gate、model routing gate、FlashAttention、RAG、vLLM/SGLang、Triton、服务指标 |
-| 经典 NLP 与评测专题 | Week 9 | Ch11 + Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM、安全评测 |
+| 经典 NLP 与评测专题 | Week 9 | Ch11 + Classic NLP handout | RNN/LSTM、dependency parsing、seq2seq、BERT、BLEU/ROUGE/F1/EM、agent/workflow eval、安全评测 |
 | 项目展示 | Week 10 | Capstone | 训练项目、推理项目、报告、演示和讨论 |
 
 10 周版本优先保证“模型实现 -> 训练 -> 生成/对齐 -> 推理服务 -> 项目”的工程链路完整；经典 NLP 放在 Week 9，用来把 encoder-only、seq2seq、结构化预测和评价指标接回现代 LLM 评测与系统选型。12 周版本建议把 Week 9 的经典 NLP 与评测拆成两周，把 Week 10 拆成训练项目展示和推理项目展示两次。
@@ -55,7 +55,7 @@
 | Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性、train/val split 和实验统计 | GPT forward/loss、training gate、checkpoint/resume integrity、数据质量与扩容决策 |
 | Ch08-Ch09 | logits 分布、采样方差、KL/reference、chat template、assistant mask、合成/蒸馏数据、偏好数据、reward、rollout 分布和安全切片 | decoding budget、SFT mask/packing audit、post-training data audit、蒸馏数据来源说明、DPO/GRPO/DAPO/GSPO/RLVR 评估与失败分析 |
 | Ch10 | KV cache、排队、显存/带宽、MoE expert parallelism、量化校准与回归、模型路由/级联、压测统计、RAG 指标、context engineering、long-context quality/cost、tool 协议和准入控制 | continuous batching admission、quantization release gate、MoE serving gate、model routing gate、context engineering gate、long-context serving gate、benchmark summary、P/D 解耦容量计划和上线报告 |
-| Ch11 | RNN/LSTM、encoder-decoder、encoder-only、结构化预测、传统指标和 judge 可靠性 | parsing/CRF/QA/metrics 作业、LLM-as-judge audit 和任务建模选择说明 |
+| Ch11 | RNN/LSTM、encoder-decoder、encoder-only、结构化预测、传统指标、judge 可靠性和 agent/workflow eval | parsing/CRF/QA/metrics 作业、LLM-as-judge audit、agent eval protocol 和任务建模选择说明 |
 
 ## 作业与评分
 
@@ -93,7 +93,7 @@
 | A6 Ch08 | greedy/top-k/top-p、repetition penalty、beam、pass@k、self-consistency、`test_time_compute_budget_report`、token constraints、speculative decoding | 解码策略、搜索、多样性、reasoning/test-time compute 预算、结构化生成 | top-p 为什么是自适应截断？多样本 reasoning 何时值得上线？约束解码如何改变采样分布？ |
 | A7 Ch09 | SFT mask、`sft_chat_template_mask_report`、LoRA、sequence log-probs、post-training data audit、RM/DPO/PPO/GRPO/DAPO/GSPO、implicit reward、KL、length bias、`rlvr_grader_report` | 指令微调、chat template、assistant-only mask、packing 边界、合成数据/蒸馏、偏好优化、reference model、可验证 reward、rollout/ratio/length 诊断、对齐风险 | 为什么 SFT loss 下降不能证明 chat template、assistant mask、packing 和数据来源都正确？合成/蒸馏数据需要哪些 teacher、verifier、去重和 eval overlap 证据？DPO 为什么比较 policy 相对 reference 的变化，而不是只比较 raw log-prob？偏好数据 gate 失败时为什么不能直接进入 DPO/GRPO？DAPO/GSPO 日志为什么要看 rollout、长度、entropy、clip 和 sequence ratio？什么时候 RLVR/RFT 的 grader 信号足够可靠？ |
 | A8 Ch10 | KV cache、prefix cache、`continuous_batching_admission_report`、quantization release gate、MoE serving gate、model routing gate、InfoNCE、reranker loss、retrieval metrics、MMR、context packing、context engineering gate、`structured_output_reliability_report`、`validate_tool_call_plan`、`tool_runtime_security_report`、benchmark summary、`production_rollout_gate_report`、`serving_overload_response_report`、`prefill_decode_disaggregation_report`、`pd_pool_capacity_plan`、`speculative_serving_gate_report`、`long_context_serving_gate_report`、指标结论边界 | 推理工程、RAG、MoE expert parallelism、context engineering、structured output、tool/agent 协议、MCP runtime security、agent trace、生产发布 gate、运行期过载响应、服务指标、容量规划、量化校准/回归、模型路由/级联、continuous batching admission、prefill/decode 解耦、KV transfer、P/D worker pool sizing、speculative decoding 上线 gate、long-context quality/cost gate | TTFT、TPOT、tokens/s、P95 和显存分别约束什么产品问题？MoE serving 为什么要同时比较 TP baseline、EP/DP+EP、expert skew、AllToAll、KV cache per rank 和 P95 TPOT？weight-only、W8A8、KV cache quantization 和 FP8/FP4 分别改善什么瓶颈，又会在哪些任务切片退化？模型路由为什么不能只看平均成本下降，而要按任务/安全/schema/RAG/长上下文切片检查误路由？为什么 JSON parse 通过不等于 schema/safety/retry gate 通过？如何在执行前拦截无效或越权 tool call，并继续检查 MCP server trust、用户同意、roots/elicitation、数据外发和 observation isolation？为什么 agent trace 必须记录 guardrail events、tool spans、context budget 和 side-effect log？context engineering 为什么要同时检查 active/retrieved/compressed/memory/tool observation token、引用保留、summary fidelity、权限和 P95 TTFT？为什么离线 eval 提升仍需要 canary、control、monitoring 和 rollback gate？queue、KV cache、swapping、租户配额和 timeout 同时异常时，如何决定限流、降级、扩容、回滚或 page owner？如何用 max_num_seqs、max_num_batched_tokens 和 active KV tokens 做调度准入？如何把端到端延迟拆成 prefill、KV transfer、decode queue 和 TPOT？P/D 解耦后如何判断 worker、link 和 KV memory 哪个先饱和？为什么高接受率不必然支持启用推测解码？长上下文上线为什么要同时看截断、位置鲁棒性、引用召回、P95 TTFT 和 KV 占用？ |
-| A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1、`judge_reliability_audit` | 经典 NLP、encoder-only、结构化预测、评测指标、LLM-as-judge 可靠性 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？为什么一次 judge win rate 不能直接支持上线结论？ |
+| A9 Ch11 | RNN recurrence、dependency parsing、seq2seq attention、MLM、BIO/span F1、Viterbi/CRF、QA span、BLEU/ROUGE/EM/F1、`judge_reliability_audit`、agent/workflow eval protocol | 经典 NLP、encoder-only、结构化预测、评测指标、LLM-as-judge 可靠性、任务级 workflow 评测 | 什么时候应选择 span extraction、token classification 或 structured decoding，而不是开放式生成？为什么一次 judge win rate 或最终答案正确不能直接支持 agent 上线结论？ |
 
 ## 书面题能力层级
 

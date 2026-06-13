@@ -364,6 +364,9 @@
 - Lin. [ROUGE: A Package for Automatic Evaluation of Summaries](https://aclanthology.org/W04-1013/).
 - Zheng et al. [Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena](https://papers.nips.cc/paper_files/paper/2023/hash/91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_Benchmarks.html). 重点看 position、verbosity、self-enhancement bias 和与人工偏好的一致性验证。
 - OpenAI. [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 model graders 需要先和 human labels 验证一致性，再用于优化。
+- Jimenez et al. [SWE-bench: Can Language Models Resolve Real-World GitHub Issues?](https://arxiv.org/abs/2310.06770). 重点看真实代码库 issue、patch、测试验证和多文件修改如何把代码 agent 评测从“生成代码片段”变成任务级 workflow eval。
+- Yao et al. [tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains](https://arxiv.org/abs/2406.12045) 与 [tau-bench repository](https://github.com/sierra-research/tau2-bench). 重点看多轮用户、领域 policy、API tools、最终数据库状态、重复 trial 一致性和 task fixes 如何进入 agent eval protocol。
+- OpenAI. [BrowseComp: a benchmark for browsing agents](https://openai.com/index/browsecomp/). 重点看难找但可验证的短答案、浏览深度、搜索策略、答案可验证性，以及为什么短答案 benchmark 不能代表所有开放式研究任务。
 
 复盘问题：
 
@@ -375,6 +378,8 @@
 - 什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？
 - transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？
 - LLM-as-judge 的 position bias、verbosity bias、swapped-order inconsistency 和 human-label disagreement 分别会让什么结论失真？
+- agent/workflow eval 为什么要同时报告 final task success、tool trajectory、state delta、side effects、latency/cost 和环境版本？
+- SWE-bench、tau-bench 和 BrowseComp 分别覆盖了 agent 能力的哪一部分？各自没有覆盖什么真实生产风险？
 
 ## Week 10: 前沿方法、Benchmark 边界与课程综合
 

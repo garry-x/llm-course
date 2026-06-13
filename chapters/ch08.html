@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>Chapter 8 Text Generation</h2>
   <p class="subtitle">Sampling Strategies + DeepSeek MTP Speculative Decoding — The Last Mile from Probability to Text</p>
-  <div class="reading-time">⏱ Estimated Reading: 110 minutes · 15 sections · 7 coding exercises · 5 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 120 minutes · 16 sections · 7 coding exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -684,6 +684,57 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   </ul>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Reasoning ability is not "outputting a longer explanation." Rigorous experiments must prove that more intermediate tokens or more candidates indeed improve the task success rate, and must state how much test-time compute was consumed.</div></div>
+</section>
+
+<section class="card" id="s8-7d">
+  <h3>8.7D Thinking Mode, Thinking Budget, and Runtime Routing</h3>
+  <p>Recent reasoning models have made "how much thinking to spend" an inference-time control variable rather than a fixed property of a model. The <a href="https://arxiv.org/abs/2505.09388" target="_blank">Qwen3 technical report</a> describes a unified framework with both thinking mode and non-thinking mode, plus a thinking budget mechanism that allocates more or fewer generated reasoning tokens according to task complexity. For engineers, this should be treated as a runtime policy problem: the model, prompt template, max reasoning tokens, candidate count, verifier, latency target, and fallback route jointly define the user-visible behavior.</p>
+
+  <div class="foundation-graph" role="img" aria-label="Thinking budget routing map">
+    <svg viewBox="0 0 900 300">
+      <defs>
+        <marker id="thinking-arrow-08" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .think-node{fill:var(--card-bg);stroke:var(--border);stroke-width:2}
+        .think-hot{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .think-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#thinking-arrow-08)}
+        .think-title{font-size:15px;font-weight:700;fill:var(--text)}
+        .think-sub{font-size:12px;fill:var(--text-muted)}
+      </style>
+      <rect class="think-hot" x="32" y="116" width="150" height="70" rx="10"/>
+      <text text-anchor="middle" x="107" y="145"><tspan class="think-title">Incoming Task</tspan><tspan class="think-sub" x="107" dy="20">type, risk, SLO</tspan></text>
+      <path class="think-line" d="M182 151 H260"/>
+      <rect class="think-node" x="260" y="76" width="170" height="150" rx="10"/>
+      <text text-anchor="middle" x="345" y="106"><tspan class="think-title">Router</tspan><tspan class="think-sub" x="345" dy="22">classify complexity</tspan><tspan class="think-sub" x="345" dy="18">set budget</tspan><tspan class="think-sub" x="345" dy="18">choose verifier</tspan></text>
+      <path class="think-line" d="M430 111 H520"/>
+      <path class="think-line" d="M430 151 H520"/>
+      <path class="think-line" d="M430 191 H520"/>
+      <rect class="think-node" x="520" y="48" width="165" height="58" rx="10"/>
+      <text text-anchor="middle" x="602" y="72"><tspan class="think-title">Fast Path</tspan><tspan class="think-sub" x="602" dy="18">no-think, low latency</tspan></text>
+      <rect class="think-node" x="520" y="122" width="165" height="58" rx="10"/>
+      <text text-anchor="middle" x="602" y="146"><tspan class="think-title">Budgeted Reasoning</tspan><tspan class="think-sub" x="602" dy="18">limited thoughts</tspan></text>
+      <rect class="think-node" x="520" y="196" width="165" height="58" rx="10"/>
+      <text text-anchor="middle" x="602" y="220"><tspan class="think-title">Search + Verifier</tspan><tspan class="think-sub" x="602" dy="18">N samples, rerank</tspan></text>
+      <path class="think-line" d="M685 77 H748"/>
+      <path class="think-line" d="M685 151 H748"/>
+      <path class="think-line" d="M685 225 H748"/>
+      <rect class="think-hot" x="748" y="112" width="130" height="78" rx="10"/>
+      <text text-anchor="middle" x="813" y="140"><tspan class="think-title">Report</tspan><tspan class="think-sub" x="813" dy="20">accuracy, tokens</tspan><tspan class="think-sub" x="813" dy="17">latency, cost</tspan></text>
+    </svg>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Runtime Choice</th><th>Use When</th><th>Must Measure</th><th>Common Failure</th></tr>
+      <tr><td>Non-thinking mode</td><td>Simple factual, extraction, routing, or low-risk chat tasks</td><td>P95 latency, format accuracy, refusal boundary</td><td>Overusing fast mode on tasks that need multi-step constraints</td></tr>
+      <tr><td>Budgeted thinking</td><td>Math, code, planning, and multi-hop QA with a latency ceiling</td><td>reasoning tokens, final accuracy, timeout rate, cost per solved task</td><td>Increasing token budget without improving final correctness</td></tr>
+      <tr><td>Self-consistency or best-of-N</td><td>Tasks with checkable final answers and enough latency budget</td><td>pass@k, vote entropy, verifier precision/recall, total generated tokens</td><td>Majority vote converges on the same systematic error</td></tr>
+      <tr><td>Verifier reranking</td><td>Code, math, tool plans, and constrained domains with reliable tests or graders</td><td>verifier false positives, grader coverage, reranked top-1 accuracy</td><td>The verifier rewards style, length, or shortcut patterns instead of correctness</td></tr>
+    </table>
+  </div>
+  <p>The course therefore treats thinking budget as part of the serving contract. A release note should state the default mode, budget cap, routing rule, stop condition, fallback path, and measurement slice. If a model supports both thinking and non-thinking modes, the evaluation must report the Pareto frontier of quality versus latency, not only the best score obtained under the largest token budget.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> Thinking mode is not a magic capability label. It is a controlled allocation of generation tokens and verification work. Senior inference engineers should be able to decide when to spend those tokens, how to stop, and how to prove that the additional compute bought real task success.</div></div>
 </section>
 
 <!-- ================================================================ -->

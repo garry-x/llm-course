@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>Chapter 10: Inference Optimization & Frontiers</h2>
   <p class="subtitle">KV Cache / Sparse Attention / Quantization / RAG / Agent — Engineering Deployment of LLMs</p>
-  <div class="reading-time">⏱ Estimated Reading: 170 minutes · 24 sections · 7 programming exercises · 7 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 180 minutes · 25 sections · 7 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -1574,6 +1574,71 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
     <li>If prefill and decode clearly interfere with each other, then try prefill/decode worker ratios of 1:1, 1:2, 2:1, and report throughput@latency, not just tokens/s.</li>
   </ol>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> Prefill/decode disaggregation transforms LLM serving from "a single model process" into a "distributed system with a KV cache transfer protocol". Senior inference engineers must be able to judge whether the split is worthwhile, whether KV transfer becomes a new bottleneck, and how requests with different SLOs should be routed.</div></div>
+</section>
+
+<section class="card" id="s10-13d">
+  <h3>10.13D Cluster-Level Inference Orchestration: From Engine Feature to Serving Fabric</h3>
+  <p>Modern inference stacks are moving beyond "choose one engine and tune its batch size." vLLM exposes experimental disaggregated prefilling so TTFT and inter-token latency can be tuned separately, but its own documentation warns that this does not automatically improve throughput. TensorRT-LLM describes disaggregated serving as separate context and generation pools with KV cache exchange and transfer overlap. NVIDIA Dynamo positions itself as an orchestration layer above engines such as vLLM, SGLang, and TensorRT-LLM, adding KV-aware routing, multi-tier KV caching, SLA-based planning, and automatic scaling. The engineering lesson is that the frontier has shifted from single-process optimization to cluster-level control of KV, routing, and SLO.</p>
+
+  <div class="foundation-graph" role="img" aria-label="Cluster-level inference orchestration map">
+    <svg viewBox="0 0 940 340">
+      <defs>
+        <marker id="cluster-arrow-10" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .cluster-node{fill:var(--card-bg);stroke:var(--border);stroke-width:2}
+        .cluster-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .cluster-kv{fill:rgba(245,158,11,.12);stroke:var(--accent-hover);stroke-width:2}
+        .cluster-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#cluster-arrow-10)}
+        .cluster-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .cluster-sub{font-size:12px;fill:var(--text-muted)}
+      </style>
+      <rect class="cluster-core" x="30" y="128" width="128" height="72" rx="10"/>
+      <text text-anchor="middle" x="94" y="156"><tspan class="cluster-title">API Gateway</tspan><tspan class="cluster-sub" x="94" dy="18">tenant, SLO, auth</tspan></text>
+      <path class="cluster-line" d="M158 164 H218"/>
+      <rect class="cluster-core" x="218" y="98" width="158" height="132" rx="10"/>
+      <text text-anchor="middle" x="297" y="130"><tspan class="cluster-title">Orchestrator</tspan><tspan class="cluster-sub" x="297" dy="22">KV-aware routing</tspan><tspan class="cluster-sub" x="297" dy="18">SLA planner</tspan><tspan class="cluster-sub" x="297" dy="18">autoscaling</tspan></text>
+      <path class="cluster-line" d="M376 130 H470"/>
+      <path class="cluster-line" d="M376 164 H470"/>
+      <path class="cluster-line" d="M376 198 H470"/>
+      <rect class="cluster-node" x="470" y="42" width="158" height="70" rx="10"/>
+      <text text-anchor="middle" x="549" y="70"><tspan class="cluster-title">Prefill Pool</tspan><tspan class="cluster-sub" x="549" dy="18">compute-heavy</tspan></text>
+      <rect class="cluster-node" x="470" y="130" width="158" height="70" rx="10"/>
+      <text text-anchor="middle" x="549" y="158"><tspan class="cluster-title">Decode Pool</tspan><tspan class="cluster-sub" x="549" dy="18">KV bandwidth</tspan></text>
+      <rect class="cluster-node" x="470" y="218" width="158" height="70" rx="10"/>
+      <text text-anchor="middle" x="549" y="246"><tspan class="cluster-title">Specialized Pools</tspan><tspan class="cluster-sub" x="549" dy="18">LoRA, tools, vision</tspan></text>
+      <path class="cluster-line" d="M628 77 H712"/>
+      <path class="cluster-line" d="M628 165 H712"/>
+      <path class="cluster-line" d="M628 253 H712"/>
+      <rect class="cluster-kv" x="712" y="86" width="178" height="156" rx="10"/>
+      <text text-anchor="middle" x="801" y="122"><tspan class="cluster-title">KV + Weight Fabric</tspan><tspan class="cluster-sub" x="801" dy="24">GPU / CPU / SSD tiers</tspan><tspan class="cluster-sub" x="801" dy="18">prefix cache domain</tspan><tspan class="cluster-sub" x="801" dy="18">cold-start streaming</tspan><tspan class="cluster-sub" x="801" dy="18">layout conversion</tspan></text>
+    </svg>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Layer</th><th>Representative Source</th><th>What Changes</th><th>What to Measure</th></tr>
+      <tr><td>Engine-level disaggregation</td><td>vLLM disaggregated prefilling</td><td>Runs prefill and decode in different instances and transfers KV through connectors</td><td>TTFT, ITL/TPOT, kv_transfer_ms, connector failure rate, comparison with chunked prefill</td></tr>
+      <tr><td>Backend-level disaggregated serving</td><td>TensorRT-LLM disaggregated serving</td><td>Separates context and generation servers, overlaps KV transfer with computation, and supports backend-specific cache exchange</td><td>throughput@latency, transfer overlap ratio, cache layout conversion cost, GPU pool utilization</td></tr>
+      <tr><td>Orchestration layer</td><td>NVIDIA Dynamo</td><td>Coordinates engines across nodes with KV-aware routing, multi-tier KV cache, SLA planning, and autoscaling</td><td>SLA breach rate, TCO, prefix-cache hit rate, cold-start time, migration/failure recovery</td></tr>
+      <tr><td>Application policy</td><td>Course deployment blueprint</td><td>Maps request type to model, thinking budget, RAG/tool path, priority, and fallback</td><td>cost per successful task, safety incidents, fallback rate, tenant isolation, audit trace completeness</td></tr>
+    </table>
+  </div>
+
+  <p>The point is not to teach every command-line flag of every framework. The course-level requirement is that students can explain which system boundary each method changes. A single-engine feature mostly changes scheduling inside a process. A disaggregated backend adds KV transfer and layout compatibility. A cluster orchestrator adds routing, cache ownership, autoscaling, and failure recovery. A product policy adds tenant, safety, tool, and budget constraints. These boundaries must not be mixed in a performance report.</p>
+
+  <h4>Production Report Template for Advanced Inference Engineers</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Report Block</th><th>Required Content</th><th>Why It Matters</th></tr>
+      <tr><td>Workload shape</td><td>input/output token histogram, reasoning budget, RAG/tool/multimodal share, concurrency trace</td><td>Determines whether prefill, decode, retrieval, tools, or network is the real bottleneck</td></tr>
+      <tr><td>Topology</td><td>engine, TP/PP/EP config, prefill/decode pool ratio, KV connector, cache tiers</td><td>Makes TTFT/TPOT and failure analysis reproducible</td></tr>
+      <tr><td>Latency decomposition</td><td>queue, prefill, KV transfer, decode queue, TPOT, post-processing, tool/RAG latency</td><td>Prevents hiding a new bottleneck behind lower average latency</td></tr>
+      <tr><td>Quality and safety</td><td>same prompts across topologies, format accuracy, citation accuracy, refusal slices, tool-call correctness</td><td>Serving changes can alter generation behavior through templates, stops, quantization, or routing</td></tr>
+      <tr><td>Cost and resilience</td><td>GPU-hours, memory headroom, SLA breach rate, failover behavior, rollback path</td><td>Turns a benchmark into an operational decision</td></tr>
+    </table>
+  </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>System Design Judgment:</strong> Advanced inference engineering is now a cluster-control problem. A course answer is incomplete if it only says "use vLLM" or "enable P/D disaggregation"; it must specify workload, topology, KV ownership, latency decomposition, quality invariants, cost, and rollback evidence.</div></div>
 </section>
 
 <!-- ================================================================ -->

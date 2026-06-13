@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>Chapter 9: Fine-tuning and Alignment</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO — The Last Mile from Pre-training to a Useful Assistant</p>
-  <div class="reading-time">⏱ Estimated Reading: 140 minutes · 19 sections · 8 programming exercises · 5 conceptual exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 150 minutes · 20 sections · 8 programming exercises · 5 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -766,6 +766,57 @@ advantages ≈
 
   <p>The reason for including these methods in Ch09 is that they all remind us of the same thing: the name of the RL algorithm itself cannot prove reasoning capability improvement. A qualified report should at least simultaneously plot reward, pass@k or task success rate, average completion tokens, P95 completion length, entropy, approx KL, clip fraction, effective rollout ratio, and failure types. If accuracy improvement is accompanied by continuous output length expansion, entropy collapse, extreme clip fraction, or effectiveness only on training question types, the engineering conclusion should be "reward/sampling/length control needs rework," not "scale up training."</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Systematic Judgment:</strong> DAPO/GSPO are not alternative memory points for GRPO, but rather connect Ch07's training stability, Ch08's test-time compute, Ch09's reward gate, and Ch10's deployment cost. Senior training engineers must be able to read these logs and explain whether an RL run is learning generalizable reasoning or exploiting the grader, length, or routing noise.</div></div>
+</section>
+
+<section class="card" id="s9-8c">
+  <h3>9.8C From Reasoning RL Research to a Deployable Evidence Chain</h3>
+  <p>The <a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1 report</a> is useful for this course not because students should memorize one recipe, but because it exposes a complete post-training systems problem. The revised arXiv version reports that reasoning ability can emerge under large-scale RL on verifiable tasks, while also highlighting why cold-start data, readability, language consistency, distillation, and evaluation are needed before a model becomes deployable. For training engineers, the lesson is: reasoning RL must be audited from data and reward to rollout behavior, capability retention, and inference cost.</p>
+
+  <div class="foundation-graph" role="img" aria-label="Reasoning RL deployable evidence chain">
+    <svg viewBox="0 0 900 270">
+      <defs>
+        <marker id="rl-chain-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .rl-node{fill:var(--card-bg);stroke:var(--border);stroke-width:2}
+        .rl-core{fill:rgba(16,185,129,.10);stroke:var(--success);stroke-width:2}
+        .rl-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#rl-chain-arrow-09)}
+        .rl-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .rl-sub{font-size:12px;fill:var(--text-muted)}
+      </style>
+      <rect class="rl-node" x="24" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="88" y="123"><tspan class="rl-title">Prompt Set</tspan><tspan class="rl-sub" x="88" dy="18">coverage, leakage</tspan></text>
+      <path class="rl-line" d="M152 130 H205"/>
+      <rect class="rl-node" x="205" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="269" y="123"><tspan class="rl-title">Reward</tspan><tspan class="rl-sub" x="269" dy="18">grader, tests</tspan></text>
+      <path class="rl-line" d="M333 130 H386"/>
+      <rect class="rl-core" x="386" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="450" y="123"><tspan class="rl-title">RL Update</tspan><tspan class="rl-sub" x="450" dy="18">GRPO/DAPO</tspan></text>
+      <path class="rl-line" d="M514 130 H567"/>
+      <rect class="rl-node" x="567" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="631" y="123"><tspan class="rl-title">Behavior</tspan><tspan class="rl-sub" x="631" dy="18">length, format</tspan></text>
+      <path class="rl-line" d="M695 130 H748"/>
+      <rect class="rl-node" x="748" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="812" y="123"><tspan class="rl-title">Release</tspan><tspan class="rl-sub" x="812" dy="18">cost, safety</tspan></text>
+      <path class="rl-line" d="M450 165 C450 205 232 205 232 166"/>
+      <text text-anchor="middle" x="340" y="224"><tspan class="rl-sub">failure loop: reward hacking, length growth, memorization, tool misuse</tspan></text>
+    </svg>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Evidence Layer</th><th>What to Prove</th><th>Minimum Signals</th><th>Reject the Claim If</th></tr>
+      <tr><td>Task distribution</td><td>The RL prompts represent the intended reasoning workload</td><td>domain mix, difficulty buckets, train/eval overlap, prompt template versions</td><td>Only one benchmark or one prompt style improves</td></tr>
+      <tr><td>Reward validity</td><td>The grader measures final correctness and cannot be cheaply exploited</td><td>unit test pass rate, verifier false positive audit, adversarial grader probes</td><td>Reward increases while human or test-verified accuracy is flat</td></tr>
+      <tr><td>Optimization stability</td><td>The policy update stays within a controlled behavioral region</td><td>approx KL, clip fraction, entropy, reward std, rollout count, effective sample ratio</td><td>KL spikes, entropy collapses, or most groups have zero reward variance</td></tr>
+      <tr><td>Reasoning behavior</td><td>Longer outputs correspond to more correct solutions, not just verbosity</td><td>pass@k, final-answer accuracy, P95 completion length, invalid format rate</td><td>Accuracy gain disappears after controlling for token budget</td></tr>
+      <tr><td>Capability retention</td><td>General assistant, safety, and domain capabilities did not regress unacceptably</td><td>slice evals, refusal calibration, code/math retention, multilingual or tenant-specific checks</td><td>The model becomes narrow, over-refuses, or fails old production slices</td></tr>
+      <tr><td>Serving viability</td><td>The post-RL model can be served under the target SLO and budget</td><td>average output tokens, TTFT/TPOT, cost per correct answer, fallback rate</td><td>The model is more accurate only under an unaffordable reasoning budget</td></tr>
+    </table>
+  </div>
+
+  <p>This evidence chain connects directly to Ch08 and Ch10. Ch08 provides pass@k, self-consistency, verifier reranking, and thinking-budget accounting. Ch10 asks whether the longer completions and multi-sample decoding can still satisfy latency, queueing, and cost constraints. Therefore, a reasoning RL report is incomplete if it stops at reward curves or benchmark scores; it must also explain how the trained model will be routed, budgeted, monitored, and rolled back in service.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Senior-Level Requirement:</strong> Treat reasoning RL as a coupled data, reward, optimizer, evaluation, and serving system. A model is not production-ready because it exhibits self-reflection; it is production-ready only when the evidence chain shows measurable correctness gains under bounded cost and acceptable regression risk.</div></div>
 </section>
 
 <!-- ================================================================ -->

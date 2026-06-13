@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/chapters-11-orange" alt="11 chapters">
   <img src="https://img.shields.io/badge/exercises-programming_+_written-blue" alt="programming and written exercises">
-  <img src="https://img.shields.io/badge/sections-127-yellow" alt="127 sections">
+  <img src="https://img.shields.io/badge/sections-130-yellow" alt="130 sections">
   <img src="https://img.shields.io/badge/frontier-architecture_cases-green" alt="frontier architecture cases">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
   <img src="https://img.shields.io/badge/db-IndexedDB-red" alt="IndexedDB">

@@ -12,9 +12,9 @@
     {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm, SwiGLU, resource estimation, stability & interpretability', sections:20},
     {id:6, file:'ch06.html', title:'Assembling a Complete GPT Model', desc:'GPT-2 124M, MoE, weight loading, logit parity & checkpoint compatibility', sections:18},
     {id:7, file:'ch07.html', title:'Training Loop', desc:'Data pipeline, AdamW, checkpoint, distributed, MFU, industrial training system gate', sections:26},
-    {id:8, file:'ch08.html', title:'Text Generation', desc:'Sampling, beam, reasoning/test-time compute, speculative & structured decoding', sections:21},
-    {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', desc:'SFT, synthetic distillation, preference data, LoRA, DPO, GRPO, RLVR & capability retention', sections:24},
-    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', desc:'KV Cache, continuous batching, RAG, tool use, PD separation & inference engine', sections:30},
+    {id:8, file:'ch08.html', title:'Text Generation', desc:'Sampling, beam, thinking budget, speculative & structured decoding', sections:22},
+    {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', desc:'SFT, synthetic distillation, preference data, LoRA, DPO, GRPO, reasoning RL & retention', sections:25},
+    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', desc:'KV Cache, continuous batching, RAG, tool use, PD separation & cluster orchestration', sections:31},
     {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, evaluation validity & safety', sections:19}
   ];
 

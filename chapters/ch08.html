@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 8 Text Generation</h2>
   <p class="subtitle">Sampling Strategies and DeepSeek MTP Speculative Decoding — Turning Probabilities into Text</p>
-  <div class="reading-time">⏱ Estimated Reading: 120 minutes · 16 sections · 7 coding exercises · 5 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 130 minutes · 25 sections · 7 coding exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -1210,6 +1210,105 @@ next_token = sample_next_token(masked, strategy="greedy")
   <p>A structured output experiment should not stop at "JSON validity is 99%." A useful report includes schema pass rate, retry count, latency overhead, semantic field accuracy, unsupported citation rate, tool authorization failures, and post-execution failure rate. If constrained decoding improves parseability but increases latency or hides a systematic extraction error, the release conclusion must mention that boundary.</p>
   <p>For senior inference engineers, the correct deployment claim is narrow: <code>structured decoding guarantees the output shape under the supported schema; application validation decides whether the content is true and safe to execute.</code> Confusing these two layers is a common cause of agent incidents: a valid tool-call JSON object can still delete the wrong resource, cite a document that does not support the claim, or submit an unsafe query.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> Use constrained decoding to make the output parseable, then use validators and execution guards to decide whether it is correct, authorized, and safe. Schema adherence is necessary infrastructure, not a substitute for task evaluation.</div></div>
+</section>
+
+<section class="card" id="s8-12b">
+  <h3>8.12B Constrained Decoding Engines: CFG, FSM, Schema, and Serving Cost</h3>
+  <p>Structured output is not only a prompting technique. In production inference, it is usually implemented as a serving-time constraint engine: the request provides a schema, regex, choice set, grammar, or tool signature; the backend compiles that contract into a constraint state; every decoding step masks illegal tokens before sampling. OpenAI Structured Outputs, vLLM Structured Outputs, SGLang Structured Outputs, Outlines-style libraries, and guidance-style libraries all follow this broad pattern, although they differ in supported schema features, grammar backend, batching behavior, and latency overhead.</p>
+  <p>This section complements the previous reliability discussion. Constrained decoding can make the surface format valid, but it does not make the content true. The inference engineer still needs validators, evidence checks, permission checks, and failure metrics after the decoder returns a parseable object.</p>
+
+  <div class="svg-diagram" style="max-width:1040px">
+    <svg viewBox="0 0 1040 520" role="img" aria-label="Constrained decoding engine pipeline from request schema to token mask and validation">
+      <defs>
+        <marker id="constraint-engine-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#2b6cb0"/>
+        </marker>
+      </defs>
+      <style>
+        .ce-box{fill:#ffffff;stroke:#cbd5e1;stroke-width:1.6}
+        .ce-core{fill:#eef6ff;stroke:#2b6cb0;stroke-width:2}
+        .ce-risk{fill:#fff5f5;stroke:#d64545;stroke-width:1.8}
+        .ce-note{fill:#f8fafc;stroke:#94a3b8;stroke-width:1.4}
+        .ce-line{fill:none;stroke:#2b6cb0;stroke-width:2;marker-end:url(#constraint-engine-arrow)}
+        .ce-fail{fill:none;stroke:#d64545;stroke-width:2;stroke-dasharray:6 5;marker-end:url(#constraint-engine-arrow)}
+        .ce-title{font-size:15px;font-weight:700;fill:#0f172a}
+        .ce-sub{font-size:12px;fill:#475569}
+        .ce-small{font-size:11px;fill:#475569}
+      </style>
+      <rect class="ce-box" x="34" y="70" width="142" height="78" rx="8"/>
+      <text text-anchor="middle" x="105" y="101"><tspan class="ce-title">Request</tspan><tspan class="ce-sub" x="105" dy="20">prompt, task</tspan><tspan class="ce-sub" x="105" dy="17">output contract</tspan></text>
+      <path class="ce-line" d="M176 109 H236"/>
+
+      <rect class="ce-core" x="236" y="52" width="174" height="114" rx="8"/>
+      <text text-anchor="middle" x="323" y="83"><tspan class="ce-title">Compile Constraint</tspan><tspan class="ce-sub" x="323" dy="21">JSON Schema</tspan><tspan class="ce-sub" x="323" dy="17">regex, CFG, choices</tspan><tspan class="ce-sub" x="323" dy="17">cache by schema hash</tspan></text>
+      <path class="ce-line" d="M410 109 H470"/>
+
+      <rect class="ce-core" x="470" y="52" width="154" height="114" rx="8"/>
+      <text text-anchor="middle" x="547" y="83"><tspan class="ce-title">Decode Step</tspan><tspan class="ce-sub" x="547" dy="21">read prefix</tspan><tspan class="ce-sub" x="547" dy="17">constraint state</tspan><tspan class="ce-sub" x="547" dy="17">allowed tokens</tspan></text>
+      <path class="ce-line" d="M624 109 H684"/>
+
+      <rect class="ce-core" x="684" y="52" width="144" height="114" rx="8"/>
+      <text text-anchor="middle" x="756" y="83"><tspan class="ce-title">Mask Logits</tspan><tspan class="ce-sub" x="756" dy="21">illegal token</tspan><tspan class="ce-sub" x="756" dy="17">probability to</tspan><tspan class="ce-sub" x="756" dy="17">negative infinity</tspan></text>
+      <path class="ce-line" d="M828 109 H888"/>
+
+      <rect class="ce-core" x="888" y="52" width="118" height="114" rx="8"/>
+      <text text-anchor="middle" x="947" y="84"><tspan class="ce-title">Sample</tspan><tspan class="ce-sub" x="947" dy="21">greedy</tspan><tspan class="ce-sub" x="947" dy="17">top-p</tspan><tspan class="ce-sub" x="947" dy="17">temperature</tspan></text>
+
+      <path class="ce-line" d="M947 166 V222 H547 V166"/>
+      <rect class="ce-note" x="472" y="222" width="150" height="72" rx="8"/>
+      <text text-anchor="middle" x="547" y="250"><tspan class="ce-title">Update State</tspan><tspan class="ce-sub" x="547" dy="20">append token</tspan><tspan class="ce-sub" x="547" dy="17">advance parser</tspan></text>
+
+      <rect class="ce-risk" x="86" y="326" width="170" height="88" rx="8"/>
+      <text text-anchor="middle" x="171" y="354"><tspan class="ce-title">Compile Failure</tspan><tspan class="ce-sub" x="171" dy="20">unsupported schema</tspan><tspan class="ce-sub" x="171" dy="17">large grammar</tspan><tspan class="ce-sub" x="171" dy="17">slow cold start</tspan></text>
+      <path class="ce-fail" d="M323 166 C292 238 229 274 171 326"/>
+
+      <rect class="ce-risk" x="344" y="326" width="170" height="88" rx="8"/>
+      <text text-anchor="middle" x="429" y="354"><tspan class="ce-title">No Legal Token</tspan><tspan class="ce-sub" x="429" dy="20">bad prefix</tspan><tspan class="ce-sub" x="429" dy="17">tokenizer mismatch</tspan><tspan class="ce-sub" x="429" dy="17">strict contract</tspan></text>
+      <path class="ce-fail" d="M547 166 C526 236 480 278 429 326"/>
+
+      <rect class="ce-risk" x="602" y="326" width="170" height="88" rx="8"/>
+      <text text-anchor="middle" x="687" y="354"><tspan class="ce-title">Serving Cost</tspan><tspan class="ce-sub" x="687" dy="20">mask overhead</tspan><tspan class="ce-sub" x="687" dy="17">batch divergence</tspan><tspan class="ce-sub" x="687" dy="17">streaming delay</tspan></text>
+      <path class="ce-fail" d="M756 166 C749 238 715 280 687 326"/>
+
+      <rect class="ce-note" x="828" y="326" width="170" height="88" rx="8"/>
+      <text text-anchor="middle" x="913" y="354"><tspan class="ce-title">Post-Validation</tspan><tspan class="ce-sub" x="913" dy="20">schema parse</tspan><tspan class="ce-sub" x="913" dy="17">evidence checks</tspan><tspan class="ce-sub" x="913" dy="17">permissions</tspan></text>
+      <path class="ce-line" d="M947 166 C966 238 952 280 913 326"/>
+
+      <text x="104" y="466" class="ce-small">Measure: compile ms, per-token mask overhead, schema pass rate, semantic accuracy, retry rate, p95 latency delta, no-legal-token rate.</text>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 8-5: A constrained decoding engine converts a format contract into a parser state and token mask. The serving stack must still handle unsupported schemas, tokenizer edge cases, latency, streaming, and semantic validation.</p>
+
+  <h4>1. Constraint families and where they fit</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Constraint Family</th><th>Good Fit</th><th>What It Controls</th><th>Engineering Caveat</th></tr>
+      <tr><td>JSON mode</td><td>Flexible logs, loose application state, exploratory tools</td><td>Encourages valid JSON output</td><td>Does not guarantee required fields, enum values, or business rules; still run schema validation</td></tr>
+      <tr><td>Strict JSON Schema</td><td>Extraction, API responses, tool arguments, typed workflow state</td><td>Object shape, required keys, basic types, enums, arrays within supported schema features</td><td>Unsupported schema features and cold compile latency can matter; cache compiled constraints by schema hash</td></tr>
+      <tr><td>Choice or enum</td><td>Classification, routing, moderation labels, small control decisions</td><td>Allowed label surface form</td><td>The selected label may still be semantically wrong; evaluate label accuracy separately</td></tr>
+      <tr><td>Regex / FSM</td><td>Identifiers, short DSL fragments, simple formats, constrained prefixes</td><td>Regular-language surface structure</td><td>Nested recursive structures are awkward or impossible; tokenizer boundaries can surprise the automaton</td></tr>
+      <tr><td>CFG / EBNF</td><td>Nested JSON, SQL-like fragments, code-like DSLs, recursive syntax</td><td>Context-free grammar structure</td><td>Compilation and allowed-token computation are more complex than simple choices or regex</td></tr>
+      <tr><td>Post-validation and repair</td><td>Semantic checks, evidence binding, permissions, domain invariants</td><td>Correctness beyond syntax</td><td>Retries add latency and can loop; define a bounded failure policy</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Production failure modes</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Failure Mode</th><th>Why It Happens</th><th>Practical Response</th></tr>
+      <tr><td>Schema compile latency</td><td>Large schemas, recursive grammars, or many one-off schemas require backend compilation</td><td>Normalize schemas, cache by hash, pre-warm frequent contracts, and report cold-start latency separately</td></tr>
+      <tr><td>Tokenizer mismatch</td><td>The grammar is defined over characters while the decoder emits tokenizer-specific tokens</td><td>Test with the actual serving tokenizer; include edge cases such as quotes, escapes, unicode, and long numbers</td></tr>
+      <tr><td>Empty legal token set</td><td>The current prefix cannot reach any valid final string under the constraint</td><td>Fail closed, return a validation error, or restart with a corrected prompt and schema; do not silently emit invalid tokens</td></tr>
+      <tr><td>Batch divergence</td><td>Requests in one batch use different schemas or constraints with different parser costs</td><td>Bucket by schema complexity, keep common schemas hot, and compare p50 and p95 latency against unconstrained decoding</td></tr>
+      <tr><td>Streaming partial JSON</td><td>Early tokens may be valid prefixes but not complete application objects</td><td>Stream framed events, stream only completed fields, or withhold the object until validation succeeds</td></tr>
+      <tr><td>Semantic mismatch</td><td>A schema-valid object can contain unsupported facts, wrong units, or unauthorized tool arguments</td><td>Use evidence binding, business validators, tenant checks, and explicit user confirmation for side effects</td></tr>
+    </table>
+  </div>
+
+  <h4>3. What to measure before enabling it by default</h4>
+  <p>A production report should include <code>schema_compile_ms</code>, per-token mask overhead, schema pass rate, semantic field accuracy, retry rate, no-legal-token rate, unsupported schema rate, and p95 latency delta versus unconstrained decoding. For high-throughput serving, also report how constrained requests affect continuous batching and KV-cache utilization.</p>
+  <p>Primary references worth reading next are <a href="https://developers.openai.com/api/docs/guides/structured-outputs" target="_blank">OpenAI Structured Outputs</a>, <a href="https://docs.vllm.ai/en/latest/features/structured_outputs/" target="_blank">vLLM Structured Outputs</a>, <a href="https://docs.sglang.io/docs/advanced_features/structured_outputs" target="_blank">SGLang Structured Outputs</a>, and the <a href="https://arxiv.org/abs/2501.10868" target="_blank">JSONSchemaBench</a> benchmark for structured-output reliability and efficiency.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Takeaway:</strong> Constrained decoding is a serving-time control plane. It converts format reliability into a state-machine problem, but task correctness still depends on validators, evidence, permissions, and bounded failure handling.</div></div>
 </section>
 
 

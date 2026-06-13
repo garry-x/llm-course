@@ -117,7 +117,7 @@
     <tr><td>RIGHT_ARC(label)</td><td>stack has at least two elements</td><td>Make the top element a dependent of the second-top element, then remove the top element</td></tr>
     <tr><td>ROOT(label)</td><td>Only one root candidate remains</td><td>Attach the root candidate to ROOT</td></tr>
   </table>
-  <h4>Worked Example：Arc-standard parsing of <code>I saw her</code></h4>
+  <h4>Worked Example: Arc-standard parsing of <code>I saw her</code></h4>
   <p>The target dependency tree is <code>saw -> I (nsubj)</code>, <code>saw -> her (obj)</code>, and finally <code>ROOT -> saw (root)</code>. Using the arc-standard transition system, it can be constructed as follows:</p>
   <div class="table-wrap">
     <table>
@@ -152,7 +152,7 @@
 </section>
 
 <section class="card" id="s11-4a">
-  <h3>11.4A Worked Example：Manual calculation of additive attention</h3>
+  <h3>11.4A Worked Example: Manual calculation of additive attention</h3>
   <p>Assume the current decoder state is <span class="katex-inline" data-expr="s_t=[1,0]" aria-label="s_t=[1,0]" role="img"></span>, and the source sequence has two encoder hidden states: <span class="katex-inline" data-expr="h_1=[1,1]" aria-label="h_1=[1,1]" role="img"></span>, <span class="katex-inline" data-expr="h_2=[0,2]" aria-label="h_2=[0,2]" role="img"></span>. Use a minimal set of additive attention parameters:</p>
   <div class="code-block" data-lang="text">
 W_s = [[1, 0]]
@@ -170,7 +170,7 @@ v   = [1]</div>
 </section>
 
 <section class="card" id="s11-5">
-  <h3>11.5 BERT / Encoder-only：MLM, Classification, and Extractive QA</h3>
+  <h3>11.5 BERT / Encoder-only: MLM, Classification, and Extractive QA</h3>
   <p>A BERT-style encoder can bidirectionally see the left and right context within the input; it is not an autoregressive generator. One of its pre-training objectives is Masked Language Modeling: cross-entropy is only computed at masked positions, while unmasked tokens use an ignore index. The <code>masked_lm_loss_from_logits</code> function in the course assignment explicitly returns the masked-token loss, accuracy, and the positions contributing to the loss, helping to distinguish between "which tokens in the input are visible" and "which positions contribute to the training objective".</p>
   <table>
     <tr><th>Dimension</th><th>Encoder-only / BERT</th><th>Decoder-only / GPT</th></tr>
@@ -201,10 +201,10 @@ v   = [1]</div>
 </section>
 
 <section class="card" id="s11-5a">
-  <h3>11.5A Worked Example：MLM loss, masked-token accuracy, and extractive QA span</h3>
+  <h3>11.5A Worked Example: MLM loss, masked-token accuracy, and extractive QA span</h3>
   <p>A common mistake in training and predicting with encoder-only models is conflating "all tokens in the input are visible" with "all positions contribute to the loss". BERT's self-attention can bidirectionally see the entire sentence, but the MLM loss is only computed at masked positions.</p>
 
-  <h4>MLM：Averaging only over masked positions</h4>  <p>Let the input tokens be <code>[CLS] the cat sat [SEP]</code>, and the mask positions be <code>[2, 3]</code>. Then the model input and labels are:</p>
+  <h4>MLM: Averaging only over masked positions</h4>  <p>Let the input tokens be <code>[CLS] the cat sat [SEP]</code>, and the mask positions be <code>[2, 3]</code>. Then the model input and labels are:</p>
   <div class="code-block" data-lang="text">
 masked input: [CLS] the [MASK] [MASK] [SEP]
 labels:       None  None cat    sat    None</div>

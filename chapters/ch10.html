@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>Chapter 10: Inference Optimization & Frontiers</h2>
   <p class="subtitle">KV Cache / Sparse Attention / Quantization / RAG / Agent — Engineering Deployment of LLMs</p>
-  <div class="reading-time">⏱ Estimated Reading: 180 minutes · 25 sections · 7 programming exercises · 7 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 190 minutes · 26 sections · 7 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -2037,6 +2037,73 @@ def forward(image, text_prompt):
   <h4>How to Write Multimodal Experiments</h4>
   <p>Multimodal reports should at least separately describe the input settings and model output: image resolution, cropping strategy, number of visual tokens, prompt, max output tokens, whether OCR tools are allowed, and whether multi-turn follow-ups are permitted. Quality metrics should also be broken down by task: VQA cannot replace OCR, OCR cannot replace chart numerical reasoning, and chart reasoning does not prove the model has reliable visual grounding.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Insight:</strong> An LLM can be viewed as a powerful sequence modeling backbone. As long as other modalities can be encoded into suitable token or vector sequences, and the training data provides cross-modal alignment signals, the model can learn to perform tasks on visual, audio, code, and other inputs. This does not mean any modality is inherently equivalent to natural language.</div></div>
+</section>
+
+<section class="card" id="s10-20a">
+  <h3>10.20A Real-Time Multimodal and Long-Context Serving</h3>
+  <p>Recent product APIs make multimodal serving look like one interface: text, image, audio, video, tools, and long context can all enter the same model call. Engineering-wise, these are very different latency and state problems. The Gemini long-context guide describes 1M+ token contexts and multimodal inputs such as video and audio, while warning that long context still has cost and retrieval limitations. OpenAI's GPT-4.1 announcement similarly emphasizes 1M-token context and multi-needle / multi-hop evaluations rather than only single needle retrieval. Realtime APIs such as OpenAI Realtime and Gemini Live keep a session open for low-latency audio/video interaction, which changes the serving problem from "one request returns one answer" into "a stateful stream with interruption, partial outputs, tool calls, and audio playback."</p>
+
+  <div class="foundation-graph" role="img" aria-label="Realtime multimodal serving pipeline">
+    <svg viewBox="0 0 940 330">
+      <defs>
+        <marker id="rt-mm-arrow-10" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .rt-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .rt-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .rt-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#rt-mm-arrow-10)}
+        .rt-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .rt-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rt-core" x="30" y="124" width="126" height="82" rx="10"/>
+      <text text-anchor="middle" x="93" y="151"><tspan class="rt-title">Client Stream</tspan><tspan class="rt-sub" x="93" dy="20">audio / video</tspan><tspan class="rt-sub" x="93" dy="17">text / tools</tspan></text>
+      <path class="rt-line" d="M156 165 H218"/>
+      <rect class="rt-node" x="218" y="82" width="150" height="70" rx="10"/>
+      <text text-anchor="middle" x="293" y="110"><tspan class="rt-title">Preprocess</tspan><tspan class="rt-sub" x="293" dy="18">chunk, VAD, frames</tspan></text>
+      <rect class="rt-node" x="218" y="188" width="150" height="70" rx="10"/>
+      <text text-anchor="middle" x="293" y="216"><tspan class="rt-title">Session State</tspan><tspan class="rt-sub" x="293" dy="18">history, cache, tools</tspan></text>
+      <path class="rt-line" d="M368 117 H456"/>
+      <path class="rt-line" d="M368 223 H456"/>
+      <rect class="rt-core" x="456" y="118" width="160" height="94" rx="10"/>
+      <text text-anchor="middle" x="536" y="145"><tspan class="rt-title">Multimodal Model</tspan><tspan class="rt-sub" x="536" dy="21">prefill + decode</tspan><tspan class="rt-sub" x="536" dy="18">tool decisions</tspan></text>
+      <path class="rt-line" d="M616 165 H692"/>
+      <rect class="rt-node" x="692" y="68" width="184" height="64" rx="10"/>
+      <text text-anchor="middle" x="784" y="94"><tspan class="rt-title">Text / Tool Output</tspan><tspan class="rt-sub" x="784" dy="18">JSON, actions, citations</tspan></text>
+      <rect class="rt-node" x="692" y="154" width="184" height="64" rx="10"/>
+      <text text-anchor="middle" x="784" y="180"><tspan class="rt-title">Audio Playback</tspan><tspan class="rt-sub" x="784" dy="18">streaming, barge-in</tspan></text>
+      <rect class="rt-node" x="692" y="240" width="184" height="64" rx="10"/>
+      <text text-anchor="middle" x="784" y="266"><tspan class="rt-title">Trace + Eval</tspan><tspan class="rt-sub" x="784" dy="18">quality, latency, safety</tspan></text>
+    </svg>
+  </div>
+
+  <h4>Realtime Serving Adds Four New State Boundaries</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Boundary</th><th>What Changes</th><th>What to Measure</th><th>Common Failure</th></tr>
+      <tr><td>Streaming input</td><td>Audio/video arrives as chunks, not as one complete prompt</td><td>chunk size, VAD error, frame sampling rate, dropped frames</td><td>Model answers before enough context or misses short events</td></tr>
+      <tr><td>Session memory</td><td>The server keeps an open session with evolving state</td><td>session duration, cached context, tool state, memory reset behavior</td><td>Old turns or tool results leak into later decisions</td></tr>
+      <tr><td>Interrupt and barge-in</td><td>The user may speak while the model is generating audio</td><td>interruption latency, cancellation correctness, partial-output handling</td><td>Assistant continues speaking after user correction or repeats stale audio</td></tr>
+      <tr><td>Realtime tool use</td><td>The model may call tools while maintaining a live conversation</td><td>tool latency, timeout policy, user confirmation, rollback path</td><td>Tool calls block audio, violate permissions, or execute after context changed</td></tr>
+    </table>
+  </div>
+
+  <h4>Long Context and Realtime Are Different Optimizations</h4>
+  <p>Long context increases what the model can see in one request; realtime sessions reduce interaction latency by keeping a streaming connection and session state. These two features can be combined, but they solve different problems and create different bottlenecks. A 1M-token document QA task is dominated by prefill, context caching, recall quality, and cost. A voice assistant is dominated by audio chunking, turn detection, first audio latency, interruption handling, and tool latency. A video meeting assistant may contain both: long-context transcript/video memory plus low-latency user interaction.</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Scenario</th><th>Primary Bottleneck</th><th>Quality Metric</th><th>System Metric</th></tr>
+      <tr><td>1M-token legal/codebase QA</td><td>Prefill, cache reuse, multi-needle retrieval</td><td>multi-hop answer accuracy, citation correctness, position robustness</td><td>TTFT, cache hit rate, input token cost, truncation rate</td></tr>
+      <tr><td>Long video understanding</td><td>Frame/audio sampling and temporal localization</td><td>event recall, timestamp accuracy, cross-modal evidence quality</td><td>video tokens, preprocessing latency, prefill queue time</td></tr>
+      <tr><td>Live voice agent</td><td>Turn detection, audio generation, tool latency</td><td>task completion, interruption handling, safety of spoken output</td><td>first audio latency, barge-in latency, dropped audio, tool timeout rate</td></tr>
+      <tr><td>Realtime multimodal support desk</td><td>Session state plus tool/RAG permissions</td><td>policy adherence, state update correctness, escalation accuracy</td><td>session cost, tool trace completeness, human handoff latency</td></tr>
+    </table>
+  </div>
+
+  <h4>Evaluation Matrix for Long-Context Multimodal Systems</h4>
+  <p>Do not evaluate a long-context multimodal system with only a generic VQA score or a single needle-in-a-haystack test. A credible launch report should cover: text retrieval, multi-needle disambiguation, cross-document reasoning, OCR/document fields, chart numeric reasoning, video event localization, audio transcription/understanding, tool/state correctness, and safety slices. It should also record input token count, visual/audio token count, context-cache hit rate, TTFT, first-audio latency, P95 end-to-end latency, and cost per successful task.</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>System Judgment:</strong> "Supports images, audio, video, and 1M tokens" is not an engineering conclusion. Senior inference engineers must translate modality and context features into token budgets, state boundaries, latency decomposition, cache strategy, quality slices, and rollback rules.</div></div>
 </section>
 
 

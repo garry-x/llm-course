@@ -813,6 +813,84 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 2.9B RoPE Scaling and Long-Context Release -->
+<!-- ================================================================ -->
+<section class="card" id="s2-9b">
+  <h3>2.9B RoPE Scaling and Long-Context Release: From Config Change to Capability Evidence</h3>
+  <p>Extending a RoPE model to longer context is not just changing <code>max_position_embeddings</code>. Methods such as <a href="https://arxiv.org/abs/2309.00071" target="_blank">YaRN</a>, NTK-aware scaling, and <a href="https://arxiv.org/abs/2402.13753" target="_blank">LongRoPE</a> adjust how RoPE frequencies map token indices to phases, usually together with continued training or fine-tuning on longer sequences. The DeepSeek-V3 report is a useful industrial example: after pre-training, it applies YaRN and uses additional training phases to progressively expand context. The engineering conclusion is that long-context capability is a release program, not a configuration flag.</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 390" role="img" aria-label="RoPE scaling release lifecycle from baseline checkpoint to long-context serving evidence">
+      <defs>
+        <marker id="rope-release-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .rr-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .rr-core{fill:rgba(52,152,219,.12);stroke:var(--accent);stroke-width:2}
+        .rr-risk{fill:rgba(231,76,60,.10);stroke:#e74c3c;stroke-width:1.7}
+        .rr-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#rope-release-arrow)}
+        .rr-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .rr-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rr-box" x="42" y="70" width="170" height="72" rx="10"/>
+      <text text-anchor="middle" x="127" y="98"><tspan class="rr-title">Base Checkpoint</tspan><tspan class="rr-sub" x="127" dy="20">trained length, theta</tspan></text>
+      <path class="rr-line" d="M212 106 H292"/>
+      <rect class="rr-core" x="292" y="70" width="180" height="72" rx="10"/>
+      <text text-anchor="middle" x="382" y="98"><tspan class="rr-title">RoPE Scaling</tspan><tspan class="rr-sub" x="382" dy="20">linear / NTK / YaRN</tspan></text>
+      <path class="rr-line" d="M472 106 H552"/>
+      <rect class="rr-core" x="552" y="70" width="180" height="72" rx="10"/>
+      <text text-anchor="middle" x="642" y="98"><tspan class="rr-title">Continued Training</tspan><tspan class="rr-sub" x="642" dy="20">long data, staged length</tspan></text>
+      <path class="rr-line" d="M732 106 H812"/>
+      <rect class="rr-box" x="812" y="70" width="130" height="72" rx="10"/>
+      <text text-anchor="middle" x="877" y="98"><tspan class="rr-title">Release</tspan><tspan class="rr-sub" x="877" dy="20">evidence-bound</tspan></text>
+
+      <rect class="rr-risk" x="160" y="246" width="180" height="82" rx="10"/>
+      <text text-anchor="middle" x="250" y="274"><tspan class="rr-title">Short Retention</tspan><tspan class="rr-sub" x="250" dy="20">PPL, QA, code, chat</tspan><tspan class="rr-sub" x="250" dy="17">must not regress</tspan></text>
+      <rect class="rr-risk" x="400" y="246" width="180" height="82" rx="10"/>
+      <text text-anchor="middle" x="490" y="274"><tspan class="rr-title">Long Evidence</tspan><tspan class="rr-sub" x="490" dy="20">needle, multi-hop</tspan><tspan class="rr-sub" x="490" dy="17">position buckets</tspan></text>
+      <rect class="rr-risk" x="640" y="246" width="180" height="82" rx="10"/>
+      <text text-anchor="middle" x="730" y="274"><tspan class="rr-title">Serving Cost</tspan><tspan class="rr-sub" x="730" dy="20">TTFT, KV, cache</tspan><tspan class="rr-sub" x="730" dy="17">throughput impact</tspan></text>
+      <path class="rr-line" d="M382 142 C346 184 298 216 250 246"/>
+      <path class="rr-line" d="M642 142 C596 184 538 216 490 246"/>
+      <path class="rr-line" d="M877 142 C826 184 778 216 730 246"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 2-2: RoPE scaling release lifecycle. A long-context claim needs scaling configuration, continued-training evidence, short-context retention, long-position evaluation, and serving-cost measurements.</p>
+
+  <h4>1. Different RoPE scaling methods change the phase map differently</h4>
+  <p>The intuitive problem is phase mismatch. RoPE maps position indices into rotations with multiple frequencies. When a model trained at 4K or 8K is asked to read 128K tokens, many positions produce phase patterns outside the training distribution. Scaling methods try to compress, stretch, or selectively adjust this phase map so that long positions become less out-of-distribution while short positions remain usable.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Method Family</th><th>Engineering Idea</th><th>Benefit</th><th>Risk</th></tr>
+      <tr><td>Change only <code>max_position</code></td><td>Generate cos/sin cache for longer positions without changing frequency mapping</td><td>Forward pass can run longer</td><td>Does not prove the model can use distant context; may fail silently</td></tr>
+      <tr><td>Linear position interpolation</td><td>Map long positions back into a shorter trained range by scaling position ids</td><td>Simple and often a useful baseline</td><td>Can compress local distances and harm short-context behavior</td></tr>
+      <tr><td>NTK-aware / dynamic scaling</td><td>Modify frequency base or scale as context length grows</td><td>Improves phase behavior for longer sequences without changing architecture</td><td>Implementation-specific; must be recorded exactly for checkpoint compatibility</td></tr>
+      <tr><td>YaRN-style scaling</td><td>Use a more structured RoPE extension recipe, often with shorter continued training</td><td>Practical context extension used by several long-context systems</td><td>Needs validation at both original and target context lengths</td></tr>
+      <tr><td>LongRoPE-style search and progressive extension</td><td>Search non-uniform interpolation and extend in stages, with short-context readjustment</td><td>Targets very large windows while trying to preserve original capabilities</td><td>More moving parts; release evidence must separate scaling, training, and evaluation effects</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Continued training data must match the long-context claim</h4>
+  <p>A model that passes needle-in-a-haystack at 128K has not necessarily learned long-document reasoning. Needle tests mostly prove retrieval of a distinct fact under controlled placement. Real long-context workloads include multi-hop references, duplicated entities, tables, code repositories, meeting transcripts, tool traces, and irrelevant distractors. The continued-training or fine-tuning data should therefore include both long sequences and tasks that require using distant information, not just long padding or concatenated unrelated documents.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Claim</th><th>Training / Tuning Evidence</th><th>Evaluation Evidence</th><th>Common Overclaim</th></tr>
+      <tr><td>Can run 128K context</td><td>Kernel, cache, and RoPE cache handle 128K positions</td><td>No crash, stable memory, stable logits on smoke tests</td><td>Calling this "understands 128K"</td></tr>
+      <tr><td>Can retrieve from 128K</td><td>Some long-position exposure or synthetic retrieval tasks</td><td>Needle / key-value retrieval by answer position bucket</td><td>Assuming retrieval equals reasoning</td></tr>
+      <tr><td>Can reason over long documents</td><td>Long QA, cross-section references, code/document dependencies</td><td>Multi-hop QA, long code tasks, citation faithfulness, distractor robustness</td><td>Reporting only average score without position and document-type slices</td></tr>
+      <tr><td>Can serve long-context product traffic</td><td>Prompt templates, RAG packing, context cache, and truncation policy tested</td><td>TTFT, KV memory, cache hit rate, P95 latency, cost per successful task</td><td>Ignoring that long context may be too slow or expensive for the target SLO</td></tr>
+    </table>
+  </div>
+
+  <h4>3. Release reports must bind config, checkpoint, and serving engine</h4>
+  <p>Long-context behavior depends on both the model checkpoint and the inference stack. A release package should record the RoPE base/theta, scaling type and factor, original training length, continued-training lengths, position-id policy for packed sequences, prefix-cache compatibility, attention kernel, quantization format, and max served context. If any of these differ between training, evaluation, and deployment, the long-context claim may not transfer.</p>
+  <p>For example, a quantized serving engine that interprets RoPE scaling differently from the training framework can pass short prompts but fail near the target context length. Similarly, prefix caching can reuse K/V for a shared prompt only if position ids and inserted retrieval/tool segments are reconstructed consistently. This is why Ch02's position ledger connects directly to Ch03 attention masks, Ch07 packed training data, Ch08 long-context generation, and Ch10 serving SLOs.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> A long-context model release must prove four things separately: the model can compute longer positions, training exposed it to useful long-context signals, evaluation shows quality by position bucket, and the serving engine can deliver the context length under cost and latency limits.</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 2.10 Summary -->
 <!-- ================================================================ -->
 <section class="card" id="s2-10">

@@ -163,6 +163,7 @@ python capacity_plan.py \
 - 若使用 MCP 或 remote tool，必须报告 server trust/allowlist、用户同意、敏感数据外发、外部 observation isolation、递归 LLM sampling 和 observation token budget；schema 通过不能替代 runtime security gate。
 - 候选发布包与 stable baseline 已在同一 policy 下比较：离线 pass rate、安全通过率、P95/P99、错误率、成本、canary 样本量/流量、control 对照、per-version monitoring 和 rollback readiness 均有记录。
 - 指标能按模型、租户、状态码、错误类型聚合。
+- 观测数据能分清 request metrics、engine metrics、trace spans 和 quality/cost events；若采集 prompt、completion、tool 参数或 observation，必须说明脱敏、采样、访问控制和保留期。
 - 限流、超时、降级和错误响应格式明确。
 
 ## 项目报告要求
@@ -176,6 +177,7 @@ python capacity_plan.py \
 - 量化发布判断：baseline 与候选量化配置在显存、吞吐、延迟、固定质量集、安全拒答/过度拒答、schema/RAG/long-context 切片上的差异。
 - 若服务支持长文档或长会话，报告 long-context gate：截断率、answer/citation recall、position robustness、P95 TTFT/latency、KV usage、prefix cache hit rate 和 action items。
 - RAG、JSON structured output schema gate、tool/MCP calling 和 reasoning budget 的回归用例。
+- Observability 截面：至少展示一次请求的 gateway/router/LLM/retrieval/tool/guardrail trace，和一组 request/engine metrics，说明如何定位 TTFT、TPOT、queue、KV cache 或 tool latency 问题。
 - Canary/control/rollback 发布判断：候选版本不能只凭离线 eval 提升上线，必须写清 production rollout gate 的通过项、失败项和 action items。
 - Overload response runbook：SLO 变坏时要能从 queue/KV/decode/error/quota 信号判断是限流、降级、扩容、回滚还是 page owner，不能只写“增加机器”。
 - 超时、限流、降级、格式错误和安全拒答策略。

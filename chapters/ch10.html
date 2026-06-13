@@ -1113,6 +1113,20 @@ summary = build_benchmark_summary(
     <li><strong>使用量统计：</strong>prompt tokens、completion tokens、total tokens，用于计费和容量规划。</li>
   </ul>
 
+  <h4>LLM Observability：指标、trace 和内容采集要分层</h4>
+  <p>普通 Web 服务的 request log 不足以解释 LLM 服务问题。OpenTelemetry GenAI semantic conventions 正在把模型名、operation、token usage、finish reason、tool call、prompt/completion 事件等字段标准化；vLLM 这类 serving engine 还会暴露 request queue、KV cache、prefix cache、tokens/s 和 engine state 指标。课程不要求学生绑定某个观测平台，但要求把遥测分成四层，避免“只有一条 latency log”。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>遥测层</th><th>最低字段</th><th>回答的问题</th><th>隐私/成本边界</th></tr>
+      <tr><td>Request metrics</td><td>model、tenant、status、error_code、TTFT、TPOT、P95/P99、prompt/completion tokens</td><td>哪个版本、租户或长度段正在破坏 SLO</td><td>只存聚合指标，避免把原始 prompt 当日志默认写入</td></tr>
+      <tr><td>Engine metrics</td><td>queue depth、running/waiting requests、active KV tokens、KV usage、prefix cache hit、tokens/s/GPU</td><td>瓶颈是排队、prefill、decode、KV memory 还是 cache miss</td><td>按模型/副本聚合，避免高基数标签拖垮监控</td></tr>
+      <tr><td>Trace spans</td><td>gateway、router、LLM call、retrieval、rerank、tool call、guardrail、streaming</td><td>一次慢请求到底卡在哪一步</td><td>采样 trace；敏感 tool 参数和 observation 要脱敏或摘要化</td></tr>
+      <tr><td>Quality/cost events</td><td>schema pass、safety/refusal、citation hit、judge result、cost/request、rollback version</td><td>质量、安全和成本是否随版本或流量变化漂移</td><td>内容采集必须有开关、保留期和访问控制</td></tr>
+    </table>
+  </div>
+  <p>Agent 和 tool 系统尤其需要 trace，而不只是最终答案。一次 agent run 应该能看到 LLM generation、tool proposal、schema/permission gate、tool execution、guardrail event、handoff 或 retry 的父子关系。若只记录最终文本，当用户报告“回答慢且越权”时，工程师无法判断是模型规划、工具 API、权限校验、检索、上下文膨胀还是输出 guardrail 造成的。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>观测原则：</strong>指标用于 SLO 和容量趋势，trace 用于单请求归因，内容事件用于质量/安全抽样。三者不能互相替代；同时，prompt、工具参数和用户数据默认应脱敏或采样采集，不能为了调试把敏感内容无边界写进日志。</div></div>
+
   <h4>SLO：推理服务应该承诺什么？</h4>
   <p>不要只看平均延迟。线上用户感知的是尾延迟和稳定性。一个合理的课程级 SLO 示例：</p>
   <div class="table-wrap">

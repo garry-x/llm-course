@@ -38,7 +38,7 @@
     <li><strong>Learning Goals:</strong> Decompose inference bottlenecks into compute, memory, IO, scheduling, retrieval, deployment, and runtime overload issues, and design KV Cache, quantization, RAG, continuous batching admission, benchmarking, SLO monitoring, production release checks, and load-shedding responses.</li>
     <li><strong>Chapter Outputs:</strong> KV Cache, quantization, minimal RAG, tool-calling schema checks, MCP runtime security checks, scheduling admission report, benchmark report, production rollout report, serving overload response report, speculative decoding diagnostics, metric conclusion summary, and LSH retrieval example.</li>
     <li><strong>Completion Criteria:</strong> When you see a slow/expensive inference problem, you can determine whether the bottleneck is more likely in computation, GPU memory, bandwidth, or retrieval.</li>
-    <li><strong>Exercise Outputs:</strong> Submit KV memory calculation, prefix cache savings rate, continuous batching admission report, quantization error experiment, RAG demo, tool schema and MCP runtime checks, production rollout report, serving overload response report, stress test JSON, P50/P95/P99 report, metric conclusion summary, and deployment plan; supporting assignments are available at <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>.</li>
+    <li><strong>Practice Artifacts:</strong> Build KV memory calculations, prefix cache savings estimates, continuous batching admission reports, quantization error experiments, RAG demos, tool schema and MCP runtime checks, production rollout reports, serving overload responses, stress test JSON, P50/P95/P99 reports, metric conclusion summaries, and deployment plans. Optional practice files are available at <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Required Prior Knowledge:</strong> Computation graph, KV cache, generation strategies, evaluation metrics from the first nine chapters, as well as TTFT, TPOT, throughput, P95/P99, active KV tokens, peak memory, and cache hit rate.<br><strong>Internalization for This Chapter:</strong> Every service problem will be decomposed into prefill, decode, RAG/tool, network streaming output, queuing, admission control, and fallback strategies; KV, quantization, prefix cache, RAG, tool checks, and multimodal tokens must all enter the same SLO/cost ledger.<br><strong>Validation Signal:</strong> You can write a deployment report explaining where the bottleneck is, which phase the optimization changed, whether quality regressed, what the capacity boundary is, and when to reject conclusions that "only look at average latency."</div>
   <p class="system-role"><strong>System Position:</strong> This chapter transforms the models, training, generation, and alignment results from the previous nine chapters into a service capable of handling traffic. It requires training engineers to understand how architecture choices change cache and sequence-state costs, and inference engineers to prove the system is deployable using workload, SLO, capacity, rollback, and security boundaries.</p>
@@ -289,7 +289,7 @@ mla = kv_cache_memory_analysis(60, 1, 128, 128000)
 gqa = kv_cache_memory_analysis(60, 8, 128, 128000)
 print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
       f"(Standard GQA: {gqa['total_cache_gb']:.1f} GB)")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why is MLA so effective?</strong> Standard MHA has independent K/V per head, GQA shares by groups. MLA goes further—projecting K/V into a low-dimensional latent space, caching the compressed vectors instead of full K/V. DeepSeek-V2/V3 report MLA as a KV cache compression scheme; the specific compression ratio depends on the latent dimension, RoPE branch, and implementation configuration. The course uses a toy configuration to help students grasp the order of magnitude, not to treat it as a fixed specification of any real model.</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why is MLA so effective?</strong> Standard MHA has independent K/V per head, GQA shares by groups. MLA goes further—projecting K/V into a low-dimensional latent space, caching the compressed vectors instead of full K/V. DeepSeek-V2/V3 report MLA as a KV cache compression scheme; the specific compression ratio depends on the latent dimension, RoPE branch, and implementation configuration. The toy configuration here is only for building order-of-magnitude intuition, not for treating it as a fixed specification of any real model.</p>
     </div>
   </div>
 </section>
@@ -655,7 +655,7 @@ Please provide an accurate and concise answer based on the document content. If 
 
   <h4>Offline Evaluation and Online Metrics</h4>
   <p>In the offline phase, first construct query-answer-document triplets: each question corresponds to a standard answer and the document snippet that should be hit. The retrieval module reports Recall@k, MRR, nDCG; the generation module reports answer accuracy, citation consistency, and whether it refuses to fabricate when no hit is found. In the online phase, look at latency, cost, and user behavior: retrieval time, rerank time, prompt token count, answer token count, user follow-up rate, human handoff rate.</p>
-  <p>When training bi-encoder retrieval embeddings, in-batch negatives are commonly used: for the <code>i</code>-th query in a batch, the positive sample document is the <code>i</code>-th document, and all other documents serve as negative samples. The <code>contrastive_inbatch_loss(query_embeddings, doc_embeddings, temperature)</code> function in the Ch10 assignment performs L2 normalization on the embeddings, computes <code>Q D^T / temperature</code>, and then uses diagonal labels for cross-entropy. This is the minimal form of InfoNCE / contrastive retrieval loss; it trains the vector space, and subsequent evaluation with Recall@k, MRR, nDCG, and end-to-end answer quality is still needed to verify if RAG is truly improved.</p>
+  <p>When training bi-encoder retrieval embeddings, in-batch negatives are commonly used: for the <code>i</code>-th query in a batch, the positive sample document is the <code>i</code>-th document, and all other documents serve as negative samples. A minimal contrastive retrieval loss first performs L2 normalization on the embeddings, computes <code>Q D^T / temperature</code>, and then uses diagonal labels for cross-entropy. This is the minimal form of InfoNCE / contrastive retrieval loss; it trains the vector space, and subsequent evaluation with Recall@k, MRR, nDCG, and end-to-end answer quality is still needed to verify if RAG is truly improved.</p>
 
   <h4>Worked Example: How In-Batch Negatives Become a Retrieval Classification Problem</h4>
   <p>Suppose a batch has 2 queries and 2 documents, all vectors are L2 normalized, and the temperature is <code>temperature=0.5</code>. The diagonal represents positive pairs: <code>q0 -> d0</code>, <code>q1 -> d1</code>.</p>
@@ -685,7 +685,8 @@ Please provide an accurate and concise answer based on the document content. If 
     <div class="katex" data-expr="\mathcal{L}= -\frac{1}{2}(\log 0.768+\log 0.768)\approx0.264" aria-label="\mathcal{L}= -\frac{1}{2}(\log 0.768+\log 0.768)\approx0.264" role="img"></div>
   </div>
   <p>This example also illustrates the boundary of in-batch negatives: it assumes all off-diagonal documents in the batch are negative samples. If <code>d1</code> could actually answer <code>q0</code>, the training would push a truly relevant document away as a negative example; real RAG training requires deduplication, hard negative annotation, and handling multiple positive samples, and cannot rely solely on loss decrease to judge retrieval quality.</p>
-  <p>The training method for a cross-encoder reranker is different: it directly reads the concatenated text of the query and a candidate document, and outputs a relevance score. Given a pair of chosen/rejected documents for the same query, <code>pairwise_reranker_loss(chosen_scores, rejected_scores)</code> can use <code>-log sigmoid(s_chosen - s_rejected)</code> to train the ranking direction. Bi-encoders are suitable for large-scale recall, while cross-encoders are better for fine-ranking top-k candidates; their loss functions, input formats, and serving costs are all different.</p>  <p>The <code>recall_at_k(retrieved_ids, relevant_ids, k)</code>, <code>reciprocal_rank_at_k(...)</code>, and <code>ndcg_at_k(retrieved_ids, relevance_scores, k)</code> functions in the Ch10 assignment correspond to three questions: whether the top-k results contain the documents that should be hit, the rank of the first relevant document, and whether documents with higher graded relevance are ranked higher. The DCG term for nDCG is typically written as <code>(2^rel - 1) / log2(rank + 1)</code>, and is then divided by the IDCG of the ideal ranking to normalize the score to around 0 to 1. If Recall@5 is very low, the generation model usually lacks sufficient context; if Recall@5 is high but the reciprocal rank or nDCG is low, it indicates that relevant chunks are ranked later, making them prone to being truncated by the prompt or interfered with by irrelevant context. The assignment also includes <code>reciprocal_rank_fusion</code>, <code>rerank_documents</code>, and <code>maximal_marginal_relevance</code>, allowing students to implement minimal versions of hybrid search, cross-encoder reranking, and de-duplicated chunk selection.</p>
+  <p>The training method for a cross-encoder reranker is different: it directly reads the concatenated text of the query and a candidate document, and outputs a relevance score. Given a pair of chosen/rejected documents for the same query, <code>pairwise_reranker_loss(chosen_scores, rejected_scores)</code> can use <code>-log sigmoid(s_chosen - s_rejected)</code> to train the ranking direction. Bi-encoders are suitable for large-scale recall, while cross-encoders are better for fine-ranking top-k candidates; their loss functions, input formats, and serving costs are all different.</p>
+  <p>Retrieval metrics answer three separate questions: whether the top-k results contain the documents that should be hit, the rank of the first relevant document, and whether documents with higher graded relevance are ranked higher. The DCG term for nDCG is typically written as <code>(2^rel - 1) / log2(rank + 1)</code>, and is then divided by the IDCG of the ideal ranking to normalize the score to around 0 to 1. If Recall@5 is very low, the generation model usually lacks sufficient context; if Recall@5 is high but the reciprocal rank or nDCG is low, it indicates that relevant chunks are ranked later, making them prone to being truncated by the prompt or interfered with by irrelevant context. Hybrid search, cross-encoder reranking, and de-duplicated chunk selection should be evaluated against these metrics rather than judged by sample answers alone.</p>
 
   <h4>Worked Example: Recall@k, MRR, and nDCG Reveal Different Failures</h4>
   <p>Suppose the retrieval results for a certain query are <code>[doc9, doc2, doc5, doc1]</code>, and the set of standard relevant documents is <code>{doc1, doc2, doc7}</code>. Looking at the top-3 results, only one relevant document, <code>doc2</code>, is hit:</p>
@@ -703,7 +704,7 @@ Please provide an accurate and concise answer based on the document content. If 
 
   <h4>Worked Example: Attributing an Incorrect Answer to a RAG Subsystem</h4>
   <p>Suppose the retrieval results for a certain question are still <code>[doc9, doc2, doc5, doc1]</code>, the standard relevant documents are <code>{doc1, doc2, doc7}</code>, and the final answer cites <code>[doc2, doc9]</code>, but the answer is wrong. Looking at <code>k=3</code>, the retrieval only hits <code>doc2</code>, so <code>Recall@3=1/3</code>, <code>MRR@3=1/2</code>; among the citations, one is relevant and one is irrelevant, so citation precision is <code>1/2</code> and citation recall is <code>1/3</code>. Since relevant evidence is already in the top-3 and the answer also cites relevant evidence, the main failure mode is not pure retrieval failure, but a <strong>generation error</strong>: the model saw some evidence but did not produce the correct answer.</p>
-  <p>The <code>rag_answer_diagnostics(retrieved_ids, relevant_ids, cited_ids, answer_correct, k)</code> function in the Ch10 assignment formalizes this judgment into a structured output: <code>retrieval_recall_at_k</code>, <code>retrieval_mrr_at_k</code>, <code>citation_precision</code>, <code>citation_recall</code>, <code>missing_relevant_ids</code>, and <code>failure_mode</code>. If there are no relevant documents in the top-k, it is attributed to <code>retrieval_miss</code>; if retrieval hits but the citations or context do not cover the relevant documents, it is attributed to <code>context_or_citation_miss</code>; if the evidence is already in the citations but the answer is still wrong, it is attributed to <code>generation_error</code>.</p>
+  <p>A RAG answer diagnostic formalizes this judgment into a structured output: <code>retrieval_recall_at_k</code>, <code>retrieval_mrr_at_k</code>, <code>citation_precision</code>, <code>citation_recall</code>, <code>missing_relevant_ids</code>, and <code>failure_mode</code>. If there are no relevant documents in the top-k, it is attributed to <code>retrieval_miss</code>; if retrieval hits but the citations or context do not cover the relevant documents, it is attributed to <code>context_or_citation_miss</code>; if the evidence is already in the citations but the answer is still wrong, it is attributed to <code>generation_error</code>.</p>
 
   <h4>Worked Example: Context Packing May Drop Retrieved Evidence</h4>
   <p>Suppose after retrieval and reranking, we have 3 chunks. Generating the answer requires reserving 2 tokens, and the maximum budget for the retrieval context in the entire prompt is 9 tokens. Each citation marker like <code>[A]</code> also takes up 1 token:</p>
@@ -789,7 +790,7 @@ Please provide an accurate and concise answer based on the document content. If 
     "properties": {
       "query": {"type": "string", "minLength": 3, "maxLength": 200},
       "top_k": {"type": "integer", "minimum": 1, "maximum": 8},
-      "source": {"type": "string", "enum": ["chapters", "assignments", "docs"]}
+      "source": {"type": "string", "enum": ["chapters", "docs", "references"]}
     },
     "required": ["query"]
   },
@@ -802,7 +803,8 @@ Please provide an accurate and concise answer based on the document content. If 
   <p>The Agent loop must have hard budgets. Common budgets include maximum tool calls, maximum wall-clock time, maximum observation tokens, maximum external API cost, maximum failure retry count, and maximum consecutive calls to the same tool type. Budgets are not just product experience details; they are capacity controls for the inference service: a single request that repeatedly searches, reads long documents, and executes code will simultaneously increase TTFT, total latency, external service costs, and context token count.</p>
 
   <h4>Tool Context Budget and Agent Trace</h4>
-  <p>After a tool system goes live, token costs come not only from the user prompt and model response. Each tool definition, schema, candidate call, observation, correction prompt, and final response consumes context. The MCP 2025 series of specifications places host/client/server, resources, prompts, tools, and client-side sampling, roots, and elicitation into the same JSON-RPC protocol; this makes the tool ecosystem more composable, but also makes the context, permissions, and observation boundaries of a single agent run more complex.</p>  <p>The official MCP tools specification treats tools as capabilities exposed by the server for model invocation: each tool has a name, descriptive metadata, and an input schema. This abstraction solves the interface problem of "how to connect tools," but does not automatically solve "which tools should be exposed" or "how tool results should enter the context." When an agent connects to dozens of MCP servers and hundreds of tools, putting all schemas directly into the active context raises TTFT, consumes window space, and increases the probability of selecting the wrong tool; therefore, the tool system also needs tool routing, schema lazy loading, result summarization, and in-environment processing.</p>
+  <p>After a tool system goes live, token costs come not only from the user prompt and model response. Each tool definition, schema, candidate call, observation, correction prompt, and final response consumes context. The MCP 2025 series of specifications places host/client/server, resources, prompts, tools, and client-side sampling, roots, and elicitation into the same JSON-RPC protocol; this makes the tool ecosystem more composable, but also makes the context, permissions, and observation boundaries of a single agent run more complex.</p>
+  <p>The official MCP tools specification treats tools as capabilities exposed by the server for model invocation: each tool has a name, descriptive metadata, and an input schema. This abstraction solves the interface problem of "how to connect tools," but does not automatically solve "which tools should be exposed" or "how tool results should enter the context." When an agent connects to dozens of MCP servers and hundreds of tools, putting all schemas directly into the active context raises TTFT, consumes window space, and increases the probability of selecting the wrong tool; therefore, the tool system also needs tool routing, schema lazy loading, result summarization, and in-environment processing.</p>
   <p>Senior reasoning engineers need to treat an agent run as a traceable distributed workflow, not a single text generation. A minimal trace should record: whether input guardrails were triggered, which tool proposals the model generated, which schema/permission/budget checks passed or failed, the latency/status/summary of each tool, whether observations were isolated, whether the final output guardrail passed, and the total prompt tokens, tool tokens, observation tokens, output tokens, and wall time for the entire run.</p>
   <div class="table-wrap">
     <table>
@@ -813,10 +815,10 @@ Please provide an accurate and concise answer based on the document content. If 
       <tr><td>side-effect log</td><td>Whether writes, messages, orders, code execution, or external data sends occurred</td><td>Cannot audit unauthorized execution or roll back operations with side effects</td></tr>
     </table>
   </div>
-  <p>When the number of tools grows from a few to dozens, hundreds, or even more, stuffing all tool definitions directly into the model context slows down prefill, increases costs, and raises the probability of incorrect selection. A more robust design is to route available tools by task, lazily load tool schemas, keep large results in the execution environment, and only backfill summaries, references, and necessary fields to the model. Anthropic's MCP code-execution approach uses "letting the agent write code to call tools" to reduce the repeated passing of tool definitions and intermediate results through the context window; this course does not require replicating that system, but asks students to treat tool context as part of the SLO and cost ledger.</p>
+  <p>When the number of tools grows from a few to dozens, hundreds, or even more, stuffing all tool definitions directly into the model context slows down prefill, increases costs, and raises the probability of incorrect selection. A more robust design is to route available tools by task, lazily load tool schemas, keep large results in the execution environment, and only backfill summaries, references, and necessary fields to the model. Anthropic's MCP code-execution approach uses "letting the agent write code to call tools" to reduce the repeated passing of tool definitions and intermediate results through the context window; the engineering conclusion is that tool context belongs in the SLO and cost ledger.</p>
 
   <h4>Programming Exercise: Structured Output Reliability Checks</h4>
-  <p>Structured output is not just "the model appears to output JSON." A production service should distinguish at least five types of signals: whether JSON is parseable, whether fields satisfy the business schema, whether repair retries push latency too high, whether fallback/refusal increases abnormally, and whether the format path bypasses safety/output guardrails. The <code>structured_output_reliability_report</code> in the Ch10 assignment puts these signals into a single reliability table, applicable to JSON mode, JSON schema, guided decoding, regex/grammar constrained decoding, or parameter generation before tool calls.</p>
+  <p>Structured output is not just "the model appears to output JSON." A production service should distinguish at least five types of signals: whether JSON is parseable, whether fields satisfy the business schema, whether repair retries push latency too high, whether fallback/refusal increases abnormally, and whether the format path bypasses safety/output guardrails. A structured output reliability report puts these signals into a single reliability table, applicable to JSON mode, JSON schema, guided decoding, regex/grammar constrained decoding, or parameter generation before tool calls.</p>
   <pre><code class="language-python">schema = {
     "type": "object",
     "properties": {
@@ -837,7 +839,7 @@ assert report["decision"] in {"promote_structured_output_path", "revise_structur
   <p>The key to this check is breaking down "format correctness rate" from a single metric. A system might have a high JSON parse rate, but enum values drift, required fields are missing, P95 worsens after retries, or excessive fallbacks cause users to receive unstructured text. Only when parse, schema, retry/latency, fallback/refusal, and safety are all under control is structured output suitable for release.</p>
 
   <h4>Programming Exercise: Pre-Execution Validation of Tool Call Plan</h4>
-  <p>The <code>validate_tool_call_plan</code> in the Ch10 assignment turns the above protocol into a testable check: it takes the tool registry, the model's proposed tool calls, and the budget, and outputs three results: schema, permission, and budget. It does not execute the tools, but intercepts unknown tools, missing parameters, out-of-bounds parameters, high-risk permissions, and repeated loops before execution.</p>
+  <p>Pre-execution tool validation turns the above protocol into a testable check: it takes the tool registry, the model's proposed tool calls, and the budget, and outputs three results: schema, permission, and budget. It does not execute the tools, but intercepts unknown tools, missing parameters, out-of-bounds parameters, high-risk permissions, and repeated loops before execution.</p>
   <pre><code class="language-python">registry = {    "search_docs": {
         "risk": "read_only",
         "parameters": {
@@ -872,7 +874,7 @@ assert report["decision"] == "execute_tool_calls"</code></pre>
       <tr><td>Sampling / budget</td><td>Whether the MCP server requests recursive LLM sampling; whether tool calls, observation tokens, and wall time exceed the budget</td><td>Disable sampling, require approval, stop loops, or summarize observations</td></tr>
     </table>
   </div>
-  <p>The <code>tool_runtime_security_report</code> in the Ch10 assignment implements this layer of checks: it takes the tool registry, runtime tool events, and policy as input, and outputs five types of signals: server trust, permission/consent, data privacy, observation isolation, and sampling/budget. It transforms the prompt injection, insecure output handling, insecure plugin design, and excessive agency from the OWASP LLM Top 10 into a checklist that can be inspected before a service goes live.</p>
+  <p>A tool runtime security report implements this layer of checks: it takes the tool registry, runtime tool events, and policy as input, and outputs five types of signals: server trust, permission/consent, data privacy, observation isolation, and sampling/budget. It transforms the prompt injection, insecure output handling, insecure plugin design, and excessive agency from the OWASP LLM Top 10 into a checklist that can be inspected before a service goes live.</p>
   <pre><code class="language-python">report = tool_runtime_security_report(
     registry,
     [{
@@ -897,16 +899,17 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
       <tr><th>Failure Mode</th><th>Manifestation</th><th>Engineering Mitigation</th><th>Evaluation Metric</th></tr>
       <tr><td>Invalid call</td><td>Tool name does not exist or JSON is invalid</td><td>Schema-constrained decoding, parameter validation, repair prompt</td><td>valid tool-call rate</td></tr>
       <tr><td>Wrong tool</td><td>Executes code when retrieval is needed, or calls an API when the user should be asked</td><td>Tool selection classification set, few-shot counterexamples, policy router</td><td>tool selection accuracy</td></tr>
-      <tr><td>Bad arguments</td><td>Query too broad, incorrect date, top_k too large</td><td>Parameter range, query rewrite, parameter-level error feedback</td><td>argument accuracy / repair success</td></tr>      <tr><td>Looping</td><td>Calling the same tool multiple times without new information</td><td>max calls, duplicate observation detection, stop rule</td><td>avg calls, loop rate, timeout rate</td></tr>
+      <tr><td>Bad arguments</td><td>Query too broad, incorrect date, top_k too large</td><td>Parameter range, query rewrite, parameter-level error feedback</td><td>argument accuracy / repair success</td></tr>
+      <tr><td>Looping</td><td>Calling the same tool multiple times without new information</td><td>max calls, duplicate observation detection, stop rule</td><td>avg calls, loop rate, timeout rate</td></tr>
       <tr><td>Observation misuse</td><td>The tool returns "uncertain", but the model treats it as fact</td><td>Structured observation, citation check, final answer verifier</td><td>grounded answer rate</td></tr>
       <tr><td>Prompt injection</td><td>Retrieved documents or web pages induce the model to ignore system rules</td><td>Mark tool output as untrusted data, instruction/data separation</td><td>injection success rate</td></tr>
     </table>
   </div>
 
   <h4>Worked Example: A Decision by the Course Q&A Agent</h4>
-  <p>The user asks: "What evaluation metrics need to be implemented for the Ch10 RAG assignment?" If the model answers directly, it might miss details; if it calls <code>search_docs</code>, a reasonable parameter is <code>{"query":"ch10 rag metrics recall mrr ndcg diagnostics","top_k":4,"source":"assignments"}</code>. The server first validates <code>top_k<=8</code>, executes the retrieval, and backfills the hit documents and fragment IDs as observations. The final answer should cite Recall@k, MRR, nDCG, citation precision/recall, and failure modes, and explain which metrics correspond to retrieval, ranking, citation, and generation attribution.</p>
+  <p>The user asks: "What evaluation metrics are required for this RAG service?" If the model answers directly, it might miss details; if it calls <code>search_docs</code>, a reasonable parameter is <code>{"query":"rag metrics recall mrr ndcg diagnostics","top_k":4,"source":"docs"}</code>. The server first validates <code>top_k<=8</code>, executes the retrieval, and backfills the hit documents and fragment IDs as observations. The final answer should cite Recall@k, MRR, nDCG, citation precision/recall, and failure modes, and explain which metrics correspond to retrieval, ranking, citation, and generation attribution.</p>
 
-  <p>If the model searches with the same query three times in a row, the system should stop the tool loop and require the model to answer based on existing observations or clarify with the user. If the retrieval result is empty, the model should not fabricate assignment requirements, but should report "Insufficient evidence found" and suggest the next actionable step. This behavioral boundary is the same issue as the benchmark validity and safety assessment in Ch11: a high-scoring agent is not one that calls tools as many times as possible, but one that calls the right tool at the right time and stops when evidence is insufficient.</p>
+  <p>If the model searches with the same query three times in a row, the system should stop the tool loop and require the model to answer based on existing observations or clarify with the user. If the retrieval result is empty, the model should not fabricate requirements, but should report "Insufficient evidence found" and suggest the next actionable step. This behavioral boundary is the same issue as the benchmark validity and safety assessment in Ch11: a high-scoring agent is not one that calls tools as many times as possible, but one that calls the right tool at the right time and stops when evidence is insufficient.</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Tool use is part of reasoning engineering. It simultaneously changes quality, latency, cost, and risk: you need to evaluate tool selection, parameter correctness, loop budget, tool result fidelity, safety boundaries, agent trace, and tool context budget, not just whether the final answer looks reasonable.</div></div>
 </section>
@@ -921,13 +924,15 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
       <tr><th>Layer</th><th>What to Include</th><th>Primary Risk</th><th>Check Signal</th></tr>
       <tr><td>Active context</td><td>Current user goal, system policy, necessary tool schema, key evidence, and recent observations</td><td>Irrelevant tokens crowd out key facts, TTFT increases</td><td>context token breakdown, needle/citation hit, P95 TTFT</td></tr>
       <tr><td>Retrieved context</td><td>RAG chunks, rerank results, citation IDs, re-fetchable tool fragments</td><td>Retrieved but not entered into the prompt, or evidence is truncated</td><td>Recall@k, citation recall, context packing skipped docs</td></tr>
-      <tr><td>Compressed context</td><td>Long conversation summaries, task progress, completed decisions, and unresolved issues</td><td>Summary loses constraints or mixes in erroneous conclusions</td><td>summary fidelity probe, constraint retention, regression samples</td></tr>      <tr><td>External memory</td><td>Cross-session preferences, project state, retrievable notes, audit logs</td><td>Expired, unauthorized, polluted, or bringing user private information into new tasks</td><td>memory source/version, permission, freshness, delete/update path</td></tr>
+      <tr><td>Compressed context</td><td>Long conversation summaries, task progress, completed decisions, and unresolved issues</td><td>Summary loses constraints or mixes in erroneous conclusions</td><td>summary fidelity probe, constraint retention, regression samples</td></tr>
+      <tr><td>External memory</td><td>Cross-session preferences, project state, retrievable notes, audit logs</td><td>Expired, unauthorized, polluted, or bringing user private information into new tasks</td><td>memory source/version, permission, freshness, delete/update path</td></tr>
       <tr><td>Cleared tool results</td><td>Large files/API outputs that can be re-fetched, only retaining call records and summaries</td><td>Cleared irreproducible evidence, making auditing impossible</td><td>tool result handle, refetchability, side-effect log</td></tr>
     </table>
-  </div>  <p>These levels correspond to different engineering actions. <strong>Select</strong> determines which documents, tools, and history segments enter the window; <strong>compress</strong> turns long trajectories into verifiable summaries; <strong>clear</strong> moves large, re-fetchable tool results out of the active context; <strong>write</strong> writes information that needs to be retained across sessions into external memory; <strong>isolate</strong> gives subtasks, subagents, or tool execution environments their own context, preventing all intermediate state from polluting the main conversation.</p>
+  </div>
+  <p>These levels correspond to different engineering actions. <strong>Select</strong> determines which documents, tools, and history segments enter the window; <strong>compress</strong> turns long trajectories into verifiable summaries; <strong>clear</strong> moves large, re-fetchable tool results out of the active context; <strong>write</strong> writes information that needs to be retained across sessions into external memory; <strong>isolate</strong> gives subtasks, subagents, or tool execution environments their own context, preventing all intermediate state from polluting the main conversation.</p>
 
   <h4>Context Engineering Checks</h4>
-  <p>The agent/RAG report in the course project should include minimal context checks. It does not require students to implement a full memory system, but it must demonstrate that the context strategy has not sacrificed quality, safety, or cost:</p>
+  <p>An agent/RAG report should include minimal context checks. It does not need a full memory system, but it must demonstrate that the context strategy has not sacrificed quality, safety, or cost:</p>
   <ul>
     <li><strong>Token budget:</strong> Report the token proportion of system, tool schema, history, retrieved context, observations, summary, and output.</li>
     <li><strong>Evidence retention:</strong> Perform head/middle/tail checks, citation id checks, and summary fidelity checks on key facts to confirm they can still be answered after compression.</li>
@@ -1065,7 +1070,7 @@ print(f"Quantization Speedup: {result_cache['ms_per_token'] / result_quant['ms_p
 <!-- ================================================================ -->
 <section class="card" id="s10-10a">
   <h3>10.10A LLM Evaluation Methodology: One Number Cannot Represent a Model</h3>
-  <p>This course treats Large language model benchmarking and evaluation as an important standalone topic for a straightforward reason: the quality of a modern LLM cannot be summarized by a single loss, a single leaderboard score, or a set of latency numbers. The evaluation in the course project should answer a specific question, such as "Does hybrid+rerank improve citation accuracy on this customer service knowledge base?", rather than making a general claim that "the model is better."</p>
+  <p>Large language model benchmarking and evaluation deserve standalone treatment for a straightforward reason: the quality of a modern LLM cannot be summarized by a single loss, a single leaderboard score, or a set of latency numbers. A useful evaluation should answer a specific question, such as "Does hybrid+rerank improve citation accuracy on this customer service knowledge base?", rather than making a general claim that "the model is better."</p>
 
   <h4>Minimal Chain from Task to Conclusion</h4>
   <table>
@@ -1079,7 +1084,7 @@ print(f"Quantization Speedup: {result_cache['ms_per_token'] / result_quant['ms_p
   </table>
 
   <h4>Benchmark Summary: Write Evaluation Results Clearly</h4>
-  <p>The <code>build_benchmark_summary</code> in this chapter's assignment is not a complex algorithm, but rather trains students to write experimental conclusions as a structured summary. A qualified summary should at least include: <code>task</code>, <code>sample_size</code>, <code>baseline</code>, <code>metrics</code>, <code>risks</code>, <code>uncertainty</code>, and <code>conclusion</code>. The point of this is not the document format, but to prevent evaluation conclusions from being misinterpreted outside the data conditions.</p>
+  <p>A benchmark summary is not a complex algorithm; it is a guard against vague conclusions. A qualified summary should at least include: <code>task</code>, <code>sample_size</code>, <code>baseline</code>, <code>metrics</code>, <code>risks</code>, <code>uncertainty</code>, and <code>conclusion</code>. The point is not the document format, but preventing evaluation conclusions from being misinterpreted outside the data conditions.</p>
 
   <div class="code-block" data-lang="python">
 summary = build_benchmark_summary(
@@ -1099,7 +1104,8 @@ summary = build_benchmark_summary(
 <!-- 10.11 vLLM -->
 <!-- ================================================================ -->
 <section class="card" id="s10-11">
-  <h3>10.11 vLLM——Production-grade LLM Inference Engine</h3>  <p>If you want to deploy an LLM to production and handle hundreds or thousands of concurrent requests, hand-written KV Cache and quantization alone are not enough. <strong>vLLM</strong> is one of the most widely used LLM inference engines in the open-source ecosystem, and its designs such as PagedAttention, continuous batching, and prefix caching have become important case studies for understanding modern inference systems.</p>
+  <h3>10.11 vLLM—Production-grade LLM Inference Engine</h3>
+  <p>If you want to deploy an LLM to production and handle hundreds or thousands of concurrent requests, hand-written KV Cache and quantization alone are not enough. <strong>vLLM</strong> is one of the most widely used LLM inference engines in the open-source ecosystem, and its designs such as PagedAttention, continuous batching, and prefix caching have become important case studies for understanding modern inference systems.</p>
 
   <h4>Core Innovation 1: PagedAttention</h4>
   <p>Traditional KV Cache allocates contiguous memory blocks for each sequence, similar to early memory management in operating systems—contiguous allocation leads to <strong>memory fragmentation</strong>: the KV Cache for a 128K sequence requires a large contiguous block of memory, and after release, it may leave unusable fragments. PagedAttention borrows from the <strong>paging mechanism of operating system virtual memory</strong>:</p>
@@ -1129,7 +1135,7 @@ summary = build_benchmark_summary(
     </tbody>
   </table>
 
-  <p>The <code>continuous_batching_admission_report</code> in the assignment turns these budgets into a single-step scheduling decision. It takes pending scheduling requests, sorts them by priority and waiting time, calculates the effective prefill after prefix cache, the tokens for this round after chunked prefill, the request's active KV reservation, and outputs <code>admitted</code>, <code>queued</code>, queued reasons, and action items. This exercise lets students see: increasing batch parameters might improve throughput, but it might also push KV memory, queue wait, or TPOT past the SLO.</p>
+  <p>A continuous batching admission report turns these budgets into a single-step scheduling decision. It takes pending scheduling requests, sorts them by priority and waiting time, calculates the effective prefill after prefix cache, the tokens for this round after chunked prefill, the request's active KV reservation, and outputs <code>admitted</code>, <code>queued</code>, queued reasons, and action items. The central lesson is that increasing batch parameters might improve throughput, but it might also push KV memory, queue wait, or TPOT past the SLO.</p>
 
   <div class="coding-exercise">
     <h4>Exercise: Continuous Batching Admission Decision</h4>
@@ -1245,7 +1251,8 @@ summary = build_benchmark_summary(
 
   <div class="table-wrap">
     <table>
-      <tr><th>Strategy</th><th>How MoE Layers are Sharded</th><th>Main Benefit</th><th>Main Risk</th></tr>      <tr><td>TP for MoE</td><td>Each expert's matrix is sharded across multiple GPUs like a dense layer</td><td>Simple implementation, reuses dense model parallelism</td><td>Expert weight access and KV cache may be duplicated; popular experts still cause waiting</td></tr>
+      <tr><th>Strategy</th><th>How MoE Layers are Sharded</th><th>Main Benefit</th><th>Main Risk</th></tr>
+      <tr><td>TP for MoE</td><td>Each expert's matrix is sharded across multiple GPUs like a dense layer</td><td>Simple implementation, reuses dense model parallelism</td><td>Expert weight access and KV cache may be duplicated; popular experts still cause waiting</td></tr>
       <tr><td>Expert Parallelism (EP)</td><td>Different experts are placed on different GPUs, tokens are routed to the rank holding the expert</td><td>Increases expert weight bandwidth, improves MoE layer locality</td><td>Requires dispatch/combine, AllToAll, expert load balancing, and cross-node topology optimization</td></tr>
       <tr><td>DP + EP</td><td>Attention/KV grouped by data parallelism, MoE layer uses expert parallelism</td><td>Reduces KV cache duplication in MLA/MQA scenarios, suitable for high-throughput batches</td><td>Request routing, prefix cache, DP rank load, and expert all-to-all need to be scheduled together</td></tr>
       <tr><td>EPLB</td><td>Replicates or re-places popular experts based on historical expert load</td><td>Reduces stragglers and tail latency caused by popular experts</td><td>Migration/replication has memory and scheduling costs; may become ineffective when static distribution changes</td></tr>
@@ -1254,7 +1261,7 @@ summary = build_benchmark_summary(
 
   <p>An MoE serving review should answer at least four questions. First, <strong>weights and KV cache</strong>: Does EP truly reduce the expert weight access bottleneck, or does the TP/DP combination cause KV cache to be stored redundantly? Second, <strong>expert load</strong>: Is the distribution of expert token counts for top-k routing skewed? Does the busiest expert/rank determine the TPOT? Third, <strong>communication</strong>: Do dispatch/combine, AllToAll, cross-node RDMA, or KV transfer become bottlenecks? Fourth, <strong>quality and compatibility</strong>: Does EPLB, expert replication, or route rearrangement change output consistency, cache hit rate, tool/schema paths, or safety regression?</p>
 
-  <pre><code class="language-text">moe_serving_gate:
+  <pre><code class="language-text">moe_serving_check:
   parallelism: TP=2, DP=4, EP=8, PP=1
   model: MoE, routed_experts=256, top_k=8, activated_params_per_token=37B
   load:
@@ -1302,7 +1309,7 @@ summary = build_benchmark_summary(
   </ul>
 
   <h4>LLM Observability: Metrics, traces, and content collection should be layered</h4>
-  <p>Request logs from ordinary web services are insufficient to explain LLM service issues. The OpenTelemetry GenAI semantic conventions are standardizing fields like model name, operation, token usage, finish reason, tool call, prompt/completion events; serving engines like vLLM also expose metrics for request queue, KV cache, prefix cache, tokens/s, and engine state. The course does not require students to bind to a specific observability platform, but requires telemetry to be divided into four layers, avoiding "only one latency log."</p>
+  <p>Request logs from ordinary web services are insufficient to explain LLM service issues. The OpenTelemetry GenAI semantic conventions are standardizing fields like model name, operation, token usage, finish reason, tool call, prompt/completion events; serving engines like vLLM also expose metrics for request queue, KV cache, prefix cache, tokens/s, and engine state. A useful telemetry design should be divided into four layers rather than collapsing everything into one latency log.</p>
   <div class="table-wrap">
     <table>
       <tr><th>Telemetry Layer</th><th>Minimum Fields</th><th>Questions Answered</th><th>Privacy/Cost Boundaries</th></tr>
@@ -1352,7 +1359,8 @@ summary = build_benchmark_summary(
       <tr><td>3</td><td>255 ms</td><td>Token 3 arrives 40 ms after the previous one</td></tr>
       <tr><td>4</td><td>300 ms</td><td>Token 4 arrives 45 ms after the previous one</td></tr>
     </table>
-  </div>  <p>This request has <code>TTFT = 180 ms</code>, <code>TPOT = (35 + 40 + 45) / 3 = 40 ms/token</code>, total generation time <code>300 ms</code>, and single-request average throughput <code>4 / 0.300 ≈ 13.3 tokens/s</code>. However, online SLO cannot be judged by a single sample: if the 95th percentile TTFT among 100 requests is <code>920 ms</code>, even if the average TTFT is only <code>260 ms</code>, the target of <code>P95 &lt; 800 ms</code> is not met. Course projects should report P50/P95/P99 simultaneously and stratify by prompt tokens, completion tokens, and whether prefix cache was hit.</p>
+  </div>
+  <p>This request has <code>TTFT = 180 ms</code>, <code>TPOT = (35 + 40 + 45) / 3 = 40 ms/token</code>, total generation time <code>300 ms</code>, and single-request average throughput <code>4 / 0.300 ≈ 13.3 tokens/s</code>. However, online SLO cannot be judged by a single sample: if the 95th percentile TTFT among 100 requests is <code>920 ms</code>, even if the average TTFT is only <code>260 ms</code>, the target of <code>P95 &lt; 800 ms</code> is not met. A service report should show P50/P95/P99 simultaneously and stratify by prompt tokens, completion tokens, and whether prefix cache was hit.</p>
 
   <h4>Capacity Planning: From Workload to Admission Control</h4>
   <p>The capacity of a real service is not a single number like "how many tokens/s the GPU can run." After entering the system, requests go through queuing, prefill, decode, streaming transmission, and post-processing; as long as the arrival rate exceeds the stable service rate, the queue grows rapidly, P95/P99 degrade first, and average latency often reveals the problem last.</p>
@@ -1389,9 +1397,9 @@ summary = build_benchmark_summary(
 
   <h4>Long Context Launch Check: Context Length Does Not Equal Usable Memory</h4>
   <p>1M token-level context makes "putting entire documents, codebases, or long conversations directly into the prompt" a feasible product form, but long context is not free memory. The longer the context, the more prefill, KV cache, TTFT, citation localization, and positional robustness become independent risks; if only <code>max_model_len</code> is considered, truncation, context rot, citation errors, or KV OOM can easily be misdiagnosed as model capability issues.</p>
-  <p>The <code>long_context_serving_gate_report</code> in the Ch10 assignment decomposes the long context path into four checks: <code>context_fit</code> checks if the input and reserved output cause truncation or overflow; <code>long_context_quality</code> checks needle/answer recall and citation hit; <code>position_robustness</code> requires coverage and stable accuracy at different positions (head/middle/tail); <code>serving_cost</code> puts P95 TTFT, total latency, KV cache usage, and prefix cache hit rate into a single launch table.</p>
+  <p>A long-context serving report decomposes the long context path into four checks: <code>context_fit</code> checks if the input and reserved output cause truncation or overflow; <code>long_context_quality</code> checks needle/answer recall and citation hit; <code>position_robustness</code> requires coverage and stable accuracy at different positions (head/middle/tail); <code>serving_cost</code> puts P95 TTFT, total latency, KV cache usage, and prefix cache hit rate into a single launch table.</p>
   <div class="code-block" data-lang="python">
-report = long_context_serving_gate_report(
+report = long_context_serving_check_report(
     records=[
         {
             "context_tokens": 96000,
@@ -1414,7 +1422,7 @@ report = long_context_serving_gate_report(
         "max_kv_cache_usage_pct": 0.8,
     },
 )</div>
-  <p>The goal of this launch check is not to encourage students to chase the maximum window, but to teach them to ask the questions that must be answered before launch: Is the long prompt truly not truncated? Can key facts be retrieved from the beginning, middle, and end? Do citations point to correct evidence? Is the prefix cache sufficient to amortize prefill costs? Is there still a safety margin for active KV tokens?</p>
+  <p>The goal of this launch check is not to chase the maximum window, but to answer the questions that must be settled before launch: Is the long prompt truly not truncated? Can key facts be retrieved from the beginning, middle, and end? Do citations point to correct evidence? Is the prefix cache sufficient to amortize prefill costs? Is there still a safety margin for active KV tokens?</p>
 
   <h4>Launch Checklist</h4>
   <ul>
@@ -1437,7 +1445,7 @@ report = long_context_serving_gate_report(
   <p>Stress testing an inference service is not simply about producing a <code>tokens/s</code> number. The engineer needs to answer: under the target business load, can the service stably meet the SLO? If not, is the problem prefill, decode, KV Cache, retrieval, queuing, or network streaming output? A qualified inference stress test report should form a closed loop connecting <strong>load assumptions, experimental matrix, layered metrics, capacity calculations, and tuning actions</strong>.</p>
 
   <h4>Step 1: Describe the Workload as Measurable Distributions</h4>
-  <p>Do not summarize all requests with "average 1,000 tokens." The performance of an LLM service is highly dependent on length distributions: the bottleneck for short prompts is usually scheduling and the first token; long-context requests amplify prefill and KV Cache; long-output requests occupy the decode batch for a long time. In course projects, it is recommended to stratify at least according to the table below:</p>
+  <p>Do not summarize all requests with "average 1,000 tokens." The performance of an LLM service is highly dependent on length distributions: the bottleneck for short prompts is usually scheduling and the first token; long-context requests amplify prefill and KV Cache; long-output requests occupy the decode batch for a long time. A useful service report should stratify at least according to the table below:</p>
   <div class="table-wrap">
     <table>
       <tr><th>Stratification Dimension</th><th>Recommended Values</th><th>Why It Matters</th></tr>
@@ -1477,7 +1485,7 @@ report = long_context_serving_gate_report(
 
   <h4>Step 3A: P/D disaggregation requires worker pool capacity planning</h4>
   <p>Prefill/decode disaggregation is not just about separating two terms. Current practices in vLLM, SGLang, and TensorRT-LLM treat prefill, decode, and KV transfer as different resource boundaries: prefill workers are more compute-throughput oriented, decode workers are more constrained by memory and bandwidth, and KV cache must be transferred between them. As long as KV transfer or active KV memory becomes the bottleneck, disaggregation may not improve end-to-end SLOs.</p>
-  <p>The <code>pd_pool_capacity_plan</code> in the Ch10 assignment turns this judgment into a capacity plan. It estimates three types of token rates (effective prefill, decode output, and KV transfer) from <code>QPS</code>, average prompt/output tokens, prefix cache hit rate, and active requests; then compares them with prefill worker, decode worker, KV transfer link, and decode-side KV capacity, outputting required workers/links, likely bottleneck, and action items.</p>
+  <p>A P/D pool capacity plan turns this judgment into a capacity plan. It estimates three types of token rates (effective prefill, decode output, and KV transfer) from <code>QPS</code>, average prompt/output tokens, prefix cache hit rate, and active requests; then compares them with prefill worker, decode worker, KV transfer link, and decode-side KV capacity, outputting required workers/links, likely bottleneck, and action items.</p>
   <div class="code-block" data-lang="python">
 plan = pd_pool_capacity_plan(
     workload={
@@ -1549,8 +1557,8 @@ assert plan["overall_pass"]</div>
 
   <h4>1A. Canary Release Is Not Simply Scaling Up Offline Scores</h4>
   <p>The release target for an LLM service is often not a single binary, but a combination of model weights, prompt/template, RAG index, reranker, tool registry, batch parameters, default sampling values, and safety policies. Passing offline evaluation only means the candidate version is worth entering canary testing; whether to expand traffic also depends on quality, safety, P95/P99, error rate, cost, monitoring fields, and rollback readiness under real requests.</p>
-  <p>The <code>production_rollout_gate_report</code> in the course assignment places the release candidate and the stable baseline into the same rollout report. It requires the candidate version to simultaneously meet six categories of conditions: offline quality, safety, SLO, cost, canary design, and rollback/monitoring:</p>
-  <pre><code class="language-python">report = production_rollout_gate_report(
+  <p>A production rollout report places the release candidate and the stable baseline into the same rollout table. It requires the candidate version to simultaneously meet six categories of conditions: offline quality, safety, SLO, cost, canary design, and rollback/monitoring:</p>
+  <pre><code class="language-python">report = production_rollout_check_report(
     baseline={"pass_rate": 0.82, "safety_pass_rate": 0.96, "cost_per_1k_requests_usd": 1.20},
     candidate={
         "pass_rate": 0.85,
@@ -1571,7 +1579,7 @@ assert report["decision"] == "promote_to_next_stage"</code></pre>
 
   <h4>1B. Proactive Degradation Before Overload After Launch</h4>
   <p>The release decision answers "Can the candidate version expand traffic?", while the runtime overload response answers "Can the current service continue to handle the same traffic?" Overload signals for LLM services are usually not a single CPU usage metric, but a combined degradation of queue backlog, P95 TTFT, P95 TPOT, KV cache usage, swapping, timeout/error, tenant quotas, and long-context requests. Waiting for 5xx errors to rise before taking action is often too late.</p>
-  <p>The <code>serving_overload_response_report</code> in the assignment puts these runtime signals into a single response table:</p>
+  <p>A serving overload response report puts these runtime signals into a single response table:</p>
   <pre><code class="language-python">report = serving_overload_response_report(
     metrics={
         "waiting_requests": 80,
@@ -1605,7 +1613,8 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
       <tr><th>Check</th><th>Input</th><th>Passing Criteria</th><th>Primary Suspect on Failure</th></tr>
       <tr><td>Load smoke</td><td>Cold start loading model and tokenizer</td><td>No missing/unexpected keys, special token IDs match configuration</td><td>Weight format, vocab size, adapter merging, FSDP shard</td></tr>
       <tr><td>Logit parity</td><td>Fixed short prompt, compare logits or top-k tokens before and after export</td><td>Nearly identical when unquantized; top-k ranking and PPL degradation are explainable when quantized</td><td>Transpose, RoPE, dtype, LayerNorm eps, quantization scale</td></tr>
-      <tr><td>Template parity</td><td>Fixed chat messages and tool schema</td><td>Training template and serving template token sequences are consistent or differences are documented</td><td>Role token, BOS/EOS, newlines, stop rules</td></tr>      <tr><td>Behavior regression</td><td>Fixed quality/safety/format sample set</td><td>Target slice improves, key old capabilities do not significantly degrade</td><td>SFT/DPO data shift, length bias, refusal boundary</td></tr>
+      <tr><td>Template parity</td><td>Fixed chat messages and tool schema</td><td>Training template and serving template token sequences are consistent or differences are documented</td><td>Role token, BOS/EOS, newlines, stop rules</td></tr>
+      <tr><td>Behavior regression</td><td>Fixed quality/safety/format sample set</td><td>Target slice improves, key old capabilities do not significantly degrade</td><td>SFT/DPO data shift, length bias, refusal boundary</td></tr>
       <tr><td>Serving smoke</td><td>Short prompt, long prompt, streaming, JSON/tool call</td><td>finish_reason, usage, error codes and streaming events stable</td><td>API wrapper, schema constraints, max_tokens, stop</td></tr>
       <tr><td>Rollback drill</td><td>Switch back to previous version or fallback model</td><td>Configuration and cache can be restored, caller routing is not disrupted</td><td>Version naming, cache pollution, canary routing strategy</td></tr>
     </table>
@@ -1895,7 +1904,8 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
 <!-- 10.15 GPU Memory Hierarchy -->
 <!-- ================================================================ -->
 <section class="card" id="s10-15">
-  <h3>10.15 GPU Memory Hierarchy—Understanding Why Triton is Necessary</h3>  <p>Before writing a Triton kernel, you must first understand the GPU memory architecture. Concepts like FlashAttention's "IO awareness," Triton's "tiling," and vLLM's "memory utilization" are all built on an understanding of the following memory hierarchy:</p>
+  <h3>10.15 GPU Memory Hierarchy—Understanding Why Triton is Necessary</h3>
+  <p>Before writing a Triton kernel, you must first understand the GPU memory architecture. Concepts like FlashAttention's "IO awareness," Triton's "tiling," and vLLM's "memory utilization" are all built on an understanding of the following memory hierarchy:</p>
   <div class="table-wrap">
     <table>
       <tr><th>Level</th><th>Size (A100)</th><th>Bandwidth</th><th>Latency</th><th>Scope</th></tr>
@@ -2024,7 +2034,7 @@ class LSHMemory:
     </table>
   </div>
   <div class="code-block" data-lang="python">
-report = speculative_serving_gate_report(
+report = speculative_serving_check_report(
     records=[
         {
             "baseline_ms": 1200,
@@ -2175,7 +2185,7 @@ def forward(image, text_prompt):
       <tr><td>safety / privacy multimodal data</td><td>Refusals, sensitive attributes, uncertainty expression, and restricted scenarios</td><td>Transfer text safety policies to images, speech, and video</td><td>May make inappropriate identity, attribute, or high-risk inferences from images or audio</td></tr>
     </table>
   </div>
-  <p>Therefore, seeing that a model performs well on VQA or general multimodal benchmarks only indicates it is strong on those types of questions; it does not imply it is suitable for invoice extraction, medical image interpretation, screen operation, or video surveillance. Course projects and classroom discussions should train the ability to "infer data and architecture requirements from the task," not to memorize a model name.</p>
+  <p>Therefore, seeing that a model performs well on VQA or general multimodal benchmarks only indicates it is strong on those types of questions; it does not imply it is suitable for invoice extraction, medical image interpretation, screen operation, or video surveillance. A stronger engineering habit is to infer data and architecture requirements from the task, rather than memorizing a model name.</p>
 
   <h4>Worked Example: Inferring Visual Token Count from Image Resolution</h4>
   <p>Assume a ViT patch size of <code>14</code>, and the input image is resized to <code>336 × 336</code>. The patch grid is approximately <code>24 × 24</code>, i.e., <code>576</code> visual patch tokens; if a global CLS token is added, the vision encoder outputs about <code>577</code> vectors. If <code>4</code> high-resolution crops are used, each crop produces <code>576</code> patch tokens, and without a resampler, the visual tokens would approach <code>2304</code>.</p>

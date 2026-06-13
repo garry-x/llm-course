@@ -679,6 +679,85 @@ report = post_training_data_audit(records, thresholds={
 </section>
 
 <!-- ================================================================ -->
+<!-- 9.6B Reward and verifier design -->
+<!-- ================================================================ -->
+<section class="card" id="s9-6b">
+  <h3>9.6B Reward and Verifier Design: Choosing the Right Training Signal Before RL</h3>
+  <p>Modern post-training does not have a single thing called "the reward." A preference label, a reward model score, a unit test, a mathematical verifier, an LLM judge, and a process reward model all create different learning signals. Before choosing PPO, GRPO, DAPO, GSPO, RLVR, or RFT, an engineer must first decide which reward family matches the task and what failure modes the reward can create.</p>
+  <p>This is why recent industrial systems emphasize graders and verifiers as much as the policy optimizer. OpenAI's <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">reinforcement fine-tuning</a> workflow requires a grader that can score outputs for an unambiguous task; DeepSeek-R1 uses rule-based rewards for reasoning tasks where final answers can be checked; process-reward research studies whether intermediate steps are valid, not only whether the final answer matches. The common lesson is that a reward should be treated as a measured instrument with calibration, scope, and known failure modes.</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 380" role="img" aria-label="Reward design ledger mapping tasks to verifiers, optimization, and audits">
+      <defs>
+        <marker id="reward-ledger-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .rw-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .rw-core{fill:rgba(16,185,129,.12);stroke:var(--success);stroke-width:2}
+        .rw-risk{fill:rgba(231,76,60,.10);stroke:#e74c3c;stroke-width:1.7}
+        .rw-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#reward-ledger-arrow)}
+        .rw-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .rw-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rw-box" x="42" y="58" width="190" height="70" rx="10"/>
+      <text text-anchor="middle" x="137" y="86"><tspan class="rw-title">Task Contract</tspan><tspan class="rw-sub" x="137" dy="20">answer space, ambiguity, risk</tspan></text>
+      <rect class="rw-core" x="300" y="58" width="190" height="70" rx="10"/>
+      <text text-anchor="middle" x="395" y="86"><tspan class="rw-title">Reward Family</tspan><tspan class="rw-sub" x="395" dy="20">preference / judge / verifier</tspan></text>
+      <rect class="rw-core" x="558" y="58" width="190" height="70" rx="10"/>
+      <text text-anchor="middle" x="653" y="86"><tspan class="rw-title">Optimization Use</tspan><tspan class="rw-sub" x="653" dy="20">DPO / GRPO / RLVR / RFT</tspan></text>
+      <rect class="rw-box" x="816" y="58" width="130" height="70" rx="10"/>
+      <text text-anchor="middle" x="881" y="86"><tspan class="rw-title">Release Claim</tspan><tspan class="rw-sub" x="881" dy="20">bounded by evidence</tspan></text>
+      <path class="rw-line" d="M232 93 H300"/>
+      <path class="rw-line" d="M490 93 H558"/>
+      <path class="rw-line" d="M748 93 H816"/>
+
+      <rect class="rw-risk" x="170" y="210" width="170" height="82" rx="10"/>
+      <text text-anchor="middle" x="255" y="238"><tspan class="rw-title">Calibration</tspan><tspan class="rw-sub" x="255" dy="20">human agreement</tspan><tspan class="rw-sub" x="255" dy="17">false pass / reject</tspan></text>
+      <rect class="rw-risk" x="405" y="210" width="170" height="82" rx="10"/>
+      <text text-anchor="middle" x="490" y="238"><tspan class="rw-title">Exploit Audit</tspan><tspan class="rw-sub" x="490" dy="20">length, format, leakage</tspan><tspan class="rw-sub" x="490" dy="17">judge or test hacking</tspan></text>
+      <rect class="rw-risk" x="640" y="210" width="170" height="82" rx="10"/>
+      <text text-anchor="middle" x="725" y="238"><tspan class="rw-title">Cost Boundary</tspan><tspan class="rw-sub" x="725" dy="20">rollouts, tokens, latency</tspan><tspan class="rw-sub" x="725" dy="17">cost per valid answer</tspan></text>
+
+      <path class="rw-line" d="M395 128 C365 168 315 184 255 210"/>
+      <path class="rw-line" d="M490 210 C488 176 500 150 558 112"/>
+      <path class="rw-line" d="M725 210 C745 168 785 138 816 112"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 9-2: Reward design ledger. The task contract determines the reward family; calibration, exploit audits, and cost boundaries determine whether the reward can support RL or only offline evaluation.</p>
+
+  <h4>1. Reward families answer different questions</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Reward Family</th><th>Best For</th><th>Typical Failure Mode</th><th>Minimum Audit Before Training</th></tr>
+      <tr><td>Human preference pair</td><td>Helpfulness, style, harmlessness, subjective trade-offs</td><td>Length bias, annotator disagreement, stale candidate distribution</td><td>Agreement rate, length-bias statistics, disagreement slices, held-out prompts</td></tr>
+      <tr><td>Reward model</td><td>Scaling preference feedback beyond direct human labeling</td><td>Policy exploits reward-model artifacts or narrow style preferences</td><td>Adversarial samples, KL/length monitoring, human comparison after optimization</td></tr>
+      <tr><td>LLM-as-judge</td><td>Open-ended answers with a clear rubric and limited human budget</td><td>Position bias, verbosity bias, model-family bias, rubric drift</td><td>A/B order swap, length control, human agreement, judge version pinning</td></tr>
+      <tr><td>Rule-based verifier</td><td>Math final answers, code tests, schema validity, tool execution results</td><td>Weak tests, public leakage, correct-by-guessing, false pass cases</td><td>Hidden tests, false pass/reject review, contamination scan, adversarial probes</td></tr>
+      <tr><td>Process reward / trace verifier</td><td>Reasoning steps, proof constraints, tool trajectories, agent workflows</td><td>Step labels are expensive, local correctness does not guarantee final success</td><td>Trace validity sample, final-answer consistency, step-to-outcome correlation</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Match optimizer to reward integrity</h4>
+  <p>DPO is appropriate when the main signal is a stable chosen/rejected comparison. PPO/GRPO-style RL is appropriate when sampling multiple candidates can reveal meaningful reward differences. RLVR/RFT is appropriate only when the grader is reliable enough that improving its score is likely to improve the target behavior. If the reward is noisy, ambiguous, or easy to exploit, stronger optimization makes the problem worse faster.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Training Choice</th><th>Reward Requirement</th><th>Do Not Use It When</th><th>Report Alongside Score</th></tr>
+      <tr><td>SFT</td><td>High-quality demonstrations or corrected traces</td><td>The target behavior requires exploration among many possible answers</td><td>format pass rate, imitation coverage, held-out task quality</td></tr>
+      <tr><td>DPO / preference optimization</td><td>Chosen/rejected pairs reflect stable preference under a known policy distribution</td><td>Preference labels are inconsistent, length-biased, or generated by obsolete candidates</td><td>preference accuracy, length shift, KL to reference, slice regressions</td></tr>
+      <tr><td>GRPO / PPO-style RL</td><td>Rollouts produce reward variance and the reward cannot be cheaply hacked</td><td>Most groups are all-correct/all-wrong or the reward mostly tracks output length</td><td>reward std, effective rollout ratio, approx KL, entropy, clip fraction</td></tr>
+      <tr><td>RLVR / RFT</td><td>A programmable or rule-based grader reliably distinguishes correct from incorrect outputs</td><td>The task is subjective, under-specified, or has a weak public test set</td><td>false pass audit, cost per valid answer, private held-out pass rate, trace validity</td></tr>
+    </table>
+  </div>
+
+  <h4>3. Reward improvement is not the same as capability improvement</h4>
+  <p>A reward curve should be interpreted as a hypothesis, not as proof. The model may learn to write longer answers, satisfy a brittle format checker, exploit a unit test, imitate the judge's preferred style, or memorize public examples. A credible report must therefore separate the reward score from the target behavior: final-answer accuracy, process validity, safety/refusal calibration, latency, token cost, and out-of-distribution slices should all be measured after optimization.</p>
+  <p>For this course, a reward design paragraph should have this shape: <code>For task X, the answer space is Y, the grader is Z, its audited false-pass rate is A, the reward variance is B, the known exploit risks are C, and the release claim is limited to D.</code> If one of these fields is missing, the RL experiment is not ready to be scaled.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> The optimizer only amplifies the reward. Senior alignment engineers first prove that the reward is calibrated, hard to exploit, and connected to the real task; only then do they treat RL curves as evidence of improvement.</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- Programming Exercise 3: DPO Loss -->
 <!-- ================================================================ -->
 <section class="card" id="s9-7">

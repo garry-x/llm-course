@@ -456,6 +456,106 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Training engineering is not just about running a DataLoader; it must also be able to explain the source, filtering, deduplication, risk, sampling weights, and split isolation of training tokens. The data pipeline defines what the model learns and how evaluation scores can be interpreted.</div></div>
 </section>
 
+<section class="card" id="s7-3c">
+  <h3>7.3C Synthetic Data and Distillation: Turning Generation into a Controlled Training Signal</h3>
+  <p>Synthetic data is now a normal part of industrial LLM training, but it is not a substitute for data governance. A generated sample still has a source prompt, a teacher model, a decoding policy, a filter, a verifier, and a target training stage. If any of these are missing from the ledger, the sample cannot be interpreted later when the model improves, regresses, or overfits a benchmark style.</p>
+  <p>The key shift is to treat synthetic data as <strong>a controlled signal transformation</strong>: raw tasks and failure cases are converted into candidate demonstrations, reasoning traces, tool-call trajectories, preference pairs, or verifier-labeled examples. The generated data is useful only if its quality, diversity, contamination risk, and downstream effect are measured against real held-out slices. Meta's <a href="https://ai.meta.com/blog/meta-llama-3-1/" target="_blank">Llama 3.1</a> post-training report describes iterative rounds of SFT, rejection sampling, DPO, and synthetic data filtering; <a href="https://arxiv.org/html/2501.12948v1" target="_blank">DeepSeek-R1</a> shows a different but related pattern where RL, cold-start data, rejection sampling, and distillation interact in a multi-stage reasoning pipeline.</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 430" role="img" aria-label="Synthetic data lifecycle from task source to training mixture and evaluation feedback">
+      <defs>
+        <marker id="synthetic-loop-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .sd-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .sd-core{fill:rgba(46,204,113,.12);stroke:#2ecc71;stroke-width:2}
+        .sd-risk{fill:rgba(231,76,60,.10);stroke:#e74c3c;stroke-width:1.8}
+        .sd-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#synthetic-loop-arrow)}
+        .sd-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .sd-sub{font-size:12px;fill:var(--text-secondary)}
+        .sd-small{font-size:11px;fill:var(--text-secondary)}
+      </style>
+
+      <rect class="sd-box" x="38" y="52" width="190" height="78" rx="10"/>
+      <text text-anchor="middle" x="133" y="80"><tspan class="sd-title">Task Sources</tspan><tspan class="sd-sub" x="133" dy="20">logs / docs / failures</tspan><tspan class="sd-small" x="133" dy="17">with privacy filtering</tspan></text>
+
+      <rect class="sd-box" x="300" y="52" width="190" height="78" rx="10"/>
+      <text text-anchor="middle" x="395" y="80"><tspan class="sd-title">Teacher Generation</tspan><tspan class="sd-sub" x="395" dy="20">model + prompt + decoding</tspan><tspan class="sd-small" x="395" dy="17">record every version</tspan></text>
+
+      <rect class="sd-box" x="562" y="52" width="190" height="78" rx="10"/>
+      <text text-anchor="middle" x="657" y="80"><tspan class="sd-title">Candidate Pool</tspan><tspan class="sd-sub" x="657" dy="20">answers / traces / pairs</tspan><tspan class="sd-small" x="657" dy="17">before promotion</tspan></text>
+
+      <rect class="sd-core" x="300" y="184" width="190" height="82" rx="12"/>
+      <text text-anchor="middle" x="395" y="213"><tspan class="sd-title">Curate and Verify</tspan><tspan class="sd-sub" x="395" dy="21">rubric, tests, judge, humans</tspan><tspan class="sd-small" x="395" dy="17">remove low-confidence data</tspan></text>
+
+      <rect class="sd-core" x="562" y="184" width="190" height="82" rx="12"/>
+      <text text-anchor="middle" x="657" y="213"><tspan class="sd-title">Training Mixture</tspan><tspan class="sd-sub" x="657" dy="21">SFT / DPO / RL / distill</tspan><tspan class="sd-small" x="657" dy="17">weight, replay, stage</tspan></text>
+
+      <rect class="sd-box" x="300" y="318" width="190" height="74" rx="10"/>
+      <text text-anchor="middle" x="395" y="346"><tspan class="sd-title">Held-Out Slices</tspan><tspan class="sd-sub" x="395" dy="20">quality / safety / style</tspan><tspan class="sd-small" x="395" dy="17">real data remains anchor</tspan></text>
+
+      <rect class="sd-box" x="562" y="318" width="190" height="74" rx="10"/>
+      <text text-anchor="middle" x="657" y="346"><tspan class="sd-title">Promotion Decision</tspan><tspan class="sd-sub" x="657" dy="20">keep / reweight / reject</tspan><tspan class="sd-small" x="657" dy="17">update the data ledger</tspan></text>
+
+      <rect class="sd-risk" x="800" y="154" width="142" height="132" rx="12"/>
+      <text text-anchor="middle" x="871" y="184"><tspan class="sd-title">Failure Risks</tspan><tspan class="sd-small" x="871" dy="23">style collapse</tspan><tspan class="sd-small" x="871" dy="17">answer leakage</tspan><tspan class="sd-small" x="871" dy="17">teacher bias</tspan><tspan class="sd-small" x="871" dy="17">false verifier pass</tspan></text>
+
+      <path class="sd-line" d="M228 91 L300 91"/>
+      <path class="sd-line" d="M490 91 L562 91"/>
+      <path class="sd-line" d="M657 130 C640 158 610 176 490 206"/>
+      <path class="sd-line" d="M490 225 L562 225"/>
+      <path class="sd-line" d="M657 266 L657 318"/>
+      <path class="sd-line" d="M562 355 L490 355"/>
+      <path class="sd-line" d="M395 318 L395 266"/>
+      <path class="sd-line" d="M752 225 L800 225"/>
+      <path class="sd-line" d="M395 392 C190 390 116 286 133 130"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 7-3: Synthetic data lifecycle. The useful unit is not a generated sample alone, but the full chain from source task to teacher, verifier, training mixture, held-out evaluation, and promotion decision.</p>
+
+  <h4>1. Synthetic data has different roles in different training stages</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Stage</th><th>Typical Synthetic Signal</th><th>Why It Helps</th><th>Main Control</th></tr>
+      <tr><td>Pre-training / mid-training</td><td>High-quality explanations, code, math, domain text, or reasoning-style documents</td><td>Raises density of useful token transitions in scarce or difficult domains</td><td>Mix with natural data, keep source diversity, check that validation gains do not come only from style imitation</td></tr>
+      <tr><td>SFT</td><td>Instruction-response demonstrations, tool-call traces, structured output examples</td><td>Teaches interface behavior, formatting, task decomposition, and domain-specific workflows</td><td>Validate prompts and answers separately; filter for correctness, not just fluency</td></tr>
+      <tr><td>Preference optimization</td><td>Chosen/rejected pairs, rewritten responses, safety/helpfulness comparisons</td><td>Creates contrastive behavioral signals when human labels are scarce</td><td>Audit pair difficulty, length bias, annotator or judge agreement, and reward hacking risk</td></tr>
+      <tr><td>Reasoning RL / RLVR</td><td>Verifiable problems, sampled solutions, rejection-sampled traces, executable checks</td><td>Lets the model explore solution strategies while a rule-based verifier supplies reward</td><td>Measure verifier precision and false positives before training; separate training prompts from final evals</td></tr>
+      <tr><td>Distillation</td><td>Teacher outputs, rationales, plans, tool decisions, or self-correction traces</td><td>Transfers behavior from a stronger or more expensive model into a cheaper one</td><td>Record teacher version, temperature, sampling count, selection rule, and domains where the student fails</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Rejection sampling is data curation, not magic supervision</h4>
+  <p>Rejection sampling means generating multiple candidates and promoting only those that pass a selection rule. The selector can be a unit test, a mathematical verifier, an LLM judge, a reward model, or human review. The engineering risk is that the selector becomes the real teacher: if it accepts verbose but wrong reasoning, rewards benchmark-specific shortcuts, or misses tool side effects, the training run will amplify those errors.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Selector</th><th>Reliable When</th><th>Fails When</th><th>Required Audit</th></tr>
+      <tr><td>Unit test / executable checker</td><td>The task has deterministic outputs and tests cover the intended behavior</td><td>Tests are narrow, underspecified, flaky, or public enough to be memorized</td><td>False pass / false reject sample review, hidden tests, contamination check</td></tr>
+      <tr><td>Math or symbolic verifier</td><td>The final answer can be normalized and checked exactly</td><td>The reasoning path is invalid but the final answer is guessed correctly</td><td>Final-answer accuracy plus trace-quality sampling</td></tr>
+      <tr><td>LLM judge</td><td>The rubric is clear and calibrated against human labels</td><td>The judge prefers length, tone, familiar model style, or position order</td><td>A/B swap, length control, disagreement slices, human agreement</td></tr>
+      <tr><td>Reward model</td><td>Preference pairs cover the target behavior and hard negatives</td><td>The policy learns reward-model artifacts or over-optimizes a narrow style</td><td>KL / length / refusal / safety monitoring and offline-to-online validation</td></tr>
+    </table>
+  </div>
+
+  <h4>3. A synthetic data ledger must make the training signal reproducible</h4>
+  <p>A useful ledger should allow another engineer to answer: what was generated, by which teacher, from which task source, under which decoding parameters, filtered by which rule, mixed at which weight, and validated on which held-out slices. Without this, "we added synthetic data" is not a scientific claim; it is an undocumented change to the gradient distribution.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Ledger Field</th><th>Example</th><th>Why It Matters</th></tr>
+      <tr><td>Source task</td><td>failed customer-service citation cases from March logs, de-identified</td><td>Prevents vague claims that the data represents the product distribution</td></tr>
+      <tr><td>Teacher and policy</td><td>teacher model version, temperature, top-p, number of candidates</td><td>Controls style, diversity, and reproducibility of generated examples</td></tr>
+      <tr><td>Verifier or selector</td><td>unit tests, schema validator, rubric judge, human review protocol</td><td>Defines what "quality" actually means for promotion</td></tr>
+      <tr><td>Mixing rule</td><td>5% of SFT tokens, capped per domain, replayed every third epoch-equivalent token window</td><td>Prevents synthetic examples from silently dominating the batch distribution</td></tr>
+      <tr><td>Eval evidence</td><td>held-out domain slice, safety slice, style-diversity check, contamination scan</td><td>Separates genuine capability gains from style transfer or benchmark leakage</td></tr>
+    </table>
+  </div>
+
+  <p>For training engineers, the practical rule is simple: synthetic data should <strong>accumulate verified signal</strong>, not replace the empirical distribution with a teacher's favorite style. If adding generated traces improves math but increases verbosity, lowers factual precision, or reduces multilingual robustness, the correct response is not to declare the synthetic pipeline successful; it is to reweight, re-filter, or split the pipeline by capability.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Treat every synthetic dataset as a model-generated intervention with provenance, verifier quality, mixture weight, and held-out evidence. The question is not "is synthetic data good," but "which synthetic signal improves which behavior under which control checks."</div></div>
+</section>
+
 <!-- ================================================================ -->
 <!-- 7.4 Cross-Entropy Theory -->
 <!-- ================================================================ -->

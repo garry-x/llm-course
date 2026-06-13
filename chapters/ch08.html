@@ -1135,6 +1135,81 @@ next_token = sample_next_token(masked, strategy="greedy")
   <div class="info-box tip"><span class="icon">💡</span><div>When building APIs or Agents, prioritize structured output or constrained decoding, and perform schema validation on the application side. Relying solely on prompt engineering makes it difficult to stably guarantee JSON format; tools like outlines, vLLM, SGLang, and llama.cpp can be chosen based on the deployment environment.</div></div>
 </section>
 
+<section class="card" id="s8-12a">
+  <h3>8.12A Structured Output Reliability: Schema Validity Is Not Semantic Correctness</h3>
+  <p>Structured output should be understood as a contract stack, not a single feature. JSON mode, strict JSON Schema, regex/grammar constraints, tool-call schemas, post-validation, and retry repair each protect a different boundary. OpenAI's <a href="https://developers.openai.com/api/docs/guides/structured-outputs" target="_blank">Structured Outputs</a> documentation emphasizes schema adherence; vLLM and SGLang expose similar constrained-output options through JSON schema, regex, choices, grammar, or EBNF. These mechanisms make parseability much more reliable, but they do not prove that the selected field values are true, complete, safe, or allowed to be executed.</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 390" role="img" aria-label="Structured output reliability stack from schema to semantic validation and execution">
+      <defs>
+        <marker id="structured-stack-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .so-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .so-core{fill:rgba(52,152,219,.12);stroke:var(--accent);stroke-width:2}
+        .so-risk{fill:rgba(231,76,60,.10);stroke:#e74c3c;stroke-width:1.7}
+        .so-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#structured-stack-arrow)}
+        .so-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .so-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="so-box" x="44" y="72" width="150" height="70" rx="10"/>
+      <text text-anchor="middle" x="119" y="100"><tspan class="so-title">Prompt Task</tspan><tspan class="so-sub" x="119" dy="20">intent, evidence, risk</tspan></text>
+      <path class="so-line" d="M194 107 H270"/>
+      <rect class="so-core" x="270" y="72" width="170" height="70" rx="10"/>
+      <text text-anchor="middle" x="355" y="100"><tspan class="so-title">Schema Constraint</tspan><tspan class="so-sub" x="355" dy="20">JSON / regex / grammar</tspan></text>
+      <path class="so-line" d="M440 107 H516"/>
+      <rect class="so-core" x="516" y="72" width="170" height="70" rx="10"/>
+      <text text-anchor="middle" x="601" y="100"><tspan class="so-title">Structured Output</tspan><tspan class="so-sub" x="601" dy="20">parseable fields</tspan></text>
+      <path class="so-line" d="M686 107 H762"/>
+      <rect class="so-box" x="762" y="72" width="174" height="70" rx="10"/>
+      <text text-anchor="middle" x="849" y="100"><tspan class="so-title">Application Action</tspan><tspan class="so-sub" x="849" dy="20">tool, DB, UI, workflow</tspan></text>
+
+      <rect class="so-risk" x="166" y="238" width="172" height="82" rx="10"/>
+      <text text-anchor="middle" x="252" y="266"><tspan class="so-title">Syntax Check</tspan><tspan class="so-sub" x="252" dy="20">parse, required fields</tspan><tspan class="so-sub" x="252" dy="17">enum and type</tspan></text>
+      <rect class="so-risk" x="404" y="238" width="172" height="82" rx="10"/>
+      <text text-anchor="middle" x="490" y="266"><tspan class="so-title">Semantic Check</tspan><tspan class="so-sub" x="490" dy="20">evidence, units, ranges</tspan><tspan class="so-sub" x="490" dy="17">business invariants</tspan></text>
+      <rect class="so-risk" x="642" y="238" width="172" height="82" rx="10"/>
+      <text text-anchor="middle" x="728" y="266"><tspan class="so-title">Execution Guard</tspan><tspan class="so-sub" x="728" dy="20">permissions, idempotency</tspan><tspan class="so-sub" x="728" dy="17">retry and rollback</tspan></text>
+      <path class="so-line" d="M355 142 C330 184 294 210 252 238"/>
+      <path class="so-line" d="M601 142 C566 184 530 210 490 238"/>
+      <path class="so-line" d="M849 142 C810 184 766 212 728 238"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 8-4: Structured output reliability stack. Constrained decoding protects syntax and schema, while semantic validation and execution guards protect correctness and safety.</p>
+
+  <h4>1. Choose the constraint level based on the downstream action</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Output Contract</th><th>Best Use</th><th>What It Guarantees</th><th>What It Does Not Guarantee</th></tr>
+      <tr><td>Prompt-only JSON instruction</td><td>Low-risk demos and exploratory analysis</td><td>Nothing formal; may work often with strong models</td><td>Valid JSON, required fields, stable keys, safe values</td></tr>
+      <tr><td>JSON mode</td><td>Need parseable JSON but schema is flexible</td><td>Output is valid JSON more reliably</td><td>Field presence, enum validity, business constraints</td></tr>
+      <tr><td>Strict JSON Schema / structured output</td><td>APIs, extraction, tool arguments, typed application state</td><td>Required keys, types, enum choices, object shape within supported schema features</td><td>Factual correctness, citation faithfulness, permission to execute action</td></tr>
+      <tr><td>Regex / grammar / EBNF</td><td>DSLs, SQL-like fragments, code templates, custom protocols</td><td>Surface form follows a formal language</td><td>Runtime safety, query correctness, injection resistance</td></tr>
+      <tr><td>Tool call schema</td><td>Agent actions, API calls, database operations, workflow automation</td><td>Arguments are parseable and typed for the tool boundary</td><td>Tool authorization, side-effect safety, idempotency, user intent</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Validation must be layered after decoding</h4>
+  <p>Even if the decoder produces schema-valid JSON, the application still needs semantic validation. For RAG, document IDs must be among retrieved documents and the cited span must support the answer. For extraction, dates, currencies, units, and entity IDs must match source evidence. For tool calls, arguments must pass permission checks, tenant boundaries, rate limits, and idempotency rules. For code or SQL, the syntax may be valid while the program is unsafe or semantically wrong.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Validation Layer</th><th>Example Check</th><th>Failure Action</th><th>Metric</th></tr>
+      <tr><td>Parse and schema</td><td>JSON parse, required fields, enum, type, array length</td><td>Retry with repair prompt or constrained decoding</td><td>schema pass rate, retry rate</td></tr>
+      <tr><td>Evidence binding</td><td>Cited document ids exist and support the field value</td><td>Ask for corrected citation, lower confidence, or abstain</td><td>citation precision/recall, unsupported field rate</td></tr>
+      <tr><td>Business invariant</td><td>Start date before end date, price non-negative, account belongs to tenant</td><td>Reject the action and surface a validation error</td><td>invariant violation rate</td></tr>
+      <tr><td>Permission and side effect</td><td>User can call the tool; operation is safe, reversible, or confirmed</td><td>Require confirmation, route to human review, or block</td><td>blocked unsafe action rate, confirmation success rate</td></tr>
+      <tr><td>Execution result</td><td>Tool/API returns success and observation matches requested state</td><td>Retry once, compensate, rollback, or mark partial failure</td><td>tool success rate, rollback rate, duplicate execution rate</td></tr>
+    </table>
+  </div>
+
+  <h4>3. Report both schema quality and semantic quality</h4>
+  <p>A structured output experiment should not stop at "JSON validity is 99%." A useful report includes schema pass rate, retry count, latency overhead, semantic field accuracy, unsupported citation rate, tool authorization failures, and post-execution failure rate. If constrained decoding improves parseability but increases latency or hides a systematic extraction error, the release conclusion must mention that boundary.</p>
+  <p>For senior inference engineers, the correct deployment claim is narrow: <code>structured decoding guarantees the output shape under the supported schema; application validation decides whether the content is true and safe to execute.</code> Confusing these two layers is a common cause of agent incidents: a valid tool-call JSON object can still delete the wrong resource, cite a document that does not support the claim, or submit an unsafe query.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> Use constrained decoding to make the output parseable, then use validators and execution guards to decide whether it is correct, authorized, and safe. Schema adherence is necessary infrastructure, not a substitute for task evaluation.</div></div>
+</section>
+
 
 <section class="card">
   <h3>Concept Exercise Review</h3>

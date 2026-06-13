@@ -44,7 +44,7 @@
     <li><strong>练习产出：</strong>提交训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>自回归概率分解、cross entropy、optimizer state、随机性控制、train/val split 和实验统计。<br><strong>本章内化：</strong>这些基础会直接进入 data curation gate、loss/ppl、AdamW/Muon、learning-rate schedule、gradient clipping、checkpoint resume、数据 packing、seed 和 ablation 报告。<br><strong>验收信号：</strong>你不只是让 loss 下降，而是能解释数据来源、过滤/去重、曲线方差、baseline、恢复点、token budget 和训练成本，并把这些结果传给 Ch08 生成质量和 Ch09 对齐实验。</div>
-  <p class="system-role"><strong>系统位置：</strong>本章把 Ch06 模型变成可复现训练 run。它不仅教优化器，还把数据策展、污染排查、完整 checkpoint、实验统计和成本账本接到 Ch09 post-training 与 capstone 训练报告。</p>
+  <p class="system-role"><strong>系统位置：</strong>本章把 Ch06 模型变成可复现训练 run。它不仅教优化器，还把数据策展、污染排查、完整 checkpoint、实验统计和成本账本接到 Ch09 post-training。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -1367,7 +1367,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <li><strong>Regression gate：</strong>安全拒答、格式遵循、长上下文、工具/RAG 输入是否退化。</li>
     <li><strong>Cost gate：</strong>新增能力是否值得训练 token、GPU 小时、推理延迟和显存成本。</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>工业训练系统的目标不是“把模型跑大”，而是让每一次数据、模型、并行和优化改动都能被恢复、观测、评估和复盘。训练工程师要能把一次 run 讲成可审计的工程过程，而不是一条 loss 曲线。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>工业训练系统的目标不是“把模型跑大”，而是让每一次数据、模型、并行和优化改动都能被恢复、观测和评估。训练工程师要能把一次 run 讲成可审计的工程过程，而不是一条 loss 曲线。</div></div>
 </section>
 
 

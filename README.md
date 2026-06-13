@@ -76,9 +76,7 @@
 
 配套学习材料：
 
-- [课程 Syllabus](docs/syllabus.html)：课程目标、周安排、作业节奏和项目安排。
-- [10 周 / 20 讲 Lecture Plan](docs/lecture-plan.html)：每讲目标、推导、课堂 demo 和 quick check。
-- [逐周阅读材料与复盘 Handout](docs/reading-list.html)：论文阅读、关键问题和复盘要求。
+- [逐周阅读材料 Handout](docs/reading-list.html)：论文阅读、关键问题和章节连接。
 - [书面推导与概念题题库](docs/written-problem-set.html)：公式推导、复杂度分析和概念辨析。
 - [Worked Example Pack](docs/worked-example-pack.html)：BPE、RoPE、attention、GQA、Norm、AdamW、SFT mask/packing、DPO、KV cache 等可复算小例子。
 - [经典 NLP 专题 Handout](docs/classic-nlp-handout.html)：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT、BLEU/ROUGE/F1/EM 与现代 LLM 的关系。
@@ -98,10 +96,6 @@
 | 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链、上下文压缩/记忆和失败兜底 |
 | 评测与上线 | Ch09-Ch11 | 设计质量/安全/延迟/成本指标，做 agent/workflow eval、压测、回归评估、canary/control 发布和回滚检查 |
 
-**课程最终项目：**[LLM Inference Engineering Capstone](projects/inference-engineering-capstone/) 会带你部署一个 OpenAI-compatible Chat API：支持流式输出、结构化 JSON、工具调用、RAG、基础指标、observability trace、context engineering gate、model routing gate、压测报告、P50/P95/P99 延迟和 tokens/s 成本估算。先用 mock engine 跑通服务骨架，再替换为 vLLM / SGLang / TensorRT-LLM / llama.cpp。
-
-**能力视图：**如果你想按岗位能力检查覆盖面，参考 [LLM 推理工程师能力视图](inference-engineer-curriculum.html)（详细版在 [docs/inference-engineer-curriculum.html](docs/inference-engineer-curriculum.html)）。它只重排章节产出、练习、Capstone、压测、评测和上线复盘，不替代章节学习。
-
 ## 面向 LLM 训练工程师的能力路线
 
 如果你的目标是成为 LLM 训练工程师，学习目标要从“能跑一个 loss”推进到“能交付可复现、可恢复、可观测、成本可解释的训练系统”。课程按以下能力组织：
@@ -114,10 +108,6 @@
 | 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
 | 微调与对齐 | Ch09 | 区分 SFT/偏好数据 gate、LoRA、DPO、GRPO/DAPO/GSPO、RLVR/RFT 的数据格式、损失、rollout 日志和适用场景 |
 | 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、MFU、GPU hours、distributed checkpoint、checkpoint 存储和 scale rehearsal |
-
-**训练最终项目：**[LLM Training Engineering Capstone](projects/training-engineering-capstone/) 会带你实现一个 PyTorch 字符级语言模型训练闭环：数据分析、data curation gate、训练、开发集监控、checkpoint/resume integrity、metrics、训练规划和分布式策略账本。默认模型很小，CPU 可跑通；报告仍需解释目标规模下数据过滤/去重/混合、DDP/ZeRO/FSDP、低精度、MFU、checkpoint state 和 reshard 的工程边界。
-
-**能力视图：**按 [LLM 训练工程师能力视图](training-engineer-curriculum.html)（详细版在 [docs/training-engineer-curriculum.html](docs/training-engineer-curriculum.html)）检查训练报告、指标日志、checkpoint 恢复说明和成本规划是否覆盖完整。
 
 ## 快速开始
 
@@ -163,7 +153,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 10 | **推理优化与前沿** — KV Cache/量化 release gate/RAG/Context Engineering/Structured Output/Tool/MCP Gate/vLLM/Triton/MoE serving/模型路由/生产发布/长上下文/多模态 | KV Cache + 量化校准/回归 + RAG + context engineering gate + structured output gate + Tool/MCP Gate + MoE serving gate + model routing gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + 服务蓝图 | 11+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics / agent workflow eval | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + agent eval protocol + MLM mask | Ch11 |
 
-> **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**
+> **总计：覆盖 11 章编程作业、书面推导题和经典 NLP 专题作业。**
 
 ## DeepSeek 技术融入
 
@@ -183,13 +173,11 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | mHC (Manifold-Constrained Hyper-Connections) | Ch05 | Birkhoff 约束、Sinkhorn-Knopp 和残差连接扩展 |
 | Muon Optimizer | Ch07 | 动量矩阵正交化和大规模优化器设计 |
 
-## 项目结构
+## 仓库结构
 
 ```
 llm-course/
 ├── index.html                # 课程首页：Hero + 仪表板 + 章节目录
-├── inference-engineer-curriculum.html # 推理工程师能力视图
-├── training-engineer-curriculum.html  # 训练工程师能力视图
 ├── css/style.css              # 暖色 editorial 风格，暗色/浅色双主题
 ├── js/
 │   ├── db.js                  # IndexedDB 持久化存储层
@@ -197,30 +185,11 @@ llm-course/
 ├── chapters/                  # 11 章，纯 HTML
 │   └── ch01.html ~ ch11.html
 ├── docs/
-│   ├── syllabus.md              # 课程目标、周安排、作业和项目结构
-│   ├── lecture-plan.md          # 10 周 / 20 讲授课计划
 │   ├── reading-list.md          # 逐周论文与技术报告阅读
 │   ├── written-problem-set.md   # 书面推导与概念题
 │   ├── worked-example-pack.md   # 可复算小例子
 │   ├── math-prerequisites.md    # 数学先修
-│   ├── classic-nlp-handout.md   # 经典 NLP 专题
-│   ├── inference-engineer-curriculum.md  # 推理工程师能力视图
-│   └── training-engineer-curriculum.md   # 训练工程师能力视图
-├── projects/
-│   ├── inference-engineering-capstone/
-│   │   ├── acceptance.py      # 项目脚本：health + 评测 + 压测 + SLO + 容量估算
-│   │   ├── app.py             # OpenAI-compatible Chat API + SSE + RAG stub + metrics
-│   │   ├── benchmark.py       # 并发压测，输出 P50/P95/P99、TTFT/TPOT、tokens/s
-│   │   ├── capacity_plan.py   # 显存、最大 batch 和每 1M tokens 成本估算
-│   │   ├── evaluate.py        # 固定评测集回归检查
-│   │   ├── slo_check.py       # 读取压测 JSON，检查延迟/吞吐/错误率 SLO
-│   │   └── eval_cases.jsonl
-│   └── training-engineering-capstone/
-│       ├── acceptance.py      # 项目脚本：数据分析 + 训练 + resume + 规划
-│       ├── data_profile.py      # 语料行数、重复、长度和字符规模分析
-│       ├── plan_training.py   # step、GPU hours、成本和 checkpoint 存储估算
-│       ├── train.py           # PyTorch tiny LM 训练循环 + checkpoint/resume
-│       └── sample_corpus.txt
+│   └── classic-nlp-handout.md   # 经典 NLP 专题
 ├── images/                    # 11 张 SVG 概念示意图 + favicon（支持暗色模式）
 │   ├── bpe-pipeline.svg       # BPE 训练与编解码流程
 │   ├── rope-rotation.svg      # RoPE 旋转位置编码原理
@@ -240,7 +209,7 @@ llm-course/
 
 ## 内容维护原则
 
-首页和 README 只保留课程主线、章节入口、工程能力视图和运行方式。论文、技术报告和工具文档不在首页堆列表，而是进入对应章节和 [逐周阅读材料与复盘 Handout](docs/reading-list.html)，并要求学生把阅读结论落回公式、代码、gate 或 capstone 决策。
+首页和 README 只保留课程主线、章节入口和运行方式。论文、技术报告和工具文档不在首页堆列表，而是进入对应章节和 [逐周阅读材料 Handout](docs/reading-list.html)，并要求学生把阅读结论落回公式、代码、系统指标或章节判断。
 
 后续扩展课程内容时优先遵循三条规则：
 

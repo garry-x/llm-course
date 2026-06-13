@@ -126,7 +126,7 @@ perplexity 是 `exp(loss)`，表示平均每一步仍有多少等价候选。
 - overfitting、data leakage 和 benchmark contamination。
 - objective、metric 和 generalization boundary 的区别。
 
-这些内容按 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md) 补救，并在训练/推理 capstone proposal、milestone 和 final report 中作为评分依据。
+这些内容按 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md) 补救，并在训练、推理和评测章节中作为判断结论是否可靠的依据。
 
 ## 反向传播核心规则
 

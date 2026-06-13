@@ -964,7 +964,7 @@ summary = build_benchmark_summary(
     baseline="bm25-only",
     sample_size=50,
     risks=["retrieval_contamination", "judge_bias", "small_dev_set"],
-    uncertainty="3 repeated runs; bootstrap CI should be reported in final project",
+    uncertainty="3 repeated runs; bootstrap CI should be reported with the benchmark",
     conclusion="hybrid+rerank improves this fixed support QA dev set, but does not prove open-domain QA quality",
 )</div>
 
@@ -1155,7 +1155,7 @@ summary = build_benchmark_summary(
 <!-- ================================================================ -->
 <section class="card" id="s10-13">
   <h3>10.13 生产推理服务蓝图——从模型到 OpenAI-compatible API</h3>
-  <p>推理工程师的最终交付物不是一个能在 Notebook 里跑的模型，而是一个<strong>稳定、可观测、可扩容、成本可控</strong>的在线服务。一个典型 LLM 推理服务可以拆成 7 层：</p>
+  <p>推理工程师面对的核心工程对象不是一个能在 Notebook 里跑的模型，而是一个<strong>稳定、可观测、可扩容、成本可控</strong>的在线服务。一个典型 LLM 推理服务可以拆成 7 层：</p>
   <div class="table-wrap">
     <table>
       <tr><th>层级</th><th>职责</th><th>关键指标</th><th>常见技术</th></tr>
@@ -1305,7 +1305,7 @@ report = long_context_serving_gate_report(
     <li><strong>成本：</strong>能估算每 1M input/output tokens 的 GPU 成本，并按租户归因。</li>
   </ul>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>推理工程师判断题：</strong>如果用户说“模型很慢”，你不能只回答“换 H100”。先拆 TTFT/TPOT/排队时间，再看瓶颈是 prefill、decode、KV、batch occupancy、网络流式输出，还是 RAG 检索。</div></div>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>动手项目：</strong>学完本节后进入 <code>projects/inference-engineering-capstone/</code>，运行一个 OpenAI-compatible Chat API。它包含非流式/流式响应、RAG stub、<code>/metrics</code>、压测脚本和固定评测集，是本章蓝图的最小可运行版本。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>课堂练习：</strong>学完本节后，用本章服务蓝图画出一个 OpenAI-compatible Chat API 的请求路径：gateway、scheduler、prefill/decode、RAG/tool、metrics 和错误处理。为每一步写清输入、输出、主要瓶颈和可观测指标。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1468,14 +1468,14 @@ assert report["decision"] == "promote_to_next_stage"</code></pre>
     tenant_usage=[{"tenant_id": "free-tier", "request_rate": 40, "quota": 10}],
 )
 assert report["decision"] == "load_shed_and_page_owner"</code></pre>
-  <p>如果 queue 和 TTFT 先坏，优先做低优先级限流、排队隔离、减少 RAG top-k 或启用缓存回答；如果 TPOT 先坏，说明 decode 侧饱和，应减少 <code>max_tokens</code>、调低并发或扩 decode worker；如果 KV usage 接近满或出现 swapping，应立即减少 active KV、截断上下文或拒绝长请求；如果某个租户超过配额，应隔离 noisy neighbor，而不是让全体用户一起承担尾延迟。过载响应不是“服务变慢后写复盘”，而是把 SLO、配额和降级动作预先变成可执行 runbook。</p>
+  <p>如果 queue 和 TTFT 先坏，优先做低优先级限流、排队隔离、减少 RAG top-k 或启用缓存回答；如果 TPOT 先坏，说明 decode 侧饱和，应减少 <code>max_tokens</code>、调低并发或扩 decode worker；如果 KV usage 接近满或出现 swapping，应立即减少 active KV、截断上下文或拒绝长请求；如果某个租户超过配额，应隔离 noisy neighbor，而不是让全体用户一起承担尾延迟。过载响应不是“服务变慢后再分析”，而是把 SLO、配额和降级动作预先变成可执行 runbook。</p>
 
   <h4>2. 推理导出和训练恢复是两种 checkpoint</h4>
   <p>第 7 章的训练 checkpoint 应包含 optimizer、scheduler、RNG、dataloader position 和 global step；推理发布包通常只需要模型权重、配置、tokenizer、模板和服务参数。把训练 checkpoint 直接塞进推理引擎会带来多余状态、格式不兼容和加载速度问题；只保存推理权重又不能用于中断后继续训练。工程上应明确区分：</p>
   <ul>
     <li><strong>resume checkpoint：</strong>用于继续训练，包含 optimizer state、sampler state 和 run config。</li>
     <li><strong>serving artifact：</strong>用于推理部署，强调加载速度、权重格式、tokenizer/template 和服务参数。</li>
-    <li><strong>analysis snapshot：</strong>用于研究复盘，保留训练曲线、评测结果和样本输出。</li>
+    <li><strong>analysis snapshot：</strong>用于研究分析，保留训练曲线、评测结果和样本输出。</li>
   </ul>
 
   <h4>3. 发布前要做哪些一致性检查</h4>

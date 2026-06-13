@@ -19,36 +19,22 @@ CHAPTERS = [f"ch{index:02d}.html" for index in range(1, 12)]
 SAFE_DOCS = [
     "classic-nlp-deep-dive-module.md",
     "classic-nlp-handout.md",
-    "inference-engineer-curriculum.md",
-    "lecture-plan.md",
     "math-prerequisites.md",
     "ml-foundations-prerequisite-bridge.md",
     "python-pytorch-review-session.md",
     "reading-list.md",
-    "syllabus.md",
-    "training-engineer-curriculum.md",
     "worked-example-pack.md",
     "written-problem-set.md",
 ]
-ROOT_PAGES = [
-    "inference-engineer-curriculum.html",
-    "training-engineer-curriculum.html",
-]
-PROJECT_DIRS = [
-    "inference-engineering-capstone",
-    "training-engineering-capstone",
-]
+ROOT_PAGES: list[str] = []
 INCLUDED_ROOTS = [
     "index.html",
-    "inference-engineer-curriculum.html",
-    "training-engineer-curriculum.html",
     "chapters/",
     "css/",
     "js/",
     "images/",
     "docs/",
     "assignments/",
-    "projects/",
 ]
 EXCLUDED_DOCS: list[str] = []
 
@@ -166,11 +152,6 @@ def build_release(out_dir: Path) -> dict[str, object]:
         (docs_dir / doc).write_text(rewrite_internal_material_links(text), encoding="utf-8")
     rendered_docs = render_docs(docs_dir, docs_dir)
 
-    projects_dir = out_dir / "projects"
-    projects_dir.mkdir()
-    for project in PROJECT_DIRS:
-        copy_tree(ROOT / "projects" / project, projects_dir / project)
-
     assignment_release = subprocess.run(
         [
             sys.executable,
@@ -198,7 +179,6 @@ def build_release(out_dir: Path) -> dict[str, object]:
         "safe_docs": SAFE_DOCS,
         "rendered_doc_pages": [str(Path(path).relative_to(out_dir)) for path in rendered_docs],
         "excluded_docs": EXCLUDED_DOCS,
-        "project_dirs": [f"projects/{project}/" for project in PROJECT_DIRS],
         "assignment_release": assignment_manifest,
         "chapters": chapter_manifest,
     }
@@ -221,7 +201,6 @@ def main() -> int:
         "root_pages": ROOT_PAGES,
         "safe_docs": SAFE_DOCS,
         "excluded_docs": EXCLUDED_DOCS,
-        "project_dirs": [f"projects/{project}/" for project in PROJECT_DIRS],
         "chapters": [{"file": f"chapters/{chapter}"} for chapter in CHAPTERS],
     }
     if args.dry_run:

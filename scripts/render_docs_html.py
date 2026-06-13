@@ -13,14 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = [
     "classic-nlp-deep-dive-module.md",
     "classic-nlp-handout.md",
-    "inference-engineer-curriculum.md",
-    "lecture-plan.md",
     "math-prerequisites.md",
     "ml-foundations-prerequisite-bridge.md",
     "python-pytorch-review-session.md",
     "reading-list.md",
-    "syllabus.md",
-    "training-engineer-curriculum.md",
     "worked-example-pack.md",
     "written-problem-set.md",
 ]
@@ -45,7 +41,7 @@ def rewrite_href(href: str, current_dir_prefix: str = "") -> str:
         path, anchor = href.split("#", 1) if "#" in href else (href, "")
         path = re.sub(r"\.md$", ".html", path)
         href = f"{path}#{anchor}" if anchor else path
-    if href.startswith("assignments/") or href.startswith("projects/"):
+    if href.startswith("assignments/"):
         href = f"../{href}"
     if href.startswith("docs/"):
         href = href.removeprefix("docs/")
@@ -223,8 +219,6 @@ def render_page(markdown: str, source_name: str) -> str:
   </div>
   <nav class="sidebar-nav">
     <a href="../index.html"><span class="ch-num">⌂</span>课程首页</a>
-    <a href="syllabus.html"><span class="ch-num">S</span>Syllabus</a>
-    <a href="lecture-plan.html"><span class="ch-num">L</span>Lecture Plan</a>
     <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
     <a href="written-problem-set.html"><span class="ch-num">W</span>书面题库</a>
     <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>

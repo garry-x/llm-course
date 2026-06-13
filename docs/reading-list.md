@@ -1,6 +1,6 @@
-# 逐周阅读材料与复盘 Handout
+# 逐周阅读材料 Handout
 
-本 handout 把 10 周课程的阅读材料按章节任务组织起来。它不是独立补课路径；每篇阅读都必须回到章节代码、书面题或 capstone 决策中。阅读分为三类：
+本 handout 把 10 周课程的阅读材料按章节任务组织起来。它不是独立补课路径；每篇阅读都必须回到章节代码、书面题或章节判断中。阅读分为三类：
 
 - 必读：课堂讨论和作业默认依赖。
 - 选读：用于项目、报告或加深理解。
@@ -14,7 +14,7 @@
 
 1. 问题设定：写出输入、输出、训练数据、模型假设和目标任务。
 2. 数学对象：定位一个目标函数、概率分解、矩阵运算、mask 规则、复杂度公式或评测指标，并解释每个变量。
-3. 代码落点：指出它对应本课程中的哪个函数、张量 shape、测试用例或 capstone 系统组件。
+3. 代码落点：指出它对应本课程中的哪个函数、张量 shape、测试用例或系统设计判断。
 4. 结论边界：说明实验结论依赖的数据、规模、指标、硬件、prompt、解码策略或人工标注假设。
 
 阅读深度按三层递进：
@@ -37,9 +37,9 @@
 - Goodfellow, Bengio, Courville. [Deep Learning](https://www.deeplearningbook.org/), optimization 和 ML basics 相关章节。
 - 本课程 [数学与 PyTorch 先修复习](math-prerequisites.md)：重点确认 Python、PyTorch、calculus、linear algebra、probability/statistics 和 ML foundations 在 Ch01-Ch06 的 shape、mask、loss 和梯度实现中如何出现。
 
-复盘问题：
+思考问题：
 
-- 训练目标、验证指标和最终项目结论之间是什么关系？
+- 训练目标、验证指标和工程结论之间是什么关系？
 - 一个 benchmark 或 hidden test 结果在什么条件下不能推广？
 - 为什么 cross entropy 可以作为概率模型的负对数似然？它和 accuracy/F1 的关系是什么？
 - PyTorch 中 shape 正确但语义错误的实现通常会在哪些地方出现？
@@ -48,7 +48,7 @@
 
 - 核心结论：用自己的话说明论文或文档解决的问题、方法和结论。
 - 技术细节：至少解释一个公式、结构图、算法步骤或实验设置。
-- 代码连接：明确指出对应章节代码、作业函数或 capstone 模块。
+- 代码连接：明确指出对应章节代码、作业函数或系统设计判断。
 - 边界条件：写出一个失败模式、反例或适用范围。
 - 延伸问题：提出一个可在课堂讨论或作业中继续追问的问题。
 
@@ -69,7 +69,7 @@
 - 本课程 Ch02 的 word vectors 与 embedding 相关小节。
 - Jurafsky and Martin, Speech and Language Processing, word embeddings 相关章节。
 
-复盘问题：
+思考问题：
 
 - BPE merge 规则为什么是贪心的？它在哪些语料上会产生不符合语义直觉的 token？
 - skip-gram 的窗口共现样本如何变成 positive/negative 二分类目标？
@@ -93,7 +93,7 @@
 - Goodfellow, Bengio, Courville. [Deep Learning](https://www.deeplearningbook.org/), optimization 和 backpropagation 相关章节。
 - The Matrix Cookbook 中 softmax/cross entropy 与矩阵求导条目。
 
-复盘问题：
+思考问题：
 
 - 为什么 attention score 要除以 `sqrt(d_k)`？
 - causal mask 的加法实现为什么通常使用一个很大的负数，而不是直接乘 0？
@@ -119,7 +119,7 @@
 - Geva et al. [Transformer Feed-Forward Layers Are Key-Value Memories](https://arxiv.org/abs/2012.14913). 重点看 FFN neuron 的键值存储解释。
 - Meng et al. [Locating and Editing Factual Associations in GPT](https://arxiv.org/abs/2202.05262). 重点看 causal tracing、activation patching 和模型编辑边界。
 
-复盘问题：
+思考问题：
 
 - GQA 节省 KV cache 的同时损失了什么表达能力？
 - MLA 的 latent cache 与 RoPE 解耦为什么会改变工程实现？
@@ -144,7 +144,7 @@
 - Brown et al. [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165).
 - Hugging Face Transformers GPT-2 model documentation。
 
-复盘问题：
+思考问题：
 
 - decoder-only LM 的训练标签为什么是右移一位？
 - MoE 的 capacity factor 太低或太高分别会造成什么问题？
@@ -179,7 +179,7 @@
 - Jordan et al. [Muon is Scalable for LLM Training](https://arxiv.org/abs/2502.16982)。重点看 Muon 从小模型实验扩展到 LLM 时需要 weight decay 和 update scale，不能只背“正交化”口号。
 - NVIDIA / PyTorch profiler 文档中 GPU utilization、kernel timeline、communication overlap 和 dataloader bottleneck 的诊断方法。
 
-复盘问题：
+思考问题：
 
 - AdamW 的 weight decay 为什么不能简单等同于 Adam 里的 L2 penalty？
 - 在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？
@@ -217,7 +217,7 @@
 - DeepSeek-V3 Technical Report 中 multi-token prediction。
 - OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/). 重点看 train-time compute 与 test-time compute 的区别，以及为什么 reasoning 模型的系统指标要单独报告。
 
-复盘问题：
+思考问题：
 
 - top-k、top-p、temperature 分别控制分布的哪个性质？
 - speculative decoding 在什么情况下不能带来明显加速？
@@ -252,7 +252,7 @@
 - Meta. [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783). 重点看 post-training 数据、rejection sampling、reward model、human annotation、安全数据和评测切片如何共同支撑发布结论。
 - OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/) 与 [Reinforcement fine-tuning guide](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning)。重点看 train-time/test-time compute、programmable grader、validation split 和 grader 适用条件。
 
-复盘问题：
+思考问题：
 
 - DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
 - SFT 数据从 messages 变成 token 序列后，哪些信息必须保留下来才能检查 assistant-only loss、truncation 和 packing 边界？
@@ -268,7 +268,7 @@
 
 ## Week 8: Inference Engineering、RAG、Quantization 与 Serving
 
-对应章节：Ch10 与推理工程 capstone。
+对应章节：Ch10。
 
 本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG、speculative decoding 和多模态输入如何共同影响延迟、吞吐、成本和质量。
 
@@ -323,7 +323,7 @@
 - Wang et al. [InternVL3.5: Advancing Open-Source Multimodal Models in Versatility, Reasoning, and Efficiency](https://arxiv.org/abs/2508.18265). 重点看开源多模态模型在 general、reasoning、text、agentic benchmarks 和 inference efficiency 上如何报告 trade-off。
 - OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。
 
-复盘问题：
+思考问题：
 
 - TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？
 - RAG 评测为什么必须同时看检索质量和生成质量？
@@ -374,7 +374,7 @@
 - Yao et al. [tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains](https://arxiv.org/abs/2406.12045) 与 [tau-bench repository](https://github.com/sierra-research/tau2-bench). 重点看多轮用户、领域 policy、API tools、最终数据库状态、重复 trial 一致性和 task fixes 如何进入 agent eval protocol。
 - OpenAI. [BrowseComp: a benchmark for browsing agents](https://openai.com/index/browsecomp/). 重点看难找但可验证的短答案、浏览深度、搜索策略、答案可验证性，以及为什么短答案 benchmark 不能代表所有开放式研究任务。
 
-复盘问题：
+思考问题：
 
 - RNN 的 BPTT 梯度连乘为什么会导致长程依赖困难？LSTM 改变了哪条路径？
 - dependency parsing 与 decoder-only LLM 在结构归纳偏置上有什么差异？
@@ -387,17 +387,16 @@
 - agent/workflow eval 为什么要同时报告 final task success、tool trajectory、state delta、side effects、latency/cost 和环境版本？
 - SWE-bench、tau-bench 和 BrowseComp 分别覆盖了 agent 能力的哪一部分？各自没有覆盖什么真实生产风险？
 
-## Week 10: 前沿方法、Benchmark 边界与课程综合
+## Week 10: 前沿方法、Benchmark 边界与章节连接
 
-对应材料：两个 capstone 方向、Ch10 前沿推理部分和前沿主题阅读。
+对应材料：Ch10 前沿推理部分、worked-example-pack 和前沿主题阅读。
 
 本周阅读目标：综合前面九周的表示、架构、训练、生成、对齐、评测和服务知识，分析一个前沿方法到底改变了哪一层技术栈，以及它的 claim 需要哪些实验才能支撑。
 
 必读：
 
-- 本课程两个 Capstone README：重点看 project 如何把问题设定、方法、实验和结论组织成课程级工程产出。
 - 目标方向的官方论文、课程讲义或模型卡：interpretability、multimodality、social impact、agents 或 reasoning。
-- 本课程 worked-example-pack：重点复盘每个模块的可计算定义和常见误解。
+- 本课程 worked-example-pack：重点检查每个模块的可计算定义和常见误解。
 
 选读：
 
@@ -405,25 +404,25 @@
 - 近一年同主题论文的 related work 和 evaluation section。
 - interpretability、多模态、agent、reasoning 或安全治理方向的官方论文、课程讲义或模型卡。
 
-项目论文阅读任务：
+前沿论文阅读任务：
 
-每个 capstone 小组需要选 2 篇最接近自己项目问题的材料：一篇方法论文或系统论文，一篇模型卡、benchmark paper 或官方技术报告。阅读目标不是堆引用，而是把自己的项目放进一个明确技术坐标中：
+每位学生需要选 2 篇最接近当前章节问题的材料：一篇方法论文或系统论文，一篇模型卡、benchmark paper 或官方技术报告。阅读目标不是堆引用，而是把课程中的训练、推理或评测判断放进一个明确技术坐标中：
 
-| 论文部分 | 你需要抽取什么 | 如何映射到 capstone |
+| 论文部分 | 你需要抽取什么 | 如何映射到章节内容 |
 |----------|----------------|---------------------|
-| Problem setup | 输入、输出、约束、目标用户或系统 workload | 写清你的 research question 和不研究什么 |
-| Method | 核心算法、模型结构、训练目标或系统机制 | 对应你的 baseline、改动点和实现边界 |
-| Experiments | 数据集、样本量、指标、baseline、消融和硬件 | 对应你的评测集、压测、ablation 和成本估算 |
-| Analysis | 失败样例、误差分类、资源瓶颈或安全边界 | 对应你的 error analysis 和上线风险 |
-| Limitations | 作者承认的限制和未覆盖场景 | 对应你的 conclusion boundary |
+| Problem setup | 输入、输出、约束、目标用户或系统 workload | 写清当前问题和不研究什么 |
+| Method | 核心算法、模型结构、训练目标或系统机制 | 对应 baseline、改动点和实现边界 |
+| Experiments | 数据集、样本量、指标、baseline、消融和硬件 | 对应评测集、压测、ablation 和成本估算 |
+| Analysis | 失败样例、误差分类、资源瓶颈或安全边界 | 对应 error analysis 和上线风险 |
+| Limitations | 作者承认的限制和未覆盖场景 | 对应 conclusion boundary |
 
-最终报告应包含一个短的 related work 段落，说明你的项目继承了什么思路、简化了什么条件、没有覆盖哪些论文中的实验范围。对于训练 capstone，这通常是 optimizer、scaling、LoRA/对齐或数据质量相关工作；对于推理 capstone，这通常是 serving、RAG、quantization、structured output 或 evaluation 相关工作。
+阅读笔记应包含一个短的 related work 段落，说明当前判断继承了什么思路、简化了什么条件、没有覆盖哪些论文中的实验范围。训练方向通常关联 optimizer、scaling、LoRA/对齐或数据质量；推理方向通常关联 serving、RAG、quantization、structured output 或 evaluation。
 
-复盘问题：
+思考问题：
 
 - 目标方向的 benchmark 衡量什么能力？没有衡量什么能力？
 - 论文或模型卡中的哪个 claim 依赖特定数据集、推理设置或评测器？
 - 如果把该方法接入本课程的训练或推理系统，最先受影响的是显存、延迟、质量、安全性还是成本？
 - 一个新方法如果只在单一 benchmark、单一模型规模或单一 prompt 模板上有效，结论应如何表述？
 - 如何把 interpretability、multimodality、agents、reasoning 或 safety 的论文 claim 映射到本课程已有的公式、代码和系统指标？
-- final project report 中的 abstract、method、experiments、analysis 和 limitations 应分别回答什么问题？
+- 技术结论中的 method、experiments、analysis 和 limitations 应分别回答什么问题？

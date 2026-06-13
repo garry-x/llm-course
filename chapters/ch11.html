@@ -383,7 +383,7 @@ assert audit["overall_pass"]</div>
       <tr><th>风险类别</th><th>典型触发条件</th><th>工程上先看什么</th><th>常见缓解</th></tr>
       <tr><td>幻觉与误导</td><td>开放式问答、RAG 召回不足、模型被要求给确定答案</td><td>事实错误率、引用覆盖、无法回答时的表达</td><td>检索引用、答案不确定性、抽取式约束、高风险场景人工复核</td></tr>
       <tr><td>隐私与个人信息</td><td>训练数据含 PII、日志保存用户输入、RAG 索引含敏感文档</td><td>数据来源、日志保留、访问权限、输出是否泄露个人信息</td><td>PII 过滤、最小化日志、租户隔离、权限感知检索</td></tr>
-      <tr><td>偏见与代表性不足</td><td>语料语言/地区/群体不均衡，标注者偏好单一</td><td>按语言、地区、群体和任务切片的错误率</td><td>数据再平衡、切片评测、标注指南多样化、失败案例复盘</td></tr>
+      <tr><td>偏见与代表性不足</td><td>语料语言/地区/群体不均衡，标注者偏好单一</td><td>按语言、地区、群体和任务切片的错误率</td><td>数据再平衡、切片评测、标注指南多样化、失败案例分析</td></tr>
       <tr><td>滥用与越狱</td><td>危险操作请求、多轮绕过、工具调用或代码执行权限</td><td>有害完成率、越狱成功率、工具权限边界</td><td>能力分级、工具沙箱、拒答策略、敏感操作二次确认</td></tr>
       <tr><td>过度拒答</td><td>安全数据比例过高，策略把良性敏感请求当危险请求</td><td>benign sensitive set 上的错误拒答率</td><td>加入安全但应回答的样本，分开训练拒答和帮助性</td></tr>
       <tr><td>版权与来源</td><td>训练语料或 RAG 语料来源不清，输出长段近似复述</td><td>数据许可、引用链路、输出相似度和来源标注</td><td>授权数据、引用来源、避免长段复述、保留可追踪文档 id</td></tr>
@@ -462,23 +462,23 @@ assert audit["overall_pass"]</div>
 </section>
 
 <section class="card" id="s11-8">
-  <h3>11.8 Capstone 项目报告：从实验结果到可判定结论</h3>
-  <p>本课程把 final project 看成一次小型研究或工程论文训练：学生不仅要实现系统，还要说明问题、方法、实验、失败和边界。训练工程与推理工程 capstone 都应达到这一标准。最终项目报告的核心不是“我跑通了脚本”，而是回答一个明确问题，并让读者能判断这个结论在什么条件下成立。</p>
+  <h3>11.8 实验结论：从指标到可判定判断</h3>
+  <p>本节训练学生把代码输出、书面推导、阅读材料和实验指标整理成可判定结论。核心不是“跑通了一个 demo”，而是回答一个明确技术问题，并让读者能判断这个结论在什么条件下成立。</p>
 
-  <h4>1. 把项目问题写成可检验命题</h4>
-  <p>好的项目问题应该能被数据和实验反驳。例如：</p>
+  <h4>1. 把问题写成可检验命题</h4>
+  <p>好的技术问题应该能被数据和实验反驳。例如：</p>
   <ul>
     <li><strong>训练工程：</strong>在固定 token budget 下，<code>seq_len=128</code> 是否比 <code>seq_len=64</code> 降低 validation PPL？代价是多少 tokens/s 和 step time？</li>
     <li><strong>对齐工程：</strong>DPO 是否提高偏好胜率，同时保持基础任务正确率和拒答边界？KL、输出长度和失败类型如何变化？</li>
     <li><strong>推理工程：</strong>RAG top-k 从 3 增到 8 是否提高 pass rate？它对 P95 TTFT、prompt tokens、context packing miss 和成本有什么影响？</li>
     <li><strong>服务工程：</strong>concurrency 从 1 到 8 时，P95/P99 是否仍满足 SLO？瓶颈是排队、prefill、decode、检索还是后处理？</li>
   </ul>
-  <p>这些问题都有 baseline、改动项、指标和结论边界。相比之下，“做一个聊天机器人”或“训练一个小模型”不是合格的课程项目问题，因为它无法说明什么改变带来了什么效果。</p>
+  <p>这些问题都有 baseline、改动项、指标和结论边界。相比之下，“做一个聊天机器人”或“训练一个小模型”不是合格的技术命题，因为它无法说明什么改变带来了什么效果。</p>
 
-  <h4>2. 报告结构应覆盖建模、系统和评测</h4>
+  <h4>2. 结论结构应覆盖建模、系统和评测</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>部分</th><th>训练 capstone 应回答</th><th>推理 capstone 应回答</th></tr>
+      <tr><th>部分</th><th>训练/对齐结论应回答</th><th>推理/服务结论应回答</th></tr>
       <tr><td>Problem</td><td>训练或对齐改动想改善什么现象</td><td>服务想满足什么 workload 和 SLO</td></tr>
       <tr><td>Baseline</td><td>默认数据、模型、lr、batch tokens、seed</td><td>默认 API、no-RAG 或默认 concurrency</td></tr>
       <tr><td>Method</td><td>数据处理、optimizer、scheduler、checkpoint 策略</td><td>RAG/tool/JSON、batching、capacity、降级策略</td></tr>
@@ -490,13 +490,13 @@ assert audit["overall_pass"]</div>
   </div>
 
   <h4>3. 负结果也可以是强结论</h4>
-  <p>课程项目不要求每个方法都“提升”。如果一个 ablation 没有带来显著改善，只要实验设计清楚，它仍然是有价值的结论。例如：<code>seq_len=128</code> 的 validation PPL 只降低 <code>0.03</code>，但 tokens/s 下降 <code>35%</code>，且三次 seed 波动约 <code>0.05</code>，那么合理结论是“当前设置不足以支持更长序列值得采用”。这比只挑一个最好数字更严谨。</p>
+  <p>实验不要求每个方法都“提升”。如果一个 ablation 没有带来显著改善，只要实验设计清楚，它仍然是有价值的结论。例如：<code>seq_len=128</code> 的 validation PPL 只降低 <code>0.03</code>，但 tokens/s 下降 <code>35%</code>，且三次 seed 波动约 <code>0.05</code>，那么合理结论是“当前设置不足以支持更长序列值得采用”。这比只挑一个最好数字更严谨。</p>
 
   <h4>4. 把结论绑定到复现命令和限制条件</h4>
-  <p>报告最后必须说明复现路径：数据版本、commit、运行命令、seed、硬件、模型配置、checkpoint 或服务 URL、评测集和压测参数。也必须说明不能外推的地方：tiny corpus 不能代表万亿 token 训练，本地 MockEngine 不能代表真实 GPU serving，小知识库 RAG 不能代表企业知识库，单一安全集合不能代表所有用户风险。</p>
+  <p>结论必须说明复现路径：数据版本、commit、运行命令、seed、硬件、模型配置、checkpoint 或服务配置、评测集和压测参数。也必须说明不能外推的地方：tiny corpus 不能代表万亿 token 训练，本地 MockEngine 不能代表真实 GPU serving，小知识库 RAG 不能代表企业知识库，单一安全集合不能代表所有用户风险。</p>
 
-  <p>最终报告的读者应该能回答三件事：第一，项目提出的问题是否清楚；第二，实验是否足以支持结论；第三，如果把系统推向更大模型、更大数据或真实服务，哪些假设会最先失效。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Capstone 是课程能力的收束点。训练项目要证明训练过程可复现、可恢复、可解释；推理项目要证明服务质量、延迟、成本和风险在目标 workload 下可判断。没有 baseline、ablation、失败分析和结论边界的项目，只是 demo，不是工程课程项目。</div></div>
+  <p>读者应该能回答三件事：第一，问题是否清楚；第二，实验是否足以支持结论；第三，如果把系统推向更大模型、更大数据或真实服务，哪些假设会最先失效。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>训练方向要证明过程可复现、可恢复、可解释；推理方向要证明服务质量、延迟、成本和风险在目标 workload 下可判断。没有 baseline、ablation、失败分析和结论边界的实验，不能支撑工程决策。</div></div>
 </section>
 
 <section class="card" id="s11-9">

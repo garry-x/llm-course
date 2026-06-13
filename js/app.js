@@ -15,7 +15,7 @@
     {id:8, file:'ch08.html', title:'文本生成', desc:'采样、beam、reasoning/test-time compute、speculative 与结构化解码', sections:21},
     {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT、合成蒸馏、偏好数据、LoRA、DPO、GRPO、RLVR 与能力保留', sections:24},
     {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache、continuous batching、RAG、tool use、PD 解耦与推理引擎', sections:30},
-    {id:11, file:'ch11.html', title:'经典神经 NLP 与评测', desc:'RNN、Parsing、Seq2Seq、BERT、评测有效性、安全与 Capstone 报告', sections:19}
+    {id:11, file:'ch11.html', title:'经典神经 NLP 与评测', desc:'RNN、Parsing、Seq2Seq、BERT、评测有效性与安全', sections:19}
   ];
 
   // ---- State helpers (IndexedDB-backed) ----

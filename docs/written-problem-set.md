@@ -144,9 +144,9 @@
 7. 现代 LLM 评测协议：给定 pairwise judge 结果 `W=42, L=35, T=23`，计算 tie-adjusted win rate；说明位置偏置、长度偏置、judge 模型同源偏置和小样本方差如何影响结论。再把“模型 A 比模型 B 好 8%”改写成包含样本量、任务、prompt、temperature、失败类别、延迟/成本和不可外推范围的严谨结论。
 8. Safety evaluation：给定 harmful set、benign sensitive set 和普通任务集上的拒答/通过/错误计数，分别计算 attack success rate、refusal rate、over-refusal rate 和 task utility；解释为什么高拒答率不等于高安全性，以及如何同时报告 helpfulness、harmlessness 和能力保留。
 
-## 跨章节综合题
+## 跨章节题
 
-这些题用于期末复习或课程综合讨论。答案必须同时写出公式、shape、计算步骤和结论边界。
+这些题用于跨章节讨论。答案必须同时写出公式、shape、计算步骤和结论边界。
 
 1. End-to-end decoder-only trace：给定 `input_ids` shape `[B=2,T=5]`、`vocab_size=8`、`d_model=4`、`n_heads=2`，写出 embedding、Q/K/V、attention scores、hidden states、logits 和 shifted labels 的 shape；若 labels 中有 3 个 `-100`，说明 CE mean reduction 的有效分母是多少。
 2. Token cost to serving cost：给定两个 tokenizer 对同一组英文、中文、代码 prompt 的 token counts、一个 24 层 GQA 模型配置和 fp16 KV cache，计算每组平均 prompt tokens、KV cache bytes、prefill token work 和多语言 token cost disparity；说明 tokenizer 选择如何同时影响 embedding 参数、context budget、TTFT 和服务成本。

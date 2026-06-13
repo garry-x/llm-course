@@ -1,6 +1,6 @@
 # Classic NLP Deep-Dive Teaching Module
 
-本模块用于把 [经典 NLP 专题 Handout](classic-nlp-handout.md) 从讨论课材料扩展为可独立授课的 2-4 讲专题。它补充 [10 周 / 20 讲 Lecture Plan](lecture-plan.md)、[逐周阅读材料与复盘 Handout](reading-list.md)、[书面推导与概念题题库](written-problem-set.md) 和 `assignments/ch11_classic_nlp/`。
+本模块用于把 [经典 NLP 专题 Handout](classic-nlp-handout.md) 从讨论课材料扩展为可独立授课的 2-4 讲专题。它补充 [逐周阅读材料 Handout](reading-list.md)、[书面推导与概念题题库](written-problem-set.md) 和 `assignments/ch11_classic_nlp/`。
 
 目标不是把课程改成传统 NLP 全覆盖课，而是确保学生能解释本课程经典神经 NLP 专题中的 RNN/LSTM、structured prediction、encoder-decoder 和 encoder-only representation learning。
 

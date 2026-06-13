@@ -610,6 +610,81 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
 </section>
 
 <!-- ================================================================ -->
+<!-- 3.7B Packed sequence attention -->
+<!-- ================================================================ -->
+<section class="card" id="s3-7b">
+  <h3>3.7B Packed Sequences, Document Boundaries, and Variable-Length Attention</h3>
+  <p>Real training pipelines often pack multiple short examples into one long token row to reduce padding waste. This changes the meaning of the attention mask. A token should attend to earlier tokens in the same packed segment, but it should not attend to tokens from a previous document or sample that happened to be concatenated before it. If the implementation uses only a plain causal mask, the model silently learns cross-example leakage.</p>
+  <p>Modern fused attention libraries expose this issue through different interfaces. PyTorch's <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html" target="_blank">scaled_dot_product_attention</a> separates causal flags and attention masks; NVIDIA Transformer Engine documents <code>cu_seqlens</code> for variable-length FlashAttention-style backends; PyTorch has also been moving toward explicit variable-length attention APIs. The shared engineering lesson is: padding removal, document-boundary masking, and high-performance kernels must describe the same visibility relation.</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 390" role="img" aria-label="Packed sequence attention mask showing document boundaries and variable length attention">
+      <defs>
+        <marker id="packed-attn-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .pa-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .pa-core{fill:rgba(52,152,219,.12);stroke:var(--accent);stroke-width:2}
+        .pa-risk{fill:rgba(231,76,60,.10);stroke:#e74c3c;stroke-width:1.7}
+        .pa-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#packed-attn-arrow)}
+        .pa-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .pa-sub{font-size:12px;fill:var(--text-secondary)}
+        .pa-token{font-size:12px;font-weight:700;fill:var(--text)}
+      </style>
+      <rect class="pa-box" x="50" y="62" width="230" height="78" rx="10"/>
+      <text text-anchor="middle" x="165" y="92"><tspan class="pa-title">Separate Samples</tspan><tspan class="pa-sub" x="165" dy="20">short documents, much padding</tspan></text>
+      <path class="pa-line" d="M280 101 H360"/>
+      <rect class="pa-core" x="360" y="50" width="260" height="102" rx="12"/>
+      <text text-anchor="middle" x="490" y="78"><tspan class="pa-title">Packed Token Row</tspan><tspan class="pa-sub" x="490" dy="20">doc A | doc B | doc C</tspan></text>
+      <text x="392" y="124"><tspan class="pa-token">A1 A2 A3</tspan><tspan class="pa-token" dx="26">B1 B2</tspan><tspan class="pa-token" dx="26">C1 C2 C3 C4</tspan></text>
+      <path class="pa-line" d="M620 101 H700"/>
+      <rect class="pa-box" x="700" y="62" width="230" height="78" rx="10"/>
+      <text text-anchor="middle" x="815" y="92"><tspan class="pa-title">Kernel Contract</tspan><tspan class="pa-sub" x="815" dy="20">mask or cu_seqlens</tspan></text>
+
+      <rect class="pa-risk" x="124" y="242" width="190" height="82" rx="10"/>
+      <text text-anchor="middle" x="219" y="270"><tspan class="pa-title">Plain Causal Only</tspan><tspan class="pa-sub" x="219" dy="20">B reads A, C reads A/B</tspan><tspan class="pa-sub" x="219" dy="17">cross-sample leakage</tspan></text>
+      <rect class="pa-core" x="395" y="242" width="190" height="82" rx="10"/>
+      <text text-anchor="middle" x="490" y="270"><tspan class="pa-title">Block-Causal Mask</tspan><tspan class="pa-sub" x="490" dy="20">causal inside each doc</tspan><tspan class="pa-sub" x="490" dy="17">no cross-boundary read</tspan></text>
+      <rect class="pa-core" x="666" y="242" width="190" height="82" rx="10"/>
+      <text text-anchor="middle" x="761" y="270"><tspan class="pa-title">Varlen Attention</tspan><tspan class="pa-sub" x="761" dy="20">cu_seqlens describes</tspan><tspan class="pa-sub" x="761" dy="17">segment boundaries</tspan></text>
+      <path class="pa-line" d="M490 152 V242"/>
+      <path class="pa-line" d="M815 140 C820 188 800 220 761 242"/>
+      <path class="pa-line" d="M360 121 C300 155 250 196 219 242"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 3-2: Packed-sequence attention. Packing saves padding compute, but the visibility relation must reset at document boundaries through a block-causal mask or variable-length kernel metadata.</p>
+
+  <h4>1. Packing is not the same as padding</h4>
+  <p>Padding keeps samples in separate rows and fills unused positions with a padding token. Packing concatenates multiple samples into one row and uses all positions. With padding, the key problem is "do not attend to padding keys." With packing, the key problem is "do not attend across document boundaries." A mask that is correct for padded batches can be wrong for packed batches.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Batch Form</th><th>Visibility Rule</th><th>Main Benefit</th><th>Main Risk</th></tr>
+      <tr><td>Padded batch</td><td>Each sample sees past tokens in its own row; padding keys are hidden</td><td>Simple shape <code>[B,T]</code>, easy debugging</td><td>Wastes compute on padding; fully masked query rows can create NaNs</td></tr>
+      <tr><td>Packed batch with dense mask</td><td>Each token sees only earlier tokens within the same packed segment</td><td>High token utilization while preserving document isolation</td><td>Dense <code>[T,T]</code> masks can be expensive; boundary bugs leak data</td></tr>
+      <tr><td>Variable-length attention</td><td>Segment boundaries are encoded by cumulative lengths such as <code>cu_seqlens</code></td><td>Avoids padding and can use fused kernels efficiently</td><td>Kernel metadata, position ids, and loss masks must stay consistent</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Position ids and loss masks must reset with the same boundary</h4>
+  <p>For decoder-only language modeling, document boundaries affect at least three tensors: the attention visibility relation, the position ids, and the loss mask. If document B is packed after document A, B's first token should normally have local position 0 or the appropriate reset behavior for the model's position mechanism, and the loss should not train the model to predict B's first token from A's last token unless the dataset explicitly wants cross-document continuation.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Tensor / Metadata</th><th>Must Agree With</th><th>Bug Symptom</th><th>Diagnostic</th></tr>
+      <tr><td>Attention mask or <code>cu_seqlens</code></td><td>Document boundaries in the packed row</td><td>Validation loss looks too good because later documents read earlier documents</td><td>Replace previous segment tokens and verify current segment logits do not change</td></tr>
+      <tr><td>Position ids</td><td>Same segment starts used by attention</td><td>RoPE or learned positions encode wrong distances after packing</td><td>Print position ids around every boundary; check reset or intended offset</td></tr>
+      <tr><td>Loss mask / labels</td><td>Prediction boundaries and ignored tokens</td><td>Model is trained to predict first token of a segment from the previous segment</td><td>Check labels at boundary positions and <code>ignore_index</code> usage</td></tr>
+      <tr><td>Sequence length metadata</td><td>Kernel layout and flattened Q/K/V order</td><td>Fused kernel output differs from dense reference only on packed batches</td><td>Compare a tiny packed example against an explicit block-causal dense mask</td></tr>
+    </table>
+  </div>
+
+  <h4>3. High-performance kernels require a reference test</h4>
+  <p>When replacing a dense pedagogical attention implementation with SDPA, FlashAttention, or a variable-length backend, first build a tiny reference case with two or three packed segments. Compute outputs once with an explicit block-causal dense mask, then compute outputs again with the fused kernel and its metadata. The maximum output difference should be within numerical tolerance. If the outputs differ only near segment boundaries, the problem is almost always mask alignment, causal orientation, position reset, or sequence-length metadata.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> Packing improves token utilization, but it also makes attention semantics less obvious. A senior training engineer must prove that causal masking, document boundaries, position ids, loss labels, and fused-kernel metadata describe the same sequence structure.</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- Programming Exercise 6: Visualization -->
 <!-- ================================================================ -->
 <section class="card" id="s3-8">

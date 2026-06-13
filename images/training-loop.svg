@@ -13,8 +13,6 @@
       .ts{fill:#9e968a;font-size:11px}
       .arr{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
       .arr-loop{stroke:#7baaf7;stroke-width:2;fill:none;stroke-dasharray:6 3;marker-end:url(#ahb)}
-      
-      }
     
     </style>
     <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
@@ -44,7 +42,7 @@
   <rect class="box" x="650" y="45" width="240" height="62"/>
   <text class="t2" x="770" y="68" text-anchor="middle">3. Backward Pass</text>
   <text class="t1" x="770" y="85" text-anchor="middle">loss.backward()</text>
-  <text class="t3" x="770" y="100" text-anchor="middle">Compute gradients for all parameters</text>
+  <text class="t3" x="770" y="100" text-anchor="middle">gradients for trainable weights</text>
 
   <!-- Loop arrow from backward back to forward -->
   <path class="arr-loop" d="M 770 107 Q 770 150 470 150 Q 170 150 170 107"/>
@@ -69,12 +67,12 @@
   <rect class="box" x="50" y="400" width="390" height="200"/>
   <text class="t2" x="245" y="422" text-anchor="middle">Key Hyperparameters</text>
   <g font-size="13">
-    <text class="t1" x="65" y="448" text-anchor="start"><tspan font-weight="700">Learning Rate:</tspan> peak 3e-4, warmup 2000 steps, cosine decay to 3e-5</text>
+    <text class="t1" x="65" y="448" text-anchor="start"><tspan font-weight="700">Learning Rate:</tspan> warmup 2000, cosine decay</text>
     <text class="t1" x="65" y="470" text-anchor="start"><tspan font-weight="700">Batch Size:</tspan> 512 sequences × 1024 tokens = 524K tokens/step</text>
     <text class="t1" x="65" y="492" text-anchor="start"><tspan font-weight="700">Gradient Clip:</tspan> max_norm=1.0, prevents gradient explosion</text>
     <text class="t1" x="65" y="514" text-anchor="start"><tspan font-weight="700">Mixed Precision:</tspan> bf16 autocast, FP32 master weights</text>
     <text class="t1" x="65" y="536" text-anchor="start"><tspan font-weight="700">Weight Decay:</tspan> 0.1 (only for weight, not bias/norm)</text>
-    <text class="t1" x="65" y="558" text-anchor="start"><tspan font-weight="700">Steps:</tspan> ~100K-500K for small models, 1M+ for large ones</text>
+    <text class="t1" x="65" y="558" text-anchor="start"><tspan font-weight="700">Steps:</tspan> ~100K-500K small, 1M+ large</text>
     <text class="t1" x="65" y="580" text-anchor="start"><tspan font-weight="700">Tokens:</tspan> Chinchilla: tokens ≈ 20 × params</text>
   </g>
 
@@ -83,11 +81,11 @@
   <text class="t2" x="675" y="422" text-anchor="middle">Optimizer Evolution</text>
   <g font-size="13">
     <text class="t1" x="480" y="450" text-anchor="start"><tspan font-weight="700">SGD+Momentum</tspan>  — Basic, requires careful tuning</text>
-    <text class="t1" x="480" y="472" text-anchor="start"><tspan font-weight="700">Adam</tspan>          — Adaptive learning rate, momentum + second moment</text>
+    <text class="t1" x="480" y="472" text-anchor="start"><tspan font-weight="700">Adam</tspan>          — Adaptive LR + second moment</text>
     <text class="t1" x="480" y="494" text-anchor="start" style="fill:#b35c22"><tspan font-weight="700">AdamW</tspan>         — Decoupled weight decay, LLM training standard</text>
-    <text class="t1" x="480" y="518" text-anchor="start" style="fill:#b35c22"><tspan font-weight="700">Muon (DeepSeek)</tspan> — Matrix orthogonalization, Newton-Schulz iteration</text>
-    <text class="t1" x="480" y="542" text-anchor="start">Replaces AdamW's momentum update with matrix orthogonalization</text>
+    <text class="t1" x="480" y="518" text-anchor="start" style="fill:#b35c22"><tspan font-weight="700">Muon</tspan>          — Matrix orthogonalization update</text>
+    <text class="t1" x="480" y="542" text-anchor="start">Uses Newton-Schulz style matrix updates</text>
     <text class="t1" x="480" y="562" text-anchor="start">Used with Q/K RMSNorm to suppress logit explosion</text>
-    <text class="t1" x="480" y="582" text-anchor="start">Suitable for matrix parameters; specific benefits depend on model and training config</text>
+    <text class="t1" x="480" y="582" text-anchor="start">Best analyzed per model, parameter group, and data mix</text>
   </g>
 </svg>

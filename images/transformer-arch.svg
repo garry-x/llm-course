@@ -11,8 +11,6 @@
       .t3{fill:#b35c22;font-size:12px;font-family:'JetBrains Mono','Fira Code',monospace}
       .ts{fill:#9e968a;font-size:11px}
       .arr{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
-      
-      }
     
     </style>
     <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
@@ -38,7 +36,8 @@
   <!-- Transformer Block xL -->
   <line class="arr" x1="410" y1="192" x2="410" y2="218"/>
   <rect class="b1" x="150" y="218" width="520" height="290"/>
-  <text class="t2" x="410" y="240" text-anchor="middle">Transformer Block × L  (repeated 12 ~ 96 layers, independent parameters per layer)</text>
+  <text class="t2" x="410" y="240" text-anchor="middle">Transformer Block × L</text>
+  <text class="ts" x="410" y="254" text-anchor="middle">repeated layers, independent parameters per layer</text>
 
   <!-- MHA inside block -->
   <rect class="b1" x="185" y="258" width="450" height="60"/>
@@ -58,7 +57,7 @@
   <line class="arr" x1="410" y1="422" x2="410" y2="440"/>
   <text class="ts" x="410" y="453" text-anchor="middle">↑ Residual Connection + RMSNorm ↑</text>
 
-  <text class="ts" x="410" y="500" text-anchor="middle">↕ Each Block has independent parameters; residual connections ensure gradients flow smoothly through deep layers ↕</text>
+  <text class="ts" x="410" y="500" text-anchor="middle">Each block has its own parameters; residual paths stabilize deep training.</text>
 
   <!-- Final LayerNorm -->
   <line class="arr" x1="410" y1="508" x2="410" y2="535"/>
@@ -74,13 +73,13 @@
 
   <!-- Softmax -->
   <line class="arr" x1="410" y1="644" x2="410" y2="670"/>
-  <rect class="b1" x="210" y="670" width="400" height="42" style="fill:#1e1d1a;stroke:#9e968a"/>
-  <text class="t2" x="410" y="689" text-anchor="middle" style="fill:#e8e4dc">Softmax → Token Probability Distribution P(x_t | x_{&lt;t})</text>
-  <text class="ts" x="410" y="705" text-anchor="middle" style="fill:#a0a0a0">vocab_size probability values, select the next token</text>
+  <rect class="b1" x="190" y="670" width="440" height="48" style="fill:#1e1d1a;stroke:#9e968a"/>
+  <text class="t2" x="410" y="690" text-anchor="middle" style="fill:#e8e4dc">Softmax over vocab logits</text>
+  <text class="ts" x="410" y="707" text-anchor="middle" style="fill:#a0a0a0">probability distribution P(next token | prefix)</text>
 
   <!-- Output -->
-  <line class="arr" x1="410" y1="712" x2="410" y2="740"/>
-  <text class="t2" x="410" y="758" text-anchor="middle">Autoregressive Generation: selected token appended to input → repeat until &lt;EOS&gt;</text>
+  <line class="arr" x1="410" y1="718" x2="410" y2="746"/>
+  <text class="t2" x="410" y="764" text-anchor="middle">Autoregressive generation: append selected token, then repeat</text>
 
   <!-- Side annotations -->
   <rect class="b1" x="680" y="220" width="125" height="55"/>

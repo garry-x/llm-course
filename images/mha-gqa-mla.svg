@@ -13,8 +13,6 @@
       .head-q{fill:#7baaf7}
       .head-k{fill:#81c995}
       .head-v{fill:#f28b82}
-      
-      }
     
     </style>
   </defs>
@@ -123,28 +121,29 @@
   <text class="ts" x="775" y="88" text-anchor="middle">latent KV cache case</text>
 
   <g transform="translate(645,105)">
-    <rect fill="#7baaf7" opacity="0.2" x="0" y="0" width="120" height="16" rx="2"/>
-    <text class="ts" x="60" y="12" text-anchor="middle">Q Heads × 8 (decompressed at compute)</text>
-    <rect fill="#e08940" opacity="0.3" x="125" y="0" width="120" height="16" rx="2"/>
-    <text class="ts" x="185" y="12" text-anchor="middle">Latent KV (compressed)</text>
+    <rect fill="#7baaf7" opacity="0.2" x="0" y="0" width="110" height="18" rx="2"/>
+    <text class="ts" x="55" y="13" text-anchor="middle">Q Heads × 8</text>
+    <rect fill="#e08940" opacity="0.3" x="130" y="0" width="110" height="18" rx="2"/>
+    <text class="ts" x="185" y="13" text-anchor="middle">Latent KV</text>
+    <text class="ts" x="120" y="36" text-anchor="middle">decompress K/V only during compute</text>
   </g>
 
   <g transform="translate(645,140)">
     <rect fill="#e08940" opacity="0.3" x="0" y="0" width="240" height="50" rx="2"/>
-    <text class="t1" x="120" y="22" text-anchor="middle" style="font-weight:700">Low-dimensional latent vector c_t^{KV}</text>
-    <text class="ts" x="120" y="40" text-anchor="middle">Dimension d_c &lt;&lt; 8×d_k  (e.g., d_c=512)</text>
+    <text class="t1" x="120" y="22" text-anchor="middle" style="font-weight:700">Latent KV vector c_t^KV</text>
+    <text class="ts" x="120" y="40" text-anchor="middle">d_c &lt;&lt; h × d_k  (example: d_c=512)</text>
   </g>
 
   <g transform="translate(645,210)">
     <rect fill="#7baaf7" opacity="0.3" x="0" y="0" width="240" height="50" rx="2"/>
-    <text class="t1" x="120" y="22" text-anchor="middle">Decompression: K = c·W_{UK}, V = c·W_{UV}</text>
-    <text class="ts" x="120" y="40" text-anchor="middle">Decompressed in SRAM during inference, not written to HBM</text>
+    <text class="t1" x="120" y="20" text-anchor="middle">Decompress K/V from c_t</text>
+    <text class="ts" x="120" y="38" text-anchor="middle">K=cW_UK, V=cW_UV in SRAM compute</text>
   </g>
 
   <g transform="translate(645,275)">
     <rect fill="#7baaf7" opacity="0.3" x="0" y="0" width="240" height="50" rx="2"/>
-    <text class="t1" x="120" y="22" text-anchor="middle">RoPE Decoupling: Q/K each apply rotation</text>
-    <text class="ts" x="120" y="40" text-anchor="middle">c_t^{KV} + decoupled position vector → rotation</text>
+    <text class="t1" x="120" y="20" text-anchor="middle">RoPE decoupling</text>
+    <text class="ts" x="120" y="38" text-anchor="middle">separate content cache and position rotation</text>
   </g>
 
   <text class="ts" x="775" y="350" text-anchor="middle">KV Cache: Only cache c_t^{KV}</text>
@@ -161,29 +160,30 @@
   <g font-size="12">
     <text class="t1" x="40" y="495" text-anchor="start" style="font-weight:700">Scheme</text>
     <text class="t1" x="140" y="495" text-anchor="start" style="font-weight:700">Q Heads</text>
-    <text class="t1" x="230" y="495" text-anchor="start" style="font-weight:700">K/V Groups</text>
-    <text class="t1" x="350" y="495" text-anchor="start" style="font-weight:700">KV Cache per Token</text>
-    <text class="t1" x="550" y="495" text-anchor="start" style="font-weight:700">Total Cache for 128K Tokens</text>
-    <text class="t1" x="720" y="495" text-anchor="start" style="font-weight:700">Representative Model</text>
+    <text class="t1" x="255" y="495" text-anchor="start" style="font-weight:700">K/V Cache Shape</text>
+    <text class="t1" x="390" y="495" text-anchor="start" style="font-weight:700">KV Cache per Token</text>
+    <text class="t1" x="580" y="495" text-anchor="start" style="font-weight:700">Total Cache</text>
+    <text class="t1" x="740" y="495" text-anchor="start" style="font-weight:700">Representative Model</text>
 
     <text class="t1" x="40" y="520" text-anchor="start">MHA</text>
     <text class="t1" x="140" y="520" text-anchor="start">8</text>
-    <text class="t1" x="230" y="520" text-anchor="start">8</text>
-    <text class="t3" x="350" y="520" text-anchor="start">8 × 128 KB = 1 MB</text>    <text class="t3" x="550" y="520" text-anchor="start">~8 GB (80 layers)</text>
-    <text class="t1" x="720" y="520" text-anchor="start">GPT-3 (175B)</text>
+    <text class="t1" x="255" y="520" text-anchor="start">8 full K/V heads</text>
+    <text class="t3" x="390" y="520" text-anchor="start">8 × 128 KB = 1 MB</text>
+    <text class="t3" x="580" y="520" text-anchor="start">~8 GB (80 layers)</text>
+    <text class="t1" x="740" y="520" text-anchor="start">GPT-3 (175B)</text>
 
     <text class="t1" x="40" y="545" text-anchor="start">GQA</text>
     <text class="t1" x="140" y="545" text-anchor="start">8</text>
-    <text class="t1" x="230" y="545" text-anchor="start">2</text>
-    <text class="t3" x="350" y="545" text-anchor="start">2 × 128 KB = 256 KB</text>
-    <text class="t3" x="550" y="545" text-anchor="start">~2 GB (80 layers)</text>
-    <text class="t1" x="720" y="545" text-anchor="start">Llama 3 (70B)</text>
+    <text class="t1" x="255" y="545" text-anchor="start">2 K/V groups</text>
+    <text class="t3" x="390" y="545" text-anchor="start">2 × 128 KB = 256 KB</text>
+    <text class="t3" x="580" y="545" text-anchor="start">~2 GB (80 layers)</text>
+    <text class="t1" x="740" y="545" text-anchor="start">Llama 3 (70B)</text>
 
     <text class="t1" x="40" y="570" text-anchor="start" style="fill:#b35c22;font-weight:700">MLA</text>
-    <text class="t1" x="140" y="570" text-anchor="start">8 (decompressed)</text>
-    <text class="t1" x="230" y="570" text-anchor="start">1 (compressed)</text>
-    <text class="t3" x="350" y="570" text-anchor="start" style="fill:#e08940">512 B = 0.5 KB</text>
-    <text class="t3" x="550" y="570" text-anchor="start" style="fill:#e08940">~4 MB (61 layers)</text>
-    <text class="t1" x="720" y="570" text-anchor="start" style="fill:#e08940;font-weight:700">DeepSeek-V3 (671B)</text>
+    <text class="t1" x="140" y="570" text-anchor="start">8</text>
+    <text class="t1" x="255" y="570" text-anchor="start">latent c_t</text>
+    <text class="t3" x="390" y="570" text-anchor="start" style="fill:#e08940">512 B = 0.5 KB</text>
+    <text class="t3" x="580" y="570" text-anchor="start" style="fill:#e08940">~4 MB (61 layers)</text>
+    <text class="t1" x="740" y="570" text-anchor="start" style="fill:#e08940;font-weight:700">DeepSeek-V3 (671B)</text>
   </g>
 </svg>

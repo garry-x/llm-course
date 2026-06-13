@@ -93,43 +93,76 @@
     <li><strong>Output Stage:</strong> Final Norm + LM Head → Map hidden states to vocabulary probability distribution</li>
   </ol>
 
-  <div class="diagram">
-  ┌──────────────────────────────────────────────────────────┐
-  │                   GPT-2 (Complete Model)                  │
-  │  Input: [t1, t2, ..., tn]  (vocab size 50257)            │
-  │        │                                                  │
-  │        ▼                                                  │
-  │  ┌─────────────┐    ┌──────────────────┐                  │
-  │  │ Token Emb.  │    │ Position Emb.    │                  │
-  │  │ (50257×768) │    │ (1024×768)       │                  │
-  │  └──────┬──────┘    └────────┬─────────┘                  │
-  │         └────────── (+) ─────┘                            │
-  │                     ▼                                     │
-  │           ┌──────────────────┐                            │
-  │           │  Dropout         │                            │
-  │           └──────────────────┘                            │
-  │                     │                                     │
-  │                     ▼   (×12)                             │
-  │           ┌────────────────────┐                          │
-  │           │     GPT2Block 1    │  d_model=768, n_heads=12 │
-  │           ├────────────────────┤                          │
-  │           │        ...         │                          │
-  │           ├────────────────────┤                          │
-  │           │     GPT2Block12    │                          │  │           └─────────┬──────────┘                          │
-  │                     │                                     │
-  │                     ▼                                     │
-  │           ┌──────────────────┐                            │
-  │           │    LayerNorm     │  (Final output normalization)           │
-  │           └──────────────────┘                            │
-  │                     │                                     │
-  │                     ▼                                     │
-  │           ┌──────────────────┐                            │
-  │           │   LM Head        │  Linear(768, 50257)        │
-  │           └──────────────────┘                            │
-  │                     │                                     │
-  │                     ▼                                     │
-  │           logits: (batch, seq, vocab=50257)               │
-  └──────────────────────────────────────────────────────────┘</div>
+  <div class="svg-diagram flow-diagram">
+    <svg viewBox="0 0 920 560" role="img" aria-label="GPT-2 complete model data flow from token ids to logits">
+      <defs>
+        <marker id="gpt-flow-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#b35c22"/>
+        </marker>
+        <style>
+          .gpt-bg{fill:#fbf9f5;stroke:#e8e3da}
+          .gpt-box{fill:#fff;stroke:#d4cec4;stroke-width:1.4}
+          .gpt-box-accent{fill:#fdf5ed;stroke:#b35c22;stroke-width:1.6}
+          .gpt-title{font:700 20px system-ui,-apple-system,sans-serif;fill:#1c1c1c}
+          .gpt-h{font:700 15px system-ui,-apple-system,sans-serif;fill:#1c1c1c}
+          .gpt-t{font:500 13px system-ui,-apple-system,sans-serif;fill:#5c554a}
+          .gpt-mono{font:600 12px "JetBrains Mono",monospace;fill:#5c554a}
+          .gpt-line{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#gpt-flow-arrow)}
+          .gpt-thin{stroke:#d4cec4;stroke-width:1.5;fill:none}
+        </style>
+      </defs>
+      <rect class="gpt-bg" x="10" y="10" width="900" height="540" rx="12"/>
+      <text class="gpt-title" x="460" y="42" text-anchor="middle">GPT-2 Complete Model: Token IDs to Next-Token Logits</text>
+
+      <rect class="gpt-box-accent" x="65" y="75" width="230" height="62" rx="8"/>
+      <text class="gpt-h" x="180" y="100" text-anchor="middle">Input Token IDs</text>
+      <text class="gpt-mono" x="180" y="122" text-anchor="middle">[B, T], vocab=50257</text>
+
+      <rect class="gpt-box" x="85" y="185" width="190" height="72" rx="8"/>
+      <text class="gpt-h" x="180" y="213" text-anchor="middle">Token Embedding</text>
+      <text class="gpt-mono" x="180" y="236" text-anchor="middle">50257 x 768</text>
+
+      <rect class="gpt-box" x="325" y="185" width="190" height="72" rx="8"/>
+      <text class="gpt-h" x="420" y="213" text-anchor="middle">Position Embedding</text>
+      <text class="gpt-mono" x="420" y="236" text-anchor="middle">1024 x 768</text>
+
+      <circle cx="300" cy="305" r="22" fill="#fdf5ed" stroke="#b35c22" stroke-width="1.6"/>
+      <text class="gpt-h" x="300" y="311" text-anchor="middle">+</text>
+      <rect class="gpt-box" x="360" y="275" width="170" height="60" rx="8"/>
+      <text class="gpt-h" x="445" y="299" text-anchor="middle">Dropout</text>
+      <text class="gpt-mono" x="445" y="319" text-anchor="middle">[B, T, 768]</text>
+
+      <rect class="gpt-box-accent" x="335" y="378" width="230" height="105" rx="10"/>
+      <text class="gpt-h" x="450" y="406" text-anchor="middle">Transformer Blocks x 12</text>
+      <text class="gpt-t" x="450" y="430" text-anchor="middle">LayerNorm + Causal MHA</text>
+      <text class="gpt-t" x="450" y="450" text-anchor="middle">MLP with GELU</text>
+      <text class="gpt-mono" x="450" y="472" text-anchor="middle">d_model=768, heads=12</text>
+
+      <rect class="gpt-box" x="640" y="190" width="200" height="60" rx="8"/>
+      <text class="gpt-h" x="740" y="214" text-anchor="middle">Final LayerNorm</text>
+      <text class="gpt-mono" x="740" y="234" text-anchor="middle">normalize residual stream</text>
+
+      <rect class="gpt-box" x="640" y="300" width="200" height="66" rx="8"/>
+      <text class="gpt-h" x="740" y="326" text-anchor="middle">LM Head</text>
+      <text class="gpt-mono" x="740" y="348" text-anchor="middle">Linear(768, 50257)</text>
+
+      <rect class="gpt-box-accent" x="625" y="432" width="230" height="62" rx="8"/>
+      <text class="gpt-h" x="740" y="457" text-anchor="middle">Output Logits</text>
+      <text class="gpt-mono" x="740" y="479" text-anchor="middle">[B, T, vocab_size]</text>
+
+      <path class="gpt-line" d="M180 137 L180 185"/>
+      <path class="gpt-line" d="M180 257 C180 287 236 305 278 305"/>
+      <path class="gpt-line" d="M420 257 C420 287 364 305 322 305"/>
+      <path class="gpt-line" d="M322 305 L360 305"/>
+      <path class="gpt-line" d="M445 335 L445 378"/>
+      <path class="gpt-line" d="M565 430 C655 430 740 335 740 250"/>
+      <path class="gpt-line" d="M740 250 L740 300"/>
+      <path class="gpt-line" d="M740 366 L740 432"/>
+      <path class="gpt-thin" d="M295 106 C365 106 415 145 420 185"/>
+      <text class="gpt-t" x="370" y="96" text-anchor="middle">position index 0..T-1</text>
+      <text class="gpt-t" x="456" y="532" text-anchor="middle">Training uses logits[:, t, :] to predict input_ids[:, t+1]; generation uses the final-position logits for the next token.</text>
+    </svg>
+  </div>
 
   <h4>Key Differences Between GPT-2 and Subsequent Models</h4>
   <ul>
@@ -146,7 +179,7 @@
 <!-- ================================================================ -->
 <section class="card">
 <div class="svg-diagram" style="max-width:860px">
-  <img src="../images/gpt-params.svg?v=en-20260613" alt="GPT-2 124M Parameter Breakdown" style="width:100%">
+  <img src="../images/gpt-params.svg?v=en-20260613c" alt="GPT-2 124M Parameter Breakdown" style="width:100%">
 </div>
 <p class="diagram-caption">Figure 6-1: GPT-2 Small (124M) Layer-by-Layer Parameter Breakdown</p>
 </section>
@@ -829,23 +862,73 @@ def load_hf_weights_to_model(hf_model, our_model):
     <li><strong>Core Issues:</strong> Total parameter count determines the capacity upper bound; the number of activated experts per token determines the single forward pass computation cost; load balancing determines throughput stability.</li>
   </ul>
 
-  <div class="diagram">
-  ┌─ DeepSeekMoE FFN Layer ──────────────────────────┐
-  │                                                   │
-  │  Input x  ──→  Router ──→ top-8 Expert Selection  │
-  │              (Linear + Softmax + TopK)            │
-  │                                                   │
-  │     ┌──────────────────────────────────┐          │
-  │     │ Expert 1 │ Expert 2 │ ... │ E256 │          │
-  │     │ (SwiGLU) │ (SwiGLU) │     │      │          │
-  │     └───┬──────┴───┬──────┘     └──┬────┘          │
-  │         │          │               │               │
-  │         └───(+)────┘               │               │
-  │              │         Shared Expert ──┘               │
-  │              │        (always on)                  │
-  │              ▼                                     │
-  │    Output y = Routed Weighted Sum + Shared Expert Output │
-  └────────────────────────────────────────────────────┘</div>
+  <div class="svg-diagram flow-diagram">
+    <svg viewBox="0 0 920 430" role="img" aria-label="DeepSeekMoE style FFN layer with router, selected experts, shared expert, and weighted sum">
+      <defs>
+        <marker id="moe-flow-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#b35c22"/>
+        </marker>
+        <style>
+          .moe-bg{fill:#fbf9f5;stroke:#e8e3da}
+          .moe-box{fill:#fff;stroke:#d4cec4;stroke-width:1.4}
+          .moe-accent{fill:#fdf5ed;stroke:#b35c22;stroke-width:1.6}
+          .moe-muted{fill:#f7f2ea;stroke:#d4cec4;stroke-width:1.2}
+          .moe-title{font:700 20px system-ui,-apple-system,sans-serif;fill:#1c1c1c}
+          .moe-h{font:700 14px system-ui,-apple-system,sans-serif;fill:#1c1c1c}
+          .moe-t{font:500 12px system-ui,-apple-system,sans-serif;fill:#5c554a}
+          .moe-mono{font:600 12px "JetBrains Mono",monospace;fill:#5c554a}
+          .moe-line{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#moe-flow-arrow)}
+          .moe-soft{stroke:#d4cec4;stroke-width:1.5;fill:none;stroke-dasharray:5 5}
+        </style>
+      </defs>
+      <rect class="moe-bg" x="10" y="10" width="900" height="410" rx="12"/>
+      <text class="moe-title" x="460" y="42" text-anchor="middle">DeepSeekMoE-Style FFN: Sparse Routed Experts + Shared Expert</text>
+
+      <rect class="moe-accent" x="45" y="86" width="135" height="58" rx="8"/>
+      <text class="moe-h" x="112.5" y="110" text-anchor="middle">Input x</text>
+      <text class="moe-mono" x="112.5" y="130" text-anchor="middle">[B, T, d]</text>
+
+      <rect class="moe-box" x="235" y="76" width="180" height="78" rx="8"/>
+      <text class="moe-h" x="325" y="102" text-anchor="middle">Router</text>
+      <text class="moe-t" x="325" y="123" text-anchor="middle">Linear + Softmax + TopK</text>
+      <text class="moe-mono" x="325" y="143" text-anchor="middle">select top-8 experts</text>
+
+      <rect class="moe-accent" x="520" y="64" width="330" height="150" rx="10"/>
+      <text class="moe-h" x="685" y="91" text-anchor="middle">Routed Expert Pool</text>
+      <rect class="moe-muted" x="545" y="112" width="76" height="60" rx="6"/>
+      <text class="moe-h" x="583" y="136" text-anchor="middle">Expert 1</text>
+      <text class="moe-t" x="583" y="156" text-anchor="middle">SwiGLU</text>
+      <rect class="moe-muted" x="640" y="112" width="76" height="60" rx="6"/>
+      <text class="moe-h" x="678" y="136" text-anchor="middle">Expert 2</text>
+      <text class="moe-t" x="678" y="156" text-anchor="middle">SwiGLU</text>
+      <rect class="moe-muted" x="735" y="112" width="90" height="60" rx="6"/>
+      <text class="moe-h" x="780" y="136" text-anchor="middle">Expert 256</text>
+      <text class="moe-t" x="780" y="156" text-anchor="middle">SwiGLU</text>
+      <text class="moe-mono" x="685" y="197" text-anchor="middle">only selected expert outputs are computed per token</text>
+
+      <rect class="moe-box" x="240" y="248" width="190" height="76" rx="8"/>
+      <text class="moe-h" x="335" y="274" text-anchor="middle">Shared Expert</text>
+      <text class="moe-t" x="335" y="295" text-anchor="middle">always active path</text>
+      <text class="moe-mono" x="335" y="314" text-anchor="middle">general FFN capacity</text>
+
+      <circle cx="610" cy="286" r="31" fill="#fdf5ed" stroke="#b35c22" stroke-width="1.6"/>
+      <text class="moe-h" x="610" y="282" text-anchor="middle">weighted</text>
+      <text class="moe-h" x="610" y="300" text-anchor="middle">sum</text>
+
+      <rect class="moe-accent" x="700" y="254" width="170" height="64" rx="8"/>
+      <text class="moe-h" x="785" y="280" text-anchor="middle">Output y</text>
+      <text class="moe-mono" x="785" y="301" text-anchor="middle">[B, T, d]</text>
+
+      <path class="moe-line" d="M180 115 L235 115"/>
+      <path class="moe-line" d="M415 115 L520 128"/>
+      <path class="moe-soft" d="M112 144 C142 230 192 286 240 286"/>
+      <path class="moe-line" d="M685 214 C685 252 655 278 641 284"/>
+      <path class="moe-line" d="M430 286 L579 286"/>
+      <path class="moe-line" d="M641 286 L700 286"/>
+      <text class="moe-t" x="184" y="242" text-anchor="start">same token also passes through shared expert</text>
+      <text class="moe-t" x="460" y="385" text-anchor="middle">Capacity comes from all experts; per-token compute comes from top-k routed experts plus the shared expert.</text>
+    </svg>
+  </div>
 
   <h4>Why Does Activating Only a Few Experts Still Work?</h4>
   <p>The core assumption of MoE is <strong>conditional computation</strong>: different tokens do not need to pass through exactly the same FFN parameters. The router selects experts based on the hidden state, directing different input patterns—such as mathematical symbols, code snippets, entity names, and format tokens—to different parameter subsets. Whether this assumption holds depends on the training data, the router's representational capacity, expert capacity, and load balancing; if the router collapses onto a few experts, MoE degenerates into an expensive and unstable approximation of a dense model.</p>

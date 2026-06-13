@@ -20,12 +20,12 @@
   <text class="t2" x="130" y="72" text-anchor="middle">Greedy Decoding</text>
   <text class="t3" x="130" y="90" text-anchor="middle">argmax logits → token</text>
   <text class="t1" x="30" y="115" text-anchor="start">Features:</text>
-  <text class="ts" x="30" y="135" text-anchor="start">• Deterministic output (same input → same output)</text>
+  <text class="ts" x="30" y="135" text-anchor="start">• Deterministic output</text>
   <text class="ts" x="30" y="153" text-anchor="start">• Problem: prone to repetitive loops</text>
   <text class="ts" x="30" y="171" text-anchor="start">• "I am very happy happy happy..."</text>
   <text class="ts" x="30" y="195" text-anchor="start">Use case: Fact extraction / Translation</text>
   <rect class="box" x="70" y="218" width="120" height="22"/>
-  <text class="ts" x="130" y="233" text-anchor="middle">T=0 (Degenerate temperature)</text>
+  <text class="ts" x="130" y="233" text-anchor="middle">T=0</text>
 
   <!-- Temperature -->
   <rect class="b2" x="255" y="48" width="220" height="200"/>
@@ -34,10 +34,10 @@
   <text class="t1" x="265" y="115" text-anchor="start">Effect:</text>
   <text class="ts" x="265" y="135" text-anchor="start">• T→0: Degrades to greedy</text>
   <text class="ts" x="265" y="153" text-anchor="start">• T=1: Original distribution</text>
-  <text class="ts" x="265" y="171" text-anchor="start">• T>1: Smoother distribution, more diverse</text>
+  <text class="ts" x="265" y="171" text-anchor="start">• T&gt;1: smoother, more diverse</text>
   <text class="ts" x="265" y="195" text-anchor="start">Use case: Creative writing (T=0.8~1.0)</text>
   <rect class="b2" x="305" y="218" width="120" height="22"/>
-  <text class="ts" x="365" y="233" text-anchor="middle">T=0.7~1.0 (Adjustable)</text>
+  <text class="ts" x="365" y="233" text-anchor="middle">T=0.7~1.0</text>
 
   <!-- Top-K -->
   <rect class="box" x="490" y="48" width="220" height="200"/>
@@ -46,7 +46,7 @@
   <text class="t1" x="500" y="115" text-anchor="start">Features:</text>
   <text class="ts" x="500" y="135" text-anchor="start">• Truncates low-probability tail</text>
   <text class="ts" x="500" y="153" text-anchor="start">• K is fixed (GPT-2: K=40)</text>
-  <text class="ts" x="500" y="171" text-anchor="start">• Problem: Fixed K → overly aggressive tail truncation</text>
+  <text class="ts" x="500" y="171" text-anchor="start">• Problem: fixed tail cutoff</text>
   <text class="ts" x="500" y="195" text-anchor="start">Use case: General generation</text>
   <rect class="box" x="540" y="218" width="120" height="22"/>
   <text class="ts" x="600" y="233" text-anchor="middle">K=40~100</text>
@@ -54,11 +54,11 @@
   <!-- Top-P -->
   <rect class="b2" x="725" y="48" width="200" height="200"/>
   <text class="t2" x="825" y="72" text-anchor="middle">Top-P (Nucleus)</text>
-  <text class="t3" x="825" y="90" text-anchor="middle">Cumulative prob ≥ P → truncate → sample</text>
+  <text class="t3" x="825" y="90" text-anchor="middle">cumulative prob ≥ P</text>
   <text class="t1" x="735" y="115" text-anchor="start">Features:</text>
-  <text class="ts" x="735" y="135" text-anchor="start">• Dynamic K, adapts to distribution shape</text>
-  <text class="ts" x="735" y="153" text-anchor="start">• Currently the most mainstream strategy</text>
-  <text class="ts" x="735" y="171" text-anchor="start">• GPT/Claude default to this method</text>
+  <text class="ts" x="735" y="135" text-anchor="start">• Dynamic K</text>
+  <text class="ts" x="735" y="153" text-anchor="start">• Adapts to distribution shape</text>
+  <text class="ts" x="735" y="171" text-anchor="start">• Common default strategy</text>
   <text class="ts" x="735" y="195" text-anchor="start">Use case: Almost all scenarios</text>
   <rect class="b2" x="775" y="218" width="100" height="22"/>
   <text class="ts" x="825" y="233" text-anchor="middle">P=0.9~0.95</text>
@@ -67,10 +67,10 @@
   <rect class="box" x="20" y="280" width="900" height="130"/>
   <text class="t2" x="470" y="305" text-anchor="middle">Sampling Effect Comparison (Same prompt: "The future of artificial intelligence is")</text>
   <g font-size="12">
-    <text class="ts" x="40" y="335" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Greedy (T=0):</tspan>  The future of artificial intelligence is the future of artificial intelligence is the future of artificial intelligence is the future of artificial intelligence is... (Infinite loop)</text>
-    <text class="ts" x="40" y="358" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Temp (T=1.5):</tspan>  The future of artificial intelligence is an unpredictable and wonderful journey that will redefine the boundaries and ethical relationships between us and machines.</text>
-    <text class="ts" x="40" y="381" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-K (K=40):</tspan> The future of artificial intelligence is bright. With the development of technology, AI will play an increasingly important role in fields such as healthcare, education, and transportation.</text>
-    <text class="ts" x="40" y="404" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-P (P=0.9):</tspan> The future of artificial intelligence is an open question. Some are optimistic about the breakthrough of AGI, others worry about the risk of losing control, but everyone agrees — change has begun.</text>
+    <text class="ts" x="40" y="335" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Greedy (T=0):</tspan> repetitive, safe, deterministic; can loop on high-probability phrases.</text>
+    <text class="ts" x="40" y="358" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Temp (T=1.5):</tspan> more diverse wording; higher risk of off-distribution continuation.</text>
+    <text class="ts" x="40" y="381" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-K (K=40):</tspan> cuts rare tokens with a fixed K; stable but insensitive to entropy.</text>
+    <text class="ts" x="40" y="404" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-P (P=0.9):</tspan> adapts candidate set size to confidence; common for chat generation.</text>
   </g>
 
   <!-- Bottom: Flow -->
@@ -90,6 +90,6 @@
     <text class="t1" x="675" y="478" text-anchor="start">Multinomial Sampling</text>
     <text class="t1" x="820" y="478" text-anchor="start">→ token</text>
   </g>
-  <text class="ts" x="470" y="510" text-anchor="middle">Recommended combination: T=0.7 ~ 1.0 + Top-P=0.9 ~ 0.95 (ChatGPT/Claude default)</text>
+  <text class="ts" x="470" y="510" text-anchor="middle">Common chat setting: T=0.7 ~ 1.0 + Top-P=0.9 ~ 0.95</text>
   <text class="ts" x="470" y="528" text-anchor="middle">Code generation: T=0.1 ~ 0.3 + Top-P=0.9 · Factual QA: T=0 (Greedy) · Creative writing: T=1.0 + Top-P=0.95</text>
 </svg>

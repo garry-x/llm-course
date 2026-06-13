@@ -1,70 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 540" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" fill="none">
   <defs>
     <style>
-      text{font-family:system-ui,-apple-system,sans-serif}
+      text{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       .bg{fill:#fbf9f5}
-      .box{fill:#fff;stroke:#d4cec4;stroke-width:1.5}
-      .b2{fill:#fdf5ed;stroke:#b35c22;stroke-width:2}
-      .t1{fill:#5c554a;font-size:13px}
-      .t2{fill:#1c1c1c;font-size:15px;font-weight:700}
-      .t3{fill:#b35c22;font-size:12px;font-family:'JetBrains Mono','Fira Code',monospace}
-      .ts{fill:#9e968a;font-size:11px}
-      .bar1{fill:#b35c22;opacity:0.6}
-      .bar2{fill:#7baaf7;opacity:0.6}
-      .bar3{fill:#81c995;opacity:0.6}
-      .bar4{fill:#e08940;opacity:0.6}
+      .panel{fill:#fff;stroke:#d4cec4;stroke-width:1.3}
+      .panel-accent{fill:#fdf5ed;stroke:#b35c22;stroke-width:1.6}
+      .title{fill:#1c1c1c;font-size:22px;font-weight:750}
+      .h{fill:#1c1c1c;font-size:15px;font-weight:750}
+      .body{fill:#5c554a;font-size:13px}
+      .small{fill:#7a7166;font-size:11.5px}
+      .mono{fill:#5c554a;font-size:11.4px;font-family:"JetBrains Mono","Fira Code",monospace;font-weight:600}
+      .accent{fill:#b35c22;font-weight:750}
+      .bar-embed{fill:#b35c22;opacity:.72}
+      .bar-block{fill:#7baaf7;opacity:.72}
+      .bar-pos{fill:#81c995;opacity:.72}
+      .bar-small{fill:#e08940;opacity:.72}
+      .rule{stroke:#e8e3da;stroke-width:1}
     </style>
   </defs>
-  <rect class="bg" width="860" height="540"/>
 
-  <text class="t2" x="430" y="28" text-anchor="middle" style="font-size:18px">GPT-2 Small (124M) Parameter Breakdown</text>
+  <rect class="bg" width="1000" height="700"/>
+  <text class="title" x="500" y="36" text-anchor="middle">GPT-2 Small (124M) Parameter Ledger</text>
+  <text class="body" x="500" y="60" text-anchor="middle">Configuration: vocab=50,257 · max_seq_len=1,024 · d_model=768 · layers=12 · heads=12 · d_ff=3,072</text>
 
-  <!-- Pie-like bar chart -->
-  <text class="t2" x="30" y="62" text-anchor="start" style="font-size:14px">Total Parameters: 124,393,728</text>
+  <rect class="panel-accent" x="32" y="84" width="936" height="92" rx="10"/>
+  <text class="h" x="58" y="116">Total trainable parameters</text>
+  <text class="title accent" x="58" y="150">124,439,808</text>
+  <text class="body" x="288" y="120">Includes linear biases and LayerNorm scale/bias terms.</text>
+  <text class="body" x="288" y="146">With weight tying, the LM head reuses token embeddings; no extra 38.6M output matrix.</text>
 
-  <!-- Token Embedding: 38.6M (31%) -->
-  <rect class="bar1" x="30" y="78" width="220" height="24" rx="3"/>
-  <text class="t1" x="260" y="94" text-anchor="start">Token Embedding  38.6M (31%)  vocab_size(50257) × d_model(768)</text>
+  <rect class="panel" x="32" y="202" width="936" height="214" rx="10"/>
+  <text class="h" x="58" y="232">Component contribution</text>
 
-  <!-- Position Embedding: 0.8M (0.6%) -->
-  <rect class="bar1" x="30" y="108" width="5" height="24" rx="3"/>
-  <text class="t1" x="260" y="124" text-anchor="start">Pos Embedding  0.8M (0.6%)  max_len(1024) × d_model(768)</text>
+  <rect class="bar-embed" x="58" y="252" width="246" height="24" rx="4"/>
+  <text class="h" x="336" y="270">Token embedding</text>
+  <text class="mono" x="560" y="270">50,257 x 768 = 38,597,376</text>
+  <text class="body" x="930" y="270" text-anchor="end">31.02%</text>
 
-  <!-- Per Block: 7.1M × 12 = 85.2M (68.5%) -->
-  <rect class="bar2" x="30" y="138" width="158" height="24" rx="3"/>
-  <text class="t1" x="260" y="154" text-anchor="start">12× Transformer Block  85.2M (68.5%)  7.1M per Block</text>
+  <rect class="bar-pos" x="58" y="288" width="6" height="24" rx="3"/>
+  <text class="h" x="336" y="306">Position embedding</text>
+  <text class="mono" x="560" y="306">1,024 x 768 = 786,432</text>
+  <text class="body" x="930" y="306" text-anchor="end">0.63%</text>
 
-  <!-- Block breakdown -->
-  <rect class="bar2" x="60" y="168" width="90" height="18" rx="2" style="opacity:0.4"/>
-  <text class="ts" x="260" y="182" text-anchor="start">  └ MHA (QKV+Output): 4× (768×768) = 2.36M × 12 = 28.3M</text>
+  <rect class="bar-block" x="58" y="324" width="542" height="24" rx="4"/>
+  <text class="h" x="622" y="337">Transformer blocks x 12</text>
+  <text class="mono" x="622" y="362">12 x 7,087,872 = 85,054,464</text>
+  <text class="body" x="930" y="337" text-anchor="end">68.36%</text>
 
-  <rect class="bar2" x="60" y="190" width="68" height="18" rx="2" style="opacity:0.4"/>
-  <text class="ts" x="260" y="204" text-anchor="start">  └ FFN (fc+proj): 2× (768×3072) = 4.7M × 12 = 56.6M</text>
+  <rect class="bar-small" x="58" y="372" width="3" height="24" rx="3"/>
+  <text class="h" x="336" y="390">Final LayerNorm + tied LM head</text>
+  <text class="mono" x="620" y="390">1,536 + 0</text>
+  <text class="body" x="930" y="390" text-anchor="end">~0.00%</text>
 
-  <!-- LN: negligible -->
-  <rect class="bar3" x="30" y="218" width="1" height="24" rx="3"/>
-  <text class="t1" x="260" y="234" text-anchor="start">LayerNorm  0.04M (0.03%)  2×(γ+β) per block, negligible</text>
+  <rect class="panel" x="32" y="440" width="452" height="214" rx="10"/>
+  <text class="h" x="58" y="470">One Transformer block</text>
+  <line class="rule" x1="58" y1="484" x2="458" y2="484"/>
+  <text class="body" x="58" y="506">Attention QKV projection</text>
+  <text class="mono" x="78" y="524">768 x 2304 + 2304 = 1,771,776</text>
+  <text class="body" x="58" y="548">Attention output projection</text>
+  <text class="mono" x="78" y="566">768 x 768 + 768 = 590,592</text>
+  <text class="body" x="58" y="590">MLP expansion projection</text>
+  <text class="mono" x="78" y="608">768 x 3072 + 3072 = 2,362,368</text>
+  <text class="body" x="58" y="628">MLP output + LayerNorm terms</text>
+  <text class="mono" x="78" y="646">2,360,064 + 3,072</text>
+  <text class="h accent" x="282" y="646">Block total: 7,087,872</text>
 
-  <!-- LM Head -->
-  <rect class="bar4" x="30" y="248" width="1" height="24" rx="3"/>
-  <text class="t1" x="260" y="264" text-anchor="start">LM Head  0M (weight tying with Token Embedding in GPT-2)</text>
+  <rect class="panel" x="516" y="440" width="452" height="210" rx="10"/>
+  <text class="h" x="542" y="470">How to read the ledger</text>
+  <line class="rule" x1="542" y1="484" x2="942" y2="484"/>
+  <text class="body" x="542" y="512">1. Embedding size is controlled by vocabulary and hidden width.</text>
+  <text class="small" x="562" y="534">Large for GPT-2 small because vocab=50,257 while d=768.</text>
+  <text class="body" x="542" y="564">2. Blocks dominate once depth and FFN width increase.</text>
+  <text class="small" x="562" y="586">Each block contains attention, MLP, and LayerNorm parameters.</text>
+  <text class="body" x="542" y="616">3. Weight tying changes accounting, not the logits shape.</text>
+  <text class="small" x="562" y="638">The model still returns [B, T, vocab_size].</text>
 
-  <!-- Key formulas -->
-  <rect class="box" x="30" y="290" width="800" height="120"/>
-  <text class="t2" x="430" y="314" text-anchor="middle">Key Formulas</text>
-  <g font-size="13" font-family="'JetBrains Mono','Fira Code',monospace">
-    <text class="t1" x="50" y="340" text-anchor="start">MHA params = 4 × d_model² = 4 × 768² = 2,359,296</text>
-    <text class="t1" x="50" y="362" text-anchor="start">FFN params  = 2 × d_model × d_ff = 2 × 768 × 3072 = 4,718,592</text>
-    <text class="t1" x="50" y="384" text-anchor="start">Block       = MHA + FFN + LN ≈ 7,080,192</text>
-    <text class="t1" x="50" y="406" text-anchor="start">Total       = Embed + Pos + 12×Block + LN_final = 124,393,728 ✓</text>
-  </g>
-
-  <!-- Scaling comparison -->
-  <rect class="b2" x="30" y="425" width="800" height="100"/>
-  <text class="t2" x="430" y="450" text-anchor="middle">Scaling: Parameter Comparison Across GPT-2 / Llama Sizes</text>
-  <g font-size="12">
-    <text class="t1" x="50" y="478" text-anchor="start"><tspan font-weight="700">GPT-2 Small:</tspan>  d=768,  L=12,  d_ff=3072  →  124M  (Target for this course implementation)</text>
-    <text class="t1" x="50" y="498" text-anchor="start"><tspan font-weight="700">GPT-2 Medium:</tspan> d=1024, L=24,  d_ff=4096  →  355M</text>
-    <text class="t1" x="50" y="518" text-anchor="start"><tspan font-weight="700">Llama 3 8B:</tspan>   d=4096, L=32,  d_ff=14336 →  8.0B  (GQA + SwiGLU + RMSNorm)</text>
-  </g>
+  <text class="small" x="500" y="680" text-anchor="middle">Figure 6-1: layer-by-layer parameter accounting for the GPT-2 small implementation target.</text>
 </svg>

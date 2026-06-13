@@ -16,8 +16,6 @@
       .arr-q{stroke:#7baaf7;stroke-width:2;fill:none;marker-end:url(#ahq)}
       .arr-k{stroke:#81c995;stroke-width:2;fill:none;marker-end:url(#ahk)}
       .arr-v{stroke:#f28b82;stroke-width:2;fill:none;marker-end:url(#ahv)}
-      
-      }
     
     </style>
     <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
@@ -61,30 +59,30 @@
 
   <!-- Softmax -->
   <line class="arr" x1="645" y1="255" x2="645" y2="295"/>
-  <rect class="box-out" x="520" y="295" width="250" height="44"/>
-  <text class="t2" x="645" y="316" text-anchor="middle">Softmax (row-wise normalization)</text>
-  <text class="t1" x="645" y="332" text-anchor="middle">Each row sums to 1.0, becomes a probability distribution</text>
+  <rect class="box-out" x="500" y="295" width="290" height="50"/>
+  <text class="t2" x="645" y="315" text-anchor="middle">Softmax over each row</text>
+  <text class="t1" x="645" y="333" text-anchor="middle">rows sum to 1.0</text>
 
   <!-- Attention × V -->
-  <line class="arr" x1="645" y1="339" x2="645" y2="380"/>
+  <line class="arr" x1="645" y1="345" x2="645" y2="382"/>
   <line class="arr-v" x1="455" y1="415" x2="515" y2="415"/>
-  <rect class="box" x="520" y="378" width="250" height="60"/>
-  <text class="t2" x="645" y="399" text-anchor="middle">Output = Attn · V</text>
-  <text class="t3" x="645" y="420" text-anchor="middle">Weighted aggregation of each position's Value</text>
-  <text class="t1" x="645" y="436" text-anchor="middle">→ (batch, seq_len, d_k)</text>
+  <rect class="box" x="500" y="382" width="290" height="62"/>
+  <text class="t2" x="645" y="404" text-anchor="middle">Output = Attn · V</text>
+  <text class="t3" x="645" y="424" text-anchor="middle">weighted sum of value vectors</text>
+  <text class="t1" x="645" y="440" text-anchor="middle">(batch, seq_len, d_k)</text>
 
   <!-- Output -->
-  <line class="arr" x1="645" y1="438" x2="645" y2="485"/>
-  <rect class="box-out" x="520" y="485" width="250" height="44"/>
-  <text class="t2" x="645" y="506" text-anchor="middle">Attention Output</text>
-  <text class="t1" x="645" y="522" text-anchor="middle">Context-aware representation for each position</text>
+  <line class="arr" x1="645" y1="444" x2="645" y2="490"/>
+  <rect class="box-out" x="500" y="490" width="290" height="48"/>
+  <text class="t2" x="645" y="511" text-anchor="middle">Attention Output</text>
+  <text class="t1" x="645" y="528" text-anchor="middle">context-aware token representation</text>
 
   <!-- Annotation box -->
   <rect class="box" x="50" y="520" width="380" height="100"/>
   <text class="t2" x="60" y="542" text-anchor="start" style="font-size:14px">Why divide by √d_k?</text>
   <g font-size="13">
-    <text class="t1" x="60" y="565" text-anchor="start">• Variance of QK^T dot product = d_k, dividing by √d_k normalizes variance to 1</text>
-    <text class="t1" x="60" y="585" text-anchor="start">• Prevents softmax from entering gradient saturation region (gradient → 0 when p_i ≈ 1)</text>
+    <text class="t1" x="60" y="565" text-anchor="start">• QK^T variance grows with d_k; scaling keeps logits controlled</text>
+    <text class="t1" x="60" y="585" text-anchor="start">• Reduces softmax saturation when one logit dominates</text>
     <text class="t1" x="60" y="605" text-anchor="start">• Equivalent to using temperature τ = √d_k</text>
   </g>
 </svg>

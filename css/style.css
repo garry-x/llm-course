@@ -199,7 +199,9 @@ body[data-ch="0"] .main{max-width:1120px}
   border-radius:var(--radius);padding:20px;margin:16px 0;
   box-shadow:var(--shadow-card);text-align:center
 }
-.svg-diagram img{display:block;max-width:100%;height:auto;margin:0 auto}
+.svg-diagram img,.svg-diagram svg{display:block;max-width:100%;height:auto;margin:0 auto}
+.svg-diagram svg{width:100%}
+.svg-diagram.flow-diagram{padding:16px}
 /* SVG dark mode: CSS filter preserves color relationships */
 [data-theme="dark"] .svg-diagram img{
   filter:invert(0.88) hue-rotate(180deg) saturate(0.85) brightness(0.95)

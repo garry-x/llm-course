@@ -11,8 +11,6 @@
       .t3{fill:#b35c22;font-size:12px;font-family:'JetBrains Mono','Fira Code',monospace}
       .ts{fill:#9e968a;font-size:11px}
       .arr{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#ah)}
-      
-      }
     
     </style>
     <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b35c22"/></marker>
@@ -53,7 +51,7 @@
 
   <!-- DPO -->
   <rect class="b2" x="325" y="48" width="290" height="460"/>
-  <text class="t2" x="470" y="72" text-anchor="middle">DPO (Direct Preference Optimization)</text>
+  <text class="t2" x="470" y="72" text-anchor="middle">DPO (Direct Preference Opt.)</text>
   <text class="ts" x="470" y="88" text-anchor="middle">Llama 3, Qwen, Mistral</text>
 
   <g transform="translate(340,105)">
@@ -70,7 +68,7 @@
     <text class="ts" x="120" y="155" text-anchor="middle" style="font-weight:700">Advantages:</text>
     <text class="ts" x="120" y="173" text-anchor="middle">• Only 1 model needed</text>
     <text class="ts" x="120" y="188" text-anchor="middle">• Standard classification loss, stable</text>
-    <text class="ts" x="120" y="203" text-anchor="middle">• Mathematically equivalent to RLHF optimal solution</text>
+    <text class="ts" x="120" y="203" text-anchor="middle">• Directly optimizes preference margins</text>
 
     <text class="ts" x="120" y="235" text-anchor="middle" style="font-weight:700;fill:#b35c22">Limitations:</text>
     <text class="ts" x="120" y="253" text-anchor="middle" style="fill:#b35c22">• Requires preference pair data</text>
@@ -81,7 +79,7 @@
 
   <!-- GRPO -->
   <rect class="box" x="630" y="48" width="290" height="460"/>
-  <text class="t2" x="775" y="72" text-anchor="middle">GRPO (Group Relative Policy Optimization)</text>
+  <text class="t2" x="775" y="72" text-anchor="middle">GRPO (Group Relative Policy Opt.)</text>
   <text class="ts" x="775" y="88" text-anchor="middle">DeepSeek-R1, Math, V3</text>
 
   <g transform="translate(645,105)">

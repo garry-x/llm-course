@@ -331,6 +331,10 @@
 <li>llama.cpp 官方文档中 quantization、CPU/GPU offload 和本地部署边界。</li>
 <li>Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。</li>
 <li>Liu et al. <a href="https://arxiv.org/abs/2304.08485">Visual Instruction Tuning</a>. 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。</li>
+<li>OpenAI. <a href="https://cdn.openai.com/gpt-4o-system-card.pdf">GPT-4o System Card</a>. 重点看 text/audio/image/video 统一模型、安全评估、语音/视觉风险、敏感属性拒答和多模态能力不能只用文本 benchmark 解释。</li>
+<li>Gemini Team. <a href="https://arxiv.org/abs/2403.05530">Gemini 1.5: Unlocking multimodal understanding across millions of tokens of context</a>. 重点看长文档、视频、音频和多模态 long-context recall 如何同时影响质量、latency、context budget 和任务边界。</li>
+<li>Qwen Team. <a href="https://arxiv.org/abs/2502.13923">Qwen2.5-VL Technical Report</a>. 重点看 dynamic resolution、window attention、document parsing、chart/layout、object localization、video event localization 和 GUI/agent task 如何改变视觉 token 表示与推理路径。</li>
+<li>Wang et al. <a href="https://arxiv.org/abs/2508.18265">InternVL3.5: Advancing Open-Source Multimodal Models in Versatility, Reasoning, and Efficiency</a>. 重点看开源多模态模型在 general、reasoning、text、agentic benchmarks 和 inference efficiency 上如何报告 trade-off。</li>
 <li>OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。</li>
 </ul>
 <p>复盘问题：</p>
@@ -338,6 +342,8 @@
 <li>TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？</li>
 <li>RAG 评测为什么必须同时看检索质量和生成质量？</li>
 <li>多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？</li>
+<li>多模态服务为什么要同时理解 resolution/crop、vision/audio token、preprocess/encoder/prefill/decode latency、active KV tokens、cache isolation 和安全失败？</li>
+<li>dynamic resolution、OCR-first、query resampler 和 video frame sampling 分别降低或放大哪些成本与失败模式？</li>
 <li>一个 benchmark summary 应怎样限制结论的适用范围？</li>
 <li>prefill 和 decode 阶段的计算/访存瓶颈为什么不同？</li>
 <li>quantization 的误差会优先影响哪些任务、层或 token 分布？</li>

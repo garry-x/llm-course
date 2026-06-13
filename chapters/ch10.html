@@ -1853,6 +1853,19 @@ def forward(image, text_prompt):
     </table>
   </div>
 
+  <h4>如何读现代多模态模型报告</h4>
+  <p>读多模态模型报告时，不要只看总榜分数。更有价值的问题是：视觉或音频信息以什么形式进入语言模型，输入被压缩了多少，哪些任务需要保留局部细节，哪些任务更依赖长上下文或时间顺序。下面四类近年的系统给出了不同答案：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>系统路线</th><th>核心思想</th><th>课程中要抓住的机制</th></tr>
+      <tr><td>Omni model</td><td>文本、图像、音频和视频由同一模型接口处理，强调实时交互和跨模态安全评估</td><td>音频/视觉不是“外部工具结果”，而是输入输出空间的一部分；安全评估要覆盖语音、图像和文本之间的迁移</td></tr>
+      <tr><td>Long-context multimodal</td><td>把长文档、视频和音频放进超长上下文，让模型在多模态序列中检索和推理</td><td>多模态长上下文的关键不只是最大 token 数，而是细粒度 recall、位置鲁棒性和长输入下的 prefill 成本</td></tr>
+      <tr><td>Dynamic-resolution VLM</td><td>按原始分辨率、窗口注意力、动态分块或时间编码处理图像和视频</td><td>高分辨率能保留 OCR、图表和定位细节，但会改变视觉 token 数、计算量和视频事件定位方式</td></tr>
+      <tr><td>Open-source efficient VLM</td><td>通过数据配比、训练 recipe、测试时策略和高效推理改进通用多模态能力</td><td>开源模型报告通常更适合学习 ablation：vision encoder、分辨率、数据混合和推理策略分别贡献了什么</td></tr>
+    </table>
+  </div>
+  <p>这些路线不是互斥的。一个生产系统可能用强多模态模型处理开放式视觉问答，用 OCR-first 路径处理发票和合同，用轻量视觉模型做路由或预筛选，再把关键文本和少量图像 crop 交给长上下文模型。工程师要能把产品需求翻译成“需要保留什么视觉信息、允许丢掉什么信息、哪一步最贵”。</p>
+
   <h4>架构家族：视觉信息什么时候进入语言模型</h4>
   <p>多模态 LLM 的核心差异不只是“用哪个 vision encoder”，而是视觉信息在序列建模中以什么形式进入 LLM。这个选择会改变训练目标、推理成本和可扩展性。</p>
   <div class="table-wrap">
@@ -1880,6 +1893,21 @@ def forward(image, text_prompt):
   </ul>
   <p>冻结策略也要和数据规模匹配：只训 projector 成本低、保留 LLM 语言能力，但视觉任务上限受限；解冻 LLM 或 vision encoder 能提升跨模态能力，却更容易遗忘原有语言能力，也需要更谨慎的学习率、混合数据和任务采样。</p>
 
+  <h4>多模态数据混合：不是把图片和文本拼在一起</h4>
+  <p>多模态能力来自任务分布，而不是来自“模型看过图片”这个事实。一个文档理解模型需要大量 OCR、表格、版面和字段抽取样本；一个视觉定位模型需要框、点或区域描述；一个视频模型需要帧序列、时间戳、事件边界和动作顺序；一个 GUI agent 还需要截图、控件位置、动作历史和执行结果。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>数据类型</th><th>训练信号</th><th>主要学到什么</th><th>如果缺失会怎样</th></tr>
+      <tr><td>image-caption / interleaved web data</td><td>图像与自然语言描述的弱对齐</td><td>主体、属性、场景和常见关系</td><td>会看大概内容，但难以稳定读小字、表格或坐标</td></tr>
+      <tr><td>OCR / document parsing</td><td>字符、字段、表格结构、版面层级</td><td>把像素中的文字和布局转成可引用信息</td><td>发票、合同、论文图表和截图任务容易幻觉</td></tr>
+      <tr><td>chart / diagram QA</td><td>坐标轴、图例、单位、趋势、数值误差</td><td>把视觉几何和数值推理连接起来</td><td>模型可能读对文字但算错比例、单位或趋势</td></tr>
+      <tr><td>grounding / detection</td><td>box、point、mask 或区域文本对齐</td><td>让答案能落回图中位置</td><td>回答可能正确，但证据区域或点击位置错误</td></tr>
+      <tr><td>video / audio sequence</td><td>时间戳、事件顺序、说话人/声音片段和动作变化</td><td>理解时间结构和跨帧依赖</td><td>会把静态帧描述当作视频理解，漏掉短时事件</td></tr>
+      <tr><td>safety / privacy multimodal data</td><td>拒答、敏感属性、不确定性表达和受限场景</td><td>把文本安全策略迁移到图像、语音和视频</td><td>可能从图像或声音中做不应做的身份、属性或高风险推断</td></tr>
+    </table>
+  </div>
+  <p>因此，看到一个模型在 VQA 或通用多模态榜单上表现很好，只能说明它在那类题目上较强；不能推出它适合票据抽取、医学影像解释、屏幕操作或视频监控。课程项目和课堂讨论要训练的是“从任务反推数据和架构需求”，而不是背某个模型名。</p>
+
   <h4>Worked Example：从图像分辨率推视觉 token 数</h4>
   <p>设 ViT patch size 为 <code>14</code>，输入图像被缩放到 <code>336 × 336</code>。patch 网格约为 <code>24 × 24</code>，即 <code>576</code> 个视觉 patch token；若再加一个全局 CLS token，则 vision encoder 输出约 <code>577</code> 个向量。若使用 <code>4</code> 个高分辨率 crop，每个 crop 都产生 <code>576</code> 个 patch token，未经 resampler 时视觉 token 会接近 <code>2304</code>。</p>
   <div class="math-box"><div class="label">视觉 token 粗略估算</div>
@@ -1889,6 +1917,7 @@ def forward(image, text_prompt):
 
   <h4>音频与视频</h4>
   <p>同样的 "Encoder + Projection + LLM" 范式也适用于音频（如语音编码器 → LLM）和视频（帧采样 → 视觉编码器 → 时序 pooling → LLM）。实时语音系统的端到端延迟取决于音频分块、编码器、LLM 解码、网络和播放缓冲；课程报告应记录实测环境，而不是引用一个脱离配置的固定毫秒数。</p>
+  <p>视频和语音还引入时间轴问题。视频抽帧太稀会漏掉短时事件，抽帧太密会把上下文塞满；语音分块太短会丢上下文，太长会增加首包延迟。现代多模态模型报告中常见的 absolute time encoding、dynamic FPS sampling、audio chunking 和 event localization，本质上都是在回答同一个问题：如何让模型既看到足够细的时间细节，又不把所有帧或音频片段原样塞进 LLM。</p>
 
   <h4>多模态的成本与失败模式</h4>
   <p>图像不是“免费附加信息”。一张图像会变成几十到数千个视觉 token，分辨率越高、patch 越细、裁剪越多，LLM 看到的序列越长，prefill 延迟和 KV Cache 成本也越高。多图、多页 PDF 或视频帧会把这个问题进一步放大。</p>

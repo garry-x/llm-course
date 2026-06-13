@@ -86,6 +86,8 @@
 - 能区分图像问答、OCR/文档理解、图表数值推理、视觉定位和视频理解。
 - 能估算视觉 token 数对 prefill latency、KV Cache 和成本的影响。
 - 能说明 VQA 高分不能推出 OCR、图表或视觉定位可靠。
+- 能读懂多模态模型报告中的 vision/audio encoder、projection/resampler、dynamic resolution、temporal encoding、OCR/document parsing 和 grounding 输出分别解决什么问题。
+- 能把多模态请求拆成 input normalization、vision/audio encoder、projection/resampler、LLM prefill、decode 和 post-processing，理解每一步如何影响延迟、质量和成本。
 
 **对应内容：**Ch10 10.20，Inference Capstone research question。
 

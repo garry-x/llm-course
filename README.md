@@ -50,10 +50,10 @@
 | 表示层 | Ch01-Ch02 | 文本如何变成 token，token 如何变成向量，模型如何获得位置信息 |
 | Transformer 核心 | Ch03-Ch06 | 注意力、mask、多头、GQA/MLA、Norm、FFN、MoE 和 GPT 前向传播如何组合 |
 | 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器、checkpoint/resume integrity 和分布式训练 gate 如何工作 |
-| 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG 和推理服务如何取舍 |
+| 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG、多模态 serving 和推理服务如何取舍 |
 | 微调与对齐 | Ch09 | SFT chat template/mask/packing gate、偏好数据 gate、LoRA、偏好建模、DPO、GRPO/DAPO/GSPO、RLVR/RFT 如何改变模型行为 |
 | 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | RNN/LSTM、dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
-| 前沿工程案例 | Ch04-Ch10 | MLA、MoE、FP8、GRPO/DAPO/GSPO、稀疏/压缩注意力等设计解决了哪些工程瓶颈 |
+| 前沿工程案例 | Ch04-Ch10 | MLA、MoE、FP8、GRPO/DAPO/GSPO、稀疏/压缩注意力、dynamic-resolution vision 和多模态 serving 等设计解决了哪些工程瓶颈 |
 
 高校课程水准的关键不在材料数量，而在每个知识点都能回答三件事：
 
@@ -94,7 +94,7 @@
 | 模型结构读懂 | Ch01-Ch06 | 看懂 tokenizer、attention、KV Cache 来源、logits 输出和参数规模 |
 | 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐、采样质量和 reasoning 预算 |
 | 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、weight-only/W8A8/KV cache 量化、FlashAttention 和显存瓶颈 |
-| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 MoE expert parallelism、model routing/cascade、continuous batching admission、prefix cache、并发调度、load shedding、observability trace、speculative decoding gate、tool-call gate、MCP runtime security、agent trace 和 context engineering gate |
+| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 MoE expert parallelism、model routing/cascade、continuous batching admission、prefix cache、并发调度、load shedding、observability trace、speculative decoding、多模态 serving、tool-call、MCP runtime security、agent trace 和 context engineering |
 | 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链、上下文压缩/记忆和失败兜底 |
 | 评测与上线 | Ch09-Ch11 | 设计质量/安全/延迟/成本指标，做 agent/workflow eval、压测、回归评估、canary/control 发布和回滚检查 |
 

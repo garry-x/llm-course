@@ -377,15 +377,20 @@ assert audit["overall_pass"]</div>
       <tr><td>LLM judge prefers new model but humans disagree</td><td>Length, tone, format, or homophily model bias</td><td>Randomize A/B order, control output length, sample for human review</td><td>Judge win rate is only an auxiliary signal</td></tr>
     </table>
   </div>
+
+  <h4>Evaluation lifecycle: from public benchmarks to live evidence</h4>
+  <p>Modern evaluation should be treated as an operational lifecycle rather than a final leaderboard snapshot. Public benchmarks are useful for rough comparability and regression checks, but frontier model and agent systems change quickly: tasks saturate, prompts become optimized, public solutions leak into data, and product workflows drift. A serious evaluation program therefore uses multiple evidence layers with different ownership, refresh cadence, and decision authority.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>Eval Type</th><th>Best Use</th><th>Main Risk</th><th>Decision It Can Support</th></tr>
-      <tr><td>Public benchmark</td><td>Comparable regression check and broad capability signal</td><td>Saturation, contamination, prompt overfitting, benchmark-specific scaffolds</td><td>Whether a model regressed on a known task family, not whether it is production-ready</td></tr>
-      <tr><td>Private held-out eval</td><td>Task-specific generalization under a controlled data protocol</td><td>Small sample size, hidden overlap with training data, stale business cases</td><td>Whether a change is worth canary testing for the target workload</td></tr>
-      <tr><td>Production trace replay</td><td>Regression testing against real user distributions without live impact</td><td>Privacy constraints, historical bias, missing future edge cases</td><td>Whether a prompt/model/service change preserves current workload behavior</td></tr>
-      <tr><td>Live canary eval</td><td>Final validation under real latency, cost, routing, and user behavior</td><td>User impact, confounding traffic shifts, monitoring blind spots</td><td>Whether to expand, hold, or roll back production traffic</td></tr>
+      <tr><th>Evidence Layer</th><th>What It Is Good For</th><th>Main Risk</th><th>Engineering Control</th></tr>
+      <tr><td>Public benchmark</td><td>External comparability, regression against known tasks, broad capability snapshot</td><td>Saturation, prompt tuning, contamination, benchmark-specific behavior</td><td>Use as a regression signal; report model, date, prompt, scaffold, and version; avoid claiming production readiness from it alone</td></tr>
+      <tr><td>Private held-out set</td><td>Deployment decision for the target domain and product workflow</td><td>Repeated internal tuning slowly turns it into a development set</td><td>Freeze final test, restrict access, rotate shadow sets, and log every evaluation run</td></tr>
+      <tr><td>Log-mined eval</td><td>Real user distribution, recurring failure modes, and long-tail workflow changes</td><td>Privacy risk, feedback bias, stale labels, missing negative examples</td><td>De-identify samples, slice by workload, require review labels, and preserve failure traces</td></tr>
+      <tr><td>LLM-as-judge / grader</td><td>Scalable scoring for open-ended responses, agents, and reasoning traces</td><td>Position bias, verbosity bias, rubric drift, weak agreement with humans</td><td>Calibrate against human labels, swap A/B order, control length, and track disagreement slices</td></tr>
+      <tr><td>Canary / live eval</td><td>Quality, latency, cost, safety, and tool behavior under real traffic</td><td>Business risk if rollout is too wide or rollback is unclear</td><td>Use small traffic, versioned routing, online monitors, rollback drills, and incident thresholds</td></tr>
     </table>
   </div>
+  <p>The engineering conclusion should cite which evidence layer supports each claim. <code>Model A wins on a public benchmark</code> supports only a broad comparison; <code>Model A reduces citation errors on a private customer-service slice without increasing P95 latency or unsafe completions during a canary</code> supports a deployment decision. Mixing these levels is a common source of overclaiming.</p>
 
   <h4>2. Small sample improvements must include uncertainty</h4>
   <p>If Model A answers 61 out of 100 questions correctly, and Model B answers 56, one cannot simply write "A improves by 5%." The difference of 5 samples could be due to question sampling fluctuation. The simplest approximation is to treat accuracy as a binomial proportion and estimate the confidence interval using the standard error:</p>

@@ -292,11 +292,31 @@ print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 3: INT8 Quantization -->
+<!-- 10.6 Quantization System -->
 <!-- ================================================================ -->
 <section class="card" id="s10-6">
-  <h3>10.6 编程练习 3：实现对称 INT8 量化</h3>
-  <p><strong>量化</strong>将模型权重从高精度转换到低精度，减少内存和带宽需求。这个练习实现最基础的对称 per-channel INT8 量化。</p>
+  <h3>10.6 量化体系：权重、激活、KV cache 与发布 gate</h3>
+  <p><strong>量化</strong>不是一个统一开关，而是一组针对不同瓶颈的低精度策略。weight-only INT4/INT8 主要降低模型权重显存和 decode 时的权重带宽；W8A8 / SmoothQuant 类方法同时量化权重和激活，更依赖校准数据与 kernel 支持；KV cache quantization 主要降低长上下文和高并发下的常驻 cache 显存；FP8/FP4 则需要把 dtype、scale metadata、硬件矩阵核和 checkpoint/engine 支持放在一起评估。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>量化对象</th><th>典型方案</th><th>主要改善</th><th>必须额外验证</th></tr>
+      <tr><td>权重 weight-only</td><td>INT8、INT4、GPTQ、AWQ、GGUF</td><td>模型权重显存、decode 权重读取带宽、本地部署门槛</td><td>per-channel/group scale、logit 排序、代码/数学/少数语言和格式输出回归</td></tr>
+      <tr><td>权重 + 激活</td><td>W8A8、SmoothQuant、FP8 linear</td><td>矩阵乘吞吐、activation 带宽、serving GPU 数量</td><td>激活 outlier、校准集覆盖、kernel 是否真正走低精度路径</td></tr>
+      <tr><td>KV cache</td><td>FP8/INT8 KV cache、长上下文 cache 压缩</td><td>active KV tokens 容量、长 prompt 并发、OOM 余量</td><td>needle/citation recall、head/middle/tail 位置鲁棒性、长输出 TPOT 和引用准确率</td></tr>
+      <tr><td>训练/推理低精度格式</td><td>FP8、MXFP8、NVFP4、FP4 QAT/PTQ</td><td>硬件矩阵核吞吐、通信/存储宽度、推理引擎内存占用</td><td>scale/amax history、engine 版本、硬件代际、恢复/导出 metadata</td></tr>
+    </table>
+  </div>
+
+  <h4>10.6.1 校准集决定你在保护什么</h4>
+  <p>量化校准集不应只取几十条短英文闲聊。推理工程师要把校准样本当作服务 workload 的缩影：prompt/output 长度、RAG 引用、tool/JSON schema、代码/数学、中文或多语言、安全拒答、长上下文位置、少量多模态输入都应按目标产品比例覆盖。GPTQ 使用近似二阶信息控制权重量化误差；AWQ 根据激活分布保护 salient channels；SmoothQuant 把激活 outlier 的难度迁移到权重侧。这些方法的共同前提是：校准分布和上线分布不能严重错位。</p>
+
+  <h4>10.6.2 上线判断：量化收益必须和质量回归一起报告</h4>
+  <p>不要只写“4-bit 省显存”或“FP8 更快”。一个合格的量化发布报告至少包含：未量化 baseline、量化格式、group size / scale 粒度、校准集来源、engine/kernel 版本、峰值显存、tokens/s、TTFT/TPOT P95、困惑度或固定任务分数、structured output/schema 通过率、RAG citation recall、安全拒答/过度拒答、长上下文位置召回和失败样例。若只在短 prompt 上看到吞吐提升，不能推出长上下文、RAG、agent tool 或多模态路径也安全。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>weight-only 量化不自动减少 KV cache；KV cache 量化不自动提高所有请求吞吐；FP8/FP4 不只是 dtype，而是硬件、scale、kernel 和评测 gate 的组合。发布 gate 必须把资源收益和任务切片回归放在同一张表里。</div></div>
+
+  <h4>编程练习 3：实现对称 INT8 量化</h4>
+  <p>下面的练习只覆盖最基础的对称 per-channel INT8 量化。它的目标是让你看懂 scale、round、clamp 和 dequantization 如何产生误差；真正部署时还要接上本节的校准集、kernel 和发布 gate。</p>
 
   <div class="coding-exercise">
     <h4>练习 3：对称 per-channel INT8 量化</h4>

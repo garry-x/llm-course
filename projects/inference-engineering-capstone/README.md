@@ -152,6 +152,7 @@ python capacity_plan.py \
 - 若采用或讨论 speculative decoding，必须单独报告 accepted/draft tokens、target verify steps、draft_ms、speedup、quality regression、memory overhead 和 QPS/workload fit，不能只给引擎支持或 `num_speculative_tokens`。
 - 若采用或讨论长上下文，必须单独报告 context fit、truncation/overflow、needle/citation recall、head/middle/tail 位置覆盖、P95 TTFT/latency、KV cache usage 和 prefix cache hit rate，不能只写支持的最大 token 数。
 - 若采用或讨论 continuous batching，必须单独报告 `max_num_seqs`、`max_num_batched_tokens`、chunked prefill、admitted/queued、queue wait、active KV tokens 和 queued reasons，不能只给平均 tokens/s。
+- 若采用或讨论量化，必须单独报告 weight-only/W8A8/KV cache/FP8-FP4 类型、scale 粒度、校准集来源、engine/kernel 版本、显存、TTFT/TPOT、tokens/s、质量/安全回归、structured output、RAG citation 和长上下文位置召回，不能只写“int4 更省显存”。
 - 若服务面向多个租户或开放流量，必须报告运行期过载响应：queue backlog、P95 TTFT/TPOT、KV cache usage、swapped requests、错误率、timeout、tenant quota/noisy neighbor、degraded mode 和 load shedding 动作。
 - SLO 目标可重复执行，失败时能指出是错误率、延迟还是吞吐不达标。
 - 最大 prompt 长度、最大输出长度、并发上限已测。
@@ -172,6 +173,7 @@ python capacity_plan.py \
 - 若使用 LLM-as-judge 或人工偏好近似指标，必须报告 position/verbosity bias、swapped-order consistency 和少量 human label agreement；未通过时不能把 judge win rate 作为上线依据。
 - P50/P95/P99 latency、TTFT、TPOT、tokens/s 和错误率。
 - 权重显存、KV Cache、runtime overhead、安全余量和每 1M tokens 成本。
+- 量化发布判断：baseline 与候选量化配置在显存、吞吐、延迟、固定质量集、安全拒答/过度拒答、schema/RAG/long-context 切片上的差异。
 - 若服务支持长文档或长会话，报告 long-context gate：截断率、answer/citation recall、position robustness、P95 TTFT/latency、KV usage、prefix cache hit rate 和 action items。
 - RAG、JSON structured output schema gate、tool/MCP calling 和 reasoning budget 的回归用例。
 - Canary/control/rollback 发布判断：候选版本不能只凭离线 eval 提升上线，必须写清 production rollout gate 的通过项、失败项和 action items。

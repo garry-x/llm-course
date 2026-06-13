@@ -40,11 +40,11 @@
 ### C. 显存与成本预算
 
 - 能估算权重显存、KV Cache 显存、激活峰值和安全余量。
-- 能比较 FP16、INT8、INT4、FP8/FP4 的收益与风险。
+- 能比较 weight-only INT8/INT4、W8A8/SmoothQuant、FP8/FP4 和 KV cache quantization 的收益与风险，并写出校准集、kernel/engine、质量回归和长上下文 gate。
 - 能把 tokens/s、GPU 小时成本、输入/输出 token 单价转换为容量规划指标。
 - 能说明长上下文下为什么 KV Cache、prefix cache hit rate 和上下文长度分布会共同决定可服务请求数。
 
-**对应内容：**Ch04 4.9，Ch07，Ch10 10.4、10.6、10.15，Capstone `capacity_plan.py`。
+**对应内容：**Ch04 4.9，Ch07，Ch10 10.4、10.6、10.13、10.15，Capstone `capacity_plan.py` 与 quantization release gate。
 
 ### D. 推理服务实现
 
@@ -91,6 +91,7 @@
 | 章节主线 | Ch01-Ch11 每章至少完成一个编程练习和全部概念练习 | 页面进度或个人笔记 |
 | 结构理解 | 能画出从 prompt 到 logits 再到 token 的完整数据流 | 一页架构图或文字说明 |
 | 显存预算 | 能手算 8B/70B 模型在 8K/32K/128K 上下文的 KV Cache，并估算每 1M tokens 成本 | 表格或 `capacity_plan.py` 输出 |
+| 量化发布 | 能说明候选量化方案作用在权重、激活还是 KV cache，并比较 baseline/quantized 的显存、TTFT/TPOT、tokens/s、质量、安全、structured output、RAG citation 和长上下文位置召回 | quantization release gate 表 |
 | 调度准入 | 能用 `max_num_seqs`、`max_num_batched_tokens`、active KV tokens 和 queue wait 判断哪些请求进入 continuous batch | admission gate 表 |
 | 长上下文上线 | 能证明长文档/长会话没有截断，head/middle/tail 位置召回稳定，引用正确，且 P95 TTFT、latency、KV usage 和 prefix cache hit rate 满足 SLO | long-context gate 表 |
 | 过载响应 | 能用 queue/KV/decode/error/quota 信号判断 load shedding、降级、扩容、回滚或 page owner | overload response 表 |
@@ -137,6 +138,7 @@ API：
 是否支持 streaming：
 是否支持 RAG：
 是否支持多模态输入：
+quantization release gate：
 评测集规模：
 pass rate：
 压测配置：

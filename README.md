@@ -71,7 +71,7 @@
 | Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差路径和资源估算 | attention 正确性、GQA/MLA 显存收益、block 稳定性和 FLOPs 预算 |
 | Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性和实验统计 | GPT 组装、训练曲线解释、checkpoint/resume integrity、数据 gate 和扩容判断 |
 | Ch08-Ch09 | logits 分布、采样方差、KL/reference model、chat template、assistant mask、偏好数据和 reward 假设 | 生成策略上线、reasoning 预算、SFT/DPO/GRPO 质量与安全边界 |
-| Ch10 | 排队、显存/带宽、KV cache、压测指标、RAG 检索指标、准入控制、发布 gate 和过载响应 | TTFT/TPOT/P95、continuous batching admission、P/D 解耦、容量规划、canary/control、load shedding 和回退 |
+| Ch10 | 排队、显存/带宽、KV cache、量化校准/回归、压测指标、RAG 检索指标、准入控制、发布 gate 和过载响应 | TTFT/TPOT/P95、quantization release gate、continuous batching admission、P/D 解耦、容量规划、canary/control、load shedding 和回退 |
 | Ch11 | 序列建模、结构化预测、encoder-only、传统指标和 judge 可靠性 | 选择生成/抽取/排序/结构化解码，判断评测结果能否支持上线结论 |
 
 配套学习材料：
@@ -93,7 +93,7 @@
 |------|----------|----------------|
 | 模型结构读懂 | Ch01-Ch06 | 看懂 tokenizer、attention、KV Cache 来源、logits 输出和参数规模 |
 | 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐、采样质量和 reasoning 预算 |
-| 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、量化、FlashAttention 和显存瓶颈 |
+| 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、weight-only/W8A8/KV cache 量化、FlashAttention 和显存瓶颈 |
 | 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 continuous batching admission、prefix cache、并发调度、load shedding、speculative decoding gate、tool-call gate、MCP runtime security 和 agent trace |
 | 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链和失败兜底 |
 | 评测与上线 | Ch09-Ch10 | 设计质量/安全/延迟/成本指标，做压测、回归评估、canary/control 发布和回滚检查 |
@@ -160,7 +160,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
 | 9 | **微调与对齐** — SFT/偏好数据/合成蒸馏/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT 协议、post-training 数据审计、LoRA、DPO/GRPO/RLVR 和蒸馏数据质量分析 | 8+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化/RAG/Structured Output/Tool/MCP Gate/vLLM/Triton/生产发布/长上下文/多模态 | KV Cache + 量化 + RAG + structured output gate + Tool/MCP Gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + 服务蓝图 | 11+5 |
+| 10 | **推理优化与前沿** — KV Cache/量化 release gate/RAG/Structured Output/Tool/MCP Gate/vLLM/Triton/生产发布/长上下文/多模态 | KV Cache + 量化校准/回归 + RAG + structured output gate + Tool/MCP Gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + 服务蓝图 | 11+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 
 > **总计：覆盖 11 章编程作业、书面推导题、经典 NLP 专题作业和两个工程 Capstone。**

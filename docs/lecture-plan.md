@@ -623,7 +623,7 @@ Quick check：
 
 - 解释 RAG 的 chunking、embedding、retrieval、rerank、prompt assembly。
 - 计算 Recall@k 和 MRR，区分召回失败与排序失败。
-- 比较 weight-only quantization、KV quantization、FP8/FP4。
+- 比较 weight-only quantization、W8A8/SmoothQuant、KV cache quantization、FP8/FP4，并说明各自改善的是权重带宽、激活带宽、active KV tokens 还是硬件矩阵核。
 - 区分 VQA、OCR、图表理解、视觉定位和视频理解的评价方式。
 - 建立上线前的 latency、cost、quality 和 safety 判断框架。
 - 把 structured output / tool calling 拆成 schema、权限、预算、MCP/runtime trust、observation 和最终答案校验。
@@ -634,7 +634,7 @@ Quick check：
 - cosine similarity 与 normalized dot product。
 - InfoNCE / in-batch negatives：`Q D^T / temperature` 后用对角线正样本做 cross entropy。
 - Cross-encoder pairwise reranker loss：`-log sigmoid(s_chosen - s_rejected)`。
-- quantization scale、dequantization error 和 ranking 误差。
+- quantization scale、dequantization error、calibration distribution、logit/ranking 误差和任务切片回归。
 - RAG retrieval metrics：Recall@k、reciprocal rank 与 nDCG@k。
 - RRF 融合 dense/BM25 排序；rerank 改善前排相关性但会增加延迟。
 - MMR 在 query 相关性和 chunk 去冗余之间做贪心折中。
@@ -660,7 +660,7 @@ Quick check：
 - 给定一个 remote MCP tool event，填写 `tool_runtime_security_report` 输出，判断 server trust、consent、roots/elicitation、data privacy、observation isolation 和 sampling/budget gate。
 - 给定一条 agent trace，定位延迟、越权、上下文膨胀或 guardrail tripwire 来自哪一步。
 - 给定 stable baseline、candidate metrics 和 rollout policy，填写 `production_rollout_gate_report`，判断 offline quality、安全、SLO、cost、canary、rollback/monitoring gate。
-- 对 per-channel INT8 权重做 roundtrip。
+- 对 per-channel INT8 权重做 roundtrip；再给出一个 quantization release gate，包含校准集、engine/kernel、显存、TTFT/TPOT、tokens/s、RAG citation、structured output、安全和长上下文回归。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
 
 Quick check：
@@ -668,7 +668,8 @@ Quick check：
 - RAG 失败一定是模型生成错了吗？
 - 为什么 top-k 最相似 chunk 可能不是最好的 prompt context？
 - Recall@k 命中了相关 chunk，为什么答案仍然可能缺引用或编造？
-- INT8 降低的是权重显存、KV cache 还是两者？
+- INT8 / INT4 weight-only、W8A8、FP8 KV cache 分别降低的是权重显存、激活带宽、KV cache 还是矩阵核成本？
+- 为什么量化校准集必须覆盖 prompt 长度、RAG/tool/schema、代码/数学、多语言、安全和长上下文位置，而不是只用短闲聊样本？
 - 为什么 structured output 或 function calling 仍然需要服务端 schema 校验和权限检查？
 - 为什么 MCP server allowlist、用户批准、roots/elicitation 和工具输出隔离是 runtime gate，而不是 prompt 文案？
 - 为什么工具数量很多时，直接把所有 tool definitions 放进上下文会影响 TTFT、成本和工具选择准确率？

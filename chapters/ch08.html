@@ -38,7 +38,7 @@
     <li><strong>Learning Goals:</strong> Explain the mathematical foundations of autoregressive generation, prefill/decode, sampling distribution truncation, repetition traps, exposure bias, speculative decoding, and structured decoding.</li>
     <li><strong>Chapter Output:</strong> A Generator capable of producing text using different sampling strategies.</li>
     <li><strong>Completion Criteria:</strong> You can explain why lower temperature is more conservative and why top-p is more adaptive than top-k.</li>
-    <li><strong>Exercise Output:</strong> Submit the generator, a sampling strategy comparison table, distinct-n/repetition rate metrics, constrained token masks, and speculative decoding acceptance rate experiments; accompanying assignments are at <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>.</li>
+    <li><strong>Practice Artifacts:</strong> Build a generator, compare sampling strategies, measure distinct-n/repetition rate, apply constrained token masks, and analyze speculative decoding acceptance rates. Optional practice files are available at <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Required Prior Knowledge:</strong> Probability distributions, logits transformation, sampling variance, autoregressive state, KV cache intuition, and basic quality/latency metrics.<br><strong>Internalization for This Chapter:</strong> temperature, top-k, top-p, beam, self-consistency, reasoning budget, and speculative decoding will all be written as measurable strategies that "change the candidate distribution, recompute, or acceptance rate," rather than isolated tuning tricks.<br><strong>Validation Signal:</strong> You can decompose a generation strategy deployment decision into quality, output tokens, P95 latency, cost, marginal gain, and a fallback strategy, and connect it to the Ch10 service SLO.</div>
   <p class="system-role"><strong>System Position:</strong> This chapter transforms the trained logits into user-visible behavior. Sampling, reasoning budgets, and speculative decoding simultaneously impact quality, latency, token cost, and safety boundaries, thus serving as the bridge between Ch09 alignment evaluation and Ch10 serving SLO.</p>
@@ -99,7 +99,7 @@
     <li><strong>Prefilling:</strong> The user's input prompt is fed into the model all at once. This is a <strong>compute-intensive</strong> phase — a large number of matrix multiplications are executed in parallel. The bottleneck is GPU compute power (FLOPS). Time to First Token (TTFT) is dominated by this phase.</li>
     <li><strong>Decoding:</strong> Tokens are generated one by one. Each step inputs only one token, using the KV Cache for incremental computation. This is typically a <strong>bandwidth-intensive</strong> phase — with small batches or low concurrency, GPU compute utilization can be significantly lower than during prefill. Subsequent throughput (TPS/TPOT) is dominated by this phase.</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Important Concept:</strong> TTFT (Time to First Token) is primarily affected by prefill, queuing, network, and routing; the user perceives it as "the time to wait for the first character to appear." TPS/TPOT is primarily affected by decoding, batching, KV cache, and bandwidth; the user perceives it as "typing speed." Numerical values vary greatly across different models, context lengths, concurrency levels, and service providers. Therefore, the course project requires students to report these metrics using a fixed benchmark.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Important Concept:</strong> TTFT (Time to First Token) is primarily affected by prefill, queuing, network, and routing; the user perceives it as "the time to wait for the first character to appear." TPS/TPOT is primarily affected by decoding, batching, KV cache, and bandwidth; the user perceives it as "typing speed." Numerical values vary greatly across different models, context lengths, concurrency levels, and service providers. A reproducible generation benchmark should report these metrics under a fixed model, prompt set, context length, concurrency level, and serving configuration.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -139,7 +139,8 @@
 <!-- Programming Exercise 1: Greedy Decoding -->
 <!-- ================================================================ -->
 <section class="card" id="s8-3">
-  <h3>8.3 Programming Exercise 1: Implementing Greedy Decoding</h3>  <p>Although greedy decoding has flaws, it is the starting point for understanding all other sampling strategies. Implement it, then observe its problems.</p>
+  <h3>8.3 Programming Exercise 1: Implementing Greedy Decoding</h3>
+  <p>Although greedy decoding has flaws, it is the starting point for understanding all other sampling strategies. Implement it, then observe its problems.</p>
 
   <div class="coding-exercise">
     <h4>Exercise 1: Greedy Decoding</h4>
@@ -281,7 +282,8 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
       <tr><td>cumulative</td><td>0.634</td><td>0.867</td><td>0.953</td><td>0.985</td><td>0.996</td><td>1.000</td></tr>
     </table>
   </div>
-  <p><code>top-k=3</code> would fixedly retain <code>A,B,C</code>, then re-normalize them to approximately <code>[0.718, 0.264, 0.097]</code>. <code>top-p=0.9</code> would start accumulating from the highest probability until the cumulative probability exceeds 0.9; here <code>A+B=0.867</code> is not enough, adding <code>C</code> brings it to <code>0.953</code>, so the candidate set is also <code>A,B,C</code>. If changed to <code>top-p=0.8</code>, the candidate set would only need <code>A,B</code>.</p>  <p>The key difference is not this singleton, but the behavior when the distribution shape changes. If the distribution is very sharp, e.g., <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>, <code>top-p=0.9</code> only retains the highest probability token; if the distribution is flat, e.g., <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>, <code>top-p=0.9</code> needs to retain the first 5 tokens. A fixed <code>top-k</code> does not automatically adjust the candidate set size based on contextual uncertainty.</p>
+  <p><code>top-k=3</code> would fixedly retain <code>A,B,C</code>, then re-normalize them to approximately <code>[0.718, 0.264, 0.097]</code>. <code>top-p=0.9</code> would start accumulating from the highest probability until the cumulative probability exceeds 0.9; here <code>A+B=0.867</code> is not enough, adding <code>C</code> brings it to <code>0.953</code>, so the candidate set is also <code>A,B,C</code>. If changed to <code>top-p=0.8</code>, the candidate set would only need <code>A,B</code>.</p>
+  <p>The key difference is not this singleton, but the behavior when the distribution shape changes. If the distribution is very sharp, e.g., <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>, <code>top-p=0.9</code> only retains the highest probability token; if the distribution is flat, e.g., <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>, <code>top-p=0.9</code> needs to retain the first 5 tokens. A fixed <code>top-k</code> does not automatically adjust the candidate set size based on contextual uncertainty.</p>
 </section>
 
 <section class="card" id="s8-5a">
@@ -289,7 +291,7 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
   <p>Real generation systems do not directly apply softmax to raw logits. A generation step typically first applies multiple transformations: repetition penalty, valid token constraints, temperature, top-k/top-p truncation, and only then renormalizes and samples. Writing the order incorrectly changes the final distribution, and also renders logprob, entropy, and tuning conclusions meaningless.</p>
 
   <h4>1. Recommended Processing Order</h4>
-  <p>The <code>decoding_distribution_report</code> in the course assignment uses the following order. Real systems can have more processors, but each step should be explicitly written into the generation policy:</p>
+  <p>A reproducible generation policy should use a clearly declared processing order. Real systems can have more processors, but each step should be explicitly written into the generation policy:</p>
   <div class="code-block" data-lang="text">
 raw logits
   -> repetition penalty / frequency penalty
@@ -586,11 +588,11 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <p>If conclusions are drawn from only one prompt, one seed, and one sample output, it is usually insufficient to determine strategy superiority. For open-ended generation, failure cases should also be saved: repetitive loops, early stopping, going off-topic, factual errors, format corruption, and excessive conservatism are all different failure modes.</p>
 
   <h4>The Role of Repetition Penalty</h4>
-  <p>Repetition penalty is not a new probability distribution nor a training objective; it is a processor applied to logits before softmax and sampling. The common rule is: for tokens already present in the prefix, if the logit is positive, divide by the penalty; if the logit is negative, multiply by the penalty, thereby relatively decreasing the probability of these tokens. The <code>apply_repetition_penalty</code> in the Ch08 assignment requires students to implement this transformation manually and verify that it changes the candidate ranking before greedy, top-k, or top-p selection.</p>
+  <p>Repetition penalty is not a new probability distribution nor a training objective; it is a processor applied to logits before softmax and sampling. The common rule is: for tokens already present in the prefix, if the logit is positive, divide by the penalty; if the logit is negative, multiply by the penalty, thereby relatively decreasing the probability of these tokens. A correct implementation should apply this transformation before greedy, top-k, or top-p selection, then verify that it actually changes the candidate ranking.</p>
 
   <h4>Worked Example: From Logits Processor to Final Sampling Distribution</h4>
   <p>Given logits <code>[4.0, 3.0, -1.0]</code>, generated token ids are <code>[0,2]</code>, repetition penalty is <code>2.0</code>. First, process the repeated tokens: the positive logit of token 0 changes from <code>4.0</code> to <code>2.0</code>, the negative logit of token 2 changes from <code>-1.0</code> to <code>-2.0</code>, resulting in <code>[2.0,3.0,-2.0]</code>. If <code>top_p=0.8</code> is then used, after softmax, the probability of token 1 is approximately <code>0.721</code>, which does not yet reach 0.8; adding token 0 brings the cumulative sum to approximately <code>0.986</code>, so the nucleus is tokens <code>{1,0}</code>, and token 2 is truncated.</p>
-  <p>Before final sampling, renormalize on the retained set: the probabilities of token 0 and token 1 are approximately <code>[0.269, 0.731]</code>, entropy is approximately <code>0.582</code>, and the highest probability token is 1. The <code>decoding_distribution_report</code> in the assignment requires returning the processed logits, retained candidates, normalized probabilities, entropy, and the current highest probability token; it helps students ground the statement "sampling parameters change the output" in a checkable probability ledger.</p>
+  <p>Before final sampling, renormalize on the retained set: the probabilities of token 0 and token 1 are approximately <code>[0.269, 0.731]</code>, entropy is approximately <code>0.582</code>, and the highest probability token is 1. A useful distribution ledger records the processed logits, retained candidates, normalized probabilities, entropy, and current highest-probability token; this turns the statement "sampling parameters change the output" into a checkable probability trace.</p>
 
   <h4>Practical Judgment for Strategy Selection</h4>
   <ul>
@@ -615,7 +617,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <div class="math-box"><div class="label">Length-normalized Beam Score</div>
     <div class="katex" data-expr="s(y)=\frac{\sum_t \log p(y_t|y_{<t},x)}{|y|^{\alpha}}" aria-label="s(y)=\frac{\sum_t \log p(y_t|y_{<t},x)}{|y|^{\alpha}}" role="img"></div>
   </div>
-  <p>The <code>length_normalized_score</code> and <code>beam_search</code> in the Ch08 assignment correspond to this process. The implementation here is a teaching version with batch size 1, aiming to let students see the relationship between the beam table, raw score, and normalized score.</p>
+  <p>The concepts behind <code>length_normalized_score</code> and <code>beam_search</code> correspond to this process. A compact batch-size-1 implementation is enough to expose the relationship between the beam table, raw score, and normalized score before introducing production batching and early-stop policies.</p>
 
   <div class="worked-example">
     <h4>Worked Example: Two-Step Beam Search with Length Normalization</h4>
@@ -662,7 +664,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   </div>
 
   <h4>Why It Differs from Ordinary Sampling</h4>
-  <p>Ordinary top-p or temperature mainly controls the entropy of the output distribution; reasoning generation is concerned with the <strong>search space</strong>. The same problem can generate multiple reasoning paths, each with its own intermediate states and final answer. For tasks with a standard answer, the evaluation focus is not on distinct-n, but on pass@k, majority vote accuracy, verifier accuracy, average output token count, and cost per correct answer. In the Ch08 assignment, <code>pass_at_k</code> uses <code>1 - C(n-c,k)/C(n,k)</code> to estimate the probability of drawing at least one correct answer from <code>k</code> samples out of <code>n</code>; <code>self_consistency_vote</code> requires you to explicitly define a final-answer extractor, aggregate multiple candidate outputs into a vote distribution, and report both the total generated tokens and the average token count.</p>
+  <p>Ordinary top-p or temperature mainly controls the entropy of the output distribution; reasoning generation is concerned with the <strong>search space</strong>. The same problem can generate multiple reasoning paths, each with its own intermediate states and final answer. For tasks with a standard answer, the evaluation focus is not on distinct-n, but on pass@k, majority vote accuracy, verifier accuracy, average output token count, and cost per correct answer. A reasoning evaluation should use <code>1 - C(n-c,k)/C(n,k)</code> to estimate the probability of drawing at least one correct answer from <code>k</code> samples out of <code>n</code>; it should also define a final-answer extractor, aggregate multiple candidate outputs into a vote distribution, and report both the total generated tokens and the average token count.</p>
 
   <h4>Worked Example: pass@k is not <code>c/n</code></h4>
   <p>Suppose for the same coding problem, we sample <code>n=10</code> candidates, of which <code>c=2</code> pass the tests. If we look at the single-sample success rate, it is <code>c/n = 0.2</code>. But pass@3 asks: if we randomly draw 3 candidates from these 10 to submit, and we succeed if at least one is correct. The failure event is that all 3 drawn are incorrect candidates:</p>
@@ -879,7 +881,7 @@ def speculative_decoding(target_model, draft_model,
   <div class="math-box"><div class="label">speculative decoding rough speedup</div>
     <div class="katex" data-expr="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" aria-label="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" role="img"></div>
   </div>
-  <p>This accounting explains two common misconceptions: First, <code>gamma=4</code> does not guarantee a fixed 4x speedup, because the draft model also takes time, and rejections reduce the number of tokens produced per round. Second, a high acceptance rate does not automatically translate to high end-to-end throughput; real services are also affected by batching, KV cache, memory bandwidth, network, and queuing. Therefore, experimental reports should simultaneously report <code>proposed</code>, <code>accepted</code>, <code>generated_tokens</code>, <code>acceptance_rate</code>, the number of target model verifications, the number of draft model steps, and a rough speedup. The <code>speculative_decoding_speedup</code> in the Ch08 assignment requires calculating these quantities from the per-round acceptance counts and output token counts; by Ch10, these quantities will be included in the <code>speculative_serving_gate_report</code>, and together with P95 latency, QPS, draft overhead, additional memory, and quality/distribution checks, they will determine whether to enable speculative decoding.</p>
+  <p>This accounting explains two common misconceptions: First, <code>gamma=4</code> does not guarantee a fixed 4x speedup, because the draft model also takes time, and rejections reduce the number of tokens produced per round. Second, a high acceptance rate does not automatically translate to high end-to-end throughput; real services are also affected by batching, KV cache, memory bandwidth, network, and queuing. Therefore, experimental reports should simultaneously report <code>proposed</code>, <code>accepted</code>, <code>generated_tokens</code>, <code>acceptance_rate</code>, the number of target model verifications, the number of draft model steps, and a rough speedup. A speculative decoding report should calculate these quantities from the per-round acceptance counts and output token counts, then combine them with P95 latency, QPS, draft overhead, additional memory, and quality/distribution checks before deciding whether to enable speculative decoding.</p>
 </section>
 
 <!-- ================================================================ -->
@@ -947,7 +949,7 @@ request_cost ~= prompt_tokens
 
   <h4>3A. Reasoning / Test-Time Compute Requires a Budget Decision</h4>
   <p>After OpenAI o1, DeepSeek-R1, and Kimi k1.5, many systems use "thinking a bit longer" as a quality improvement method: increasing reasoning tokens, sampling multiple solution paths, using a verifier or unit tests for best-of-N selection, or distilling long chains into short outputs. Engineering reports cannot just report accuracy improvements; they must also report samples per question, average output tokens, P95 latency, verifier calls, cost per correct answer, and marginal benefit.</p>
-  <p>The <code>test_time_compute_budget_report</code> in the Ch08 assignment formalizes this judgment into a deployment report. It compares greedy, self-consistency, best-of-N, verifier reranking, or reasoning model tiers, and outputs quality, token budget, latency, cost, and marginal efficiency signals, along with a recommended strategy for deployment.</p>
+  <p>A test-time compute budget report formalizes this judgment into a deployment decision. It compares greedy decoding, self-consistency, best-of-N, verifier reranking, or reasoning model tiers, and outputs quality, token budget, latency, cost, and marginal efficiency signals, along with a recommended strategy for deployment.</p>
   <div class="code-block" data-lang="python">
 report = test_time_compute_budget_report(
     [
@@ -963,19 +965,20 @@ report = test_time_compute_budget_report(
     },
 )
 assert report["recommended_strategy"] == "self_consistency_5"</div>
-  <p>The core of this gate is not to replace benchmarks, but to prevent the conclusion of "trading unlimited sampling for scores" from polluting deployment decisions. If best-of-16 has the highest accuracy but exceeds the token and latency budget, a qualified report should state "requires distillation, routing to hard problems, optimizing parallel sampling, or rejecting this strategy", rather than directly using the highest score as the production strategy.</p>
+  <p>The purpose of this budget check is not to replace benchmarks, but to prevent the conclusion of "trading unlimited sampling for scores" from polluting deployment decisions. If best-of-16 has the highest accuracy but exceeds the token and latency budget, a qualified report should state "requires distillation, routing to hard problems, optimizing parallel sampling, or rejecting this strategy", rather than directly using the highest score as the production strategy.</p>
 
   <h4>4. Format of a Qualified Strategy Description</h4>
-  <p>The generation policy in the course project should be written in the following form:</p>
+  <p>A production generation policy should be written in the following form:</p>
   <div class="code-block" data-lang="text">
 Task: Chinese customer-service RAG
 Output: natural-language answer with cited document ids
-Decoding: temperature=0.2, top_p=0.9, max_new_tokens=512, stop=["\n\nUser:"]Constraints: answer must include at least one retrieved doc id; JSON only for tool calls
+Decoding: temperature=0.2, top_p=0.9, max_new_tokens=512, stop=["\n\nUser:"]
+Constraints: answer must include at least one retrieved doc id; JSON only for tool calls
 Evaluation: faithfulness, answer F1, citation precision/recall, unsafe completion rate
 System: TTFT/P95 TPOT, generated tokens/request, retry rate, cost/request
 Known boundary: low temperature reduces variance but does not prove faithfulness</div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> The generation strategy is not a single hyperparameter, but a combination of task objectives, output constraints, sampling/search, evaluation metrics, and service SLOs. The course report should explain why this set of strategies was chosen and within which tasks, loads, and risk boundaries it holds.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> The generation strategy is not a single hyperparameter, but a combination of task objectives, output constraints, sampling/search, evaluation metrics, and service SLOs. The strategy report should explain why this set of strategies was chosen and within which tasks, loads, and risk boundaries it holds.</div></div>
 </section>
 
 <!-- ================================================================ -->

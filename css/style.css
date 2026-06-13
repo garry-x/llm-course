@@ -120,17 +120,6 @@ body{
 .theme-toggle:hover{background:rgba(255,255,255,.08);color:#d0cbc0}
 .theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* search */
-.search-box{
-  width:calc(100% - 28px);margin:12px 14px 8px;padding:8px 12px;min-height:42px;
-  border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-sm);
-  background:rgba(255,255,255,.03);color:#d0cbc0;
-  font-size:.78rem;font-family:var(--font-body)
-}
-.search-box::placeholder{color:rgba(255,255,255,.25)}
-.search-box:focus{outline:none;border-color:var(--accent);background:rgba(255,255,255,.06)}
-.search-results{font-size:.7rem;max-height:180px;overflow-y:auto;margin:4px 14px 0}
-
 /* ---- Font size control (top of main content) ---- */
 .font-controls{
   display:flex;gap:4px;margin-bottom:24px;
@@ -446,8 +435,7 @@ td{color:var(--text-secondary)}
     width:56px;min-width:56px;transform:translateX(0)
   }
   .sidebar-header h1,.sidebar-header p,
-  .sidebar-nav a span:not(.ch-num),.sidebar-footer .theme-toggle span,
-  .search-box{display:none}
+  .sidebar-nav a span:not(.ch-num),.sidebar-footer .theme-toggle span{display:none}
   .sidebar-nav a{gap:0;justify-content:center;padding:0;min-height:48px}
   .sidebar-nav a .ch-num{width:32px;height:32px;font-size:.75rem}
   .sidebar-footer{padding:8px}
@@ -461,9 +449,7 @@ td{color:var(--text-secondary)}
   .sidebar:hover .sidebar-header h1,
   .sidebar:hover .sidebar-header p,
   .sidebar:hover .sidebar-nav a span,
-  .sidebar:hover .sidebar-footer .theme-toggle span,
-  .sidebar:hover .search-box{display:initial}
-  .sidebar:hover .search-box{display:block}
+  .sidebar:hover .sidebar-footer .theme-toggle span{display:initial}
   .sidebar:hover .sidebar-nav a{gap:10px;justify-content:flex-start;padding:0 18px}
   .sidebar:hover .sidebar-nav a .ch-num{width:28px;height:28px}
   .sidebar:hover .theme-toggle{justify-content:flex-start;padding:8px 12px}
@@ -487,10 +473,9 @@ td{color:var(--text-secondary)}
     box-shadow:none;transition:transform var(--transition)
   }
   .sidebar.open{transform:translateX(0);box-shadow:4px 0 30px rgba(0,0,0,.4)}
-  .sidebar .search-box,.sidebar-header h1,.sidebar-header p,
+  .sidebar-header h1,.sidebar-header p,
   .sidebar-footer .theme-toggle span,
   .sidebar-nav a span{display:initial}
-  .sidebar .search-box{display:block}
   .sidebar-nav a{gap:10px;justify-content:flex-start;padding:0 18px}
   .theme-toggle{justify-content:flex-start;padding:8px 12px}
   .theme-toggle span{display:inline}

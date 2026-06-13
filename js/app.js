@@ -303,35 +303,6 @@
     }, {passive: true});
   }
 
-  // ---- Search ----
-  var searchIdx = [];
-  function buildSearchIdx(){
-    searchIdx = [];
-    CHAPTERS.forEach(function(ch){
-      searchIdx.push({id:ch.id, file:chapterHref(ch), title:ch.title, desc:ch.desc});
-    });
-  }
-  function handleSearch(val){
-    var box = document.getElementById('search-results');
-    if(!box) return;
-    if(!val || val.length < 2){ box.style.display='none'; box.innerHTML=''; return; }
-    var q = val.toLowerCase();
-    var matches = searchIdx.filter(function(item){
-      return item.title.toLowerCase().indexOf(q)>=0 || item.desc.toLowerCase().indexOf(q)>=0;
-    });
-    if(matches.length===0){
-      box.style.display='block';
-      box.innerHTML = '<div style="padding:6px 8px;opacity:.5;font-size:.72rem">No matching chapters found</div>';
-    } else {
-      box.style.display='block';
-      box.innerHTML = matches.map(function(m){
-        return '<a href="'+m.file+'" style="display:block;padding:6px 8px;color:var(--sidebar-text);text-decoration:none;border-radius:4px;font-size:.72rem"'+
-          ' onmouseover="this.style.background=\'rgba(255,255,255,.08)\'" onmouseout="this.style.background=\'transparent\'">'+
-          '<span style="color:var(--accent);font-weight:600">Ch'+m.id+'</span> '+m.title+'</a>';
-      }).join('');
-    }
-  }
-
   // ---- Init ----
   function init(){
     initTheme();
@@ -345,10 +316,6 @@
     initTOC();
     initCodeCopy();
     initReadingBar();
-    buildSearchIdx();
-    // Bind search
-    var searchBox = document.getElementById('search-box') || document.querySelector('.search-box');
-    if(searchBox) searchBox.addEventListener('input', function(){ handleSearch(this.value); });
     // KaTeX
     if(window.katex){
       var macros = { '\\parallel': '\\mathrel{/\\!\\!/}' };

@@ -161,7 +161,9 @@ Required reading:
 - Loshchilov and Hutter. [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101). Focus on the difference between AdamW and L2 regularization.
 - Hoffmann et al. [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556). Focus on the data/parameter trade-off in the Chinchilla scaling law.
 - Li et al. [DataComp-LM: In search of the next generation of training sets for language models](https://arxiv.org/abs/2406.11794). Focus on data curation strategies: deduplication, filtering, data mixing, and multi-scale evaluation.
-- Penedo et al. [The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale](https://arxiv.org/abs/2406.17557). Focus on filtering, deduplication, ablation of pretraining data, and the educational text filtering of FineWeb-Edu.- Rajbhandari et al. [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054). Focus on optimizer/gradient/parameter state sharding.
+- Penedo et al. [The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale](https://arxiv.org/abs/2406.17557). Focus on filtering, deduplication, ablation of pretraining data, and the educational text filtering of FineWeb-Edu.
+- Soldaini et al. [Dolma: an Open Corpus of Three Trillion Tokens for Language Model Pretraining Research](https://arxiv.org/abs/2402.00159). Focus on corpus composition, documented curation steps, intermediate corpus analysis, and reproducible data tooling.
+- Rajbhandari et al. [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054). Focus on optimizer/gradient/parameter state sharding.
 - Shoeybi et al. [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053). Focus on how tensor parallelism partitions matrices within Transformer layers.
 - Jiang et al. [MegaScale: Scaling Large Language Model Training to More Than 10,000 GPUs](https://arxiv.org/abs/2402.15627). Focus on full-stack observability, straggler diagnosis, fault tolerance, and MFU in large-scale training, rather than just memorizing the GPU count.
 
@@ -181,7 +183,7 @@ Questions to consider:
 
 - Why can AdamW's weight decay not simply be equated to L2 penalty in Adam?
 - Given fixed compute, why is a "larger model" not necessarily more reasonable than a "smaller model + more training tokens"?
-- Which types of erroneous training conclusions do the size, dedup, quality, eval contamination, domain mixture, and privacy gate of the `training_data_curation_report` respectively prevent?
+- Which types of erroneous training conclusions do the size, dedup, quality, eval contamination, domain mixture, and privacy diagnostics of the `training_data_curation_report` respectively prevent?
 - When training loss decreases but the development set worsens, which outputs should be checked first?
 - How do parameters, gradients, optimizer state, activations, and communication buffers respectively enter the GPU memory budget?
 - Which bottlenecks (capacity, communication, or throughput) do DDP, ZeRO/FSDP, tensor parallel, and pipeline parallel respectively address?

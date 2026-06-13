@@ -167,7 +167,8 @@ The table below is for establishing a technology map. Please open and read the o
 | RLVR / RFT | Ch09 | Train reasoning with verifiable graders, and check reward signal, cost, and hacking risks |
 | DeepSeekMoE + Aux-Loss-Free | Ch06 | Sparse activation, expert routing, and dynamic bias load balancing |
 | FP8 Mixed Precision + DualPipe | Ch07 | Low-precision training, scaling strategy, communication computation overlap |
-| MTP (Multi-Token Prediction) | Ch08 | Training auxiliary objective and speculative decoding draft signal || DSA / CSA / HCA | Ch10 | Long-context sparse attention and KV/computation cost compression |
+| MTP (Multi-Token Prediction) | Ch08 | Training auxiliary objective and speculative decoding draft signal |
+| DSA / CSA / HCA | Ch10 | Long-context sparse attention and KV/computation cost compression |
 | Linear attention / SSM / Mamba-style state | Ch10 | Compact sequence memory, streaming-friendly inference, and hybrid long-context architecture trade-offs |
 | Engram external memory | Ch10 | Differences between model external memory, LSH retrieval, and RAG |
 | mHC (Manifold-Constrained Hyper-Connections) | Ch05 | Birkhoff constraint, Sinkhorn-Knopp, and residual connection extension |

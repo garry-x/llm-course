@@ -37,12 +37,12 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> The main line of training has only four steps: take a segment of tokens, let the model predict the next token, compute the error with cross-entropy, and backpropagate to update parameters. Muon, FP8/FP4, DualPipe, and distributed training are large-scale optimization topics; for the first pass, treat them as "knowing why they are needed."</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Basic concepts from Chapter 6: GPTModel, cross-entropy, optimizer.</li>
-    <li><strong>Learning Goals:</strong> Derive the next-token loss from maximum likelihood, build a reproducible training loop, and explain data curation gate, perplexity, calibration/ECE, AdamW, warmup, gradient clipping, mixed precision, and training anomaly diagnosis.</li>
-    <li><strong>Chapter Output:</strong> A training loop capable of training a small model and observing loss/perplexity/calibration changes, plus a pre-training data quality/contamination acceptance report.</li>
+    <li><strong>Learning Goals:</strong> Derive the next-token loss from maximum likelihood, build a reproducible training loop, and explain data curation diagnostics, perplexity, calibration/ECE, AdamW, warmup, gradient clipping, mixed precision, and training anomaly diagnosis.</li>
+    <li><strong>Chapter Output:</strong> A training loop capable of training a small model and observing loss/perplexity/calibration changes, plus a pre-training data quality/contamination evidence report.</li>
     <li><strong>Completion Criteria:</strong> You can clearly explain why input <code>x</code> and target <code>y</code> are shifted by one position.</li>
     <li><strong>Exercise Output:</strong> Submit training script, loss curve with fixed seed, checkpoint/resume proof, anomaly diagnosis runbook, tokens/s and GPU/CPU cost estimation; accompanying assignments at <a href="../assignments/ch07_training/">assignments/ch07_training/</a>.</li>
   </ul>
-  <div class="dependency-note"><strong>Prerequisite Skills:</strong> Autoregressive probability decomposition, cross entropy, optimizer state, randomness control, train/val split, and experimental statistics.<br><strong>Internalized in This Chapter:</strong> These fundamentals will directly feed into data curation gate, loss/ppl, AdamW/Muon, learning-rate schedule, gradient clipping, checkpoint resume, data packing, seed, and ablation report.<br><strong>Validation Signal:</strong> You don't just make loss drop; you can explain data source, filtering/deduplication, curve variance, baseline, recovery point, token budget, and training cost, and pass these results to Ch08 generation quality and Ch09 alignment experiments.</div>
+  <div class="dependency-note"><strong>Prerequisite Skills:</strong> Autoregressive probability decomposition, cross entropy, optimizer state, randomness control, train/val split, and experimental statistics.<br><strong>Internalized in This Chapter:</strong> These fundamentals will directly feed into data curation diagnostics, loss/ppl, AdamW/Muon, learning-rate schedule, gradient clipping, checkpoint resume, data packing, seed, and ablation report.<br><strong>Validation Signal:</strong> You don't just make loss drop; you can explain data source, filtering/deduplication, curve variance, baseline, recovery point, token budget, and training cost, and pass these results to Ch08 generation quality and Ch09 alignment experiments.</div>
   <p class="system-role"><strong>System Position:</strong> This chapter turns the Ch06 model into a reproducible training run. It not only teaches optimizers but also connects data curation, contamination investigation, complete checkpoint, experimental statistics, and cost ledger to Ch09 post-training.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
@@ -369,7 +369,7 @@ assert report["decision"] == "resume_checkpoint_ready"</div>
       <tr><td>embedding nearest neighbor</td><td>Semantically similar rewrites and paraphrases</td><td>Samples with similar topics but different answers</td><td>Model, threshold, manual sampling results</td></tr>
     </table>
   </div>
-  <p>For example, in code corpora, <code>import</code> statements, license headers, common function signatures, and framework boilerplate generate a lot of duplicates. If the threshold is too strict, the model loses realistic code style; if the threshold is too loose, the model memorizes popular repositories and training set answers. A reasonable approach is to process hierarchically based on data source and task risk, rather than applying a single similarity threshold to the entire corpus. The <code>training_data_curation_report</code> in the Ch07 assignment implements these checks as a pre-training gate:</p>
+  <p>For example, in code corpora, <code>import</code> statements, license headers, common function signatures, and framework boilerplate generate a lot of duplicates. If the threshold is too strict, the model loses realistic code style; if the threshold is too loose, the model memorizes popular repositories and training set answers. A reasonable approach is to process hierarchically based on data source and task risk, rather than applying a single similarity threshold to the entire corpus. The <code>training_data_curation_report</code> in the Ch07 assignment implements these checks as a compact pre-training diagnostic:</p>
   <div class="code-block" data-lang="python">
 report = training_data_curation_report(
     sources=[
@@ -382,13 +382,69 @@ report = training_data_curation_report(
                 "max_eval_overlap_rate": 0.005, "min_domain_count": 2},
 )
 assert report["decision"] == "data_ready_for_training_rehearsal"</div>
-  <p>This report does not replace large-scale MinHash, model-based scoring filtering, or manual sampling, but it forces the training report to first answer basic questions: are tokens sufficient, is duplication too high, is the dev set contaminated, is quality filtering too loose, is the domain mixture unbalanced, are PII/credential risks handled. Only when these gates are passed does the subsequent loss curve become more interpretable.</p>
+  <p>This report does not replace large-scale MinHash, model-based scoring filtering, or manual sampling, but it forces the training report to first answer basic questions: are tokens sufficient, is duplication too high, is the dev set contaminated, is quality filtering too loose, is the domain mixture unbalanced, are PII/credential risks handled. When these questions are answered explicitly, the subsequent loss curve becomes more interpretable.</p>
 
-  <h4>3. PII, credentials, and copyright risks must enter the training ledger</h4>
+  <h4>3. Data curation is an optimization loop, not a one-time cleaning pass</h4>
+  <p>A pre-training corpus is not "clean" or "unclean" in a single scalar sense. Each filter changes which token transitions appear in the batch, which means it changes the gradient distribution. A useful data pipeline therefore behaves like an optimization loop: propose a filtering or sampling recipe, train at a smaller scale, evaluate across capability and risk slices, then decide whether the recipe should be promoted to the full run.</p>
+  <div class="svg-diagram" style="max-width:960px">
+    <svg viewBox="0 0 940 360" role="img" aria-label="Data curation optimization loop from raw pool to full training run">
+      <defs>
+        <marker id="data-loop-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .dl-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .dl-core{fill:rgba(52,152,219,.12);stroke:var(--accent);stroke-width:2}
+        .dl-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#data-loop-arrow)}
+        .dl-title{font-size:17px;font-weight:700;fill:var(--text)}
+        .dl-sub{font-size:13px;fill:var(--text-secondary)}
+      </style>
+      <rect class="dl-core" x="360" y="136" width="220" height="86" rx="12"/>
+      <text text-anchor="middle" x="470" y="168"><tspan class="dl-title">Curation Recipe</tspan><tspan class="dl-sub" x="470" dy="22">filter + dedup + mixture</tspan></text>
+
+      <rect class="dl-box" x="32" y="44" width="190" height="72" rx="10"/>
+      <text text-anchor="middle" x="127" y="70"><tspan class="dl-title">Raw Data Pool</tspan><tspan class="dl-sub" x="127" dy="20">web / code / books / papers</tspan></text>
+      <rect class="dl-box" x="32" y="244" width="190" height="72" rx="10"/>
+      <text text-anchor="middle" x="127" y="270"><tspan class="dl-title">Source Ledger</tspan><tspan class="dl-sub" x="127" dy="20">version / license / risk</tspan></text>
+
+      <rect class="dl-box" x="370" y="36" width="200" height="72" rx="10"/>
+      <text text-anchor="middle" x="470" y="62"><tspan class="dl-title">Small-Scale Train</tspan><tspan class="dl-sub" x="470" dy="20">same code, lower budget</tspan></text>
+      <rect class="dl-box" x="370" y="252" width="200" height="72" rx="10"/>
+      <text text-anchor="middle" x="470" y="278"><tspan class="dl-title">Validation Slices</tspan><tspan class="dl-sub" x="470" dy="20">ppl / code / math / safety</tspan></text>
+
+      <rect class="dl-box" x="708" y="44" width="200" height="72" rx="10"/>
+      <text text-anchor="middle" x="808" y="70"><tspan class="dl-title">Mixture Update</tspan><tspan class="dl-sub" x="808" dy="20">weights / temperature</tspan></text>
+      <rect class="dl-box" x="708" y="244" width="200" height="72" rx="10"/>
+      <text text-anchor="middle" x="808" y="270"><tspan class="dl-title">Full Run Evidence</tspan><tspan class="dl-sub" x="808" dy="20">tokens by source + eval</tspan></text>
+
+      <path class="dl-line" d="M222 80 C282 86 306 126 360 158"/>
+      <path class="dl-line" d="M222 280 C286 268 316 230 360 200"/>
+      <path class="dl-line" d="M470 136 L470 108"/>
+      <path class="dl-line" d="M470 222 L470 252"/>
+      <path class="dl-line" d="M570 72 C642 78 672 78 708 78"/>
+      <path class="dl-line" d="M708 280 C642 280 616 238 580 204"/>
+      <path class="dl-line" d="M808 116 C796 156 784 198 808 244"/>
+      <path class="dl-line" d="M708 80 C636 116 612 140 580 158"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 7-2: Data curation as an optimization loop. The training signal is shaped by filtering, deduplication, mixture weights, and evaluation slices before the full run consumes its token budget.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Data Decision</th><th>What Changes in Training</th><th>What to Measure</th><th>Typical Failure Mode</th></tr>
+      <tr><td>Quality filter</td><td>Removes low-information or malformed transitions; may also remove rare language/domain patterns</td><td>Domain PPL, downstream slices, deleted-sample audit</td><td>Over-filtering improves average loss while weakening long-tail coverage</td></tr>
+      <tr><td>Dedup threshold</td><td>Reduces repeated gradients and memorization pressure</td><td>Duplicate rate, eval overlap, false-deletion samples</td><td>Strict thresholds delete legitimate code boilerplate or legal templates</td></tr>
+      <tr><td>Mixture weight</td><td>Changes how often each capability source appears in optimizer updates</td><td>Tokens consumed by source, per-domain validation, overfit indicators</td><td>Small high-quality sources are oversampled until style or answer leakage dominates</td></tr>
+      <tr><td>Synthetic data inclusion</td><td>Injects teacher-model style, reasoning traces, and possible answer patterns</td><td>Teacher/source provenance, eval overlap, capability slice lift, style collapse checks</td><td>Generated traces improve one benchmark but narrow model behavior elsewhere</td></tr>
+      <tr><td>Curriculum or annealing</td><td>Changes the temporal order of gradients across the run</td><td>Consumed-token timeline, loss by source, late-stage regression tests</td><td>Late high-quality sampling hides early contamination or creates domain forgetting</td></tr>
+    </table>
+  </div>
+  <p>Modern dataset work such as DataComp-LM, FineWeb, Dolma, and the Llama 3 report all point to the same engineering lesson: dataset design must be evaluated with experiments and transparent documentation, not only with a heuristic cleanliness score. DataComp-LM frames data curation as controlled multi-scale experiments; FineWeb documents and ablates filtering and deduplication choices; Dolma emphasizes reproducible corpus construction and tooling; Llama 3 highlights the need to interpret evaluations together with cleaning, deduplication, PII filtering, and contamination analysis.</p>
+  <p>For this course, the minimum habit is to report every full training run with a data ledger: consumed tokens by source, filtering recipe version, deduplication threshold, split isolation method, eval contamination result, privacy/credential handling, and validation slices. Without this ledger, two runs with the same model, optimizer, and token count may still be incomparable because they learned from different gradient distributions.</p>
+
+  <h4>4. PII, credentials, and copyright risks must enter the training ledger</h4>
   <p>The course does not simplify legal judgment into a single classifier, but engineering must know where risks enter. PII may appear in the form of emails, phone numbers, addresses, ID numbers, medical records, chat logs; code corpora may contain API keys, private tokens, passwords, or internal URLs; web pages and books also involve source authorization, citations, redistribution, and downstream generation risks. The data report should at least document: filtering rules, hit rates, retention/deletion strategies, manual sampling results, and which risks cannot be covered by current rules.</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>Engineering boundary:</strong> PII or license filtering cannot be compensated for solely by safety alignment after training. Once the model memorizes sensitive strings during pre-training, post-training refusal can only reduce the trigger probability, not prove the information did not enter the parameters.</div></div>
 
-  <h4>4. Mixture weight is an optimization signal, not a data proportion</h4>
+  <h4>5. Mixture weight is an optimization signal, not a data proportion</h4>
   <p>If the web has 10T tokens and code has 1T tokens, it does not mean the batch must be sampled at a 10:1 ratio. Training engineers can increase the sampling weight for high-quality or target-capability-related data sources, and can also use temperature sampling for different data sources:</p>
   <div class="math-box"><div class="label">Mixture temperature sampling</div>
     <span class="katex-block" data-expr="p_i=\frac{n_i^\alpha}{\sum_j n_j^\alpha},\qquad 0<\alpha\le 1" aria-label="p_i = n_i alpha over sum n_j alpha" role="img"></span>

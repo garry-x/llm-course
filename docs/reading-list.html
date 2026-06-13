@@ -184,7 +184,9 @@
 <li>Loshchilov and Hutter. <a href="https://arxiv.org/abs/1711.05101">Decoupled Weight Decay Regularization</a>. Focus on the difference between AdamW and L2 regularization.</li>
 <li>Hoffmann et al. <a href="https://arxiv.org/abs/2203.15556">Training Compute-Optimal Large Language Models</a>. Focus on the data/parameter trade-off in the Chinchilla scaling law.</li>
 <li>Li et al. <a href="https://arxiv.org/abs/2406.11794">DataComp-LM: In search of the next generation of training sets for language models</a>. Focus on data curation strategies: deduplication, filtering, data mixing, and multi-scale evaluation.</li>
-<li>Penedo et al. <a href="https://arxiv.org/abs/2406.17557">The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale</a>. Focus on filtering, deduplication, ablation of pretraining data, and the educational text filtering of FineWeb-Edu.- Rajbhandari et al. <a href="https://arxiv.org/abs/1910.02054">ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</a>. Focus on optimizer/gradient/parameter state sharding.</li>
+<li>Penedo et al. <a href="https://arxiv.org/abs/2406.17557">The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale</a>. Focus on filtering, deduplication, ablation of pretraining data, and the educational text filtering of FineWeb-Edu.</li>
+<li>Soldaini et al. <a href="https://arxiv.org/abs/2402.00159">Dolma: an Open Corpus of Three Trillion Tokens for Language Model Pretraining Research</a>. Focus on corpus composition, documented curation steps, intermediate corpus analysis, and reproducible data tooling.</li>
+<li>Rajbhandari et al. <a href="https://arxiv.org/abs/1910.02054">ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</a>. Focus on optimizer/gradient/parameter state sharding.</li>
 <li>Shoeybi et al. <a href="https://arxiv.org/abs/1909.08053">Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism</a>. Focus on how tensor parallelism partitions matrices within Transformer layers.</li>
 <li>Jiang et al. <a href="https://arxiv.org/abs/2402.15627">MegaScale: Scaling Large Language Model Training to More Than 10,000 GPUs</a>. Focus on full-stack observability, straggler diagnosis, fault tolerance, and MFU in large-scale training, rather than just memorizing the GPU count.</li>
 </ul>
@@ -204,7 +206,7 @@
 <ul>
 <li>Why can AdamW&#x27;s weight decay not simply be equated to L2 penalty in Adam?</li>
 <li>Given fixed compute, why is a &quot;larger model&quot; not necessarily more reasonable than a &quot;smaller model + more training tokens&quot;?</li>
-<li>Which types of erroneous training conclusions do the size, dedup, quality, eval contamination, domain mixture, and privacy gate of the <code>training_data_curation_report</code> respectively prevent?</li>
+<li>Which types of erroneous training conclusions do the size, dedup, quality, eval contamination, domain mixture, and privacy diagnostics of the <code>training_data_curation_report</code> respectively prevent?</li>
 <li>When training loss decreases but the development set worsens, which outputs should be checked first?</li>
 <li>How do parameters, gradients, optimizer state, activations, and communication buffers respectively enter the GPU memory budget?</li>
 <li>Which bottlenecks (capacity, communication, or throughput) do DDP, ZeRO/FSDP, tensor parallel, and pipeline parallel respectively address?</li>

@@ -241,7 +241,6 @@ def render_page(markdown: str, source_name: str) -> str:
   </article>
 </main>
 <button class="back-to-top" id="back-to-top" onclick="window.scrollTo({{top:0,behavior:'smooth'}})">↑</button>
-<script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
 </body>
 </html>

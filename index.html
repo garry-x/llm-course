@@ -44,12 +44,20 @@
   </section>
 </main>
 
-<script src="js/db.js"></script>
 <script src="js/app.js"></script>
 <script>
 (function(){
   var chapters = window.LLM && LLM.getChapters ? LLM.getChapters() : [];
-  function safeGet(k,d){ return window.IDB ? IDB.get(k,d) : (function(){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d} })() }
+  function safeGet(k,d){
+    try{
+      var v = localStorage.getItem(k);
+      if(v === null){
+        v = localStorage.getItem('__idb_' + k);
+        if(v !== null) localStorage.setItem(k, v);
+      }
+      return v ? JSON.parse(v) : d;
+    } catch(e){ return d }
+  }
   var done = new Set(safeGet('llm-done',[]));
   var list = document.getElementById('chapter-list');
   list.innerHTML = chapters.map(function(ch){

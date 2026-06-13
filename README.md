@@ -14,7 +14,6 @@
   <img src="https://img.shields.io/badge/sections-135-yellow" alt="135 sections">
   <img src="https://img.shields.io/badge/frontier-architecture_cases-green" alt="frontier architecture cases">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
-  <img src="https://img.shields.io/badge/db-IndexedDB-red" alt="IndexedDB">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="license">
 </p>
 
@@ -181,8 +180,7 @@ llm-course/
 ├── index.html                # Course homepage: Hero + Dashboard + Chapter directory
 ├── css/style.css              # Warm editorial style, dark/light dual theme
 ├── js/
-│   ├── db.js                  # IndexedDB persistent storage layer
-│   └── app.js                 # Search/theme/font size/progress/notes/TOC/keyboard navigation
+│   └── app.js                 # Theme/font size/progress/TOC/keyboard navigation
 ├── chapters/                  # 11 chapters, pure HTML
 │   └── ch01.html ~ ch11.html
 ├── docs/

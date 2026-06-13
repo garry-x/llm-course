@@ -18,9 +18,23 @@
     {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, agent workflow evaluation & safety', sections:20}
   ];
 
-  // ---- State helpers (IndexedDB-backed) ----
-  function safeGet(k, fb){ return window.IDB ? IDB.get(k, fb) : (function(){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb} })() }
-  function safeSet(k, v){ if(window.IDB){ IDB.set(k, v) } else { try{ localStorage.setItem(k, JSON.stringify(v)) } catch(e){} } }
+  // ---- State helpers (localStorage-backed) ----
+  function safeGet(k, fb){
+    try{
+      var v = localStorage.getItem(k);
+      if(v === null){
+        v = localStorage.getItem('__idb_' + k);
+        if(v !== null) localStorage.setItem(k, v);
+      }
+      return v ? JSON.parse(v) : fb;
+    } catch(e){ return fb }
+  }
+  function safeSet(k, v){
+    try{
+      localStorage.setItem(k, JSON.stringify(v));
+      localStorage.removeItem('__idb_' + k);
+    } catch(e){}
+  }
 
   var completed = new Set(safeGet('llm-done', []));
   var currentCh = parseInt(document.body.getAttribute('data-ch')||'0');
@@ -352,233 +366,6 @@
     }
   }
 
-  // ---- Profile Management ----
-  var PROFILES_KEY = 'llm-profiles';
-  var ACTIVE_PROFILE_KEY = 'llm-active-profile';
-  var activeProfileId = safeGet(ACTIVE_PROFILE_KEY, null);
-
-  function getProfiles(){ return safeGet(PROFILES_KEY, []) }
-  function saveProfiles(list){ safeSet(PROFILES_KEY, list) }
-  function getActiveProfile(){
-    if(!activeProfileId) return null;
-    var profiles = getProfiles();
-    for(var i=0; i<profiles.length; i++){ if(profiles[i].id===activeProfileId) return profiles[i] }
-    return null;
-  }
-  function notesKey(ch){ return 'llm-notes-' + activeProfileId + '-ch' + ch }
-
-  function renderProfileArea(){
-    var sb = document.querySelector('.sidebar-footer');
-    if(!sb) return;
-    var area = document.createElement('div');
-    area.className = 'profile-area';
-    area.id = 'profile-area';
-    sb.parentNode.insertBefore(area, sb);
-    updateProfileUI();
-  }
-
-  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
-  function escapeJsString(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r') }
-  function safeColor(c){ return /^#[0-9a-fA-F]{6}$/.test(String(c)) ? c : '#b35c22' }
-
-  function updateProfileUI(){
-    var area = document.getElementById('profile-area');
-    if(!area) return;
-    var profile = getActiveProfile();
-    if(profile){
-      var safeName = escapeHtml(profile.name);
-      area.innerHTML = '<button class="profile-btn" onclick="LLM.openProfileModal()">'+
-        '<span class="profile-avatar" style="background:'+safeColor(profile.color)+'">'+safeName.charAt(0).toUpperCase()+'</span>'+
-        '<span class="profile-name">'+safeName+'</span>'+
-        '<span style="font-size:.65rem;opacity:.5">▼</span></button>';
-    } else {
-      area.innerHTML = '<button class="profile-btn" onclick="LLM.openProfileModal()" style="justify-content:center">'+
-        '👤 Login / Create Account</button>';
-    }
-  }
-
-  function openProfileModal(){
-    var overlay = document.getElementById('profile-modal');
-    if(!overlay){
-      overlay = document.createElement('div');
-      overlay.className = 'modal-overlay';
-      overlay.id = 'profile-modal';
-      overlay.addEventListener('click', function(e){ if(e.target===overlay) closeProfileModal(); });
-      document.body.appendChild(overlay);
-    }
-    renderProfileModal();
-    overlay.classList.add('open');
-  }
-
-  function closeProfileModal(){
-    var overlay = document.getElementById('profile-modal');
-    if(overlay) overlay.classList.remove('open');
-  }
-
-  function renderProfileModal(){
-    var overlay = document.getElementById('profile-modal');
-    if(!overlay) return;
-    var profiles = getProfiles();    var current = getActiveProfile();
-    var html = '<div class="modal"><h3>👤 User Account</h3>';
-    if(profiles.length > 0){
-      html += '<div class="profile-list">';
-      profiles.forEach(function(p){
-        var safeName = escapeHtml(p.name);
-        var safeId = escapeJsString(p.id);
-        html += '<div class="profile-list-item'+(current&&current.id===p.id?' active':'')+'" onclick="LLM.selectProfile(\''+safeId+'\')">'+
-          '<span class="profile-avatar" style="background:'+safeColor(p.color)+';width:28px;height:28px;font-size:.7rem">'+safeName.charAt(0).toUpperCase()+'</span>'+
-          '<span>'+safeName+'</span>'+
-          '<button class="del-btn" onclick="event.stopPropagation();LLM.deleteProfile(\''+safeId+'\')">✕</button></div>';
-      });
-      html += '</div>';
-    }
-    html += '<div class="field"><label>New Account</label>'+
-      '<input id="new-profile-name" placeholder="Enter username..." maxlength="20"></div>'+
-      '<div class="actions">'+
-      '<button class="btn btn-outline" onclick="LLM.closeProfileModal()">Close</button>'+
-      '<button class="btn btn-primary" onclick="LLM.createProfile()">+ Create</button></div></div>';
-    overlay.innerHTML = html;
-  }
-
-  function selectProfile(id){
-    activeProfileId = id;
-    safeSet(ACTIVE_PROFILE_KEY, id);
-    updateProfileUI();
-    renderProfileModal();
-    updateNotesUI();
-  }
-
-  function createProfile(){
-    var input = document.getElementById('new-profile-name');
-    var name = (input?input.value:'').trim();
-    if(!name || name.length < 1) return;
-    var colors = ['#b35c22','#4f46e5','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#ca8a04'];
-    var profile = { id: 'p'+Date.now(), name:name, color:colors[Math.floor(Math.random()*colors.length)], createdAt:Date.now() };
-    var profiles = getProfiles();
-    profiles.push(profile);
-    saveProfiles(profiles);
-    selectProfile(profile.id);
-  }
-
-  function deleteProfile(id){
-    if(!confirm('Are you sure you want to delete this account and all its notes? This action cannot be undone.')) return;
-    var profiles = getProfiles().filter(function(p){ return p.id!==id });
-    saveProfiles(profiles);
-    // Clean up notes
-    for(var i=1; i<=10; i++){ try{ if(window.IDB) IDB.remove('llm-notes-'+id+'-ch'+i); else localStorage.removeItem('llm-notes-'+id+'-ch'+i) }catch(e){} }
-    if(activeProfileId===id){ activeProfileId=null; safeSet(ACTIVE_PROFILE_KEY, null) }
-    updateProfileUI();
-    renderProfileModal();
-    updateNotesUI();
-  }
-
-  // ---- Notes Management ----
-  function getNotes(ch){ return safeGet(notesKey(ch), []) }
-  function saveNotes(ch, notes){ safeSet(notesKey(ch), notes) }
-
-  function initNotesPanel(){
-    if(currentCh < 1) return;
-    var panel = document.createElement('div');
-    panel.className = 'notes-panel';
-    panel.id = 'notes-panel';
-    panel.innerHTML = '<div class="notes-panel-header" onclick="LLM.toggleNotes()">'+
-      '<span>📝</span><h4>My Notes</h4><span class="note-count" id="note-count"></span></div>'+
-      '<div class="notes-panel-body" id="notes-list"></div>'+
-      '<div class="notes-panel-input">'+
-      '<textarea id="note-input" placeholder="Write notes... (Markdown supported)" onkeydown="if(event.key===\'Enter\'&&event.metaKey)LLM.addNote()"></textarea>'+
-      '<button class="btn btn-primary" onclick="LLM.addNote()" style="min-height:36px;padding:6px 12px;font-size:.8rem">Save</button></div>';
-    document.body.appendChild(panel);
-
-    var toggleBtn = document.createElement('button');
-    toggleBtn.className = 'note-toggle-btn';
-    toggleBtn.id = 'note-toggle-btn';
-    toggleBtn.title = 'Notes';
-    toggleBtn.innerHTML = '📝';
-    toggleBtn.addEventListener('click', function(){ LLM.toggleNotes(); });
-    document.body.appendChild(toggleBtn);
-
-    updateNotesUI();
-  }
-
-  function updateNotesUI(){
-    var panel = document.getElementById('notes-panel');
-    var toggleBtn = document.getElementById('note-toggle-btn');
-    var hasNotes = false;
-    if(currentCh >= 1 && activeProfileId){
-      var notes = getNotes(currentCh);
-      hasNotes = notes.length > 0;
-      var list = document.getElementById('notes-list');
-      var count = document.getElementById('note-count');
-      if(list){
-        if(notes.length===0){
-          list.innerHTML = '<div style="font-size:.8rem;color:var(--text-secondary);padding:20px;text-align:center">No notes yet. Write your first note in the input box below ✍️</div>';
-        } else {
-          list.innerHTML = notes.map(function(n){
-            var d = new Date(n.timestamp);
-            var time = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-            var sectionLabel = n.sectionId ? ' ('+n.sectionId+')' : '';
-            return '<div class="note-card">'+
-              '<div class="note-meta">'+time+sectionLabel+'</div>'+
-              '<div class="note-text">'+escapeHtml(n.text)+'</div>'+
-              '<button class="note-del" onclick="LLM.deleteNote(\''+n.id+'\')">✕</button></div>';
-          }).join('');
-        }
-      }
-      if(count) count.textContent = notes.length + ' notes';
-    }
-    if(toggleBtn) toggleBtn.classList.toggle('has-notes', hasNotes);
-  }
-
-  function toggleNotes(){
-    var panel = document.getElementById('notes-panel');
-    if(!panel) return;
-    if(!activeProfileId){ openProfileModal(); return; }
-    panel.classList.toggle('open');
-    if(panel.classList.contains('open')){
-      updateNotesUI();
-      setTimeout(function(){
-        var ta = document.getElementById('note-input');
-        if(ta) ta.focus();
-      }, 300);
-    }
-  }
-
-  function addNote(){
-    if(!activeProfileId){ openProfileModal(); return; }
-    var ta = document.getElementById('note-input');
-    var text = (ta?ta.value:'').trim();
-    if(!text) return;
-    // Detect current visible section
-    var sectionId = '';
-    var sections = document.querySelectorAll('section.card[id]');
-    for(var i=0; i<sections.length; i++){
-      var rect = sections[i].getBoundingClientRect();
-      if(rect.top < window.innerHeight/2 && rect.bottom > 0){ sectionId = sections[i].id; break }
-    }
-    var note = { id:'n'+Date.now(), text:text, timestamp:Date.now(), sectionId:sectionId };
-    var notes = getNotes(currentCh);
-    notes.push(note);
-    saveNotes(currentCh, notes);
-    if(ta) ta.value = '';
-    updateNotesUI();
-  }
-
-  function deleteNote(noteId){
-    var notes = getNotes(currentCh);
-    notes = notes.filter(function(n){ return n.id!==noteId });
-    saveNotes(currentCh, notes);
-    updateNotesUI();
-  }
-
-  // ---- Update init ----
-  var _origInit = init;
-  init = function(){
-    _origInit();
-    renderProfileArea();
-    if(currentCh >= 1) initNotesPanel();
-    updateNotesUI();
-  };
-
   // Public API
   window.LLM = {
     checkMC: checkMC,
@@ -587,14 +374,6 @@
     markComplete: markComplete,
     setFontSize: setFontSize,
     toggleSolution: function(btn){ btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('open'); },
-    openProfileModal: openProfileModal,
-    closeProfileModal: closeProfileModal,
-    selectProfile: selectProfile,
-    createProfile: createProfile,
-    deleteProfile: deleteProfile,
-    toggleNotes: toggleNotes,
-    addNote: addNote,
-    deleteNote: deleteNote,
     getChapters: chaptersWithHref
   };
 

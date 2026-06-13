@@ -567,17 +567,21 @@ td{color:var(--text-secondary)}
 .hero{
   position:relative;overflow:hidden;
   background:var(--surface);
-  border-radius:var(--radius);padding:42px 48px;margin-bottom:20px;
+  border-radius:var(--radius);padding:32px 36px;margin-bottom:20px;
   box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:left
 }
 .hero::before{
   content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,transparent,var(--accent),transparent)
 }
-.hero h2{font-size:2.12rem;font-weight:700;margin-bottom:12px;position:relative;line-height:1.25;text-wrap:balance;max-width:760px}
-.hero p{color:var(--text-secondary);font-size:1rem;max-width:720px;margin:0 0 24px;position:relative;line-height:1.7}
-.hero-actions{display:flex;align-items:center;gap:12px;position:relative}
-.hero .btn{padding:12px 28px;font-size:.95rem}
+.hero-copy{
+  position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;
+  column-gap:32px;row-gap:10px;align-items:center
+}
+.hero h2{font-size:1.9rem;font-weight:700;margin-bottom:0;position:relative;line-height:1.24;text-wrap:balance;max-width:760px}
+.hero p{color:var(--text-secondary);font-size:.96rem;max-width:760px;margin:0;position:relative;line-height:1.65}
+.hero-actions{display:flex;align-items:center;gap:10px;position:relative;grid-column:2;grid-row:1 / span 2;justify-self:end}
+.hero .btn{padding:11px 22px;font-size:.92rem;white-space:nowrap}
 .hero-tags{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;margin-bottom:20px;position:relative}
 .hero-tag{
   padding:5px 12px;border-radius:999px;font-size:.75rem;font-weight:600;
@@ -597,9 +601,9 @@ td{color:var(--text-secondary)}
 .hero-panel span{font-size:.8rem;color:var(--text-secondary);line-height:1.65}
 
 /* ---- Chapter List Items (homepage) ---- */
-.chapter-list{display:flex;flex-direction:column;gap:10px;margin-bottom:32px}
+.chapter-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:32px}
 .chapter-item{
-  display:flex;align-items:center;gap:16px;padding:14px 18px;
+  display:flex;align-items:center;gap:12px;padding:13px 16px;
   background:var(--surface);border-radius:var(--radius);
   box-shadow:var(--shadow);text-decoration:none;color:var(--text);
   transition:all var(--transition);border:1px solid var(--border);
@@ -614,15 +618,15 @@ td{color:var(--text-secondary)}
 .chapter-item:hover::after{width:100%}
 .chapter-item.completed{border-left:3px solid var(--success)}
 .chapter-item .ch-num-big{
-  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:.98rem;font-weight:700;flex-shrink:0;
+  width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:.9rem;font-weight:700;flex-shrink:0;
   background:var(--accent-light);color:var(--accent);position:relative;z-index:1
 }
 .chapter-item.completed .ch-num-big{background:#f2faf5;color:var(--success)}
 .chapter-item .ch-info{flex:1;position:relative;z-index:1}
-.chapter-item .ch-info h4{font-size:.94rem;font-weight:700;margin-bottom:0}
+.chapter-item .ch-info h4{font-size:.9rem;font-weight:700;margin-bottom:0;line-height:1.35}
 .chapter-item .ch-info p{font-size:.8rem;color:var(--text-secondary);margin:0}
-.chapter-item .ch-meta{font-size:.75rem;color:var(--text-secondary);text-align:right;position:relative;z-index:1}
+.chapter-item .ch-meta{font-size:.72rem;color:var(--text-secondary);text-align:right;position:relative;z-index:1;white-space:nowrap}
 
 /* ---- Feedback Animation ---- */
 .feedback{
@@ -677,6 +681,12 @@ td{color:var(--text-secondary)}
   .section-heading{display:block}
   .section-heading h3{margin-bottom:8px}
   .system-grid{grid-template-columns:1fr}
+  .chapter-list{grid-template-columns:1fr}
+}
+
+@media(max-width:1199px){
+  .hero-copy{display:block}
+  .hero-actions{margin-top:20px;justify-content:flex-start}
 }
 
 .dependency-note{

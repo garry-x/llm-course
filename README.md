@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/chapters-11-orange" alt="11 chapters">
   <img src="https://img.shields.io/badge/exercises-programming_+_written-blue" alt="programming and written exercises">
-  <img src="https://img.shields.io/badge/sections-132-yellow" alt="132 sections">
+  <img src="https://img.shields.io/badge/sections-133-yellow" alt="133 sections">
   <img src="https://img.shields.io/badge/frontier-architecture_cases-green" alt="frontier architecture cases">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
   <img src="https://img.shields.io/badge/db-IndexedDB-red" alt="IndexedDB">
@@ -92,7 +92,7 @@ If your goal is to become an LLM inference engineer, the learning objective is n
 | Model Architecture Understanding | Ch01-Ch06 | Understand tokenizer, attention, KV Cache origin, logits output, and parameter scale |
 | Generation & Latency Decomposition | Ch08 | Distinguish prefill/decode, explain TTFT, TPOT, TPS, throughput, sampling quality, and reasoning budget |
 | Memory & Bandwidth Optimization | Ch04, Ch10 | Calculate KV Cache, understand MQA/GQA/MLA, weight-only/W8A8/KV cache quantization, FlashAttention, and memory bottlenecks |
-| Inference Service Architecture | Ch10 | Choose vLLM/SGLang/TensorRT-LLM/llama.cpp, understand MoE expert parallelism, model routing/cascade, continuous batching admission, prefix cache, concurrent scheduling, load shedding, observability trace, speculative decoding, multimodal serving, tool-call, MCP runtime security, agent trace, and context engineering |
+| Inference Service Architecture | Ch10 | Choose vLLM/SGLang/TensorRT-LLM/llama.cpp, understand MoE expert parallelism, model routing/cascade, continuous batching admission, prefix cache, KV-aware routing, cache hierarchy, concurrent scheduling, load shedding, observability trace, speculative decoding, multimodal serving, tool-call, MCP runtime security, agent trace, and context engineering |
 | Retrieval & Tool Calling | Ch08-Ch10 | Design structured output, RAG, Agent toolchain, context compression/memory, and failure fallback |
 | Evaluation & Deployment | Ch09-Ch11 | Design quality/safety/latency/cost metrics, perform agent/workflow eval, stress testing, regression evaluation, canary/control release, and rollback checks |
 
@@ -150,7 +150,7 @@ This repository recommends using `.venv` in the root directory to run local code
 | 7 | **Training Loop** — AdamW/Muon + FP8/MXFP8 + Distributed Strategy Ledger | Complete training script + strategy/gate report | 7+5 |
 | 8 | **Text Generation** — Sampling strategies + reasoning budget + MTP speculative decoding + constrained generation | Text generator + test-time compute gate | 7+5 |
 | 9 | **Fine-tuning & Alignment** — SFT/preference data/synthetic distillation/LoRA/DPO/GRPO/DAPO/GSPO/RLVR + R1 reasoning | SFT protocol, post-training data audit, LoRA, DPO/GRPO/RLVR, reasoning RL logs, and distillation data quality analysis | 8+5 |
-| 10 | **Inference Optimization & Frontiers** — KV Cache/quantization release gate/RAG/Context Engineering/Structured Output/Tool/MCP Gate/vLLM/Triton/MoE serving/Model routing/Production release/Long context/Multimodal | KV Cache + quantization calibration/regression + RAG + context engineering gate + structured output gate + Tool/MCP Gate + MoE serving gate + model routing gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + service blueprint | 11+5 |
+| 10 | **Inference Optimization & Frontiers** — KV Cache/quantization release gate/RAG/Context Engineering/Structured Output/Tool/MCP Gate/vLLM/Triton/MoE serving/Model routing/Production release/KV-aware routing/Long context/Multimodal | KV Cache + quantization calibration/regression + RAG + context engineering gate + structured output gate + Tool/MCP Gate + MoE serving gate + model routing gate + rollout gate + overload response + continuous batching admission + P/D pool plan + KV-aware cache hierarchy + speculative gate + long-context gate + LSH + service blueprint | 11+5 |
 | Topic | **Classic NLP & Evaluation** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics / agent workflow eval | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + agent eval protocol + MLM mask | Ch11 |
 
 > **Total: Covers 11 chapters of programming assignments, written derivation problems, and classic NLP topic assignments.**

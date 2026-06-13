@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>Chapter 10: Inference Optimization & Frontiers</h2>
   <p class="subtitle">KV Cache / Sparse Attention / Quantization / RAG / Agent — Engineering Deployment of LLMs</p>
-  <div class="reading-time">⏱ Estimated Reading: 190 minutes · 26 sections · 7 programming exercises · 7 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 200 minutes · 27 sections · 7 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -1639,6 +1639,79 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
     </table>
   </div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>System Design Judgment:</strong> Advanced inference engineering is now a cluster-control problem. A course answer is incomplete if it only says "use vLLM" or "enable P/D disaggregation"; it must specify workload, topology, KV ownership, latency decomposition, quality invariants, cost, and rollback evidence.</div></div>
+</section>
+
+<section class="card" id="s10-13e">
+  <h3>10.13E KV-Aware Routing and Cache Hierarchy: The New Control Plane</h3>
+  <p>Disaggregating prefill and decode is only the first step. Once KV cache can move between workers or survive beyond one request, the main engineering question becomes: <strong>who owns each KV block, which request should be routed to which worker, and which cache tier is worth paying for?</strong> Current production stacks point in the same direction. vLLM exposes KV transfer connectors for disaggregated prefilling; SGLang combines P/D disaggregation with router integration and transfer engines such as Mooncake or NIXL; NVIDIA Dynamo describes a KV-aware router, low-latency KV transfer through NIXL, a KV block manager, and SLO planning; llm-d positions Kubernetes-native inference around prefix-cache-aware routing, tiered KV management, wide expert parallelism, and SLO-aware autoscaling. The shared lesson is that KV cache has become a first-class distributed resource, not an implementation detail hidden inside one engine.</p>
+
+  <div class="foundation-graph" role="img" aria-label="KV-aware distributed inference control plane">
+    <svg viewBox="0 0 940 360">
+      <defs>
+        <marker id="kv-route-arrow-10" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .kv-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .kv-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .kv-cache{fill:rgba(245,158,11,.12);stroke:var(--accent-hover);stroke-width:2}
+        .kv-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#kv-route-arrow-10)}
+        .kv-dash{fill:none;stroke:var(--text-secondary);stroke-width:1.6;stroke-dasharray:5 4}
+        .kv-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .kv-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="kv-core" x="34" y="118" width="138" height="84" rx="10"/>
+      <text text-anchor="middle" x="103" y="148"><tspan class="kv-title">Incoming Request</tspan><tspan class="kv-sub" x="103" dy="20">tokens, tenant, SLO</tspan><tspan class="kv-sub" x="103" dy="17">tools, prefix key</tspan></text>
+      <path class="kv-line" d="M172 160 H234"/>
+      <rect class="kv-core" x="234" y="92" width="176" height="136" rx="10"/>
+      <text text-anchor="middle" x="322" y="122"><tspan class="kv-title">KV-Aware Router</tspan><tspan class="kv-sub" x="322" dy="24">prefix/cache hit</tspan><tspan class="kv-sub" x="322" dy="18">queue and SLO</tspan><tspan class="kv-sub" x="322" dy="18">worker memory</tspan><tspan class="kv-sub" x="322" dy="18">tenant isolation</tspan></text>
+      <path class="kv-line" d="M410 130 H492"/>
+      <path class="kv-line" d="M410 180 H492"/>
+      <rect class="kv-node" x="492" y="56" width="154" height="76" rx="10"/>
+      <text text-anchor="middle" x="569" y="85"><tspan class="kv-title">Prefill Workers</tspan><tspan class="kv-sub" x="569" dy="19">create KV blocks</tspan></text>
+      <rect class="kv-node" x="492" y="178" width="154" height="76" rx="10"/>
+      <text text-anchor="middle" x="569" y="207"><tspan class="kv-title">Decode Workers</tspan><tspan class="kv-sub" x="569" dy="19">hold active KV</tspan></text>
+      <path class="kv-line" d="M646 94 H728"/>
+      <path class="kv-line" d="M646 216 H728"/>
+      <rect class="kv-cache" x="728" y="38" width="176" height="248" rx="10"/>
+      <text text-anchor="middle" x="816" y="70"><tspan class="kv-title">Cache Hierarchy</tspan><tspan class="kv-sub" x="816" dy="26">GPU active blocks</tspan><tspan class="kv-sub" x="816" dy="20">CPU warm tier</tspan><tspan class="kv-sub" x="816" dy="20">SSD/object cold tier</tspan><tspan class="kv-sub" x="816" dy="20">global block index</tspan><tspan class="kv-sub" x="816" dy="20">eviction policy</tspan><tspan class="kv-sub" x="816" dy="20">privacy boundary</tspan></text>
+      <path class="kv-dash" d="M569 132 V178"/>
+      <text class="kv-sub" x="590" y="158">KV transfer</text>
+      <rect class="kv-node" x="250" y="274" width="446" height="52" rx="10"/>
+      <text text-anchor="middle" x="473" y="296"><tspan class="kv-title">Observability Loop</tspan><tspan class="kv-sub" x="473" dy="18">TTFT, ITL, cache hit, transfer time, SLO breach, cost per successful task</tspan></text>
+      <path class="kv-dash" d="M473 274 V228"/>
+    </svg>
+  </div>
+
+  <h4>What the Router Must Know</h4>
+  <p>A generic HTTP load balancer only sees request count and response latency. An LLM router needs a richer state vector because two requests with the same HTTP size can have radically different GPU costs. A 500-token prompt with 4K output is decode-heavy; a 128K RAG prompt with 128 output tokens is prefill-heavy; an agent conversation may have a reusable prefix, tool state, and tenant-specific memory restrictions. Routing without these signals either wastes cache reuse or creates tail-latency spikes.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Signal</th><th>Why It Matters</th><th>Bad Routing Symptom</th></tr>
+      <tr><td>Prompt and output token forecast</td><td>Separates prefill-heavy, decode-heavy, and long-session traffic</td><td>Short chat requests wait behind long-document prefill</td></tr>
+      <tr><td>Prefix/cache key</td><td>Routes repeated system prompts, RAG templates, or multi-turn sessions to cache-warm workers</td><td>Low prefix-cache hit rate despite repeated traffic</td></tr>
+      <tr><td>Active KV tokens per worker</td><td>Represents memory pressure better than request count</td><td>OOM or eviction spikes while request count looks normal</td></tr>
+      <tr><td>Transfer path and topology</td><td>KV movement is cheap on fast local interconnects and expensive across weak links</td><td>Saved prefill time is lost in KV transfer</td></tr>
+      <tr><td>Tenant and privacy policy</td><td>Prevents cross-tenant cache reuse or tool-state leakage</td><td>Cache hits improve metrics while violating isolation rules</td></tr>
+      <tr><td>SLO class and priority</td><td>Lets realtime, batch, and background requests use different queues</td><td>Batch jobs consume decode slots needed by interactive sessions</td></tr>
+    </table>
+  </div>
+
+  <h4>Cache Hierarchy Is a Cost Model, Not Just a Storage Feature</h4>
+  <p>Multi-tier KV cache is attractive because GPU memory is scarce and expensive, while CPU memory or disk can hold larger working sets. But every tier adds read latency, transfer bandwidth limits, eviction decisions, and correctness boundaries. Use a cache tier only when the hit pattern and reuse value justify the transfer. A long system prompt reused across thousands of requests is a good candidate; a one-off private document may not be worth offloading unless it belongs to a multi-turn session with clear privacy controls.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Tier</th><th>Good Fit</th><th>Risk</th><th>Decision Metric</th></tr>
+      <tr><td>GPU KV blocks</td><td>Active decode, hot prefixes, realtime sessions</td><td>Expensive capacity and eviction pressure</td><td>active_kv_tokens, eviction rate, TPOT</td></tr>
+      <tr><td>CPU memory tier</td><td>Warm prefixes, paused sessions, repeated enterprise templates</td><td>PCIe/network transfer can dominate TTFT</td><td>hit value minus transfer_ms</td></tr>
+      <tr><td>SSD/object tier</td><td>Large cold working set, batch replay, long-lived sessions with low urgency</td><td>High tail latency and stale ownership metadata</td><td>P95 restore time, cost per restored token</td></tr>
+      <tr><td>Recompute instead of cache</td><td>Low reuse, small prompts, strict privacy, cheap prefill</td><td>Higher repeated compute</td><td>prefill_ms compared with restore_ms</td></tr>
+    </table>
+  </div>
+
+  <h4>When KV-Aware Infrastructure Is Not Worth It</h4>
+  <p>Advanced infrastructure should be justified by workload evidence. If the service mainly handles short prompts, has low concurrency, has little prefix reuse, or runs on a small single-node deployment, a simpler unified engine with prefix caching and chunked prefill may be the better engineering choice. KV-aware distributed serving becomes valuable when there is a measurable combination of long prompts, high concurrency, multi-turn or repeated-prefix traffic, strict SLOs, and enough interconnect bandwidth to move cache state without hiding a new bottleneck.</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>System Judgment:</strong> The frontier is not merely "bigger context" or "more GPUs". The hard problem is controlling where KV state lives, how requests find reusable state, when to transfer or recompute, and how to preserve SLO, privacy, and rollback guarantees while the cache becomes distributed.</div></div>
 </section>
 
 <!-- ================================================================ -->

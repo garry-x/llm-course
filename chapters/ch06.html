@@ -723,6 +723,92 @@ def copy_linear_from_hf(linear, hf_weight, hf_bias=None, transpose=True):
 </section>
 
 <!-- ================================================================ -->
+<!-- 6.6C Modern Architecture Ledger -->
+<!-- ================================================================ -->
+<section class="card" id="s6-6c">
+  <h3>6.6C Modern Decoder Architecture Ledger: Reading Dense, MoE, Long-Context, and Multimodal Model Reports</h3>
+  <p>The GPT-2 implementation in this chapter is a clean pedagogical baseline. Modern industrial model reports, however, rarely describe a model with only <code>n_layers</code>, <code>n_heads</code>, and <code>d_model</code>. They usually combine dense or sparse FFN, RoPE variants, GQA/MLA-style attention compression, active-versus-total parameter accounting, multimodal token fusion, thinking-budget controls, and checkpoint/export constraints. A high-level engineer must be able to translate these claims into a concrete resource and compatibility ledger.</p>
+  <p>For example, <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3</a> reports a 671B-total-parameter MoE model with 37B activated parameters per token, MLA attention, auxiliary-loss-free load balancing, and multi-token prediction. <a href="https://arxiv.org/abs/2505.09388" target="_blank">Qwen3</a> mixes dense and MoE models and treats thinking/non-thinking behavior as a unified inference-time control problem. <a href="https://ai.meta.com/blog/llama-4-multimodal-intelligence/" target="_blank">Llama 4</a> moves further by combining MoE, native multimodality, long-context design, and teacher-model distillation. These are not isolated features; each changes the tensor contract, training run ledger, and serving constraints.</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 390" role="img" aria-label="Modern decoder architecture ledger connecting report claims to implementation and serving checks">
+      <defs>
+        <marker id="arch-ledger-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .al-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .al-core{fill:rgba(52,152,219,.12);stroke:var(--accent);stroke-width:2}
+        .al-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#arch-ledger-arrow)}
+        .al-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .al-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="al-core" x="370" y="145" width="240" height="90" rx="12"/>
+      <text text-anchor="middle" x="490" y="176"><tspan class="al-title">Architecture Ledger</tspan><tspan class="al-sub" x="490" dy="22">config -> tensors -> cost -> serving</tspan><tspan class="al-sub" x="490" dy="18">one contract, not separate slogans</tspan></text>
+
+      <rect class="al-box" x="48" y="40" width="205" height="66" rx="10"/>
+      <text text-anchor="middle" x="150" y="66"><tspan class="al-title">Backbone</tspan><tspan class="al-sub" x="150" dy="20">dense / MoE / multimodal</tspan></text>
+      <rect class="al-box" x="48" y="162" width="205" height="66" rx="10"/>
+      <text text-anchor="middle" x="150" y="188"><tspan class="al-title">Attention</tspan><tspan class="al-sub" x="150" dy="20">MHA / GQA / MLA / hybrid</tspan></text>
+      <rect class="al-box" x="48" y="284" width="205" height="66" rx="10"/>
+      <text text-anchor="middle" x="150" y="310"><tspan class="al-title">Position and Context</tspan><tspan class="al-sub" x="150" dy="20">RoPE / iRoPE / length extension</tspan></text>
+
+      <rect class="al-box" x="727" y="40" width="205" height="66" rx="10"/>
+      <text text-anchor="middle" x="830" y="66"><tspan class="al-title">Parameter Accounting</tspan><tspan class="al-sub" x="830" dy="20">total vs. active vs. KV</tspan></text>
+      <rect class="al-box" x="727" y="162" width="205" height="66" rx="10"/>
+      <text text-anchor="middle" x="830" y="188"><tspan class="al-title">Training Objective</tspan><tspan class="al-sub" x="830" dy="20">next-token / MTP / distill / RL</tspan></text>
+      <rect class="al-box" x="727" y="284" width="205" height="66" rx="10"/>
+      <text text-anchor="middle" x="830" y="310"><tspan class="al-title">Serving Contract</tspan><tspan class="al-sub" x="830" dy="20">routing / quant / context / tools</tspan></text>
+
+      <path class="al-line" d="M253 73 C310 88 330 126 370 165"/>
+      <path class="al-line" d="M253 195 L370 195"/>
+      <path class="al-line" d="M253 317 C310 298 330 250 370 214"/>
+      <path class="al-line" d="M610 165 C650 126 670 88 727 73"/>
+      <path class="al-line" d="M610 195 L727 195"/>
+      <path class="al-line" d="M610 214 C650 250 670 298 727 317"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 6-3: A modern architecture ledger. Model reports should be translated into tensor contracts, parameter accounting, training objectives, and serving constraints before comparing quality claims.</p>
+
+  <h4>1. Do not compare model size with a single number</h4>
+  <p>Dense and MoE models use parameter counts differently. A dense 70B model stores and activates roughly the same set of parameters for every token. A sparse MoE model may store hundreds of billions of parameters but activate only a subset per token. This means total parameters, active parameters, KV cache, communication cost, and latency must be reported separately.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Claim in a Model Report</th><th>Engineering Meaning</th><th>What to Ask Before Comparing</th></tr>
+      <tr><td>Total parameters</td><td>Checkpoint size and memory needed to host all weights</td><td>Are all experts resident on each worker, sharded, or offloaded?</td></tr>
+      <tr><td>Active parameters per token</td><td>Approximate compute path selected by routing or architecture</td><td>Does the figure include shared experts, attention, embeddings, and output head?</td></tr>
+      <tr><td>Context length</td><td>Maximum supported prompt length under the position mechanism and KV budget</td><td>Was it trained, extended, or only extrapolated; what happens to retrieval and latency?</td></tr>
+      <tr><td>Multimodal support</td><td>Additional token sources enter the same or a connected backbone</td><td>Are vision/audio tokens early-fused, projected, or served through a separate encoder?</td></tr>
+      <tr><td>Thinking budget</td><td>Inference-time allocation of extra reasoning tokens or mode control</td><td>How are latency, cost, stop criteria, and answer quality reported together?</td></tr>
+    </table>
+  </div>
+
+  <h4>2. The implementation checklist changes with each architecture family</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Architecture Family</th><th>Forward Contract Change</th><th>Training Check</th><th>Serving Check</th></tr>
+      <tr><td>GPT-2-style dense decoder</td><td>Absolute positions, LayerNorm, GELU FFN, optional tied LM head</td><td>Next-token shift, parameter parity, position-table boundary</td><td>Simple KV cache, no router, fixed context table</td></tr>
+      <tr><td>Llama-style dense decoder</td><td>RMSNorm, RoPE, SwiGLU, often bias-free projections and untied head</td><td>RoPE frequency, norm epsilon, FFN multiplier, tokenizer/template contract</td><td>GQA-aware KV size, RoPE scaling, quantization compatibility</td></tr>
+      <tr><td>DeepSeek-style MoE decoder</td><td>Router selects experts; MLA compresses attention state; active and total parameters diverge</td><td>Load balance, router bias, token dispatch, expert gradients, MTP target accounting</td><td>Expert parallelism, tail latency, KV compression, routing skew, FP8/quantized export</td></tr>
+      <tr><td>Qwen3-style unified reasoning model</td><td>Same model may run with different thinking budgets or chat-template modes</td><td>Separate fast-answer, reasoning, multilingual, code, and agent slices</td><td>Route by budget, monitor token expansion, bind latency SLO to mode selection</td></tr>
+      <tr><td>Llama 4-style multimodal MoE</td><td>Text and vision tokens can enter a shared backbone; experts and long-context policy coexist</td><td>Balance modalities, context extension, teacher distillation, hard-example filtering</td><td>Image token cost, long-context KV pressure, expert placement, multimodal safety checks</td></tr>
+    </table>
+  </div>
+
+  <h4>3. A model card is not enough; you need a release ledger</h4>
+  <p>Before a modern checkpoint enters Chapter 7 training continuation, Chapter 9 post-training, or Chapter 10 serving, the release package should answer the following questions in machine-checkable form:</p>
+  <ul>
+    <li><strong>Config:</strong> norm type, attention type, position mechanism, FFN/MoE layout, tokenizer, special tokens, chat template, and max context.</li>
+    <li><strong>Parameter accounting:</strong> total parameters, active parameters per token, expert count, top-k, shared experts, KV cache formula, and quantized weight format.</li>
+    <li><strong>Training semantics:</strong> next-token loss, multi-token prediction heads, distillation targets, RL/post-training stages, and data mixture version.</li>
+    <li><strong>Serving semantics:</strong> supported decoding modes, thinking-budget controls, tool/multimodal inputs, batching limits, routing policy, and rollback-compatible export.</li>
+    <li><strong>Evaluation boundary:</strong> which benchmarks measure base capability, instruction following, reasoning, multimodality, long context, safety, latency, and cost.</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Modern LLM architecture comparison is not "which model has more parameters." It is a ledger comparison across tensor contract, active compute, memory residency, training objective, context policy, modality interface, and serving SLO.</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- Programming Exercise 4: HF Weight Loading -->
 <!-- ================================================================ -->
 <section class="card" id="s6-7">

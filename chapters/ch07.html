@@ -22,8 +22,8 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 7 Training Loop</h2>
-  <p class="subtitle">From MLE to AdamW/Muon, FP8/FP4, and DualPipe — Training Efficiency at Scale</p>
-  <div class="reading-time">⏱ Estimated Reading: 140 min · 20 sections · 6 programming exercises · 7 concept exercises</div>
+  <p class="subtitle">From MLE to AdamW/Muon, FP8/MXFP8/NVFP4, and DualPipe — Training Efficiency at Scale</p>
+  <div class="reading-time">⏱ Estimated Reading: 150 min · 21 sections · 6 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -899,6 +899,108 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
   <div class="info-box key"><span class="icon">🔑</span><div><strong>How to Estimate Actual Benefits:</strong> Roughly calculating by weight bit-width alone, FP4 weight storage is about 1/4 of BF16; however, real deployment must also account for scale/metadata, KV cache, activations, communication buffers, parallel sharding, and framework overhead. Therefore, course reports should be written as "estimated by configuration + measured memory", and not extrapolate numbers from a single model card to all models.</div></div>
 </section>
 
+<section class="card" id="s7-10a">
+  <h3>7.10A Low-Precision Training Ledger: FP8, MXFP8, NVFP4, and What Must Stay High Precision</h3>
+  <p>Modern low-precision training is not a one-line dtype switch. It is a contract among tensor role, hardware support, scaling granularity, accumulation dtype, checkpoint metadata, and validation slices. DeepSeek-V3 demonstrated large-scale FP8 training with explicit scaling and stability controls. NVIDIA Transformer Engine documents FP8 on Hopper/Ada/Blackwell and adds MXFP8 and NVFP4 support on Blackwell. Recent MXFP8 pre-training work emphasizes that narrow formats become useful only when conversion, block scaling, and tensor-role choices are treated as part of the recipe.</p>
+
+  <div class="svg-diagram">
+    <svg viewBox="0 0 980 390" role="img" aria-label="Low precision training ledger connecting tensor role, format choice, scale metadata, accumulation, and validation">
+      <defs>
+        <marker id="lowp-arrow-07" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#b85b1a"/>
+        </marker>
+      </defs>
+      <style>
+        .lp-box{fill:#fffaf4;stroke:#d8c9b9;stroke-width:1.4}
+        .lp-core{fill:#eef6ff;stroke:#2f6fed;stroke-width:1.8}
+        .lp-warn{fill:#fff4df;stroke:#d98a18;stroke-width:1.4}
+        .lp-text{fill:#241f1a;font-size:17px;font-weight:700}
+        .lp-sub{fill:#554a41;font-size:12.5px}
+        .lp-line{fill:none;stroke:#b85b1a;stroke-width:2;marker-end:url(#lowp-arrow-07)}
+      </style>
+      <rect class="lp-box" x="34" y="58" width="160" height="92" rx="10"/>
+      <text class="lp-text" text-anchor="middle" x="114" y="91">Tensor Role</text>
+      <text class="lp-sub" text-anchor="middle" x="114" y="116">weights, activations</text>
+      <text class="lp-sub" text-anchor="middle" x="114" y="134">gradients, optimizer</text>
+
+      <path class="lp-line" d="M198 104 H270"/>
+      <rect class="lp-core" x="274" y="38" width="178" height="132" rx="12"/>
+      <text class="lp-text" text-anchor="middle" x="363" y="73">Format Choice</text>
+      <text class="lp-sub" text-anchor="middle" x="363" y="99">BF16 / FP8</text>
+      <text class="lp-sub" text-anchor="middle" x="363" y="118">MXFP8 / NVFP4</text>
+      <text class="lp-sub" text-anchor="middle" x="363" y="137">hardware-specific kernels</text>
+
+      <path class="lp-line" d="M456 104 H528"/>
+      <rect class="lp-core" x="532" y="38" width="184" height="132" rx="12"/>
+      <text class="lp-text" text-anchor="middle" x="624" y="73">Scale Metadata</text>
+      <text class="lp-sub" text-anchor="middle" x="624" y="99">amax history</text>
+      <text class="lp-sub" text-anchor="middle" x="624" y="118">block/global scale</text>
+      <text class="lp-sub" text-anchor="middle" x="624" y="137">checkpointed recipe</text>
+
+      <path class="lp-line" d="M720 104 H792"/>
+      <rect class="lp-box" x="796" y="58" width="154" height="92" rx="10"/>
+      <text class="lp-text" text-anchor="middle" x="873" y="91">Validation</text>
+      <text class="lp-sub" text-anchor="middle" x="873" y="116">loss, grad norm</text>
+      <text class="lp-sub" text-anchor="middle" x="873" y="134">task slices, tokens/s</text>
+
+      <rect class="lp-warn" x="104" y="232" width="182" height="78" rx="10"/>
+      <text class="lp-text" text-anchor="middle" x="195" y="262">Keep High Precision</text>
+      <text class="lp-sub" text-anchor="middle" x="195" y="286">master weights, reductions</text>
+      <rect class="lp-warn" x="342" y="232" width="182" height="78" rx="10"/>
+      <text class="lp-text" text-anchor="middle" x="433" y="262">Track Drift</text>
+      <text class="lp-sub" text-anchor="middle" x="433" y="286">scale saturation, overflow</text>
+      <rect class="lp-warn" x="580" y="232" width="210" height="78" rx="10"/>
+      <text class="lp-text" text-anchor="middle" x="685" y="262">Release Boundary</text>
+      <text class="lp-sub" text-anchor="middle" x="685" y="286">engine, GPU, recipe version</text>
+
+      <path class="lp-line" d="M363 174 C350 205 275 217 208 229"/>
+      <path class="lp-line" d="M624 174 C600 206 522 217 448 229"/>
+      <path class="lp-line" d="M873 154 C840 203 770 220 702 229"/>
+    </svg>
+    <p class="diagram-caption">Figure 7-4: Low-precision training is a tensor-role and scaling recipe, not a generic dtype replacement.</p>
+  </div>
+
+  <h4>1. Choose the format by tensor role and hardware, not by bit width alone</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Format / Recipe</th><th>Where It Fits</th><th>Engineering Benefit</th><th>Primary Risk to Test</th></tr>
+      <tr><td>BF16 baseline</td><td>Reference training, sensitive reductions, optimizer/master state</td><td>Wide dynamic range, stable debugging baseline</td><td>Higher memory and bandwidth than narrower formats</td></tr>
+      <tr><td>FP8 E4M3</td><td>Forward weights and activations when kernels support it</td><td>Higher GEMM throughput and lower activation/communication width</td><td>Saturation and rounding error on outlier activations</td></tr>
+      <tr><td>FP8 E5M2</td><td>Backward gradients or tensors needing larger dynamic range</td><td>More exponent range than E4M3</td><td>Less mantissa precision; small gradient detail may be lost</td></tr>
+      <tr><td>MXFP8</td><td>Blackwell microscaling paths with per-block scaling</td><td>Fine-grained scaling can make more tensors eligible for low precision</td><td>Conversion and rounding recipe become part of the training algorithm</td></tr>
+      <tr><td>NVFP4 / FP4</td><td>Experimental or hardware-specific aggressive low precision</td><td>Potentially large storage, bandwidth, and tensor-core gains</td><td>Narrow range requires hierarchical scaling, careful accumulation, and stronger regression tests</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Decide what must remain high precision</h4>
+  <p>The course rule is conservative: if a tensor accumulates information across many tokens, steps, ranks, or experts, do not move it to a narrower format without a specific stability argument and an ablation. The following table is a practical starting point.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Component</th><th>Low-Precision Candidate?</th><th>What to Keep or Accumulate in Higher Precision</th><th>Why</th></tr>
+      <tr><td>GEMM inputs</td><td>Often yes</td><td>Accumulator or output scale handling</td><td>Matrix cores can be fast, but accumulated error must be controlled.</td></tr>
+      <tr><td>LayerNorm / RMSNorm statistics</td><td>Usually no for statistics</td><td>Variance, RMS, reduction sums</td><td>Reductions over hidden dimensions are sensitive to small numerical errors.</td></tr>
+      <tr><td>Softmax and CE loss</td><td>Usually no for core reductions</td><td>Log-sum-exp, denominator, loss aggregation</td><td>Overflow/underflow directly creates NaN or distorted gradients.</td></tr>
+      <tr><td>Optimizer state</td><td>Rarely for first implementation</td><td>Master weights, momentum, variance, scheduler/scaler state</td><td>Optimizer state defines recovery and long-horizon trajectory.</td></tr>
+      <tr><td>MoE router logits and load stats</td><td>Be cautious</td><td>Router score computation and load-balance statistics</td><td>Small routing perturbations can change expert load and communication skew.</td></tr>
+      <tr><td>Checkpoint metadata</td><td>No</td><td>Format recipe, amax/scale history, tensor role map, engine version</td><td>A checkpoint without the recipe is not reproducible.</td></tr>
+    </table>
+  </div>
+
+  <h4>3. Low-precision validation must combine quality, stability, and throughput</h4>
+  <p>A credible low-precision report compares against a BF16 or FP32 reference and records the following signals on the same run ledger:</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Signal</th><th>Minimum Evidence</th><th>Action if It Fails</th></tr>
+      <tr><td>Numerical stability</td><td>finite loss/logits, grad_norm distribution, overflow/saturation counts, scale/amax history</td><td>Move sensitive tensors back to BF16, change scale granularity, reduce lr, or inspect outlier batches</td></tr>
+      <tr><td>Optimization parity</td><td>train/val loss curves compared at the same consumed tokens and seed range</td><td>Run short BF16 replay and isolate whether drift starts in forward, backward, or optimizer step</td></tr>
+      <tr><td>Task quality</td><td>code, math, long-context, multilingual, safety, and format slices</td><td>Do not scale the recipe until regressions are assigned to tensor roles or data slices</td></tr>
+      <tr><td>System benefit</td><td>tokens/s, MFU, memory peak, communication bytes, checkpoint size</td><td>If kernels do not use the intended path, low precision may add overhead instead of speed</td></tr>
+      <tr><td>Recovery</td><td>resume from checkpoint with identical recipe and scale metadata</td><td>Treat missing amax/scale/recipe state as a checkpoint bug, not a harmless warning</td></tr>
+    </table>
+  </div>
+  <p><strong>Engineering takeaway:</strong> FP8, MXFP8, and NVFP4 are useful because they change the compute and bandwidth contract of training. They are dangerous when treated as a universal replacement for BF16. A senior training engineer should be able to state which tensors moved to a narrow format, which tensors stayed high precision, how scaling factors were tracked, and what evidence proves that the run remained stable and useful.</p>
+</section>
+
 <!-- ================================================================ -->
 <!-- Programming Exercise 5: Full Training Loop -->
 <!-- ================================================================ -->
@@ -1299,13 +1401,15 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     <li>✅ <strong>Training Log Diagnostics</strong> — Distinguish optimization, data, numerical, and system issues using loss, val loss, grad_norm, and tokens/s</li>
     <li>✅ <strong>Programming Exercise 6: Shakespeare in Practice</strong> — End-to-end training + generation + plotting</li>
     <li>✅ <strong>Muon Optimizer</strong> — Theory of Newton-Schulz orthogonal projection</li>
-    <li>✅ <strong>FP8/FP4</strong> — Block-wise scaling, E4M3/E5M2, QAT</li>
+    <li>✅ <strong>FP8/MXFP8/NVFP4</strong> — Tensor-role format choice, block scaling, high-precision paths, and validation ledgers</li>
     <li>✅ <strong>DualPipe</strong> — Bidirectional pipeline to eliminate bubbles</li>
   </ul>
   <div class="info-box key"><span class="icon">📚</span><div><strong>Further Reading:</strong>
     <a href="https://arxiv.org/abs/1412.6980" target="_blank">Kingma & Ba (2015) — Adam</a> ·
     <a href="https://arxiv.org/abs/1711.05101" target="_blank">Loshchilov & Hutter (2019) — AdamW</a> ·
     <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 (FP8 §3.3.2, DualPipe §3.3.1)</a> ·
+    <a href="https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html" target="_blank">NVIDIA Transformer Engine FP8/FP4 primer</a> ·
+    <a href="https://arxiv.org/abs/2506.08027" target="_blank">Recipes for Pre-training LLMs with MXFP8</a> ·
     <a href="https://kellerjordan.github.io/posts/muon/" target="_blank">Muon optimizer notes</a> ·
     <a href="https://arxiv.org/abs/2203.15556" target="_blank">Chinchilla — Training Compute-Optimal LLMs</a></div></div>
 </section>

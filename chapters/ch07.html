@@ -1363,23 +1363,134 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
 
   <h4>Problems with Traditional Pipelines</h4>
   <p>In GPipe, all micro-batches complete the forward pass before starting the backward pass. This leads to a large number of idle GPUs at the beginning and end of the pipeline:</p>
-  <div class="diagram">
-    Traditional GPipe Bubble (~50% idle):
-    GPU0: [F1][F2][F3]                 [B3][B2][B1]
-    GPU1:      [F1][F2][F3]      [B3][B2][B1]
-    GPU2:           [F1][F2][F3][B3][B2][B1]
-    ████████████████ = Idle bubble ~50%
+  <div class="svg-diagram" style="max-width:960px">
+    <svg viewBox="0 0 960 360" role="img" aria-label="Traditional GPipe schedule showing idle bubbles before and after forward and backward waves">
+      <style>
+        .pipe-axis{stroke:var(--border);stroke-width:1.4}
+        .pipe-grid{stroke:rgba(148,163,184,.35);stroke-width:1}
+        .pipe-fwd{fill:rgba(37,99,235,.14);stroke:#2563eb;stroke-width:1.6}
+        .pipe-bwd{fill:rgba(16,185,129,.14);stroke:#10b981;stroke-width:1.6}
+        .pipe-idle{fill:rgba(239,68,68,.11);stroke:#ef4444;stroke-width:1.2;stroke-dasharray:5 4}
+        .pipe-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .pipe-label{font-size:13px;font-weight:700;fill:var(--text)}
+        .pipe-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <text x="32" y="36" class="pipe-title">Traditional GPipe: Fill, Drain, and Idle Bubbles</text>
+      <text x="32" y="64" class="pipe-sub">All forward micro-batches run first; backward starts after the pipeline fills.</text>
+      <line class="pipe-axis" x1="120" y1="96" x2="900" y2="96"/>
+      <line class="pipe-axis" x1="120" y1="168" x2="900" y2="168"/>
+      <line class="pipe-axis" x1="120" y1="240" x2="900" y2="240"/>
+      <text x="46" y="101" class="pipe-label">Stage 0</text>
+      <text x="46" y="173" class="pipe-label">Stage 1</text>
+      <text x="46" y="245" class="pipe-label">Stage 2</text>
+      <text x="120" y="306" class="pipe-sub">time</text>
+      <line class="pipe-grid" x1="196" y1="82" x2="196" y2="262"/>
+      <line class="pipe-grid" x1="272" y1="82" x2="272" y2="262"/>
+      <line class="pipe-grid" x1="348" y1="82" x2="348" y2="262"/>
+      <line class="pipe-grid" x1="424" y1="82" x2="424" y2="262"/>
+      <line class="pipe-grid" x1="500" y1="82" x2="500" y2="262"/>
+      <line class="pipe-grid" x1="576" y1="82" x2="576" y2="262"/>
+      <line class="pipe-grid" x1="652" y1="82" x2="652" y2="262"/>
+      <line class="pipe-grid" x1="728" y1="82" x2="728" y2="262"/>
+
+      <rect class="pipe-fwd" x="120" y="78" width="72" height="36" rx="6"/><text text-anchor="middle" x="156" y="101" class="pipe-label">F1</text>
+      <rect class="pipe-fwd" x="196" y="78" width="72" height="36" rx="6"/><text text-anchor="middle" x="232" y="101" class="pipe-label">F2</text>
+      <rect class="pipe-fwd" x="272" y="78" width="72" height="36" rx="6"/><text text-anchor="middle" x="308" y="101" class="pipe-label">F3</text>
+      <rect class="pipe-idle" x="348" y="78" width="148" height="36" rx="6"/><text text-anchor="middle" x="422" y="101" class="pipe-sub">idle</text>
+      <rect class="pipe-bwd" x="500" y="78" width="72" height="36" rx="6"/><text text-anchor="middle" x="536" y="101" class="pipe-label">B3</text>
+      <rect class="pipe-bwd" x="576" y="78" width="72" height="36" rx="6"/><text text-anchor="middle" x="612" y="101" class="pipe-label">B2</text>
+      <rect class="pipe-bwd" x="652" y="78" width="72" height="36" rx="6"/><text text-anchor="middle" x="688" y="101" class="pipe-label">B1</text>
+
+      <rect class="pipe-idle" x="120" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="156" y="173" class="pipe-sub">idle</text>
+      <rect class="pipe-fwd" x="196" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="232" y="173" class="pipe-label">F1</text>
+      <rect class="pipe-fwd" x="272" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="308" y="173" class="pipe-label">F2</text>
+      <rect class="pipe-fwd" x="348" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="384" y="173" class="pipe-label">F3</text>
+      <rect class="pipe-idle" x="424" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="460" y="173" class="pipe-sub">idle</text>
+      <rect class="pipe-bwd" x="500" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="536" y="173" class="pipe-label">B3</text>
+      <rect class="pipe-bwd" x="576" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="612" y="173" class="pipe-label">B2</text>
+      <rect class="pipe-bwd" x="652" y="150" width="72" height="36" rx="6"/><text text-anchor="middle" x="688" y="173" class="pipe-label">B1</text>
+
+      <rect class="pipe-idle" x="120" y="222" width="148" height="36" rx="6"/><text text-anchor="middle" x="194" y="245" class="pipe-sub">idle</text>
+      <rect class="pipe-fwd" x="272" y="222" width="72" height="36" rx="6"/><text text-anchor="middle" x="308" y="245" class="pipe-label">F1</text>
+      <rect class="pipe-fwd" x="348" y="222" width="72" height="36" rx="6"/><text text-anchor="middle" x="384" y="245" class="pipe-label">F2</text>
+      <rect class="pipe-fwd" x="424" y="222" width="72" height="36" rx="6"/><text text-anchor="middle" x="460" y="245" class="pipe-label">F3</text>
+      <rect class="pipe-bwd" x="500" y="222" width="72" height="36" rx="6"/><text text-anchor="middle" x="536" y="245" class="pipe-label">B3</text>
+      <rect class="pipe-bwd" x="576" y="222" width="72" height="36" rx="6"/><text text-anchor="middle" x="612" y="245" class="pipe-label">B2</text>
+      <rect class="pipe-bwd" x="652" y="222" width="72" height="36" rx="6"/><text text-anchor="middle" x="688" y="245" class="pipe-label">B1</text>
+
+      <rect class="pipe-fwd" x="748" y="88" width="28" height="18" rx="4"/><text x="784" y="102" class="pipe-sub">forward</text>
+      <rect class="pipe-bwd" x="748" y="120" width="28" height="18" rx="4"/><text x="784" y="134" class="pipe-sub">backward</text>
+      <rect class="pipe-idle" x="748" y="152" width="28" height="18" rx="4"/><text x="784" y="166" class="pipe-sub">pipeline bubble</text>
+    </svg>
   </div>
+  <p class="diagram-caption">Figure 7-4: GPipe-style scheduling creates fill and drain bubbles. Early and late pipeline stages wait while micro-batches move through the pipeline.</p>
 
   <h4>DualPipe's Bidirectional Scheduling</h4>
   <p>DualPipe advances simultaneously from both ends of the pipeline—forward pass from the start, backward pass from the end, meeting in the middle. It also overlaps All-to-All communication with computation:</p>
-  <div class="diagram">
-    DualPipe Bidirectional Pipeline (Bubble < 5%):
-    GPU0: [F1→←][F2→][F3→][B3←→][B2←][B1←]
-    GPU1: [F1→][F2→][B3←→][F3→][B2←][B1←]
-    GPU2: [F1→][B3←→][B2←][B1←][F2→][F3→]
-    → = Forward, ← = Backward, ←→ = Communication Overlap
+  <div class="svg-diagram" style="max-width:960px">
+    <svg viewBox="0 0 960 390" role="img" aria-label="DualPipe schedule showing bidirectional forward backward and communication overlap">
+      <style>
+        .dp-axis{stroke:var(--border);stroke-width:1.4}
+        .dp-grid{stroke:rgba(148,163,184,.35);stroke-width:1}
+        .dp-fwd{fill:rgba(37,99,235,.14);stroke:#2563eb;stroke-width:1.6}
+        .dp-bwd{fill:rgba(16,185,129,.14);stroke:#10b981;stroke-width:1.6}
+        .dp-overlap{fill:rgba(245,158,11,.18);stroke:#d97706;stroke-width:1.6}
+        .dp-idle{fill:rgba(239,68,68,.08);stroke:#ef4444;stroke-width:1.2;stroke-dasharray:5 4}
+        .dp-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .dp-label{font-size:13px;font-weight:700;fill:var(--text)}
+        .dp-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <text x="32" y="36" class="dp-title">DualPipe: Bidirectional Pipeline with Communication Overlap</text>
+      <text x="32" y="64" class="dp-sub">Forward, backward, and MoE communication are arranged to keep more stages busy.</text>
+      <line class="dp-axis" x1="120" y1="104" x2="900" y2="104"/>
+      <line class="dp-axis" x1="120" y1="176" x2="900" y2="176"/>
+      <line class="dp-axis" x1="120" y1="248" x2="900" y2="248"/>
+      <text x="46" y="109" class="dp-label">Stage 0</text>
+      <text x="46" y="181" class="dp-label">Stage 1</text>
+      <text x="46" y="253" class="dp-label">Stage 2</text>
+      <text x="120" y="326" class="dp-sub">time</text>
+      <line class="dp-grid" x1="198" y1="88" x2="198" y2="270"/>
+      <line class="dp-grid" x1="276" y1="88" x2="276" y2="270"/>
+      <line class="dp-grid" x1="354" y1="88" x2="354" y2="270"/>
+      <line class="dp-grid" x1="432" y1="88" x2="432" y2="270"/>
+      <line class="dp-grid" x1="510" y1="88" x2="510" y2="270"/>
+      <line class="dp-grid" x1="588" y1="88" x2="588" y2="270"/>
+      <line class="dp-grid" x1="666" y1="88" x2="666" y2="270"/>
+      <line class="dp-grid" x1="744" y1="88" x2="744" y2="270"/>
+
+      <rect class="dp-overlap" x="120" y="86" width="74" height="36" rx="6"/><text text-anchor="middle" x="157" y="109" class="dp-label">F1+B1</text>
+      <rect class="dp-fwd" x="198" y="86" width="74" height="36" rx="6"/><text text-anchor="middle" x="235" y="109" class="dp-label">F2</text>
+      <rect class="dp-fwd" x="276" y="86" width="74" height="36" rx="6"/><text text-anchor="middle" x="313" y="109" class="dp-label">F3</text>
+      <rect class="dp-overlap" x="354" y="86" width="74" height="36" rx="6"/><text text-anchor="middle" x="391" y="109" class="dp-label">B3+Comm</text>
+      <rect class="dp-bwd" x="432" y="86" width="74" height="36" rx="6"/><text text-anchor="middle" x="469" y="109" class="dp-label">B2</text>
+      <rect class="dp-bwd" x="510" y="86" width="74" height="36" rx="6"/><text text-anchor="middle" x="547" y="109" class="dp-label">B1</text>
+      <rect class="dp-idle" x="588" y="86" width="38" height="36" rx="6"/><text text-anchor="middle" x="607" y="109" class="dp-sub">idle</text>
+
+      <rect class="dp-fwd" x="120" y="158" width="74" height="36" rx="6"/><text text-anchor="middle" x="157" y="181" class="dp-label">F1</text>
+      <rect class="dp-fwd" x="198" y="158" width="74" height="36" rx="6"/><text text-anchor="middle" x="235" y="181" class="dp-label">F2</text>
+      <rect class="dp-overlap" x="276" y="158" width="74" height="36" rx="6"/><text text-anchor="middle" x="313" y="181" class="dp-label">B3+Comm</text>
+      <rect class="dp-fwd" x="354" y="158" width="74" height="36" rx="6"/><text text-anchor="middle" x="391" y="181" class="dp-label">F3</text>
+      <rect class="dp-bwd" x="432" y="158" width="74" height="36" rx="6"/><text text-anchor="middle" x="469" y="181" class="dp-label">B2</text>
+      <rect class="dp-bwd" x="510" y="158" width="74" height="36" rx="6"/><text text-anchor="middle" x="547" y="181" class="dp-label">B1</text>
+      <rect class="dp-idle" x="588" y="158" width="38" height="36" rx="6"/><text text-anchor="middle" x="607" y="181" class="dp-sub">idle</text>
+
+      <rect class="dp-fwd" x="120" y="230" width="74" height="36" rx="6"/><text text-anchor="middle" x="157" y="253" class="dp-label">F1</text>
+      <rect class="dp-overlap" x="198" y="230" width="74" height="36" rx="6"/><text text-anchor="middle" x="235" y="253" class="dp-label">B3+Comm</text>
+      <rect class="dp-bwd" x="276" y="230" width="74" height="36" rx="6"/><text text-anchor="middle" x="313" y="253" class="dp-label">B2</text>
+      <rect class="dp-bwd" x="354" y="230" width="74" height="36" rx="6"/><text text-anchor="middle" x="391" y="253" class="dp-label">B1</text>
+      <rect class="dp-fwd" x="432" y="230" width="74" height="36" rx="6"/><text text-anchor="middle" x="469" y="253" class="dp-label">F2</text>
+      <rect class="dp-fwd" x="510" y="230" width="74" height="36" rx="6"/><text text-anchor="middle" x="547" y="253" class="dp-label">F3</text>
+      <rect class="dp-idle" x="588" y="230" width="38" height="36" rx="6"/><text text-anchor="middle" x="607" y="253" class="dp-sub">idle</text>
+
+      <rect class="dp-fwd" x="686" y="98" width="28" height="18" rx="4"/><text x="722" y="112" class="dp-sub">forward work</text>
+      <rect class="dp-bwd" x="686" y="130" width="28" height="18" rx="4"/><text x="722" y="144" class="dp-sub">backward work</text>
+      <rect class="dp-overlap" x="686" y="162" width="28" height="18" rx="4"/><text x="722" y="176" class="dp-sub">compute plus communication</text>
+      <rect class="dp-idle" x="686" y="194" width="28" height="18" rx="4"/><text x="722" y="208" class="dp-sub">remaining bubble</text>
+      <text x="686" y="250" class="dp-sub">The exact schedule depends on micro-batches,</text>
+      <text x="686" y="268" class="dp-sub">parallel mesh, all-to-all cost, and kernel support.</text>
+    </svg>
   </div>
+  <p class="diagram-caption">Figure 7-5: DualPipe-style scheduling reduces idle bubbles by interleaving forward, backward, and communication work. The diagram is conceptual; real overlap depends on hardware topology and implementation.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Practical Effect:</strong> The DeepSeek-V3 technical report provides a training system case with 2048 H800 GPUs and 54.2% MFU; the training cluster and MFU numbers for the Llama 3 405B report come from a different set of models, hardware, and scheduling configurations. They are suitable as cases for "parallel scheduling affects effective compute," and should not be directly compared as general conclusions of superiority or inferiority; cost and training time also depend on data, hardware price, communication topology, checkpoint strategy, and failure recovery.</div></div>
 </section>
 

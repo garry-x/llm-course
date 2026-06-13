@@ -242,6 +242,8 @@
 - Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). 重点看从 KL-constrained RL 到分类式 loss 的推导。
 - DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). 重点看 GRPO、冷启动数据、rejection sampling、蒸馏模型和方法边界。
 - Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). 重点看 long-context RL、long2short、长度控制、采样策略和多模态 reasoning 的工程取舍。
+- Yu et al. [DAPO: An Open-Source LLM Reinforcement Learning System at Scale](https://arxiv.org/abs/2503.14476). 重点看 dynamic sampling、decoupled clipping、token-level policy gradient loss、overlong reward shaping 和开源 RL recipe 如何服务可复现训练。
+- Zheng et al. [Group Sequence Policy Optimization](https://arxiv.org/abs/2507.18071). 重点看 sequence-level importance ratio、length normalization、MoE RL 稳定性和为什么 token-level ratio 噪声会影响长训练。
 
 选读：
 
@@ -259,6 +261,7 @@
 - `post_training_data_audit` 的 coverage、label quality、leakage 和 safety gate 分别对应 post-training 的哪类失败结论？
 - 如果 SFT/偏好数据的任务覆盖不足或 eval overlap 不为零，为什么不能用 DPO/GRPO 训练 loss 下降作为上线证据？
 - GRPO 的组内 advantage 白化依赖什么采样假设？
+- DAPO/GSPO 式 reasoning RL 报告为什么必须同时看 rollout 命中率、completion length、entropy、clip fraction、sequence ratio 和 held-out prompt 切片？
 - RLVR/RFT 的 grader 为什么需要 pass-rate、reward variance、completion length 和 hacking signal 四类检查？
 - LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？
 - 对齐后模型质量上升但能力回退时，应如何区分数据分布、KL 约束和评测指标的问题？

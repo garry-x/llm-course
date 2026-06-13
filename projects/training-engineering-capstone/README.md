@@ -108,6 +108,7 @@ python plan_training.py \
 - loss spike、NaN、过拟合或吞吐下降的排查记录。
 - 若使用 SFT 数据做 post-training，必须报告 chat template、assistant spans、assistant-only label mask、supervised token ratio、assistant truncation、packing mode 和是否使用 block-diagonal attention；任一 gate 未通过时，SFT loss 下降不能作为指令跟随改进证据。
 - 若使用偏好数据或 RLVR/RFT 数据做 post-training，必须报告任务覆盖、安全切片、同 prompt 标签冲突、长度偏差、eval overlap 和 unsafe chosen；任一 gate 未通过时，DPO/GRPO loss 下降不能作为模型改进证据。
+- 若讨论或模拟 GRPO/DAPO/GSPO 式 reasoning RL，必须报告 reward/pass rate、rollout 有效比例、completion length p50/p95、entropy、clip fraction、approx KL、sequence-level ratio 或 token-level ratio、overlong 样本比例和 held-out prompt 切片；只展示 reward 曲线或 AIME/代码平均分不能证明可扩展训练 recipe 成立。
 - 若使用 LLM-as-judge 或偏好评测替代人工检查，必须报告 position/verbosity bias、swapped-order consistency 和少量 human label agreement；未通过时不能把 judge win rate 当作训练改进证据。
 - 分布式/低精度策略说明：即使本项目只在 CPU 或单 GPU 上跑，也要用 Ch07 的策略账本解释目标规模下 DDP、ZeRO/FSDP、FP8/MXFP8 或 checkpoint state 会改变哪些风险。
 - 明确说明你的研究问题、baseline、结论适用条件，以及哪些结果只在 tiny corpus / CPU baseline 下成立。

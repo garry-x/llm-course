@@ -497,7 +497,7 @@ Quick check：
 - Ch09 SFT template/mask/packing 与 LoRA 测试通过。
 - 训练 capstone 初版。
 
-## Week 7 Lecture 14: Preference Optimization、DPO 与 GRPO
+## Week 7 Lecture 14: Preference Optimization、DPO、GRPO 与 Reasoning RL
 
 对应材料：Ch09、reading-list Week 7。
 
@@ -509,6 +509,7 @@ Quick check：
 - 推导 DPO log-ratio 的方向。
 - 用长度统计判断偏好数据是否鼓励冗长输出。
 - 解释 GRPO 组内 advantage 白化和局限。
+- 解释 DAPO/GSPO 这类 reasoning RL recipe 为什么要关注 rollout 分布、长度增长、entropy、clip fraction、sequence ratio 和 MoE 路由稳定性。
 - 判断 RLVR/RFT grader 是否适合进入 RL-style post-training。
 
 核心推导：
@@ -521,6 +522,7 @@ Quick check：
 - PPO clipped objective 用 `ratio = exp(new_logp - old_logp)`，优化 `min(ratio*A, clip(ratio, 1-eps, 1+eps)*A)`，限制单步 policy 更新幅度。
 - 近似 KL `exp(log_ref-log_policy) - (log_ref-log_policy) - 1` 只在有效 sampled tokens 上求平均。
 - GRPO 在同 prompt group 内标准化 reward。
+- DAPO/GSPO 日志：dynamic sampling 命中率、completion length p50/p95、entropy、clip fraction、approx KL、sequence-level ratio 和 held-out prompt 切片必须和 reward 曲线一起看。
 - RLVR/RFT grader gate：pass rate 不能接近 0 或 1，reward 方差不能塌缩，completion token 成本和 reward hacking rate 必须受控。
 
 课堂 demo：
@@ -533,6 +535,7 @@ Quick check：
 - 手算带 padding mask 的 token-level 近似 KL。
 - 对 chosen/rejected response length 计算 length bias 统计。
 - 对不同 reward scale 的 group 做 whitening。
+- 比较 token-level ratio 与 sequence-level ratio，说明长度归一化和 MoE routing volatility 会改变 RL 日志解释。
 - 给定一组 grader 输出，填写 `rlvr_grader_report`，判断 reward signal、cost 和 integrity gate 是否通过。
 
 Quick check：
@@ -545,12 +548,13 @@ Quick check：
 - PPO clipping 是否等价于 KL 惩罚？
 - KL 惩罚为什么不能把 padding token 算进均值？
 - GRPO 是否解决 reward hacking？
+- DAPO/GSPO 的平均 reward 提升为什么不能单独证明 reasoning 能力变强？
 - 为什么“答案可验证”不等于“grader 一定可靠”？
 
 课后产出：
 
-- A7 post-training data audit、RM/DPO/PPO/GRPO/RLVR grader 测试通过。
-- 阅读复盘：R1/GRPO、Kimi k1.5 或 RFT 中的 reward 设计边界。
+- A7 post-training data audit、RM/DPO/PPO/GRPO/RLVR grader 测试通过，并能解释 DAPO/GSPO 日志中的长度、entropy、clip 和 sequence ratio。
+- 阅读复盘：R1/GRPO、DAPO、GSPO、Kimi k1.5 或 RFT 中的 reward 设计与训练稳定性边界。
 
 ## Week 8 Lecture 15: KV Cache、FlashAttention 与 Serving Metrics
 

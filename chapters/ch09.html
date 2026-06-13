@@ -719,6 +719,23 @@ advantages ≈
   <p>完整 GRPO policy loss 还需要把每条 completion 的序列级 advantage 扩展到有效 completion token 上，再和 old/new policy ratio 组成 PPO clipped surrogate，同时对当前 policy 与 reference policy 的 token log-prob 计算 masked approximate KL。Ch09 作业中的 <code>grpo_policy_loss</code> 因此报告 <code>policy_loss</code>、<code>kl_loss</code>、<code>loss</code>、<code>clip_fraction</code>、<code>mean_ratio</code> 和 <code>mean_advantage</code>；这些量能让学生区分“奖励相对更高”“策略更新被 clipping 限制”和“policy 偏离 reference”。</p>
 </section>
 
+<section class="card" id="s9-8b">
+  <h3>9.8B 从 GRPO 到 DAPO / GSPO：reasoning RL 的工程配方</h3>
+  <p>2025 年以后，reasoning RL 的重点从“是否能用 GRPO 训练推理”进一步转向“如何稳定、可复现、可扩展地训练”。DAPO 把大规模 LLM RL 的隐藏细节拆成更明确的 recipe，例如 decoupled clipping、dynamic sampling、token-level policy gradient loss 和 overlong reward shaping；GSPO 则把 importance ratio 从 token 级改成 sequence likelihood 级，在长训练和 MoE RL 中强调稳定性。课程不要求学生把这些算法全部实现成工业系统，但要理解它们共同暴露的工程问题：rollout 分布、长度增长、entropy、KL、clip 行为、MoE 路由波动和 reward integrity 会共同决定一次 RL run 是否可信。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>方法</th><th>解决的痛点</th><th>课程里需要检查的信号</th></tr>
+      <tr><td>GRPO</td><td>去掉 Critic，用同 prompt 多个 completion 的组内相对 reward 做 advantage</td><td>group reward std、mean advantage、clip fraction、approx KL、每 prompt rollout 数</td></tr>
+      <tr><td>DAPO</td><td>把大规模 RL recipe 显式化，避免静态采样、过长输出和 clip 设置让训练失稳或只学会变长</td><td>dynamic sampling 命中率、completion length 分布、entropy、reward pass rate、overlong 样本比例</td></tr>
+      <tr><td>GSPO</td><td>用 sequence-level ratio 和 clipping 降低 token-level ratio 噪声，特别关注 MoE RL 稳定性</td><td>sequence log-prob ratio、length-normalized ratio、MoE routing volatility、recompute/inference logprob mismatch</td></tr>
+    </table>
+  </div>
+
+  <p>把这些方法放进 Ch09 的原因，是它们都在提醒同一件事：RL 算法名字本身不能证明 reasoning 能力提升。一个合格报告至少要同时画出 reward、pass@k 或任务成功率、平均 completion tokens、P95 completion length、entropy、approx KL、clip fraction、有效 rollout 比例和失败类型。如果准确率提升伴随输出长度持续膨胀、entropy 塌缩、clip fraction 极端、或只在训练题型上有效，工程结论应是“reward/采样/长度控制需要重做”，不是“扩大训练规模”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>DAPO/GSPO 不是 GRPO 的替代记忆点，而是把 Ch07 的训练稳定性、Ch08 的 test-time compute、Ch09 的 reward gate 和 Ch10 的上线成本连在一起。高阶训练工程师要能读懂这些日志，并解释一次 RL run 是在学习可泛化推理，还是在利用 grader、长度或路由噪声。</div></div>
+</section>
+
 <!-- ================================================================ -->
 <!-- 编程练习 4: GRPO Advantage -->
 <!-- ================================================================ -->
@@ -1056,7 +1073,7 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
   <p>作业中的 <code>dpo_implicit_rewards</code> 正是把这些量显式返回。训练工程师要看分布，而不是只看均值：如果少数长回答贡献了大部分正边际，模型可能正在学习“回答更长更容易赢”；如果 chosen 和 rejected 都被 policy 相对 reference 大幅提高，说明 KL 锚点可能太弱，模型没有真正压低低质量回答。</p>
 
   <h4>PPO/GRPO 还要看 ratio 与 clipping</h4>
-  <p>GRPO 使用组内白化的 advantage，但策略更新仍然通过 PPO-style clipped surrogate 控制步长。日志中的 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code> 是判断训练是否稳定的关键。</p>
+  <p>GRPO 使用组内白化的 advantage，但策略更新仍然通过 PPO-style clipped surrogate 控制步长。日志中的 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code> 是判断训练是否稳定的关键。若采用 DAPO 或 GSPO 风格的 recipe，还要把 dynamic sampling、completion length、entropy、sequence-level ratio 和 MoE routing volatility 放进同一张日志表，否则无法判断收益来自更好的策略更新，还是来自采样、长度或路由副作用。</p>
   <table class="metrics-table">
     <thead>
       <tr><th>现象</th><th>可能含义</th><th>优先处理</th></tr>
@@ -1066,6 +1083,8 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
       <tr><td><code>clip_fraction</code> 长期很高</td><td>策略步长经常越界，PPO clipping 在强行限制更新</td><td>降低 lr、减小 reward scale、增大 batch 或提高 KL 惩罚</td></tr>
       <tr><td><code>approx_kl</code> 快速上升</td><td>policy 正在远离 reference，可能损伤基础能力或安全边界</td><td>提高 <code>kl_beta</code>、降低 lr、检查 reward hacking</td></tr>
       <tr><td><code>mean_advantage</code> 不接近 0</td><td>组内白化、mask 或 batch 维度可能实现错</td><td>确认按同一 prompt 的 G 个 completion 归一化，而不是跨 prompt 混合</td></tr>
+      <tr><td><code>completion_length_p95</code> 持续膨胀</td><td>模型可能通过更长 CoT、拖延或格式填充拿 reward</td><td>加入长度 reward shaping、overlong 截断分析和单位正确答案成本</td></tr>
+      <tr><td><code>entropy</code> 过快塌缩</td><td>探索不足，dynamic sampling 或 KL/温度设置可能过强</td><td>检查 rollout 多样性、pass/fail 混合比例和 held-out prompt 覆盖</td></tr>
       <tr><td>reward 上升但人工质量下降</td><td>奖励漏洞、长度偏差或 judge 风格偏差</td><td>加入失败切片，分开报告正确性、长度、拒答和格式</td></tr>
     </tbody>
   </table>
@@ -1078,7 +1097,7 @@ decoding: temperature=0.2, top_p=0.9, max_new_tokens=512
 optimization: preference_acc, reward_margin_p50/p95, approx_kl, length_delta
 behavior: task_success, hallucination_rate, unsafe_completion_rate, over_refusal_rate
 retention: math/code/readcomp slices compared against SFT baseline</div>
-  <p>如果 <code>approx_kl</code> 很低但行为没有变化，说明偏好训练可能太弱；如果 <code>approx_kl</code> 很高且数学/代码能力下降，说明对齐税已经出现；如果安全拒答率上升但良性敏感请求完成率下降，说明模型可能学到了过度拒答。课程项目应把这些行为切片和优化日志放在同一张结果表中，才能判断对齐方法是否值得继续扩大训练。</p>
+  <p>如果 <code>approx_kl</code> 很低但行为没有变化，说明偏好训练可能太弱；如果 <code>approx_kl</code> 很高且数学/代码能力下降，说明对齐税已经出现；如果安全拒答率上升但良性敏感请求完成率下降，说明模型可能学到了过度拒答。若 DAPO/GSPO 式 RL 曲线看起来更好，还必须检查它是否在 held-out prompt、不同长度桶和 MoE 路由状态下保持收益。课程项目应把这些行为切片和优化日志放在同一张结果表中，才能判断对齐方法是否值得继续扩大训练。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>偏好优化的训练记录必须同时包含目标函数内部量和外部行为量。内部量说明优化是否按公式发生，外部行为量说明它是否真的让模型更有用、更诚实、更安全，并且没有过度牺牲原有能力。</div></div>
 </section>
@@ -1256,7 +1275,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
   </ul>
 
   <h4>和 SFT / DPO / GRPO 的关系</h4>
-  <p>SFT 适合教格式和基本任务行为；DPO 适合把 chosen/rejected 偏好转成 reference-relative 更新；GRPO/RLVR 更适合有可验证 reward、需要探索多条推理路径的任务。工业系统通常不是三选一：先用 SFT 建立可读性和格式，再用偏好或 rule-based reward 做后训练，最后用固定 eval、红队、安全/格式回归和成本账本决定是否发布。</p>
+  <p>SFT 适合教格式和基本任务行为；DPO 适合把 chosen/rejected 偏好转成 reference-relative 更新；GRPO/RLVR 更适合有可验证 reward、需要探索多条推理路径的任务；DAPO/GSPO 这类后续 recipe 更强调如何把 RL run 做稳、做长、做可复现。工业系统通常不是三选一：先用 SFT 建立可读性和格式，再用偏好或 rule-based reward 做后训练，最后用固定 eval、红队、安全/格式回归和成本账本决定是否发布。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>高阶对齐工程师要能证明 reward 本身可靠。一个漂亮的 RL 曲线如果来自可猜答案、泄漏测试、输出变长或 grader 漏洞，就不是能力提升，而是 reward hacking。</div></div>
 </section>
 
@@ -1278,6 +1297,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>DPO 隐式 Reward 诊断</strong> — 用 policy/reference log-ratio 报告 chosen/rejected margin</li>
     <li>✅ <strong>PPO Clipped Objective</strong> — old/new policy ratio、advantage、clip fraction 与 approx KL</li>
     <li>✅ <strong>GRPO 组内白化</strong> — 无需 Critic 的策略优化</li>
+    <li>✅ <strong>DAPO / GSPO 工程配方</strong> — dynamic sampling、长度控制、sequence-level ratio 和 MoE RL 稳定性诊断</li>
     <li>✅ <strong>编程练习 4：PPO + GRPO 优势估计</strong> — clipped surrogate + 组内白化 + KL</li>
     <li>✅ <strong>编程练习 5：DPO vs GRPO 对比</strong> — 收敛速度与准确率</li>
     <li>✅ <strong>对齐评估协议</strong> — 同时看 helpfulness、honesty、harmlessness、过度拒答和能力保留</li>

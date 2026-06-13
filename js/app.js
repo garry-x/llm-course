@@ -14,7 +14,7 @@
     {id:7, file:'ch07.html', title:'Training Loop', desc:'Data pipeline, AdamW, checkpoint, distributed, MFU, industrial training system gate', sections:26},
     {id:8, file:'ch08.html', title:'Text Generation', desc:'Sampling, beam, thinking budget, speculative & structured decoding', sections:22},
     {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', desc:'SFT, synthetic distillation, LoRA, DPO, GRPO, rollout systems & retention', sections:26},
-    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', desc:'KV Cache, continuous batching, RAG, KV-aware routing & cluster orchestration', sections:33},
+    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', desc:'KV Cache, sparse/linear attention, continuous batching, RAG & KV-aware orchestration', sections:35},
     {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, agent workflow evaluation & safety', sections:20}
   ];
 

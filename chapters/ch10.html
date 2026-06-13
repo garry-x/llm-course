@@ -6,7 +6,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
   <link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Chapter 10: Inference Optimization & Frontiers — KV Cache / Sparse Attention / Quantization / RAG / Agent — LLM Deep Learning</title>
+<title>Chapter 10: Inference Optimization & Frontiers — KV Cache / Sparse and Linear Attention / Quantization / RAG / Agent — LLM Deep Learning</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
@@ -25,8 +25,8 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 10: Inference Optimization & Frontiers</h2>
-  <p class="subtitle">KV Cache / Sparse Attention / Quantization / RAG / Agent — Engineering Deployment of LLMs</p>
-  <div class="reading-time">⏱ Estimated Reading: 200 minutes · 27 sections · 7 programming exercises · 7 concept exercises</div>
+  <p class="subtitle">KV Cache / Sparse and Linear Attention / Quantization / RAG / Agent — Engineering Deployment of LLMs</p>
+  <div class="reading-time">⏱ Estimated Reading: 215 minutes · 35 sections · 7 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -35,7 +35,7 @@
 
 <section class="card">
   <h3>How to Learn This Chapter: Classify Engineering Optimizations by Bottleneck</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> Inference optimization is not a collection of isolated terms. KV Cache solves redundant computation, Quantization solves memory/bandwidth, FlashAttention solves attention IO, RAG solves knowledge updates, vLLM solves serving throughput. Sparse attention, external memory, Triton, and multimodality belong to the frontier map; first-time learners should establish a classification.</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> Inference optimization is not a collection of isolated terms. KV Cache solves redundant computation, Quantization solves memory/bandwidth, FlashAttention solves attention IO, RAG solves knowledge updates, vLLM solves serving throughput. Sparse attention, linear attention, state-space models, external memory, Triton, and multimodality belong to the frontier map; first-time learners should establish a classification.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Basic concepts of the generation process, GPU memory, and batch from Chapter 8.</li>
     <li><strong>Learning Goals:</strong> Decompose inference bottlenecks into compute, memory, IO, scheduling, retrieval, deployment, and runtime overload issues, and be able to design KV Cache, Quantization, RAG, Continuous Batching Admission, Benchmark, SLO, Production Release Gate, and Load-Shedding Gate.</li>
@@ -44,7 +44,7 @@
     <li><strong>Exercise Outputs:</strong> Submit KV memory calculation, prefix cache savings rate, continuous batching admission gate, quantization error experiment, RAG demo, tool schema/MCP runtime gate, production rollout gate, serving overload response gate, stress test JSON, P50/P95/P99 report, metric conclusion summary, and deployment plan; supporting assignments are available at <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Required Prior Knowledge:</strong> Computation graph, KV cache, generation strategies, evaluation metrics from the first nine chapters, as well as TTFT, TPOT, throughput, P95/P99, active KV tokens, peak memory, and cache hit rate.<br><strong>Internalization for This Chapter:</strong> Every service problem will be decomposed into prefill, decode, RAG/tool, network streaming output, queuing, admission control, and fallback strategies; KV, quantization, prefix cache, RAG, tool gate, and multimodal tokens must all enter the same SLO/cost ledger.<br><strong>Validation Signal:</strong> You can write a deployment report explaining where the bottleneck is, which phase the optimization changed, whether quality regressed, what the capacity boundary is, and when to reject conclusions that "only look at average latency."</div>
-  <p class="system-role"><strong>System Position:</strong> This chapter transforms the models, training, generation, and alignment results from the previous nine chapters into a service capable of handling traffic. It requires training engineers to deliver loadable model packages, and inference engineers to prove the system is deployable using workload, SLO, capacity, rollback, and security boundaries.</p>
+  <p class="system-role"><strong>System Position:</strong> This chapter transforms the models, training, generation, and alignment results from the previous nine chapters into a service capable of handling traffic. It requires training engineers to understand how architecture choices change cache and sequence-state costs, and inference engineers to prove the system is deployable using workload, SLO, capacity, rollback, and security boundaries.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
     <div class="foundation-graph" role="img" aria-label="Chapter 10 Knowledge Map: Before learning this chapter, you need to understand the model computation graph, KV cache, generation strategies, and SLO. This chapter teaches LLM serving. After learning, you can continue to read about disaggregated prefilling, MCP, and multimodal serving">
@@ -78,7 +78,7 @@
         <tr><td>SLO / Canary / Cost</td><td>Use P95/P99, error budget, cost, quality regression, and rollback to jointly decide on deployment.</td><td><strong>Materials:</strong> Google SRE SLO/Release Engineering, LLM serving postmortem.<br><strong>Knowledge Points:</strong> canary, load shedding, cost attribution, multimodal capacity model.</td></tr>
       </table>
     </div>
-    <p><strong>Chapter Coverage:</strong> This chapter originally had comprehensive content on serving, RAG, tools, quantization, and multimodality; it has been supplemented with MCP tool context budget, the experimental boundaries of vLLM disaggregated prefilling, and perspectives on dynamic resolution, window attention, and temporal encoding from the Qwen2.5-VL report.</p>
+    <p><strong>Chapter Coverage:</strong> This chapter covers serving, RAG, tools, quantization, multimodality, sparse/compressed attention, linear attention, state-space models, and hybrid sequence architectures. The goal is not to memorize every engine flag or model name, but to classify each technique by the resource it changes: KV memory, attention scope, sequence state, parameter bandwidth, context tokens, scheduling, or release risk.</p>
   </div>
 </section>
 
@@ -322,6 +322,107 @@ print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
   <h4>How to Combine and How to Evaluate</h4>
   <p>Sparse layers and global compression layers can be interleaved per layer, fused in parallel, or used only for some long-context layers. When analyzing such methods in the course, only three questions need to be asked: how many KV items are accessed reduced from <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> to, what is the additional indexing/compression overhead, and whether quality degrades on long-dependency, precise citation, and multi-hop tasks. Any claim of "1M context" or "inference FLOPs reduced to X" must be tied to a specific model, context length, hardware, kernel, and evaluation set.</p>
   <div class="info-box tip"><span class="icon">📚</span><div><strong>Reading Tip:</strong> Sparse attention, compressed attention, external memory, reasoning effort, and test-time compute are all suitable as engineering case studies of "how cutting-edge systems make trade-offs around long contexts, memory, throughput, and inference budget." When learning, separate the principles that can be reused long-term from the specifications that change with model versions.</div></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- 10.5A Linear/SSM/Hybrid Sequence Architectures -->
+<!-- ================================================================ -->
+<section class="card" id="s10-5a">
+  <h3>10.5A Linear Attention, SSM, and Hybrid Sequence Architectures: When Full Attention Is Not the Only Memory</h3>
+  <p>Sparse and compressed attention keep the basic attention contract: a query selects some representation of previous tokens and then reads values. A different frontier direction asks whether the model must keep a per-token KV memory at all. <strong>Linear attention</strong>, <strong>state-space models</strong>, retention-style models, and recent hybrid architectures replace part of the token-by-token lookup with a compact recurrent state. For inference engineers, the question is not "which architecture is fashionable", but which memory representation is being carried through time and what quality evidence is lost or gained.</p>
+
+  <div class="svg-diagram" style="max-width:940px">
+    <svg viewBox="0 0 940 500" role="img" aria-label="Sequence architecture comparison from dense attention to hybrid systems">
+      <defs>
+        <marker id="seq-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <rect x="10" y="10" width="920" height="480" rx="10" fill="var(--code-bg)" stroke="var(--border)"/>
+      <text x="470" y="42" text-anchor="middle" style="font-size:18px;font-weight:700;fill:var(--text)">What Memory Does the Sequence Model Carry?</text>
+
+      <rect x="40" y="78" width="190" height="112" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="135" y="105" text-anchor="middle" style="font-size:14px;font-weight:700;fill:var(--text)">Dense Attention</text>
+      <text x="135" y="130" text-anchor="middle" style="font-size:12px;fill:var(--muted)">stores K/V for every token</text>
+      <text x="135" y="150" text-anchor="middle" style="font-size:12px;fill:var(--muted)">exact pairwise lookup</text>
+      <text x="135" y="170" text-anchor="middle" style="font-size:12px;fill:var(--accent)">high recall, high KV cost</text>
+
+      <rect x="270" y="78" width="190" height="112" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="365" y="105" text-anchor="middle" style="font-size:14px;font-weight:700;fill:var(--text)">Sparse / Compressed</text>
+      <text x="365" y="130" text-anchor="middle" style="font-size:12px;fill:var(--muted)">keeps selected K/V</text>
+      <text x="365" y="150" text-anchor="middle" style="font-size:12px;fill:var(--muted)">or pooled summaries</text>
+      <text x="365" y="170" text-anchor="middle" style="font-size:12px;fill:var(--accent)">less scope, recall risk</text>
+
+      <rect x="500" y="78" width="190" height="112" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="595" y="105" text-anchor="middle" style="font-size:14px;font-weight:700;fill:var(--text)">Linear Attention</text>
+      <text x="595" y="130" text-anchor="middle" style="font-size:12px;fill:var(--muted)">updates a running state</text>
+      <text x="595" y="150" text-anchor="middle" style="font-size:12px;fill:var(--muted)">associative computation</text>
+      <text x="595" y="170" text-anchor="middle" style="font-size:12px;fill:var(--accent)">streaming-friendly</text>
+
+      <rect x="730" y="78" width="170" height="112" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="815" y="105" text-anchor="middle" style="font-size:14px;font-weight:700;fill:var(--text)">SSM / Mamba</text>
+      <text x="815" y="130" text-anchor="middle" style="font-size:12px;fill:var(--muted)">selective recurrent state</text>
+      <text x="815" y="150" text-anchor="middle" style="font-size:12px;fill:var(--muted)">no full KV table</text>
+      <text x="815" y="170" text-anchor="middle" style="font-size:12px;fill:var(--accent)">linear sequence scaling</text>
+
+      <line x1="230" y1="134" x2="270" y2="134" stroke="var(--accent)" stroke-width="2" marker-end="url(#seq-arrow)"/>
+      <line x1="460" y1="134" x2="500" y2="134" stroke="var(--accent)" stroke-width="2" marker-end="url(#seq-arrow)"/>
+      <line x1="690" y1="134" x2="730" y2="134" stroke="var(--accent)" stroke-width="2" marker-end="url(#seq-arrow)"/>
+
+      <rect x="92" y="245" width="756" height="88" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="470" y="273" text-anchor="middle" style="font-size:15px;font-weight:700;fill:var(--text)">Hybrid Stack in Modern Long-Context Models</text>
+      <text x="470" y="300" text-anchor="middle" style="font-size:12px;fill:var(--muted)">local/full attention layers + linear or SSM layers + MLA/GQA cache compression + MoE/MLP blocks</text>
+      <text x="470" y="320" text-anchor="middle" style="font-size:12px;fill:var(--accent)">goal: keep exact retrieval where needed, use compact state where exact pairwise lookup is too expensive</text>
+
+      <path d="M135 190 C160 230 210 245 330 245" fill="none" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#seq-arrow)"/>
+      <path d="M365 190 C380 225 410 245 445 245" fill="none" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#seq-arrow)"/>
+      <path d="M595 190 C580 225 545 245 505 245" fill="none" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#seq-arrow)"/>
+      <path d="M815 190 C785 230 735 245 610 245" fill="none" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#seq-arrow)"/>
+
+      <rect x="70" y="390" width="210" height="58" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="175" y="414" text-anchor="middle" style="font-size:12px;font-weight:700;fill:var(--text)">Quality evidence</text>
+      <text x="175" y="434" text-anchor="middle" style="font-size:11px;fill:var(--muted)">needle, citation, code, multi-hop</text>
+      <rect x="365" y="390" width="210" height="58" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="470" y="414" text-anchor="middle" style="font-size:12px;font-weight:700;fill:var(--text)">Systems evidence</text>
+      <text x="470" y="434" text-anchor="middle" style="font-size:11px;fill:var(--muted)">kernel, cache, throughput, TTFT</text>
+      <rect x="660" y="390" width="210" height="58" rx="8" fill="var(--card-bg)" stroke="var(--border)"/>
+      <text x="765" y="414" text-anchor="middle" style="font-size:12px;font-weight:700;fill:var(--text)">Training evidence</text>
+      <text x="765" y="434" text-anchor="middle" style="font-size:11px;fill:var(--muted)">scale, stability, data mixture, RL</text>
+    </svg>
+  </div>
+
+  <h4>Dense, Sparse, Linear, and Recurrent State Are Different Memory Contracts</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Family</th><th>Memory Representation During Inference</th><th>Good Fit</th><th>Main Risk to Evaluate</th></tr>
+      <tr><td>Full dense attention</td><td>All historical K/V vectors remain addressable by every new query.</td><td>Precise recall, code navigation, citation, and tasks where any previous token may matter.</td><td>KV cache and attention work grow with context and concurrency.</td></tr>
+      <tr><td>Sparse or compressed attention</td><td>The model keeps a subset, window, or pooled summary of historical K/V.</td><td>Long documents where most tokens are irrelevant for each query, and the sparsity pattern is reliable.</td><td>Important evidence may be skipped, pooled away, or hard to cite precisely.</td></tr>
+      <tr><td>Linear attention</td><td>Attention is rewritten into a running state, often through feature maps or delta-rule updates.</td><td>Streaming, very long sequence processing, and workloads where compact state is more valuable than exact lookup.</td><td>Finite state may be weaker at arbitrary content-based retrieval unless hybridized or carefully trained.</td></tr>
+      <tr><td>SSM / Mamba-style selective state</td><td>A recurrent hidden state is updated token by token, with input-dependent selection of what to keep or forget.</td><td>Long sequences, audio/time-series style data, and cases where linear sequence scaling matters.</td><td>Different kernel ecosystem, checkpoint compatibility, and long-range exact recall behavior from attention.</td></tr>
+      <tr><td>Hybrid architecture</td><td>Combines attention layers, linear/SSM layers, local windows, MLA/GQA cache compression, and FFN/MoE blocks.</td><td>Frontier long-context LLMs that need both efficient streaming and high-quality retrieval/reasoning.</td><td>More moving parts: layer mix, kernel availability, training recipe, and task-specific regressions.</td></tr>
+    </table>
+  </div>
+
+  <h4>The Core Algebra Behind Linear Attention</h4>
+  <p>Standard causal attention computes a new distribution over all previous keys for every query. Linear attention tries to use an associative form so the previous sequence can be summarized incrementally. A simplified causal form is:</p>
+  <div class="math-box"><div class="label">Linear Attention State Update (Conceptual)</div>
+    <div class="katex" data-expr="S_t = S_{t-1} + \phi(k_t)v_t^\top,\quad z_t = z_{t-1} + \phi(k_t),\quad y_t = \frac{\phi(q_t)^\top S_t}{\phi(q_t)^\top z_t}" aria-label="S_t = S_{t-1} + phi(k_t) v_t^T, z_t = z_{t-1} + phi(k_t), y_t = phi(q_t)^T S_t / phi(q_t)^T z_t" role="img"></div>
+  </div>
+  <p>The important shift is that the model no longer has to materialize a <code>[T,T]</code> score matrix or keep a full per-token lookup path for every layer. It carries <code>S_t</code> and <code>z_t</code> forward. This is why linear attention can be attractive for long sequences and streaming decode. The trade-off is also visible: after many tokens have been folded into a finite state, the model may not be able to recover an arbitrary token-level fact as cleanly as dense attention unless the architecture adds selective memory, local attention, retrieval, or periodic full-attention layers.</p>
+
+  <h4>Why Mamba-Style SSMs Matter for LLM Engineers</h4>
+  <p>State-space models carry a hidden state rather than a KV table. The Mamba line made this direction relevant to language modeling by making the state update selective: parameters that determine what to keep, forget, or expose can depend on the current input token. In simplified notation:</p>
+  <div class="math-box"><div class="label">Selective State Update (Conceptual)</div>
+    <div class="katex" data-expr="h_t = A(x_t)h_{t-1} + B(x_t)x_t,\quad y_t = C(x_t)h_t" aria-label="h_t = A(x_t) h_{t-1} + B(x_t) x_t, y_t = C(x_t) h_t" role="img"></div>
+  </div>
+  <p>This gives the model an explicit mechanism for deciding which information should persist in the state. Mamba-2 further clarifies that attention-like and SSM-like layers can be understood through a shared structured matrix view, which is useful for engineers because it reduces the false dichotomy between "attention model" and "recurrent model". The practical question becomes: which layers need exact token lookup, which layers can use compact state, and which kernels make the chosen mix efficient on the target hardware?</p>
+
+  <h4>How to Read Hybrid Linear Attention Claims</h4>
+  <p>Recent hybrid systems such as Kimi Linear combine expressive linear attention modules with attention/cache-compression components like MLA. The reported motivation is not merely "replace Transformers"; it is to reduce KV cache and long-context decode cost while retaining enough attention-like capability for short-context, long-context, and post-training/RL workloads. For this course, read such claims through three ledgers:</p>
+  <ul>
+    <li><strong>Architecture ledger:</strong> Which layers use dense attention, local attention, linear attention, SSM, MLA/GQA, or MoE? Is exact retrieval preserved anywhere?</li>
+    <li><strong>Systems ledger:</strong> What is the actual state or cache size per token/layer, which kernels exist, and how do TTFT, TPOT, throughput, and memory change at the target context length?</li>
+    <li><strong>Quality ledger:</strong> Are evaluations separated by short context, long context, multi-hop recall, citation, code, tool use, and RL/post-training tasks rather than only average benchmark scores?</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Full attention, sparse attention, linear attention, and SSMs are not interchangeable speed tricks. They define different memory contracts. Senior training and inference engineers should ask what state is preserved, what exact lookup path remains, what kernel makes it fast, and which task slices prove that the cheaper memory did not erase the information the product needs.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1946,15 +2047,17 @@ assert report["decision"] == "enable_speculative_decoding_for_this_workload"</di
   <p>This chapter can be summarized with a "pruning" map: modern LLM systems don't just rely on larger GPUs; they reduce redundant computation, redundant memory, and redundant context at different levels.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>Compression Target</th><th>Representative Technique</th><th>What is Saved</th><th>Main Risk</th></tr>      <tr><td><strong>Historical State</strong></td><td>GQA, MLA, prefix cache, PagedAttention</td><td>KV Cache memory, repeated prefill</td><td>Low cache hit rate, long-context memory still grows with batch</td></tr>
+      <tr><th>Compression Target</th><th>Representative Technique</th><th>What is Saved</th><th>Main Risk</th></tr>
+      <tr><td><strong>Historical State</strong></td><td>GQA, MLA, prefix cache, PagedAttention</td><td>KV Cache memory, repeated prefill</td><td>Low cache hit rate, long-context memory still grows with batch</td></tr>
       <tr><td><strong>Scheduling Queue</strong></td><td>continuous batching, chunked prefill, admission control</td><td>Static batch waiting, long prompt blocking, KV overselling</td><td>Improper max token/seq settings amplify tail latency or cause OOM</td></tr>
       <tr><td><strong>Parameter Access</strong></td><td>MoE, quantization, tensor parallel</td><td>Activated parameters per token, weight bandwidth, single-GPU memory</td><td>Unbalanced routing, quantization error, communication overhead</td></tr>
       <tr><td><strong>Attention Scope</strong></td><td>Sparse attention, compressed attention, sliding window + global tokens</td><td>Long-context FLOPs and intermediate activations</td><td>Missed recall of distant information, degraded precise citation</td></tr>
+      <tr><td><strong>Sequence State</strong></td><td>linear attention, SSM/Mamba-style layers, retention, hybrid stacks</td><td>Full per-token lookup path in some layers, long-sequence recurrent state cost</td><td>Finite-state memory may weaken arbitrary recall unless exact attention or retrieval remains</td></tr>
       <tr><td><strong>Context Content</strong></td><td>RAG, rerank, MMR, context packing</td><td>Irrelevant prompt tokens, knowledge update cost</td><td>Retrieval errors, citation inconsistency, context interference</td></tr>
       <tr><td><strong>Inference Steps</strong></td><td>speculative decoding, multi-token prediction, early stop</td><td>Number of target model forward passes, average TPOT</td><td>Insufficient acceptance rate, draft model bias, quality regression</td></tr>
     </table>
   </div>
-  <p>This table is a course-level abstraction and does not replace specific technical reports. Whether a system is truly faster, more efficient, or more accurate depends on prompt length distribution, batch size, concurrency, GPU type, kernel implementation, quantization calibration, retrieval library, and evaluation dataset. State space models like Mamba offer another route for long sequence modeling, but each has its own trade-offs across different tasks, hardware, and ecosystems.</p>
+  <p>This table is a course-level abstraction and does not replace specific technical reports. Whether a system is truly faster, more efficient, or more accurate depends on prompt length distribution, batch size, concurrency, GPU type, kernel implementation, quantization calibration, retrieval library, and evaluation dataset. Linear attention and state-space models like Mamba offer another route for long sequence modeling, but each changes the memory contract and must be evaluated on the task slices that need precise recall.</p>
 </section>
 
 <!-- ================================================================ -->

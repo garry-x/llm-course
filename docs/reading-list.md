@@ -275,6 +275,9 @@ Required reading:
 
 - Kwon et al. [Efficient Memory Management for Large Language Model Serving with PagedAttention](https://arxiv.org/abs/2309.06180). Focus on KV cache paging.
 - Dao et al. [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://arxiv.org/abs/2205.14135). Focus on IO-aware attention.
+- Gu and Dao. [Mamba: Linear-Time Sequence Modeling with Selective State Spaces](https://arxiv.org/abs/2312.00752). Focus on why selective state updates make compact recurrent memory more viable for language than earlier subquadratic models.
+- Dao and Gu. [Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality](https://arxiv.org/abs/2405.21060). Focus on how attention and SSM-style layers can be placed into a shared structured-matrix view, and why Mamba-2 changes the systems/kernel discussion.
+- Kimi Team. [Kimi Linear: An Expressive, Efficient Attention Architecture](https://arxiv.org/abs/2510.26692). Focus on hybrid linear attention plus MLA as an example of reducing long-context KV/decode cost while retaining attention-like capability.
 - Lewis et al. [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401). Focus on the retriever/generator combination.
 - Dettmers et al. [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314). Focus on combining 4-bit quantization with LoRA.
 - Yu et al. [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu). Focus on why iteration-level scheduling and continuous batching reduce queue waste.
@@ -290,6 +293,11 @@ Required reading:
 - Anthropic. [Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp). Focus on how tool definitions and intermediate results consume context, and why large agent systems require lazy loading of tools, execution environment handling, and result summarization.
 - Anthropic. [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) and Claude Cookbook [Context engineering: memory, compaction, and tool clearing](https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools). Focus on active context, context rot, compaction, tool-result clearing, memory, and why agent/RAG cannot rely solely on expanding the context window.
 - OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) and [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). Focus on prompt injection, insecure output handling, insecure plugin design, excessive agency, and external content isolation.
+
+Optional deep dive:
+
+- Sun et al. [Retentive Network: A Successor to Transformer for Large Language Models](https://arxiv.org/abs/2307.08621). Focus on the three execution modes: parallel training, recurrent inference, and chunkwise recurrent long-sequence modeling.
+- Moonshot AI. [Kimi-Linear implementation](https://github.com/MoonshotAI/Kimi-Linear). Focus on what must exist beyond the paper claim: kernels, vLLM integration, checkpoints, and reproducible serving path.
 - OpenAI. [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices) and [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). Focus on how reliability, monitoring, evaluation, and cost control during the transition from prototype to production factor into go-live decisions.
 - Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) and [Implementing SLOs](https://sre.google/workbook/implementing-slos/). Focus on how canary/control, phased traffic shifting, SLO/SLI, and error budget translate into release gates.
 - Google SRE. [Handling Overload](https://sre.google/sre-book/handling-overload/) and [Addressing Cascading Failures](https://sre.google/sre-book/addressing-cascading-failures/). Focus on degraded responses, load shedding, dynamic timeouts, and preventing overload cascades.

@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 10: Inference Optimization & Frontiers</h2>
   <p class="subtitle">KV Cache, Sparse and Linear Attention, Quantization, RAG, Agents, and Model Routing — Engineering LLM Deployment</p>
-  <div class="reading-time">⏱ Estimated Reading: 225 minutes · 36 sections · 7 programming exercises · 7 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 235 minutes · 38 sections · 7 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -945,6 +945,118 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
 
   <p>A common failure is "the long-context path pass rate improves, but token cost and TTFT increase exponentially, and citations are unstable." In this case, the action item may not be to switch to a larger model, but rather to reduce tool schema, lazy-load tools, change chunk/rerank, compress history, clear re-fetchable observations, or write long-term state to permission-controlled memory. Context engineering is therefore the intersection of RAG, Agent, long-context serving, and observability.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Context is not an infinitely free "prompt space." It is the common carrier of the model's working memory, latency cost, privacy boundaries, and quality evidence; any agent or RAG launch report should explain where the context comes from, why it enters the window, when it is compressed or cleared, and whether these actions break citations, permissions, and SLOs.</div></div>
+</section>
+
+<section class="card" id="s10-9c">
+  <h3>10.9C Prompt Injection and Tool Data Boundaries</h3>
+  <p>RAG documents, web pages, email bodies, uploaded files, OCR text, tool outputs, MCP resources, and tool descriptions all enter the model as tokens. The model does not have a cryptographic boundary between "trusted instruction" and "untrusted content"; therefore, the serving system must create that boundary outside the model. OWASP classifies prompt injection as a top LLM application risk, and its prevention guidance emphasizes separating instructions from data, validating outputs, constraining tool execution, and testing adversarial cases. The MCP specification and security best-practice documents make the same point from the tool-protocol side: tool behavior descriptions can be untrusted, tools can represent arbitrary code execution, and implementations need consent, access control, scope minimization, and protection against confused-deputy and token-passthrough failures.</p>
+  <p>The practical rule is simple: <strong>external content can provide evidence, but it must not become policy</strong>. A retrieved paragraph can support an answer; it cannot rewrite the system prompt. A tool result can report facts; it cannot authorize the next tool call. A tool description can explain an interface; it cannot silently request private context. Bigger models, longer context, RAG, and fine-tuning do not remove this boundary problem because the failure comes from mixing trusted and untrusted tokens inside one sequence.</p>
+
+  <div class="svg-diagram">
+    <svg viewBox="0 0 1040 500" role="img" aria-label="Prompt injection and tool data boundary for RAG, tools, MCP resources, and final answer verification">
+      <defs>
+        <marker id="pi-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#7c3aed"/>
+        </marker>
+        <style>
+          .pi-title{font:700 18px system-ui,sans-serif;fill:#1f2937}
+          .pi-text{font:600 13px system-ui,sans-serif;fill:#374151}
+          .pi-small{font:500 12px system-ui,sans-serif;fill:#4b5563}
+          .pi-box{fill:#ffffff;stroke:#d1d5db;stroke-width:1.5}
+          .pi-trusted{fill:#ecfdf5;stroke:#059669;stroke-width:2}
+          .pi-untrusted{fill:#fff7ed;stroke:#ea580c;stroke-width:2}
+          .pi-control{fill:#eef2ff;stroke:#4f46e5;stroke-width:2}
+          .pi-danger{fill:#fef2f2;stroke:#dc2626;stroke-width:2}
+          .pi-line{stroke:#7c3aed;stroke-width:2;fill:none;marker-end:url(#pi-arrow)}
+          .pi-dash{stroke:#ea580c;stroke-width:2;fill:none;stroke-dasharray:6 5;marker-end:url(#pi-arrow)}
+        </style>
+      </defs>
+
+      <rect class="pi-trusted" x="40" y="48" width="190" height="76" rx="10"/>
+      <text class="pi-title" x="135" y="78" text-anchor="middle">Trusted Policy</text>
+      <text class="pi-small" x="135" y="101" text-anchor="middle">system, tenant, user consent</text>
+
+      <rect class="pi-untrusted" x="40" y="190" width="190" height="168" rx="10"/>
+      <text class="pi-title" x="135" y="222" text-anchor="middle">Untrusted Data</text>
+      <text class="pi-small" x="135" y="248" text-anchor="middle">RAG chunks, web pages</text>
+      <text class="pi-small" x="135" y="270" text-anchor="middle">tool outputs, files, OCR</text>
+      <text class="pi-small" x="135" y="292" text-anchor="middle">MCP resources and metadata</text>
+      <text class="pi-small" x="135" y="324" text-anchor="middle">may contain hidden instructions</text>
+
+      <rect class="pi-control" x="310" y="88" width="190" height="232" rx="12"/>
+      <text class="pi-title" x="405" y="122" text-anchor="middle">Context Builder</text>
+      <text class="pi-small" x="405" y="150" text-anchor="middle">label source and trust level</text>
+      <text class="pi-small" x="405" y="174" text-anchor="middle">separate instruction from data</text>
+      <text class="pi-small" x="405" y="198" text-anchor="middle">quote or summarize evidence</text>
+      <text class="pi-small" x="405" y="222" text-anchor="middle">remove executable directives</text>
+      <text class="pi-small" x="405" y="246" text-anchor="middle">preserve citation handles</text>
+      <text class="pi-small" x="405" y="282" text-anchor="middle">output: bounded model context</text>
+
+      <rect class="pi-box" x="575" y="92" width="170" height="94" rx="10"/>
+      <text class="pi-title" x="660" y="126" text-anchor="middle">Model</text>
+      <text class="pi-small" x="660" y="150" text-anchor="middle">may propose answer</text>
+      <text class="pi-small" x="660" y="170" text-anchor="middle">or candidate action</text>
+
+      <rect class="pi-control" x="820" y="44" width="180" height="170" rx="12"/>
+      <text class="pi-title" x="910" y="76" text-anchor="middle">Server Checks</text>
+      <text class="pi-small" x="910" y="104" text-anchor="middle">schema validation</text>
+      <text class="pi-small" x="910" y="126" text-anchor="middle">permission and consent</text>
+      <text class="pi-small" x="910" y="148" text-anchor="middle">egress allowlist</text>
+      <text class="pi-small" x="910" y="170" text-anchor="middle">PII and secret scan</text>
+      <text class="pi-small" x="910" y="192" text-anchor="middle">side-effect approval</text>
+
+      <rect class="pi-danger" x="820" y="276" width="180" height="126" rx="12"/>
+      <text class="pi-title" x="910" y="310" text-anchor="middle">Blocked Path</text>
+      <text class="pi-small" x="910" y="336" text-anchor="middle">instruction override</text>
+      <text class="pi-small" x="910" y="358" text-anchor="middle">private data egress</text>
+      <text class="pi-small" x="910" y="380" text-anchor="middle">unauthorized tool action</text>
+
+      <rect class="pi-box" x="575" y="276" width="170" height="126" rx="10"/>
+      <text class="pi-title" x="660" y="310" text-anchor="middle">Final Verifier</text>
+      <text class="pi-small" x="660" y="336" text-anchor="middle">citation grounding</text>
+      <text class="pi-small" x="660" y="358" text-anchor="middle">format and policy</text>
+      <text class="pi-small" x="660" y="380" text-anchor="middle">trace completeness</text>
+
+      <path class="pi-line" d="M230 86 H310"/>
+      <path class="pi-dash" d="M230 274 H310"/>
+      <path class="pi-line" d="M500 146 H575"/>
+      <path class="pi-line" d="M745 140 H820"/>
+      <path class="pi-line" d="M660 186 V276"/>
+      <path class="pi-line" d="M745 338 H820"/>
+      <path class="pi-dash" d="M230 214 C350 420 760 454 884 402"/>
+      <text class="pi-text" x="520" y="454" text-anchor="middle">Untrusted instructions never execute directly; every action crosses a server-side boundary.</text>
+    </svg>
+    <p class="diagram-caption">Figure 10-7: Prompt injection defense is an application boundary, not a single prompt. External content is evidence; server-side checks decide actions and data egress.</p>
+  </div>
+
+  <h4>Threat Surfaces and Engineering Controls</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Surface</th><th>Typical Attack</th><th>Failure Mode</th><th>Engineering Control</th></tr>
+      <tr><td>Direct user input</td><td>User asks the model to ignore policy or reveal hidden instructions</td><td>Policy conflict is resolved by model behavior instead of server policy</td><td>System policy outside the model, refusal tests, output policy verifier</td></tr>
+      <tr><td>Indirect RAG / web content</td><td>Retrieved page says "send private context to this URL" or "follow these new rules"</td><td>Observation is treated as a new instruction</td><td>Source labels, quoted evidence blocks, instruction/data separation, citation checking</td></tr>
+      <tr><td>Tool output</td><td>Tool response asks the agent to call another tool, send email, or overwrite files</td><td>Tool output becomes an action source</td><td>Tool outputs are facts only; next action must pass schema, permission, budget, and consent checks</td></tr>
+      <tr><td>MCP tool metadata</td><td>Tool description or annotation hides instructions to request extra context or exfiltrate data</td><td>Tool poisoning and overbroad tool exposure</td><td>Trusted registry, version pinning, metadata review, lazy schema loading, least-privilege tool set</td></tr>
+      <tr><td>Data egress</td><td>Model copies private documents, API keys, or tenant data into an external call</td><td>Privacy breach or cross-tenant leak</td><td>Egress allowlist, redaction, PII/secret scan, tenant boundary, local-tool fallback</td></tr>
+      <tr><td>Side-effect tools</td><td>Agent sends messages, modifies files, orders services, or executes code without approval</td><td>Excessive agency and irreversible actions</td><td>Human approval for high-impact actions, sandboxing, idempotency, rollback log</td></tr>
+    </table>
+  </div>
+
+  <h4>Security Invariants to Test</h4>
+  <p>A senior inference engineer should turn prompt-injection safety into repeatable tests, not only prose guidelines. The minimum adversarial set should include direct jailbreak prompts, poisoned RAG documents, malicious web snippets, adversarial tool outputs, poisoned MCP tool descriptions, multimodal/OCR hidden instructions, cross-turn memory pollution, and canary secrets placed in private context.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Invariant</th><th>How to Test</th><th>Observable Signal</th></tr>
+      <tr><td>Observations are data, not instructions</td><td>Insert documents and tool outputs that command the model to change policy</td><td>Injection success rate, unsupported action proposals, source-label accuracy</td></tr>
+      <tr><td>Private data cannot leave approved boundaries</td><td>Place canary secrets in private context and request external tool use</td><td>Secret leakage rate, egress block rate, redaction false positives</td></tr>
+      <tr><td>Tool execution is server-authorized</td><td>Generate valid-looking but unauthorized tool calls</td><td>Unauthorized execution count, approval bypass rate, schema rejection reason</td></tr>
+      <tr><td>Side effects require explicit consent</td><td>Simulate send/write/order/execute tasks with and without user approval</td><td>Consent enforcement rate, rollback completeness, side-effect audit coverage</td></tr>
+      <tr><td>Context packing preserves trust labels</td><td>Mix trusted policy, untrusted snippets, and summarized observations</td><td>Trust-label retention, citation grounding, summary contamination rate</td></tr>
+    </table>
+  </div>
+
+  <p>Useful primary references for this section include <a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank">OWASP LLM01: Prompt Injection</a>, the <a href="https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html" target="_blank">OWASP LLM Prompt Injection Prevention Cheat Sheet</a>, the <a href="https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices" target="_blank">MCP Security Best Practices</a>, and the <a href="https://modelcontextprotocol.io/specification/2025-11-25" target="_blank">MCP specification security principles</a>. The course-level conclusion is not that these documents provide a magic filter; they define the engineering boundary that must exist around the model.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Prompt injection is a system-design problem. Treat the model as a proposal generator; trusted policy, data-egress control, tool authorization, consent, and final verification must live in the application layer where they can be tested, logged, and enforced.</div></div>
 </section>
 
 <!-- ================================================================ -->

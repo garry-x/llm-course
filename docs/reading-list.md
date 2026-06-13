@@ -241,6 +241,7 @@ Required reading:
 - Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). Focus on long-context RL, long2short, length control, sampling strategies, and engineering trade-offs for multimodal reasoning.
 - Yu et al. [DAPO: An Open-Source LLM Reinforcement Learning System at Scale](https://arxiv.org/abs/2503.14476). Focus on Clip-Higher, dynamic sampling, token-level policy gradient loss, overlong reward shaping, and how open-source RL recipes serve reproducible training.
 - Zheng et al. [Group Sequence Policy Optimization](https://arxiv.org/abs/2507.18071). Focus on sequence-level importance ratio, length normalization, MoE RL stability, and why token-level ratio noise affects long training runs.
+- verl [documentation](https://verl.readthedocs.io/), OpenRLHF [documentation](https://openrlhf.readthedocs.io/), SGLang [Post-Training Integration](https://sgl-project.github.io/references/post_training_integration.html), slime [documentation](https://thudm.github.io/slime/), and AReaL [paper](https://arxiv.org/abs/2505.24298). Focus on rollout engines, Ray/vLLM/SGLang integration, weight synchronization, colocated versus decoupled rollout, asynchronous RL, sample staleness, and production run ledgers.
 
 Optional reading:
 

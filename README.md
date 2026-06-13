@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/chapters-11-orange" alt="11 chapters">
   <img src="https://img.shields.io/badge/exercises-programming_+_written-blue" alt="programming and written exercises">
-  <img src="https://img.shields.io/badge/sections-133-yellow" alt="133 sections">
+  <img src="https://img.shields.io/badge/sections-134-yellow" alt="134 sections">
   <img src="https://img.shields.io/badge/frontier-architecture_cases-green" alt="frontier architecture cases">
   <img src="https://img.shields.io/badge/iPad_Pro-optimized-purple" alt="iPad Pro">
   <img src="https://img.shields.io/badge/db-IndexedDB-red" alt="IndexedDB">
@@ -51,7 +51,7 @@ This course is organized around "how large models are represented, computed, tra
 | Transformer Core | Ch03-Ch06 | How attention, mask, multi-head, GQA/MLA, Norm, FFN, MoE, and GPT forward propagation combine |
 | Training Loop | Ch07 | Why next-token prediction is equivalent to maximum likelihood, how loss, PPL, optimizer, checkpoint/resume integrity, and distributed training gates work |
 | Generation & Inference | Ch08-Ch10 | How prefill/decode, sampling, speculative decoding, KV Cache, FlashAttention, RAG, multimodal serving, and inference services trade off |
-| Fine-tuning & Alignment | Ch09 | How SFT chat template/mask/packing gates, preference data gates, LoRA, preference modeling, DPO, GRPO/DAPO/GSPO, RLVR/RFT change model behavior |
+| Fine-tuning & Alignment | Ch09 | How SFT chat template/mask/packing gates, preference data gates, LoRA, preference modeling, DPO, GRPO/DAPO/GSPO, RLVR/RFT, and rollout/training systems change model behavior |
 | Classic NLP & Evaluation | Week 8 Topic / Ch11 Assignments | How RNN/LSTM, dependency parsing, seq2seq, BERT/MLM, BLEU/ROUGE/F1/EM connect to modern LLMs |
 | Frontier Engineering Cases | Ch04-Ch10 | What engineering bottlenecks designs like MLA, MoE, FP8, GRPO/DAPO/GSPO, sparse/compressed attention, dynamic-resolution vision, and multimodal serving solve |
 
@@ -106,7 +106,7 @@ If your goal is to become an LLM training engineer, the learning objective shoul
 | Training Loop Engineering | Ch06-Ch07 | Organize PyTorch Dataset/DataLoader, forward, loss, backward, optimizer, scheduler |
 | Stability & Recovery | Ch07 | Use seed, grad clipping, checkpoint integrity, distributed resume, and anomaly troubleshooting to protect training |
 | Monitoring & Evaluation | Ch07-Ch09 | Record train_loss, val_loss, ppl, lr, grad_norm, tokens/s, and interpret curves |
-| Fine-tuning & Alignment | Ch09 | Distinguish data formats, losses, rollout logs, and applicable scenarios for SFT/preference data gates, LoRA, DPO, GRPO/DAPO/GSPO, RLVR/RFT |
+| Fine-tuning & Alignment | Ch09 | Distinguish data formats, losses, rollout logs, weight sync, staleness, and applicable scenarios for SFT/preference data gates, LoRA, DPO, GRPO/DAPO/GSPO, RLVR/RFT |
 | Distribution & Cost | Ch07, Ch10 | Understand AMP, FSDP/ZeRO, global batch tokens, MFU, GPU hours, distributed checkpoint, checkpoint storage, and scale rehearsal |
 
 ## Quick Start
@@ -149,7 +149,7 @@ This repository recommends using `.venv` in the root directory to run local code
 | 6 | **Assemble GPT + DeepSeekMoE** — GPT-2 124M Complete Model | `GPTModel` ~100 lines | 5+5 |
 | 7 | **Training Loop** — AdamW/Muon + FP8/MXFP8 + Distributed Strategy Ledger | Complete training script + strategy/gate report | 7+5 |
 | 8 | **Text Generation** — Sampling strategies + reasoning budget + MTP speculative decoding + constrained generation | Text generator + test-time compute gate | 7+5 |
-| 9 | **Fine-tuning & Alignment** — SFT/preference data/synthetic distillation/LoRA/DPO/GRPO/DAPO/GSPO/RLVR + R1 reasoning | SFT protocol, post-training data audit, LoRA, DPO/GRPO/RLVR, reasoning RL logs, and distillation data quality analysis | 8+5 |
+| 9 | **Fine-tuning & Alignment** — SFT/preference data/synthetic distillation/LoRA/DPO/GRPO/DAPO/GSPO/RLVR + rollout systems + R1 reasoning | SFT protocol, post-training data audit, LoRA, DPO/GRPO/RLVR, reasoning RL logs, rollout system ledger, and distillation data quality analysis | 8+5 |
 | 10 | **Inference Optimization & Frontiers** — KV Cache/quantization release gate/RAG/Context Engineering/Structured Output/Tool/MCP Gate/vLLM/Triton/MoE serving/Model routing/Production release/KV-aware routing/Long context/Multimodal | KV Cache + quantization calibration/regression + RAG + context engineering gate + structured output gate + Tool/MCP Gate + MoE serving gate + model routing gate + rollout gate + overload response + continuous batching admission + P/D pool plan + KV-aware cache hierarchy + speculative gate + long-context gate + LSH + service blueprint | 11+5 |
 | Topic | **Classic NLP & Evaluation** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics / agent workflow eval | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + agent eval protocol + MLM mask | Ch11 |
 

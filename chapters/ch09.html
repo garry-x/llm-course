@@ -26,7 +26,7 @@
 <article class="chapter">
   <h2>Chapter 9: Fine-tuning and Alignment</h2>
   <p class="subtitle">SFT / LoRA / DPO / GRPO — The Last Mile from Pre-training to a Useful Assistant</p>
-  <div class="reading-time">⏱ Estimated Reading: 150 minutes · 20 sections · 8 programming exercises · 5 conceptual exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 160 minutes · 21 sections · 8 programming exercises · 5 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -817,6 +817,75 @@ advantages ≈
 
   <p>This evidence chain connects directly to Ch08 and Ch10. Ch08 provides pass@k, self-consistency, verifier reranking, and thinking-budget accounting. Ch10 asks whether the longer completions and multi-sample decoding can still satisfy latency, queueing, and cost constraints. Therefore, a reasoning RL report is incomplete if it stops at reward curves or benchmark scores; it must also explain how the trained model will be routed, budgeted, monitored, and rolled back in service.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Senior-Level Requirement:</strong> Treat reasoning RL as a coupled data, reward, optimizer, evaluation, and serving system. A model is not production-ready because it exhibits self-reflection; it is production-ready only when the evidence chain shows measurable correctness gains under bounded cost and acceptable regression risk.</div></div>
+</section>
+
+<section class="card" id="s9-8d">
+  <h3>9.8D Post-Training RL Systems: Rollout, Weight Sync, and Staleness</h3>
+  <p>Reasoning RL is not just an optimizer formula. Once each prompt needs multiple long completions, tool calls, verifier execution, reward computation, and repeated policy updates, the bottleneck moves from "how to write the GRPO loss" to "how to keep generation, scoring, training, and weight synchronization busy without corrupting the learning signal." Modern open systems show the same direction from different angles: verl integrates training and inference frameworks such as PyTorch FSDP, Megatron-LM, vLLM, and SGLang; OpenRLHF combines Ray, vLLM, DeepSpeed, and agent-style execution; SGLang emphasizes post-training features such as refit, postpone generation, sleep/wake control, deterministic inference, and cache-aware rollout; slime intentionally couples Megatron training with SGLang rollout; AReaL explores fully asynchronous rollout and training with explicit control of data staleness.</p>
+
+  <div class="foundation-graph" role="img" aria-label="Post-training RL system dataflow">
+    <svg viewBox="0 0 940 360">
+      <defs>
+        <marker id="rlsys-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .rlsys-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .rlsys-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .rlsys-reward{fill:rgba(16,185,129,.10);stroke:var(--success);stroke-width:2}
+        .rlsys-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#rlsys-arrow-09)}
+        .rlsys-dash{fill:none;stroke:var(--text-secondary);stroke-width:1.6;stroke-dasharray:5 4;marker-end:url(#rlsys-arrow-09)}
+        .rlsys-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .rlsys-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rlsys-node" x="30" y="126" width="128" height="74" rx="10"/>
+      <text text-anchor="middle" x="94" y="154"><tspan class="rlsys-title">Prompt Queue</tspan><tspan class="rlsys-sub" x="94" dy="19">tasks, tools, seeds</tspan></text>
+      <path class="rlsys-line" d="M158 163 H218"/>
+      <rect class="rlsys-core" x="218" y="92" width="156" height="142" rx="10"/>
+      <text text-anchor="middle" x="296" y="122"><tspan class="rlsys-title">Rollout Engine</tspan><tspan class="rlsys-sub" x="296" dy="22">vLLM / SGLang</tspan><tspan class="rlsys-sub" x="296" dy="18">multi-sample</tspan><tspan class="rlsys-sub" x="296" dy="18">tool or env calls</tspan><tspan class="rlsys-sub" x="296" dy="18">logprobs</tspan></text>
+      <path class="rlsys-line" d="M374 163 H438"/>
+      <rect class="rlsys-reward" x="438" y="92" width="156" height="142" rx="10"/>
+      <text text-anchor="middle" x="516" y="122"><tspan class="rlsys-title">Reward Service</tspan><tspan class="rlsys-sub" x="516" dy="22">tests, graders</tspan><tspan class="rlsys-sub" x="516" dy="18">format checks</tspan><tspan class="rlsys-sub" x="516" dy="18">safety slices</tspan><tspan class="rlsys-sub" x="516" dy="18">cost records</tspan></text>
+      <path class="rlsys-line" d="M594 163 H658"/>
+      <rect class="rlsys-core" x="658" y="92" width="156" height="142" rx="10"/>
+      <text text-anchor="middle" x="736" y="122"><tspan class="rlsys-title">Trainer</tspan><tspan class="rlsys-sub" x="736" dy="22">GRPO / PPO</tspan><tspan class="rlsys-sub" x="736" dy="18">reference KL</tspan><tspan class="rlsys-sub" x="736" dy="18">FSDP/Megatron</tspan><tspan class="rlsys-sub" x="736" dy="18">checkpoint</tspan></text>
+      <path class="rlsys-dash" d="M736 92 C736 38 296 38 296 92"/>
+      <text text-anchor="middle" x="516" y="42"><tspan class="rlsys-sub">weight sync / refit / pause-resume</tspan></text>
+      <rect class="rlsys-node" x="174" y="274" width="590" height="56" rx="10"/>
+      <text text-anchor="middle" x="469" y="296"><tspan class="rlsys-title">Replay and Monitoring Ledger</tspan><tspan class="rlsys-sub" x="469" dy="18">policy version, sample age, reward distribution, length, KL, throughput, failed environments</tspan></text>
+      <path class="rlsys-dash" d="M516 234 V274"/>
+    </svg>
+  </div>
+
+  <h4>The RL System Boundary</h4>
+  <p>A production RL post-training run has at least four stateful components. The <strong>actor policy</strong> generates candidates; the <strong>reference policy</strong> supplies KL or log-prob baselines; the <strong>reward path</strong> scores answers through human labels, reward models, tests, tools, or verifiers; the <strong>trainer</strong> updates weights and checkpoints full training state. If rollout uses a serving engine and training uses FSDP, DeepSpeed, or Megatron, the system must also synchronize weights between the training representation and the inference representation. This is why post-training frameworks increasingly expose explicit rollout engines, refit or weight-transfer APIs, pause/resume behavior, and checkpoint ownership rather than treating generation as a local Python function.</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Component</th><th>What It Owns</th><th>Failure Mode</th><th>Signal to Log</th></tr>
+      <tr><td>Rollout engine</td><td>Generation throughput, KV cache, sampling, tool/environment calls, rollout logprobs</td><td>GPU idle from long-tail completions, memory pressure, stale weights, missing logprobs</td><td>rollout tokens/s, completion length P95, policy version, invalid/timeout rate</td></tr>
+      <tr><td>Reward service</td><td>Verifier tests, reward model calls, human/AI judge, rule checks, safety filters</td><td>Reward bottleneck, flaky tests, false positives, reward hacking</td><td>reward latency, pass-rate, reward std, grader error rate, suspicious pass cases</td></tr>
+      <tr><td>Trainer</td><td>Policy update, reference KL, optimizer state, sharding, checkpoints</td><td>KL spike, clip collapse, optimizer mismatch after resume, stale rollout overuse</td><td>approx KL, clip fraction, entropy, sample age, resume parity</td></tr>
+      <tr><td>Data buffer</td><td>Trajectory records, prompt ids, rewards, logprobs, version metadata</td><td>Training on mixed or undocumented policy versions, duplicate leakage, unbounded queue age</td><td>sample age histogram, replay ratio, dedup key, prompt slice coverage</td></tr>
+    </table>
+  </div>
+
+  <h4>Synchronous, Colocated, Decoupled, and Asynchronous Designs</h4>
+  <p>There is no universally best RL system topology. Synchronous designs are simpler and preserve on-policy freshness, but they often wait for the longest completion in a batch. Colocated designs place actor, reference, reward, and rollout on the same GPUs to improve small-cluster utilization, but they require careful sleep/wake or memory sharing. Decoupled designs put rollout and training on separate GPU pools, improving utilization and allowing serving-engine optimizations, but weight synchronization becomes a first-class cost. Fully asynchronous designs improve throughput by letting rollout workers continuously generate and trainers update as data arrives, but they must control sample staleness and use objectives or filters that tolerate older policy versions.</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Design</th><th>Best Fit</th><th>Hard Part</th><th>Do Not Use If</th></tr>
+      <tr><td>Synchronous batch RL</td><td>Early experiments, small runs, high need for exact on-policy data</td><td>Long-tail output length stalls the whole batch</td><td>Rollout length is highly skewed and GPU idle dominates</td></tr>
+      <tr><td>Colocated hybrid engine</td><td>Limited GPUs, actor/ref/reward can share memory windows</td><td>Sleep/wake, memory fragmentation, component scheduling</td><td>Training and rollout require incompatible parallel topologies</td></tr>
+      <tr><td>Decoupled rollout and trainer</td><td>Large runs, serving engine needed for high-throughput generation</td><td>Weight sync, logprob parity, rollout/training queue balance</td><td>Network or conversion cost erases rollout gains</td></tr>
+      <tr><td>Fully asynchronous RL</td><td>Long reasoning outputs, agentic environments, severe rollout bottleneck</td><td>Sample staleness, reproducibility, policy-version accounting</td><td>Reward is noisy and cannot tolerate off-policy correction</td></tr>
+    </table>
+  </div>
+
+  <h4>Minimum Run Ledger for RL Scaling</h4>
+  <p>A senior training engineer should be able to read an RL run ledger and decide whether the system is learning or merely burning rollout tokens. At minimum, keep: prompt slice, policy version used for generation, current trainer version, response token count, reward, reward source, rollout logprobs, reference logprobs, tool/test result, sample age, invalid-format flag, timeout flag, and training step that consumed the sample. Without this ledger, it is impossible to debug whether a reward improvement came from better reasoning, longer outputs, stale policy artifacts, verifier bugs, or environment shortcuts.</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>System Judgment:</strong> For advanced post-training, "RL works" is not proven by a reward curve. The proof requires a system ledger: rollout freshness, weight-sync correctness, reward integrity, token cost, throughput, checkpoint recovery, and held-out behavior must all point to the same conclusion.</div></div>
 </section>
 
 <!-- ================================================================ -->

@@ -738,6 +738,82 @@ metrics     distinct-2, repetition rate, task score, latency</div>
 </section>
 
 <!-- ================================================================ -->
+<!-- 8.7E Reasoning controller -->
+<!-- ================================================================ -->
+<section class="card" id="s8-7e">
+  <h3>8.7E Reasoning Controller: Effort, Hidden Tokens, Incomplete Outputs, and Tool Continuation</h3>
+  <p>Once reasoning becomes a request-level control, the generation system needs a controller rather than a fixed decoding recipe. OpenAI's <a href="https://developers.openai.com/api/docs/guides/reasoning" target="_blank">reasoning model documentation</a> makes this concrete: <code>reasoning.effort</code> trades speed and token usage against deeper reasoning, hidden reasoning tokens occupy context and are billed as output tokens, and a response can become incomplete if the token cap is reached before visible output is produced. Qwen3's thinking-budget design points to the same engineering pattern from the open-model side: the model may support multiple reasoning modes, but the product must decide when each mode is worth its cost.</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 390" role="img" aria-label="Reasoning controller lifecycle from task classification to effort selection, generation, monitoring, and fallback">
+      <defs>
+        <marker id="reason-controller-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .rc-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .rc-core{fill:rgba(52,152,219,.12);stroke:var(--accent);stroke-width:2}
+        .rc-risk{fill:rgba(231,76,60,.10);stroke:#e74c3c;stroke-width:1.7}
+        .rc-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#reason-controller-arrow)}
+        .rc-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .rc-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rc-box" x="40" y="84" width="160" height="72" rx="10"/>
+      <text text-anchor="middle" x="120" y="112"><tspan class="rc-title">Task Classifier</tspan><tspan class="rc-sub" x="120" dy="20">type, risk, SLO</tspan></text>
+      <path class="rc-line" d="M200 120 H280"/>
+      <rect class="rc-core" x="280" y="56" width="180" height="128" rx="12"/>
+      <text text-anchor="middle" x="370" y="86"><tspan class="rc-title">Effort Policy</tspan><tspan class="rc-sub" x="370" dy="22">none / low / medium</tspan><tspan class="rc-sub" x="370" dy="18">high / xhigh</tspan><tspan class="rc-sub" x="370" dy="18">reasoning budget cap</tspan></text>
+      <path class="rc-line" d="M460 120 H542"/>
+      <rect class="rc-core" x="542" y="56" width="190" height="128" rx="12"/>
+      <text text-anchor="middle" x="637" y="86"><tspan class="rc-title">Generation Run</tspan><tspan class="rc-sub" x="637" dy="22">visible output</tspan><tspan class="rc-sub" x="637" dy="18">hidden reasoning tokens</tspan><tspan class="rc-sub" x="637" dy="18">tool calls and resumes</tspan></text>
+      <path class="rc-line" d="M732 120 H812"/>
+      <rect class="rc-box" x="812" y="84" width="130" height="72" rx="10"/>
+      <text text-anchor="middle" x="877" y="112"><tspan class="rc-title">Response</tspan><tspan class="rc-sub" x="877" dy="20">answer or fallback</tspan></text>
+
+      <rect class="rc-risk" x="210" y="254" width="170" height="78" rx="10"/>
+      <text text-anchor="middle" x="295" y="282"><tspan class="rc-title">Cost Monitor</tspan><tspan class="rc-sub" x="295" dy="20">tokens, latency, queue</tspan></text>
+      <rect class="rc-risk" x="418" y="254" width="170" height="78" rx="10"/>
+      <text text-anchor="middle" x="503" y="282"><tspan class="rc-title">Incomplete Guard</tspan><tspan class="rc-sub" x="503" dy="20">max tokens, context space</tspan></text>
+      <rect class="rc-risk" x="626" y="254" width="170" height="78" rx="10"/>
+      <text text-anchor="middle" x="711" y="282"><tspan class="rc-title">Eval Feedback</tspan><tspan class="rc-sub" x="711" dy="20">quality gain vs. cost</tspan></text>
+      <path class="rc-line" d="M637 184 C615 220 565 238 503 254"/>
+      <path class="rc-line" d="M370 184 C355 220 330 236 295 254"/>
+      <path class="rc-line" d="M711 254 C770 224 815 184 877 156"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 8-3: Reasoning controller lifecycle. Effort selection, hidden-token budget, incomplete-response handling, tool continuation, and eval feedback are part of one serving policy.</p>
+
+  <h4>1. Effort levels are an evaluation knob, not a quality guarantee</h4>
+  <p>Increasing effort is useful only when representative evals show a measurable improvement that justifies latency and cost. Low effort can be better for short tool plans, extraction, and customer-service routing; medium effort is often a balanced starting point; high or xhigh effort should be reserved for hard reasoning, long-horizon research, debugging, security review, or asynchronous agentic workflows. If the prompt has unclear success criteria, weak stopping rules, or unconstrained tool access, more reasoning can create overthinking, unnecessary search, and output regressions.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Controller Decision</th><th>Use When</th><th>Risk</th><th>Required Evidence</th></tr>
+      <tr><td>Lower effort</td><td>Latency-sensitive classification, retrieval, extraction, short chat, simple tool calls</td><td>Under-thinking multi-step constraints</td><td>No quality regression on simple-task slices; P95 latency and token cost improve</td></tr>
+      <tr><td>Medium effort baseline</td><td>General production workloads with mixed planning and ordinary answer generation</td><td>Wasting tokens on tasks that do not need reasoning</td><td>Per-slice quality/cost table, not only a global average</td></tr>
+      <tr><td>Higher effort</td><td>Complex debugging, math/code reasoning, high-value analysis, long-horizon agent tasks</td><td>Overthinking, tool loops, context exhaustion, higher queue latency</td><td>Clear lift on hard slices after controlling for output tokens and retries</td></tr>
+      <tr><td>Escalation route</td><td>Fast path fails validation, verifier confidence is low, or user explicitly asks for deeper reasoning</td><td>Unbounded retry cost</td><td>Escalation rate, success after escalation, token cost per recovered task</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Hidden reasoning tokens are still capacity and cost</h4>
+  <p>Reasoning tokens may not be visible in the final answer, but they still consume output budget and context space. This creates two engineering traps. First, <code>max_output_tokens</code> must cover both hidden reasoning and visible answer tokens; otherwise, the model can spend the entire budget thinking and return an incomplete response. Second, long prompts, retrieved context, tool traces, and hidden reasoning compete for the same context window, so a long-context RAG request may need a lower reasoning budget than a short math problem.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Budget Item</th><th>What It Consumes</th><th>Failure If Ignored</th><th>Monitor</th></tr>
+      <tr><td>Input context</td><td>User prompt, system prompt, retrieved documents, tool history</td><td>Reasoning has too little remaining context; important evidence is truncated</td><td>input tokens, cached tokens, retrieval token share</td></tr>
+      <tr><td>Hidden reasoning</td><td>Internal thinking tokens or model-specific reasoning budget</td><td>High cost with little visible output; incomplete response before answer</td><td>reasoning token count where available, incomplete status, output-token breakdown</td></tr>
+      <tr><td>Visible answer</td><td>User-facing final response, code, JSON, citations</td><td>Answer is cut off or invalid even if reasoning was sufficient</td><td>visible output tokens, schema validity, finish reason</td></tr>
+      <tr><td>Tool continuation</td><td>Function call items, outputs, reasoning items needed for the next turn</td><td>The model repeats work or loses the state needed to continue efficiently</td><td>tool round count, replayed items, duplicate calls, continuation success</td></tr>
+    </table>
+  </div>
+
+  <h4>3. A production reasoning controller needs fallbacks</h4>
+  <p>A robust controller should define what happens when the run is incomplete, the verifier rejects the answer, a tool call times out, or the token budget is exhausted. Typical fallbacks include asking for clarification, returning a partial answer with uncertainty, retrying once with a higher effort or smaller context, routing to a specialized model, or deferring to an asynchronous workflow. The important point is that fallback rules must be evaluated just like decoding parameters: measure recovery success, added latency, and whether the fallback hides systematic model failures.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> Reasoning effort is a control surface for a serving policy, not a universal upgrade switch. Advanced inference engineers tune it with per-slice evals, hidden-token accounting, incomplete-response handling, tool-continuation rules, and fallback metrics.</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 8.8 MTP Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s8-8">

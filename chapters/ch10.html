@@ -22,8 +22,8 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 10: Inference Optimization & Frontiers</h2>
-  <p class="subtitle">KV Cache, Sparse and Linear Attention, Quantization, RAG, and Agents — Engineering LLM Deployment</p>
-  <div class="reading-time">⏱ Estimated Reading: 215 minutes · 35 sections · 7 programming exercises · 7 concept exercises</div>
+  <p class="subtitle">KV Cache, Sparse and Linear Attention, Quantization, RAG, Agents, and Model Routing — Engineering LLM Deployment</p>
+  <div class="reading-time">⏱ Estimated Reading: 225 minutes · 36 sections · 7 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -1829,6 +1829,95 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   <p>Advanced infrastructure should be justified by workload evidence. If the service mainly handles short prompts, has low concurrency, has little prefix reuse, or runs on a small single-node deployment, a simpler unified engine with prefix caching and chunked prefill may be the better engineering choice. KV-aware distributed serving becomes valuable when there is a measurable combination of long prompts, high concurrency, multi-turn or repeated-prefix traffic, strict SLOs, and enough interconnect bandwidth to move cache state without hiding a new bottleneck.</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>System Judgment:</strong> The frontier is not merely "bigger context" or "more GPUs". The hard problem is controlling where KV state lives, how requests find reusable state, when to transfer or recompute, and how to preserve SLO, privacy, and rollback guarantees while the cache becomes distributed.</div></div>
+</section>
+
+<section class="card" id="s10-13f">
+  <h3>10.13F Model Router and Cascade Evaluation: Quality, Cost, SLO, and Safety in One Decision</h3>
+  <p>The previous section focused on <strong>where a request should run</strong> given KV locality and cluster state. A production service also needs to decide <strong>which model or provider should answer</strong>. This is a different control problem. A model router changes the quality/cost frontier by sending easy or low-risk requests to cheaper models, reserving stronger models for difficult or high-risk requests, and using fallback paths when a provider, region, or model version fails. <a href="https://arxiv.org/abs/2406.18665" target="_blank">RouteLLM</a> studies routing between strong and weak models using preference data; <a href="https://arxiv.org/abs/2305.05176" target="_blank">FrugalGPT</a> frames LLM cascade as cost-aware model selection; <a href="https://docs.litellm.ai/docs/routing" target="_blank">LiteLLM</a> shows the gateway side with load balancing, timeouts, retries, fallbacks, and cooldowns.</p>
+
+  <div class="foundation-graph" role="img" aria-label="Model routing and cascade decision flow">
+    <svg viewBox="0 0 940 390">
+      <defs>
+        <marker id="model-route-arrow-10" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#2563eb"/>
+        </marker>
+      </defs>
+      <style>
+        .mr-node{fill:#ffffff;stroke:#d7dee8;stroke-width:2}
+        .mr-core{fill:#eff6ff;stroke:#2563eb;stroke-width:2}
+        .mr-risk{fill:#fff7ed;stroke:#ea580c;stroke-width:2}
+        .mr-ledger{fill:#f8fafc;stroke:#64748b;stroke-width:2}
+        .mr-line{fill:none;stroke:#2563eb;stroke-width:2;marker-end:url(#model-route-arrow-10)}
+        .mr-soft{fill:none;stroke:#64748b;stroke-width:1.6;stroke-dasharray:5 5}
+        .mr-title{font-size:14px;font-weight:700;fill:#172033}
+        .mr-sub{font-size:12px;fill:#46556a}
+      </style>
+      <rect class="mr-core" x="28" y="138" width="132" height="74" rx="10"/>
+      <text text-anchor="middle" x="94" y="166"><tspan class="mr-title">Request</tspan><tspan class="mr-sub" x="94" dy="20">task, tenant, risk</tspan><tspan class="mr-sub" x="94" dy="17">tokens, tools</tspan></text>
+      <path class="mr-line" d="M160 175 H220"/>
+      <rect class="mr-core" x="220" y="86" width="174" height="178" rx="10"/>
+      <text text-anchor="middle" x="307" y="118"><tspan class="mr-title">Router Policy</tspan><tspan class="mr-sub" x="307" dy="24">task classifier</tspan><tspan class="mr-sub" x="307" dy="18">difficulty score</tspan><tspan class="mr-sub" x="307" dy="18">cost and SLO model</tspan><tspan class="mr-sub" x="307" dy="18">data boundary</tspan><tspan class="mr-sub" x="307" dy="18">provider health</tspan></text>
+      <path class="mr-line" d="M394 122 H476"/>
+      <path class="mr-line" d="M394 175 H476"/>
+      <path class="mr-line" d="M394 228 H476"/>
+      <rect class="mr-node" x="476" y="42" width="154" height="66" rx="10"/>
+      <text text-anchor="middle" x="553" y="68"><tspan class="mr-title">Small Model</tspan><tspan class="mr-sub" x="553" dy="19">cheap, low latency</tspan></text>
+      <rect class="mr-risk" x="476" y="142" width="154" height="66" rx="10"/>
+      <text text-anchor="middle" x="553" y="168"><tspan class="mr-title">Strong Model</tspan><tspan class="mr-sub" x="553" dy="19">reasoning, high risk</tspan></text>
+      <rect class="mr-node" x="476" y="242" width="154" height="66" rx="10"/>
+      <text text-anchor="middle" x="553" y="268"><tspan class="mr-title">Specialized Path</tspan><tspan class="mr-sub" x="553" dy="19">code, vision, region</tspan></text>
+      <path class="mr-line" d="M630 75 H708"/>
+      <path class="mr-line" d="M630 175 H708"/>
+      <path class="mr-line" d="M630 275 H708"/>
+      <rect class="mr-risk" x="708" y="108" width="178" height="134" rx="10"/>
+      <text text-anchor="middle" x="797" y="140"><tspan class="mr-title">Verifier and Policy</tspan><tspan class="mr-sub" x="797" dy="24">schema, safety, citation</tspan><tspan class="mr-sub" x="797" dy="18">unit tests, confidence</tspan><tspan class="mr-sub" x="797" dy="18">escalate or fallback</tspan></text>
+      <rect class="mr-ledger" x="230" y="310" width="190" height="48" rx="10"/>
+      <text text-anchor="middle" x="325" y="331"><tspan class="mr-title">Trace Ledger</tspan><tspan class="mr-sub" x="325" dy="17">route, score, cost, latency</tspan></text>
+      <rect class="mr-ledger" x="676" y="310" width="190" height="48" rx="10"/>
+      <text text-anchor="middle" x="771" y="331"><tspan class="mr-title">Eval Slices</tspan><tspan class="mr-sub" x="771" dy="17">quality, safety, SLO, drift</tspan></text>
+      <path class="mr-soft" d="M307 264 V310"/>
+      <path class="mr-soft" d="M797 242 V310"/>
+    </svg>
+  </div>
+
+  <h4>Separate Four Routing Problems Before Designing One Router</h4>
+  <p>Many production failures come from using one routing label for different decisions. Routing by task, routing by difficulty, routing for reliability, and routing for compliance have different evidence requirements. A low-cost classifier might be acceptable for picking a summarization model, but it is not enough to decide whether a request involving medical advice, code execution, or private data can skip the strongest safety path.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Routing Problem</th><th>Decision Unit</th><th>Primary Signal</th><th>Wrong Decision Cost</th><th>Release Evidence</th></tr>
+      <tr><td>Task routing</td><td>Choose text, code, vision, RAG, or tool path</td><td>Task classifier, tool need, modality, schema</td><td>Wrong model family or missing tool path</td><td>Confusion matrix by task slice, tool selection accuracy, schema pass rate</td></tr>
+      <tr><td>Difficulty routing</td><td>Choose weak, medium, or strong model</td><td>Router score, uncertainty, prompt length, domain, historical failures</td><td>Hard request answered by a weak model</td><td>Quality/cost curve against all-strong baseline and per-slice regressions</td></tr>
+      <tr><td>Reliability routing</td><td>Retry, fallback, region, or provider</td><td>Timeout, rate limit, provider health, cooldown state</td><td>Retry storm, duplicate side effect, incompatible response format</td><td>Error taxonomy, fallback success rate, retry budget, idempotency checks</td></tr>
+      <tr><td>Compliance routing</td><td>Choose region, privacy tier, safety policy, or human review</td><td>Tenant, data class, jurisdiction, permission, risk label</td><td>Data boundary violation or unsafe automation</td><td>Policy trace, tenant isolation audit, safety/refusal and over-refusal slices</td></tr>
+    </table>
+  </div>
+
+  <h4>Evaluation Must Compare Against the Strong-Model Baseline</h4>
+  <p>A router is useful only if it improves the deployed frontier, not merely if it looks plausible. The baseline should include the strong model on every request, the cheapest acceptable fixed model, and the current production policy if one exists. For each candidate router, plot cost per successful task against quality, safety, schema validity, and SLO. The report should not hide poor slices behind a good global average: long-context RAG, code execution, legal/medical/financial domains, non-English traffic, structured output, and tool calls should be reported separately.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Metric Family</th><th>What to Log Per Request</th><th>Why It Is Needed</th></tr>
+      <tr><td>Route decision</td><td>route_policy, router_version, selected_model, threshold, route_reason</td><td>Lets engineers explain why a request did not use the strongest model</td></tr>
+      <tr><td>Quality and safety</td><td>task score, judge result, citation hit, schema pass, refusal and over-refusal label</td><td>Prevents cost savings from hiding regressions in high-risk slices</td></tr>
+      <tr><td>Cost and SLO</td><td>prompt/output tokens, retries, model calls, TTFT, TPOT, total latency, estimated cost</td><td>Shows whether cascade overhead cancels model savings</td></tr>
+      <tr><td>Verifier outcome</td><td>confidence, validation errors, escalation reason, final branch</td><td>Distinguishes successful cheap answers from cheap answers accepted by a weak verifier</td></tr>
+      <tr><td>Reliability path</td><td>timeout, provider error, retry count, fallback model, cooldown state</td><td>Separates quality routing from provider failure handling</td></tr>
+    </table>
+  </div>
+
+  <h4>Cascade Outcomes and Engineering Actions</h4>
+  <p>A cascade is not automatically better than a single strong model. It adds router latency, verifier cost, possible repeated generation, and more places where templates, tokenizers, tool schemas, and safety policies can diverge. The engineering value comes from knowing which outcomes require action.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Observed Outcome</th><th>Interpretation</th><th>Action</th></tr>
+      <tr><td>Same quality, much lower cost, SLO still met</td><td>Router is finding easy traffic reliably</td><td>Increase traffic gradually, keep per-slice monitoring and rollback label</td></tr>
+      <tr><td>Global quality flat, high-risk slice regresses</td><td>Average metric is hiding unsafe routing</td><td>Force high-risk slice to strong model or add a stronger verifier before expansion</td></tr>
+      <tr><td>Cost lower but P95 latency worse</td><td>Cascade or fallback calls add tail latency</td><td>Use one-shot routing, parallel verification, stricter timeout, or reject cascade for realtime traffic</td></tr>
+      <tr><td>Fallback succeeds but output format changes</td><td>Fallback model is not a transparent replacement</td><td>Align tokenizer/template/tool schema/response format, or expose fallback as a different product path</td></tr>
+      <tr><td>Router score drifts after launch</td><td>Traffic, prompts, models, or evaluation distribution changed</td><td>Recalibrate thresholds and retrain router using fresh labeled samples</td></tr>
+    </table>
+  </div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Takeaway:</strong> Model routing is a serving policy, not a shortcut around evaluation. A deployable router must bind the selected model, route reason, verifier result, cost, latency, safety slice, and fallback path into one trace. Otherwise, the service cannot explain why a cheaper branch was chosen or prove that the cost saving did not come from silent quality loss.</div></div>
 </section>
 
 <!-- ================================================================ -->

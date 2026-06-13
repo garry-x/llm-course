@@ -366,6 +366,7 @@ assert audit["overall_pass"]</div>
 
   <h4>1. Data contamination and split leakage are not the same problem</h4>
   <p><strong>Split leakage</strong> usually occurs within one's own data pipeline: the same document, user session, question bank, or near-paraphrase enters train/dev/test simultaneously. It can be mitigated through document-level splitting, URL/question ID deduplication, n-gram overlap checks, embedding nearest-neighbor search, and manual spot checks. <strong>Benchmark contamination</strong> is broader: public test questions, answer explanations, discussion posts, or code repositories may have already entered pre-training or SFT data. It cannot always be completely eliminated, so the report must specify the data source, publication date, deduplication method, and handling of high-similarity samples.</p>
+  <p>Public benchmarks also have a lifecycle. A benchmark that was useful when first released can become saturated, repeatedly prompt-tuned, or contaminated after months of leaderboard optimization. OpenAI's 2026 discussion of <a href="https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/" target="_blank">SWE-bench Verified</a> is a useful example: even a human-validated public benchmark can stop measuring the frontier once models, agents, and training data have adapted to it. In course reports, old public benchmarks should often be treated as regression tests, while private held-out sets and live/canary evals carry more evidence for deployment decisions.</p>
   <div class="table-wrap">
     <table>
       <tr><th>Phenomenon</th><th>Possible Cause</th><th>Checks to Perform</th><th>Conclusion Boundary</th></tr>
@@ -373,6 +374,15 @@ assert audit["overall_pass"]</div>
       <tr><td>Dev set improves with each tuning, test does not</td><td>Dev set repeatedly optimized, gradually becoming a training signal</td><td>Freeze final test, maintain a shadow eval, run only at milestones</td><td>Dev scores only represent development progress, not final capability</td></tr>
       <tr><td>RAG QA citation correct but answer wrong</td><td>Retrieval hit does not guarantee generation faithfulness, or gold answer is too narrow</td><td>Separately count retrieval recall, citation precision, and answer accuracy</td><td>Cannot use end-to-end accuracy to directly pinpoint the bottleneck</td></tr>
       <tr><td>LLM judge prefers new model but humans disagree</td><td>Length, tone, format, or homophily model bias</td><td>Randomize A/B order, control output length, sample for human review</td><td>Judge win rate is only an auxiliary signal</td></tr>
+    </table>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Eval Type</th><th>Best Use</th><th>Main Risk</th><th>Decision It Can Support</th></tr>
+      <tr><td>Public benchmark</td><td>Comparable regression check and broad capability signal</td><td>Saturation, contamination, prompt overfitting, benchmark-specific scaffolds</td><td>Whether a model regressed on a known task family, not whether it is production-ready</td></tr>
+      <tr><td>Private held-out eval</td><td>Task-specific generalization under a controlled data protocol</td><td>Small sample size, hidden overlap with training data, stale business cases</td><td>Whether a change is worth canary testing for the target workload</td></tr>
+      <tr><td>Production trace replay</td><td>Regression testing against real user distributions without live impact</td><td>Privacy constraints, historical bias, missing future edge cases</td><td>Whether a prompt/model/service change preserves current workload behavior</td></tr>
+      <tr><td>Live canary eval</td><td>Final validation under real latency, cost, routing, and user behavior</td><td>User impact, confounding traffic shifts, monitoring blind spots</td><td>Whether to expand, hold, or roll back production traffic</td></tr>
     </table>
   </div>
 

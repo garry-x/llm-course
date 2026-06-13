@@ -205,6 +205,7 @@ def render_page(markdown: str, source_name: str) -> str:
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
 
 	<link rel="apple-touch-icon" href="../images/favicon.png">

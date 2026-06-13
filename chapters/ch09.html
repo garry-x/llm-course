@@ -1485,6 +1485,16 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li><strong>Cost:</strong> Average completion tokens, rollout count, and training epochs should be controlled; long-CoT improvements must report token cost simultaneously.</li>
     <li><strong>Integrity:</strong> Check for reward hacking, format bypass, test leakage, grader-model homogenous bias, and cases where "the answer is correct but the reasoning is wrong."</li>
   </ul>
+  <p>Final-answer rewards are necessary for math, code, and tool tasks, but they are not sufficient evidence of improved reasoning. A model can guess the final answer, exploit a weak unit test, or produce an invalid chain of thought that happens to end with the right number. Recent <a href="https://arxiv.org/abs/2506.14245" target="_blank">RLVR evaluation work</a> makes this boundary explicit: when the task claims to improve reasoning, evaluation should distinguish the final answer from the validity of the reasoning trace.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Evaluation Layer</th><th>What It Proves</th><th>What It Does Not Prove</th><th>Minimum Diagnostic</th></tr>
+      <tr><td>Final-answer pass rate</td><td>The output reaches a verifiable answer under the current grader</td><td>The intermediate reasoning is valid, robust, or non-leaked</td><td>Held-out pass rate, public/private split, adversarial grader probes</td></tr>
+      <tr><td>CoT / trace validity</td><td>The reasoning path follows constraints, tests, or domain logic</td><td>The answer will stay correct under all prompts or budgets</td><td>Trace audit sample, process verifier, invalid-but-correct examples</td></tr>
+      <tr><td>Pass@k / diversity</td><td>The policy can find at least one correct path under a sampling budget</td><td>The top-1 policy improved or the model became more efficient</td><td>pass@1, pass@k, distinct solution paths, average rollout tokens</td></tr>
+      <tr><td>Cost per correct-and-valid answer</td><td>The improvement is deployable under Ch08/Ch10 budgets</td><td>The method is universally better across tasks</td><td>rollout count, completion length P95, verifier cost, P95 latency</td></tr>
+    </table>
+  </div>
 
   <h4>Relationship with SFT / DPO / GRPO</h4>
   <p>SFT is suitable for teaching format and basic task behavior; DPO is suitable for converting chosen/rejected preferences into reference-relative updates; GRPO/RLVR is more suitable for tasks with verifiable rewards that require exploring multiple reasoning paths; subsequent recipes like DAPO/GSPO emphasize how to make RL runs stable, long, and reproducible. Industrial systems are usually not a three-way choice: first use SFT to establish readability and format, then use preference or rule-based reward for post-training, and finally use fixed eval, red teaming, safety/format regression, and cost accounting to decide whether to release.</p>

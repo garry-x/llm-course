@@ -175,7 +175,8 @@
       <tr><th><code>C_{center,context}</code></th><th>king</th><th>queen</th><th>apple</th><th>row sum</th></tr>
       <tr><td>king</td><td>0</td><td>8</td><td>1</td><td>9</td></tr>
       <tr><td>queen</td><td>6</td><td>0</td><td>1</td><td>7</td></tr>
-      <tr><td>apple</td><td>1</td><td>1</td><td>0</td><td>2</td></tr>      <tr><td>column sum</td><td>7</td><td>9</td><td>2</td><td>18</td></tr>
+      <tr><td>apple</td><td>1</td><td>1</td><td>0</td><td>2</td></tr>
+      <tr><td>column sum</td><td>7</td><td>9</td><td>2</td><td>18</td></tr>
     </table>
   </div>
 
@@ -299,7 +300,8 @@ S2: I sat near the river bank.</div>
 <!-- Programming Exercise 1: TokenEmbedding -->
 <!-- ================================================================ -->
 <section class="card" id="s2-2">
-  <h3>2.2 Programming Exercise 1: Implementing TokenEmbedding</h3>  <p>PyTorch's <code>nn.Embedding(V, d)</code> is essentially a trainable lookup table operation. If the embedding matrix is <span class="katex-inline" data-expr="E\in\mathbb{R}^{V\times d}" aria-label="E in R V by d" role="img"></span>, the one-hot row vector <span class="katex-inline" data-expr="e_i" aria-label="e_i" role="img"></span> for token id satisfies <span class="katex-inline" data-expr="e_iE=E_i" aria-label="e_i E equals E_i" role="img"></span>. In practice, engineering directly indexes <code>E[token_id]</code>, avoiding the explicit construction of a large one-hot tensor; the <code>embedding_lookup_as_matmul</code> in the Ch02 assignment lets students write out this equivalence.</p>
+  <h3>2.2 Programming Exercise 1: Implementing TokenEmbedding</h3>
+  <p>PyTorch's <code>nn.Embedding(V, d)</code> is essentially a trainable lookup table operation. If the embedding matrix is <span class="katex-inline" data-expr="E\in\mathbb{R}^{V\times d}" aria-label="E in R V by d" role="img"></span>, the one-hot row vector <span class="katex-inline" data-expr="e_i" aria-label="e_i" role="img"></span> for token id satisfies <span class="katex-inline" data-expr="e_iE=E_i" aria-label="e_i E equals E_i" role="img"></span>. In practice, engineering directly indexes <code>E[token_id]</code>, avoiding the explicit construction of a large one-hot tensor; writing embedding lookup as matrix multiplication makes this equivalence explicit.</p>
 
   <div class="coding-exercise">
     <h4>🖥️ Exercise 1: TokenEmbedding Module</h4>

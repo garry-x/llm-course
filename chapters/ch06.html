@@ -370,7 +370,8 @@ print("Forward + Backward pass passed ✓")</div>
 <!-- 6.3A From logits to next-token loss -->
 <!-- ================================================================ -->
 <section class="card" id="s6-3a">
-  <h3>6.3A From Logits to the Language Modeling Objective: Why the Output Is [batch, seq, vocab]</h3>  <p>The forward pass of the complete GPTModel to <code>logits</code> is not the end. The true optimization objective of language model training is: at each position <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>, use the hidden state at the current position to predict the <strong>next token</strong> <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>. Therefore, <code>logits[:, t, :]</code> does not predict the token at the current position, but rather the categorical distribution of the token at the next position.</p>
+  <h3>6.3A From Logits to the Language Modeling Objective: Why the Output Is [batch, seq, vocab]</h3>
+  <p>The forward pass of the complete GPTModel to <code>logits</code> is not the end. The true optimization objective of language model training is: at each position <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>, use the hidden state at the current position to predict the <strong>next token</strong> <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>. Therefore, <code>logits[:, t, :]</code> does not predict the token at the current position, but rather the categorical distribution of the token at the next position.</p>
 
   <div class="math-box"><div class="label">Autoregressive Decomposition</div>
     <div class="katex" data-expr="p(x_1,\ldots,x_T)=\prod_{t=1}^{T}p(x_t \mid x_{<t})" aria-label="p(x_1,\ldots,x_T)=\prod_{t=1}^{T}p(x_t \mid x_{<t})" role="img"></div>
@@ -480,7 +481,8 @@ sample 2 labels: [GPT, EOS,  -100, -100]</div>
 <!-- 6.4A Worked Example -->
 <!-- ================================================================ -->
 <section class="card" id="s6-4a">
-  <h3>6.4A Worked Example: How the Tied LM Head Connects to the Next-Token Loss</h3>  <p>Let the vocabulary size be <span class="katex-inline" data-expr="|V|=4" aria-label="|V|=4" role="img"></span>, the hidden dimension be <span class="katex-inline" data-expr="d=2" aria-label="d=2" role="img"></span>, and the token embedding matrix be <span class="katex-inline" data-expr="E\in\mathbb{R}^{4\times 2}" aria-label="E\in\mathbb{R}^{4\times 2}" role="img"></span>. The input sequence <code>[0, 1, 2]</code> passes through the Transformer to obtain hidden states <span class="katex-inline" data-expr="H\in\mathbb{R}^{3\times 2}" aria-label="H\in\mathbb{R}^{3\times 2}" role="img"></span>:</p>
+  <h3>6.4A Worked Example: How the Tied LM Head Connects to the Next-Token Loss</h3>
+  <p>Let the vocabulary size be <span class="katex-inline" data-expr="|V|=4" aria-label="|V|=4" role="img"></span>, the hidden dimension be <span class="katex-inline" data-expr="d=2" aria-label="d=2" role="img"></span>, and the token embedding matrix be <span class="katex-inline" data-expr="E\in\mathbb{R}^{4\times 2}" aria-label="E\in\mathbb{R}^{4\times 2}" role="img"></span>. The input sequence <code>[0, 1, 2]</code> passes through the Transformer to obtain hidden states <span class="katex-inline" data-expr="H\in\mathbb{R}^{3\times 2}" aria-label="H\in\mathbb{R}^{3\times 2}" role="img"></span>:</p>
   <div class="math-box"><div class="label">tied LM Head logits</div>
     <div class="katex" data-expr="Z = H E^\top,\qquad Z\in\mathbb{R}^{3\times 4}" aria-label="Z = H E^\top,\qquad Z\in\mathbb{R}^{3\times 4}" role="img"></div>
   </div>

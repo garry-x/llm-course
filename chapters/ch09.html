@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 9: Fine-tuning and Alignment</h2>
-  <p class="subtitle">SFT / LoRA / DPO / GRPO — The Last Mile from Pre-training to a Useful Assistant</p>
+  <p class="subtitle">SFT, LoRA, DPO, and GRPO — Turning a Pretrained Model into a Useful Assistant</p>
   <div class="reading-time">⏱ Estimated Reading: 170 minutes · 22 sections · 8 programming exercises · 5 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Learn This Chapter: View Alignment as "Making the Model Respond According to Human Intent"</h3>
+  <h3>How to Learn This Chapter: View Alignment as Training Behavior Toward Human Intent</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> First distinguish what problems SFT, LoRA, DPO, and GRPO each solve: SFT learns format, LoRA reduces fine-tuning cost, DPO learns preferences, GRPO strengthens reasoning. There are many formulas, but when learning for the first time, first grasp what the data looks like and what the loss is comparing.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Chapter 7 training loop, Chapter 8 generation, and log probability.</li>
@@ -90,7 +90,7 @@
 
 <!-- ================================================================ -->
 <section class="card" id="s9-1">
-  <h3>9.1 Why is Pre-training Not Enough? — From "Text Continuator" to "Assistant"</h3>
+  <h3>9.1 Why Pre-training Is Not Enough — From Text Continuation to Assistant Behavior</h3>
   <p>After pre-training in Chapter 7, we obtain a GPT model that can <strong>reasonably continue text</strong>. It has learned grammar, factual knowledge, and even a degree of reasoning ability. But if you directly ask it "Please explain backpropagation," its output is likely to be something like this:</p>
   <div class="code-block" data-lang="text">
 "Backpropagation" is "backpropagation" is a method in deep learning for "backpropagation" is a method in deep learning for computing gradients. "Backpropagation"……</div>

@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 11 Classic Neural NLP and Evaluation</h2>
-  <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT — Connecting Classic Neural NLP Back to Modern LLMs</p>
+  <p class="subtitle">RNN, Dependency Parsing, Seq2Seq, and BERT — Connecting Classic Neural NLP to Modern LLMs</p>
   <div class="reading-time">Estimated Reading: 145 minutes · 15 sections · 5 runnable exercises · 5 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Learn This Chapter: Not a History Review, But Model Family Boundaries</h3>
+  <h3>How to Learn This Chapter: Focus on Model-Family Boundaries, Not History</h3>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> A modern LLM course cannot only cover decoder-only GPT. Real-world NLP systems still heavily use encoder-only representations, cross-encoder rerankers, extractive QA, sequence labeling, and structured prediction. This chapter fills in the objective functions, visibility constraints, and evaluation metrics for these model families.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Ch03 attention, Ch08 beam search, Ch10 RAG rerank and retrieval evaluation.</li>
@@ -611,7 +611,7 @@ assert audit["overall_pass"]</div>
     <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>How to select a valid answer span and handle no-answer</td></tr>
     <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>Why metric choice can change the conclusion</td></tr>
     <tr><td><code>summarize_pairwise_judgments</code></td><td>LLM-as-judge</td><td>How to calculate tie-adjusted win rate and decompose wins/losses by task</td></tr>
-    <tr><td><code>judge_reliability_audit</code></td><td>Judge reliability gate</td><td>How to check for position bias, length bias, swap consistency, and human label agreement rate</td></tr>
+    <tr><td><code>judge_reliability_audit</code></td><td>Judge reliability audit</td><td>How to check for position bias, length bias, swap consistency, and human label agreement rate</td></tr>
     <tr><td><code>safety_evaluation_metrics</code></td><td>Safety evaluation</td><td>Why attack success, refusal, over-refusal, and task utility must be reported simultaneously</td></tr>    <tr><td><code>benchmark_result_summary</code></td><td>Benchmark reporting</td><td>How to turn metrics into engineering conclusions that include samples, inference settings, failure types, and boundaries</td></tr>
   </table>
 </section>

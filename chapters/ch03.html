@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 3 Single-Head Self-Attention</h2>
-  <p class="subtitle">Implementing Scaled Dot-Product Attention from Scratch—The Source of All LLM Magic</p>
+  <p class="subtitle">Implementing Scaled Dot-Product Attention from Scratch — The Core Operation Behind Modern LLMs</p>
   <div class="reading-time">⏱ Estimated Reading: 120 minutes · 19 sections · 6 programming exercises · 6 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -83,7 +83,7 @@
 <!-- 3.1 Why Attention is Needed -->
 <!-- ================================================================ -->
 <section class="card" id="s3-1">
-  <h3>3.1 Why is Attention Needed? — The Predicament of RNNs and the Breakthrough of Attention</h3>
+  <h3>3.1 Why Attention Is Needed — RNN Limitations and the Attention Breakthrough</h3>
   <p>Before the Transformer (2017), sequence modeling was long dominated by RNNs/LSTMs. Understanding their <strong>structural limitations</strong> in parallelism and long-range dependencies is key to truly understanding why the attention mechanism became the critical choice for subsequent architectures.</p>
 
   <h4>How RNNs Work: Iterative Compression</h4>
@@ -109,7 +109,7 @@
 <!-- 3.2 QKV Principle -->
 <!-- ================================================================ -->
 <section class="card" id="s3-2">
-  <h3>3.2 Q, K, V Triplet—The "Retrieval Language" of the Attention Mechanism</h3>
+  <h3>3.2 The Q/K/V Triplet — The Retrieval Interface of Attention</h3>
   <p>The core idea of Scaled Dot-Product Attention can be analogized to <strong>database retrieval</strong>:</p>
   <ul>
     <li><strong>Query (Q):</strong> "What am I looking for?"—Each position actively sends out a "question" based on its current context. For example, in a translation task, "I" wants to know which Chinese word it corresponds to.</li>
@@ -302,7 +302,7 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.5 Deep Theory: √dₖ -->
+<!-- 3.5 Theory: √dₖ -->
 <!-- ================================================================ -->
 <section class="card" id="s3-5">
   <h3>3.5 Deep Dive: Why Divide by √dₖ? — Variance Analysis and Gradient Behavior</h3>
@@ -326,7 +326,7 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.6 Deep Theory: Softmax Temperature -->
+<!-- 3.6 Theory: Softmax Temperature -->
 <!-- ================================================================ -->
 <section class="card" id="s3-6">
   <h3>3.6 Deep Dive: Softmax Temperature, Gradient Saturation, and the "Sharpness" of Attention Distributions</h3>

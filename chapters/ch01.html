@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 1 BPE Tokenizer</h2>
-  <p class="subtitle">Implementing Byte Pair Encoding from Scratch — The "First Gate" of LLMs</p>
+  <p class="subtitle">Implementing Byte Pair Encoding from Scratch — The Text Interface of LLMs</p>
   <div class="reading-time">⏱ Estimated reading: 110 minutes · 16 sections · 5 programming exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Learn This Chapter: First, Understand "How Text Becomes Numbers"</h3>
+  <h3>How to Learn This Chapter: Start with How Text Becomes Numbers</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> This chapter only requires you to understand three questions: what a token is, why BPE repeatedly merges high-frequency pairs, and why encoding/decoding is reversible. Information theory, Zipf's law, and PMI can be treated as explanatory intuition for now; you don't need to master them completely on the first pass.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Python lists, dictionaries, strings/bytes, simple loops.</li>
@@ -114,7 +114,7 @@ python -c "import torch; print(torch.__version__)"</div>
 <!-- 1.3 Token and Tokenization Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s1-3">
-  <h3>1.3 What is a Token? — An Information Theory Perspective</h3>
+  <h3>1.3 What a Token Is — An Information-Theoretic Perspective</h3>
   <p>LLMs do not directly process characters or strings; they process <strong>tokens</strong>—the smallest indivisible units of text. Each token corresponds to an integer ID, and the model sees a sequence of integers, not text.</p>
 
   <h4>Tokenization from an Information Theory Perspective</h4>

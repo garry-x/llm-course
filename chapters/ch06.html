@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 6: Assembling the Complete GPT Model</h2>
-  <p class="subtitle">GPT-2 124M from Scratch + DeepSeekMoE Sparse Activation Architecture</p>
+  <p class="subtitle">GPT-2 124M from Scratch plus DeepSeekMoE Sparse Activation</p>
   <div class="reading-time">⏱ Estimated reading: 110 minutes · 12 sections · 5 programming exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Learn This Chapter: First Complete a Forward Propagation Chain</h3>
+  <h3>How to Learn This Chapter: First Complete the Forward Pass</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> The goal is not to understand all historical details of GPT-2 at once, but to connect the components from previous chapters into <code>token ids -> logits</code>. DeepSeekMoE is a capacity scaling case study; for the first pass, you can complete the GPTModel main line first, then come back to the router.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Embedding, causal self-attention, GPT-2 Block, linear layer output logits.</li>
@@ -370,7 +370,7 @@ print("Forward + Backward pass passed ✓")</div>
 <!-- 6.3A From logits to next-token loss -->
 <!-- ================================================================ -->
 <section class="card" id="s6-3a">
-  <h3>6.3A From logits to Language Model Objective: Why the output is [batch, seq, vocab]</h3>  <p>The forward pass of the complete GPTModel to <code>logits</code> is not the end. The true optimization objective of language model training is: at each position <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>, use the hidden state at the current position to predict the <strong>next token</strong> <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>. Therefore, <code>logits[:, t, :]</code> does not predict the token at the current position, but rather the categorical distribution of the token at the next position.</p>
+  <h3>6.3A From Logits to the Language Modeling Objective: Why the Output Is [batch, seq, vocab]</h3>  <p>The forward pass of the complete GPTModel to <code>logits</code> is not the end. The true optimization objective of language model training is: at each position <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>, use the hidden state at the current position to predict the <strong>next token</strong> <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>. Therefore, <code>logits[:, t, :]</code> does not predict the token at the current position, but rather the categorical distribution of the token at the next position.</p>
 
   <div class="math-box"><div class="label">Autoregressive Decomposition</div>
     <div class="katex" data-expr="p(x_1,\ldots,x_T)=\prod_{t=1}^{T}p(x_t \mid x_{<t})" aria-label="p(x_1,\ldots,x_T)=\prod_{t=1}^{T}p(x_t \mid x_{<t})" role="img"></div>
@@ -442,7 +442,7 @@ sample 2 labels: [GPT, EOS,  -100, -100]</div>
 <!-- 6.4 Weight Tying -->
 <!-- ================================================================ -->
 <section class="card" id="s6-4">
-  <h3>6.4 Deep Theory: Weight Tying—Which Models Use It, Which Don't, and Why?</h3>
+  <h3>6.4 Theory: Weight Tying — Which Models Use It, Which Do Not, and Why?</h3>
   <p><strong>Weight Tying</strong> makes the embedding layer (Token Embedding) and the output layer (LM Head) share the same weight matrix. More precisely, the input side uses the <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>-th row vector to represent token <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>; the output side computes the dot product of the hidden state <span class="katex-inline" data-expr="h_t" aria-label="h_t" role="img"></span> with each token's row vector to obtain the vocabulary logits. It is not an inverse mapping in the mathematical sense, but rather the same set of token vectors simultaneously serving the dual roles of "input representation" and "output classification prototype".</p>
 
   <div class="math-box"><div class="label">Weight Tying Sharing Method</div>
@@ -844,7 +844,7 @@ def load_hf_weights_to_model(hf_model, our_model):
 <!-- 6.8 Theory: DeepSeekMoE -->
 <!-- ================================================================ -->
 <section class="card" id="s6-8">
-  <h3>6.8 Deep Theory: MoE Architecture—Decoupling Capacity and Per-Token Computation</h3>
+  <h3>6.8 Theory: MoE Architecture — Decoupling Capacity and Per-Token Computation</h3>
   <p><strong>Mixture of Experts (MoE)</strong> is the most important extension beyond the GPT-2 architecture for LLMs. It replaces the FFN in each layer with multiple "expert" networks, activating only a few of them per token, achieving <strong>sparse activation</strong>—a large total parameter count but a forward pass computation cost dependent only on the activated parameters.</  p>
 
   <h4>Core Design of DeepSeekMoE</h4>

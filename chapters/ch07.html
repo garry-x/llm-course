@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 7 Training Loop</h2>
-  <p class="subtitle">From MLE to AdamW/Muon + FP8/FP4 + DualPipe—Ultimate Training Efficiency</p>
+  <p class="subtitle">From MLE to AdamW/Muon, FP8/FP4, and DualPipe — Training Efficiency at Scale</p>
   <div class="reading-time">⏱ Estimated Reading: 140 min · 20 sections · 6 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Learn This Chapter: First Make Loss Drop, Then Study Training Optimization</h3>
+  <h3>How to Learn This Chapter: First Make the Loss Decrease, Then Study Training Optimization</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Beginner Focus:</strong> The main line of training has only four steps: take a segment of tokens, let the model predict the next token, compute the error with cross-entropy, and backpropagate to update parameters. Muon, FP8/FP4, DualPipe, and distributed training are large-scale optimization topics; for the first pass, treat them as "knowing why they are needed."</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Basic concepts from Chapter 6: GPTModel, cross-entropy, optimizer.</li>
@@ -249,7 +249,7 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
     <div class="katex" data-expr="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" aria-label="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" role="img"></div>
   </div>
   <p>The <code>global_batch_tokens</code> and <code>training_steps_for_token_budget</code> in the Ch07 assignment correspond to these two formulas. For example: with <code>micro_batch=4</code>, <code>seq_len=2048</code>, <code>grad_accum=8</code>, <code>data_parallel=16</code>, each step consumes <code>1,048,576</code> tokens; if the training budget is <code>20B</code> tokens, approximately <code>19,074</code> optimizer steps are needed. The rough training compute for a dense decoder-only LM is often estimated using <span class="katex-inline" data-expr="6ND" aria-label="6ND" role="img"></span>, where <span class="katex-inline" data-expr="N" aria-label="N" role="img"></span> is the number of parameters and <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> is the number of training tokens; the <code>dense_lm_training_flops</code> in the assignment uses this approximation to link scale, data, and compute budget.</p>
-  <p>Training memory must also include optimizer states. AdamW typically saves gradients, first-order momentum <code>m</code>, and second-order momentum <code>v</code> for each parameter; if parameters are in bf16, gradients in bf16, and moments in fp32, each parameter requires approximately <code>2 + 2 + 2*4 = 12</code> bytes. The <code>optimizer_state_memory_bytes</code> in the Ch07 assignment separately calculates the rough per-GPU estimates for parameters, gradients, optimizer states, and ZeRO-style optimizer state sharding; the further <code>distributed_training_strategy_report</code> maps DDP, ZeRO-1/2/3, FSDP/FSDP2 to per-card model states, global batch tokens, communication patterns, memory gates, and MFU gates.</p>
+  <p>Training memory must also include optimizer states. AdamW typically saves gradients, first-order momentum <code>m</code>, and second-order momentum <code>v</code> for each parameter; if parameters are in bf16, gradients in bf16, and moments in fp32, each parameter requires approximately <code>2 + 2 + 2*4 = 12</code> bytes. The <code>optimizer_state_memory_bytes</code> in the Ch07 assignment separately calculates the rough per-GPU estimates for parameters, gradients, optimizer states, and ZeRO-style optimizer state sharding; the further <code>distributed_training_strategy_report</code> maps DDP, ZeRO-1/2/3, FSDP/FSDP2 to per-card model states, global batch tokens, communication patterns, memory checks, and MFU checks.</p>
 
   <h4>Worked Example: AdamW Memory Accounting and ZeRO-1 Sharding</h4>
   <p>Take a <code>7B</code> parameter dense decoder-only LM as an example, assuming parameters are in bf16 (2 bytes), gradients in bf16 (2 bytes), and AdamW's first/second-order moments <code>m, v</code> in fp32 (4 bytes each). Training memory cannot be estimated simply as "7B × 2 bytes", because that only covers the model weights themselves:</p>
@@ -284,7 +284,7 @@ assert report["decision"] == "strategy_ready_for_rehearsal"</div>
   <p>This exercise requires students to see: with the same 8-GPU training, DDP replicates the full model state, while FSDP/ZeRO-3 shards parameters, gradients, and optimizer states; however, whether training can be scaled up also depends on activation memory, communication latency, checkpoint overhead, and MFU, not just the per-card state memory.</p>
   <h4>Checkpoint/resume: Not just saving model weights</h4>
   <p>Large-scale training is often interrupted by preemption, node failures, OOM, or cluster maintenance. A checkpoint that can resume training must save <code>model</code>, <code>optimizer</code>, <code>scheduler</code>, <code>global_step</code>, RNG, sampler/data cursor; low-precision training also needs to save GradScaler, FP8 scale, or amax history; sharded strategies like FSDP/ZeRO also need to save shard metadata and use a format that can be re-sharded upon loading. Exporting only inference weights is sufficient for serving, but it does not prove that training can continue from the same state.</p>
-  <p>The <code>checkpoint_resume_integrity_report</code> in the Ch07 assignment codifies these requirements into gates: <code>state_completeness</code> checks if the training state is complete, <code>write_integrity</code> checks atomic writes and step monotonicity, <code>distributed_reshard</code> checks if the sharded/DCP format supports resumption with a different world size, <code>checkpoint_interval</code> controls the maximum token loss after preemption, and <code>checkpoint_overhead</code> constrains the save cost and async/overlap strategy.</p>
+  <p>The <code>checkpoint_resume_integrity_report</code> in the Ch07 assignment codifies these requirements into checks: <code>state_completeness</code> verifies whether the training state is complete, <code>write_integrity</code> checks atomic writes and step monotonicity, <code>distributed_reshard</code> checks whether the sharded/DCP format supports resumption with a different world size, <code>checkpoint_interval</code> controls the maximum token loss after preemption, and <code>checkpoint_overhead</code> constrains the save cost and async/overlap strategy.</p>
   <div class="code-block" data-lang="python">
 report = checkpoint_resume_integrity_report(
     checkpoints=[{
@@ -476,7 +476,7 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
 <!-- 7.4A CE Gradient and Backward Pass Path -->
 <!-- ================================================================ -->
 <section class="card" id="s7-4a">
-  <h3>7.4A What Training Actually Updates: Insights from the Cross-Entropy Gradient</h3>
+  <h3>7.4A What Training Actually Updates: Reading the Cross-Entropy Gradient</h3>
   <p>Manually implementing cross-entropy addresses forward numerical stability; understanding training also requires looking at its gradient. For a single token position, let the logits be <span class="katex-inline" data-expr="z \in \mathbb{R}^{V}" aria-label="z \in \mathbb{R}^{V}" role="img"></span>, the softmax probability be <span class="katex-inline" data-expr="p_i = \exp(z_i) / \sum_j \exp(z_j)" aria-label="p_i = \exp(z_i) / \sum_j \exp(z_j)" role="img"></span>, and the target class be <span class="katex-inline" data-expr="y" aria-label="y" role="img"></span>. The loss is <span class="katex-inline" data-expr="L=-\log p_y" aria-label="L=-\log p_y" role="img"></span>.</p>
 
   <div class="math-box"><div class="label">Equation 7.8A Gradient of Cross-Entropy with respect to logits</div>
@@ -1403,8 +1403,8 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
 </section>
 
 <section class="card" id="s7-15b">
-  <h3>7.15B Industrial Training System Gate: Data, Parallelism, Fault Tolerance, and Evaluation Loop</h3>
-  <p>The commonality of the latest industrial training systems is not a single parallel strategy, but forming a closed loop of <strong>data quality, model parallelism, communication overlap, checkpointing, observability, and evaluation gates</strong>. MegaScale treats stability, straggler diagnosis, and fault tolerance in 10K+ GPU training as core issues; DeepSeek-V3 combines MLA, MoE, FP8, DualPipe, and stable long runs; PyTorch FSDP2/DTensor and Distributed Checkpoint turn sharded states into composable interfaces; NVIDIA Transformer Engine implements FP8/MXFP8/NVFP4 low-precision training down to kernels and scale management. Course projects do not need to replicate these systems, but must learn the same class of problems they solve.</p>
+  <h3>7.15B Industrial Training System Checks: Data, Parallelism, Fault Tolerance, and Evaluation Loop</h3>
+  <p>The commonality of the latest industrial training systems is not a single parallel strategy, but forming a closed loop of <strong>data quality, model parallelism, communication overlap, checkpointing, observability, and evaluation checks</strong>. MegaScale treats stability, straggler diagnosis, and fault tolerance in 10K+ GPU training as core issues; DeepSeek-V3 combines MLA, MoE, FP8, DualPipe, and stable long runs; PyTorch FSDP2/DTensor and Distributed Checkpoint turn sharded states into composable interfaces; NVIDIA Transformer Engine implements FP8/MXFP8/NVFP4 low-precision training down to kernels and scale management. Course projects do not need to replicate these systems, but must learn the same class of problems they solve.</p>
 
   <h4>1. Training systems are not just about choosing DDP/FSDP/TP/PP</h4>
   <div class="table-wrap">
@@ -1414,7 +1414,7 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
       <tr><td>Compute plane</td><td>How are DP/FSDP/TP/PP/EP/SP combined, and is the bottleneck computation, communication, or memory?</td><td>tokens/s/GPU, MFU, communication wait, peak memory</td></tr>
       <tr><td>State plane</td><td>How are model, optimizer, scheduler, RNG, sampler, and FP8 scale saved and restored?</td><td>Resume parity, checkpoint duration, restore command</td></tr>
       <tr><td>Control plane</td><td>How to pause, degrade, rollback, replace nodes, or continue training after an anomaly?</td><td>Runbook, alert thresholds, most recent recovery record</td></tr>
-      <tr><td>Eval plane</td><td>When to save, when to evaluate, which gates decide to continue training or stop?</td><td>Dev loss, task benchmarks, safety/format regressions, conclusion boundaries</td></tr>
+      <tr><td>Eval plane</td><td>When to save, when to evaluate, and which checks decide whether to continue training or stop?</td><td>Dev loss, task benchmarks, safety/format regressions, conclusion boundaries</td></tr>
     </table>
   </div>
 
@@ -1422,11 +1422,11 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
   <p>The optimal parallel configuration differs for Dense Transformer, MoE, long-context, and multimodal models. Dense models often first use FSDP/ZeRO to reduce state memory, then use TP/PP to scale to multiple nodes; MoE additionally requires expert parallel and all-to-all load balancing; long contexts amplify activation, attention, and checkpointing pressure. Do not treat "enabling FSDP" as training system design; the real questions are: which tensor is too large, which communication is too frequent, which stage blocks the critical path.</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Industry Reference:</strong> <a href="https://arxiv.org/abs/2402.15627" target="_blank">MegaScale</a> emphasizes full-stack observability and straggler/fault diagnosis; <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3</a> demonstrates the combination of FP8, DualPipe, MoE/MLA, and stable training; <a href="https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html" target="_blank">PyTorch FSDP2</a> and <a href="https://docs.pytorch.org/docs/stable/distributed.tensor.html" target="_blank">DTensor</a> provide the foundation for sharded training; <a href="https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html" target="_blank">Transformer Engine</a> covers FP8/MXFP8/NVFP4; <a href="https://docs.nvidia.com/megatron-core/developer-guide/0.16.0/user-guide/parallelism-guide.html" target="_blank">Megatron Core</a> treats DP/TP/PP/SP/EP as composable strategies.</div></div>
 
-  <h4>3. Checkpoint gate must cover both recovery and release</h4>
+  <h4>3. Checkpoint checks must cover both recovery and release</h4>
   <p>Training interruption recovery focuses on optimizer, scheduler, RNG, and sampler; inference release focuses on weight format, tokenizer, template, quantization, and serving parameters. The two should not be mixed. In distributed training, checkpoints must also handle parameter sharding, optimizer sharding, world size changes, and asynchronous saving overhead. The value of PyTorch Distributed Checkpoint lies in saving these sharded states as composable objects, rather than having each training script write a fragile set of rank-local saving logic.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>Gate</th><th>Passing Criteria</th><th>Check First on Failure</th></tr>
+      <tr><th>Check</th><th>Passing Criteria</th><th>Check First on Failure</th></tr>
       <tr><td>Resume parity</td><td>Step, lr, loss, sample order are continuous within tolerance after recovery</td><td>optimizer/scheduler/RNG/sampler state</td></tr>
       <tr><td>Checkpoint overhead</td><td>Saving does not persistently lower MFU or cause periodic training pauses</td><td>Synchronous disk write, object storage bandwidth, async save memory overhead</td></tr>
       <tr><td>World-size change</td><td>Can reload sharded state and maintain token progress after scaling up/down</td><td>Shard metadata, global batch tokens, data offset</td></tr>
@@ -1435,13 +1435,13 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
   </div>
   <p>The minimum requirement for a course project is: perform at least one checkpoint/resume demonstration, and explain in the report which states were saved, which were not, and how this gap would affect reproducible experiments. Distributed projects should also record checkpoint size, save time, restore time, and the cost of failed reruns.</p>
 
-  <h4>4. Evaluation gate decides "continue training" or "stop loss"</h4>
-  <p>Advanced training engineers must be able to separate training goals from engineering decisions. A decreasing loss does not necessarily mean the model is better for the target workload; a rising benchmark score could also come from contamination, prompt overfitting, or changes in output length. A practical gate should include at least:</p>
+  <h4>4. Evaluation checks decide whether to continue training or stop</h4>
+  <p>Advanced training engineers must be able to separate training goals from engineering decisions. A decreasing loss does not necessarily mean the model is better for the target workload; a rising benchmark score could also come from contamination, prompt overfitting, or changes in output length. Practical evaluation should include at least:</p>
   <ul>
-    <li><strong>Optimization gate:</strong> Are train/val loss, grad norm, lr, loss scale, tokens/s stable?</li>
-    <li><strong>Capability gate:</strong> Is it better than the baseline on a fixed set of tasks, with variance and sample size supporting the conclusion?</li>
-    <li><strong>Regression gate:</strong> Are safety refusals, format adherence, long context, tool/RAG inputs degraded?</li>
-    <li><strong>Cost gate:</strong> Is the new capability worth the cost in training tokens, GPU hours, inference latency, and memory?</li>
+    <li><strong>Optimization signals:</strong> Are train/val loss, grad norm, lr, loss scale, and tokens/s stable?</li>
+    <li><strong>Capability signals:</strong> Is it better than the baseline on a fixed set of tasks, with variance and sample size supporting the conclusion?</li>
+    <li><strong>Regression signals:</strong> Are safety refusals, format adherence, long context, or tool/RAG inputs degraded?</li>
+    <li><strong>Cost signals:</strong> Is the new capability worth the cost in training tokens, GPU hours, inference latency, and memory?</li>
   </ul>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> The goal of an industrial training system is not "to make the model larger", but to ensure that every change in data, model, parallelism, and optimization can be recovered, observed, and evaluated. A training engineer must be able to describe a run as an auditable engineering process, not just a loss curve.</div></div>
 </section>

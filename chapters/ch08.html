@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 8 Text Generation</h2>
-  <p class="subtitle">Sampling Strategies + DeepSeek MTP Speculative Decoding — The Last Mile from Probability to Text</p>
+  <p class="subtitle">Sampling Strategies and DeepSeek MTP Speculative Decoding — Turning Probabilities into Text</p>
   <div class="reading-time">⏱ Estimated Reading: 120 minutes · 16 sections · 7 coding exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Learn This Chapter: Generation is "Repeatedly Selecting the Next Token"</h3>
+  <h3>How to Learn This Chapter: Generation Means Repeatedly Selecting the Next Token</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> First master the four sampling methods: greedy, temperature, top-k, top-p. Speculative decoding, MTP, and Attention Sink are inference acceleration/long-context optimizations; on your first pass, focus on understanding the motivation, without striving to write an industrial-grade implementation immediately.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Chapter 6 logits, softmax, probability sampling.</li>
@@ -113,7 +113,7 @@
 </section>
 
 
-<section class="card" id="s8-2">  <h3>8.2 Why Does Greedy Decoding Fail? — Repetition Traps and Exposure Bias</h3>
+<section class="card" id="s8-2">  <h3>8.2 Why Greedy Decoding Fails — Repetition Traps and Exposure Bias</h3>
   <p>Greedy Decoding selects the token with the highest probability at each step: <span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>. It is the simplest strategy, but it has two fundamental flaws.</p>
 
   <h4>Flaw 1: Repetition Loop</h4>

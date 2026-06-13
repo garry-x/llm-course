@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 5 Transformer Block</h2>
-  <p class="subtitle">RMSNorm + FFN + SwiGLU + mHC Hyper-Connection — Building the Core Unit of an LLM</p>
+  <p class="subtitle">RMSNorm, FFN, SwiGLU, and mHC Hyper-Connections — Building the Core LLM Block</p>
   <div class="reading-time">⏱ Estimated Reading: 125 minutes · 15 sections · 5 programming exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -83,7 +83,7 @@
 <!-- 5.1 Decoder-only Overview -->
 <!-- ================================================================ -->
 <section class="card" id="s5-1">
-  <h3>5.1 Decoder-only Architecture Overview — The "Building Block" Perspective of the Transformer Block</h3>
+  <h3>5.1 Decoder-Only Architecture Overview — The Transformer Block as the Main Reusable Unit</h3>
   <p>Many mainstream autoregressive LLMs (such as the language models in the GPT, Llama, and DeepSeek series) adopt a <strong>Decoder-only</strong> architecture: there is no separate encoder; it mainly consists of stacked <strong>Transformer Blocks</strong>. Still, note that encoder-only, encoder-decoder, or hybrid architectures also exist in NLP and multimodal systems; this chapter focuses on the decoder-only route. Each Block contains two core sublayers:</p>
   <ul>
     <li><strong>Self-Attention Layer</strong> — Allows tokens to exchange information (completed in Chapter 4)</li>
@@ -277,7 +277,7 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
 <!-- 5.3 Pre-Norm vs Post-Norm -->
 <!-- ================================================================ -->
 <section class="card" id="s5-3">
-  <h3>5.3 Deep Theory: Pre-Norm vs. Post-Norm—How Normalization Position Determines Training Stability</h3>
+  <h3>5.3 Theory: Pre-Norm vs. Post-Norm — How Normalization Position Affects Training Stability</h3>
   <p>Whether the normalization layer is placed at the input or output of the sublayer has a <strong>decisive</strong> impact on training dynamics. This is a key design decision repeatedly validated during the scaling of LLMs.</p>
 
   <h4>Post-Norm (Original Transformer)</h4>
@@ -397,7 +397,7 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
 <!-- 5.5 Theory: FFN as Key-Value Memory -->
 <!-- ================================================================ -->
 <section class="card" id="s5-5">
-  <h3>5.5 Deep Theory: FFN as Key-Value Memory — The Secret of Model Knowledge Storage</h3>
+  <h3>5.5 Theory: FFN as Key-Value Memory — How Models Store Knowledge</h3>
   <p>The FFN is more than just a "nonlinear transformation." From an interpretability perspective, Geva et al. (2021) revealed the essence of the FFN: <strong>a large-scale key-value memory</strong>.</p>
 
   <h4>Revisiting the FFN</h4>
@@ -796,7 +796,7 @@ x = x + dropout(ffn(norm2(x)))</div>  <p>The meaning of this position is: during
 <!-- 5.8 Gradient Check -->
 <!-- ================================================================ -->
 <section class="card" id="s5-8">
-  <h3>5.8 Deep Theory: Gradient Check — Why Verify Backpropagation?</h3>
+  <h3>5.8 Theory: Gradient Check — Why Verify Backpropagation?</h3>
   <p>When implementing complex custom operators, hand-written backward functions may contain mathematical errors. Even a single sign error can cause the model to "train" for a long time without converging.</p>
 
   <h4>Mathematical Principle of Finite Differences</h4>
@@ -905,7 +905,7 @@ print(f"LayerNorm module gradient check: {test_module}")</div>
 <!-- 5.10 Learnable Hyper-Connections -->
 <!-- ================================================================ -->
 <section class="card" id="s5-10">
-  <h3>5.10 Deep Theory: Learnable Hyper-Connections — Birkhoff Constraint and Sinkhorn-Knopp Iteration</h3>
+  <h3>5.10 Theory: Learnable Hyper-Connections — Birkhoff Constraint and Sinkhorn-Knopp Iteration</h3>
   <p><strong>Hyper-Connections</strong> is a class of designs that attempt to extend traditional residual connections: instead of each layer only having a fixed 1:1 residual addition with its adjacent layer, they learn more flexible inter-layer connection weights. To avoid excessive signal amplification introduced by learnable connection matrices, some cutting-edge designs constrain the connection matrix to structured sets like the <strong>Birkhoff polytope</strong>.</p>
 
   <h4>Limitations of Traditional Residual Connections</h4>

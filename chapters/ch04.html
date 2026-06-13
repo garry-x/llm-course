@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 4 Multi-Head Attention & MLA</h2>
-  <p class="subtitle">From MHA to GQA to DeepSeek MLA — The Path of KV Cache Compression</p>
+  <p class="subtitle">From MHA to GQA to DeepSeek MLA — A Path to KV Cache Compression</p>
   <div class="reading-time">⏱ Estimated Reading: 100 min · 12 sections · 5 programming exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Study This Chapter: Learn MHA First, Then Treat GQA/MLA as Compression Techniques</h3>
+  <h3>How to Learn This Chapter: Learn MHA First, Then Treat GQA/MLA as Compression Techniques</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> Multi-head attention simply splits a large vector into multiple smaller heads and performs the attention from Chapter 3 in parallel. GQA and MLA are engineering optimizations to reduce KV Cache storage during inference. On your first pass, focus on understanding "why we need to save KV"; implementation details can be revisited on a second pass.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Chapter 3 Q/K/V, reshape, transpose.</li>
@@ -90,7 +90,7 @@
 
 <!-- ================================================================ -->
 <section class="card" id="s4-1">
-  <h3>4.1 From Single-Head to Multi-Head — Why Isn't One Head Enough?</h3>
+  <h3>4.1 From Single-Head to Multi-Head — Why One Head Is Not Enough</h3>
   <p>Chapter 3 implemented single-head self-attention: one <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>-dimensional Q/K/V space responsible for all matching patterns. But relationships in language are <strong>multifaceted</strong> — a single token needs to match other tokens from multiple "perspectives" simultaneously.</p>
 
   <h4>Concrete Scenario: Why Isn't One Head Enough?</h4>

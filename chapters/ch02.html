@@ -22,7 +22,7 @@
 <main class="main">
 <article class="chapter">
   <h2>Chapter 2: Embedding Layer and Positional Encoding</h2>
-  <p class="subtitle">Implement TokenEmbedding + Sinusoidal + RoPE — Enabling the Model to Understand Semantics and Order</p>
+  <p class="subtitle">Implement TokenEmbedding, Sinusoidal Encoding, and RoPE — Representing Meaning and Order</p>
   <div class="reading-time">⏱ Estimated reading: 120 minutes · 19 sections · 4 programming exercises · 6 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
@@ -31,7 +31,7 @@
   </div>
 
 <section class="card">
-  <h3>How to Learn This Chapter: Focus on "Lookup Table" and "Position Information"</h3>
+  <h3>How to Learn This Chapter: Focus on Lookup Tables and Positional Information</h3>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Key for Beginners:</strong> First understand <code>nn.Embedding</code> as "looking up a row vector by token id", then understand why Transformers don't know order, so positional encoding must be added. The matrix derivation for RoPE can be reviewed in detail on a second pass.</div></div>
   <ul>
     <li><strong>Prerequisites:</strong> Tensor shapes, matrix lookup, basic concepts of sin/cos.</li>

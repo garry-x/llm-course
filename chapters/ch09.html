@@ -38,7 +38,7 @@
     <li><strong>Learning Goals:</strong> Distinguish between pre-training, SFT, PEFT, preference optimization, and reinforcement learning alignment, and derive the loss signals for SFT mask, LoRA, DPO, and GRPO.</li>
     <li><strong>Chapter Output:</strong> Minimal implementations of SFT/LoRA/DPO/GRPO/RLVR and a map of applicable scenarios.</li>
     <li><strong>Completion Criteria:</strong> You can determine whether a requirement should use SFT, LoRA, DPO, or RL-based methods.</li>
-    <li><strong>Exercise Output:</strong> Submit masked SFT, SFT chat template/mask/packing diagnostics, LoRA parameter statistics, post-training data audit, DPO/GRPO toy experiments, RLVR grader reliability report, preference data error analysis, and safety risk explanation; accompanying assignments at <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>.</li>
+    <li><strong>Practice Artifacts:</strong> Build masked SFT, SFT chat template/mask/packing diagnostics, LoRA parameter statistics, post-training data audit, DPO/GRPO toy experiments, RLVR grader reliability reports, preference data error analysis, and safety risk explanations. Optional practice files are available at <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Prerequisite Skills:</strong> log probability, sequence loss, reference model, KL, preference data statistics, reward signal, and evaluation slices.<br><strong>Internalization for this Chapter:</strong> SFT, LoRA, DPO, GRPO, RLVR/RFT will all be reduced to five things: "data format, objective function, constraint term, sampling assumption, and evaluation slice"; the post-training data audit checks coverage, leakage, length bias, and safety slices before the objective function, rather than opening a separate remedial path.<br><strong>Validation Signal:</strong> You can determine whether an alignment experiment optimized target behavior, reward hacking, format bias, or evaluation leakage, and report quality changes alongside Ch08 generation cost and Ch10 service safety boundaries.</div>
   <p class="system-role"><strong>System Position:</strong> This chapter transforms the Ch07 training loop and Ch08 generation behavior into a post-training system oriented towards tasks, preferences, safety, and reasoning ability. Synthetic data, distillation, rejection sampling, DPO/GRPO, and RLVR must all be traced back to data source, objective function, evaluation slice, and service cost, rather than being stacked as separate tricks.</p>
@@ -180,7 +180,7 @@
 
   <p>This framing matches recent practice. <a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1</a> shows why RL can elicit reasoning but also why cold-start data, readability, distillation, and evaluation matter. <a href="https://arxiv.org/abs/2503.14476" target="_blank">DAPO</a> turns long-CoT RL into measurable engineering controls such as dynamic sampling and length-aware reward shaping. <a href="https://arxiv.org/abs/2507.18071" target="_blank">GSPO</a> moves part of the stability problem from token-level ratios to sequence-level optimization. OpenAI's <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">reinforcement fine-tuning</a> documentation exposes the production side: a grader, prompt dataset, validation split, checkpoint monitoring, and deployment decision must be specified together.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Learning Target:</strong> After reading this chapter, students should be able to trace any post-training method through the same five objects: prompt distribution, supervision or reward signal, policy constraint, rollout system, and evaluation slices. If one object is missing, the method name is not enough to support an engineering conclusion.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Learning Target:</strong> After reading this chapter, learners should be able to trace any post-training method through the same five objects: prompt distribution, supervision or reward signal, policy constraint, rollout system, and evaluation slices. If one object is missing, the method name is not enough to support an engineering conclusion.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -344,7 +344,7 @@ messages:
 
 serialized tokens:
   BOS system_tokens user_tokens assistant_header response_tokens EOS</div>
-  <p>Course implementations can use a simplified ChatML, but experimental reports must clearly state the template, special tokens, whether BOS/EOS are added, and how the response start point is located. Otherwise, two students using the same data and model might train different behaviors.</p>
+  <p>A compact implementation can use a simplified ChatML template, but experimental reports must clearly state the template, special tokens, whether BOS/EOS are added, and how the response start point is located. Otherwise, two teams using the same data and model might train different behaviors.</p>
 
   <h4>2. Label mask for multi-turn dialogues</h4>
   <p>Single-turn SFT only needs to mask the user prompt; multi-turn dialogues require more precision: all system/user tokens are not targets, and whether the assistant's historical responses participate in the loss depends on the training objective. A common practice is to compute loss for each assistant span, allowing the model to learn each response in a multi-turn dialogue:</p>
@@ -363,7 +363,7 @@ labels:      -100    -100    keep         -100    keep</div>
   </ul>
   <p>A practical metric is <code>supervised_token_ratio = valid_label_tokens / total_tokens</code>. A very low ratio indicates that training is performing forward computation on a large number of prompts, padding, or invalid tokens; a very high ratio may also indicate that the prompt is too short, the task is too templated, and the model has not learned complex instruction conditions.</p>
 
-  <p>The <code>sft_chat_template_mask_report(examples, policy)</code> in the assignment turns this section into a pre-training diagnostic. It receives already tokenized multi-turn messages, rather than directly relying on a specific tokenizer: each message must carry <code>role</code> and <code>token_ids</code>, and the function then reports assistant spans, supervised token ratio, truncated assistant tokens, illegal roles, and packing risks. This allows students to export Hugging Face, OpenAI, or custom data into a unified span table, and then verify "whether the template is consistent, whether the loss only falls on assistant tokens, whether truncation cuts off the response, and whether packing requires block-diagonal attention."</p>
+  <p>A template and mask diagnostic turns this section into a pre-training check. It receives already tokenized multi-turn messages, rather than directly relying on a specific tokenizer: each message must carry <code>role</code> and <code>token_ids</code>, and the report then records assistant spans, supervised token ratio, truncated assistant tokens, illegal roles, and packing risks. This allows Hugging Face, OpenAI, or custom data to be exported into a unified span table, and then verifies whether the template is consistent, whether the loss only falls on assistant tokens, whether truncation cuts off the response, and whether packing requires block-diagonal attention.</p>
 
   <div class="code-block" data-lang="python">report = sft_chat_template_mask_report(
     examples=[{
@@ -375,7 +375,7 @@ labels:      -100    -100    keep         -100    keep</div>
     }],
     policy={"max_seq_len": 32, "pack_examples": False},
 )
-# report["gates"] checks template_roles, assistant_label_mask,
+# report checks template_roles, assistant_label_mask,
 # supervised_token_ratio, truncation, and packing.</div>
 
   <p>The key point of this diagnostic is not to replace the tokenizer, but to make explicit the protocol most prone to errors after tokenization and before the training step. If multiple samples are packed without block-diagonal attention, the later sample will see the previous sample under ordinary causal attention; if <code>max_seq_len</code> truncates the assistant span, the training loss may still decrease, but the effective supervision has already deviated from the target behavior.</p>
@@ -417,7 +417,7 @@ labels:      -100    -100    keep         -100    keep</div>
   <div class="math-box"><div class="label">Equation 9.2 RM Loss</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" aria-label="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" role="img"></div>
   </div>
-  <p>In the assignment, this objective corresponds to <code>pairwise_reward_loss(chosen_rewards, rejected_rewards)</code>: first compute the reward margin <span class="katex-inline" data-expr="m_i=r_i^w-r_i^l" aria-label="m_i=r_i^w-r_i^l" role="img"></span> for each preference pair, then take the mean of <span class="katex-inline" data-expr="-\log\sigma(m_i)" aria-label="-\log\sigma(m_i)" role="img"></span>. If the proportion of <span class="katex-inline" data-expr="m_i&gt;0" aria-label="m_i&gt;0" role="img"></span> is very low, it indicates the reward model has not yet ranked chosen above rejected; if the proportion is high but generalization is poor, check whether the preference pairs are dominated by length, template, or candidate distribution.</p>
+  <p>Computationally, this objective first computes the reward margin <span class="katex-inline" data-expr="m_i=r_i^w-r_i^l" aria-label="m_i=r_i^w-r_i^l" role="img"></span> for each preference pair, then takes the mean of <span class="katex-inline" data-expr="-\log\sigma(m_i)" aria-label="-\log\sigma(m_i)" role="img"></span>. If the proportion of <span class="katex-inline" data-expr="m_i&gt;0" aria-label="m_i&gt;0" role="img"></span> is very low, it indicates the reward model has not yet ranked chosen above rejected; if the proportion is high but generalization is poor, check whether the preference pairs are dominated by length, template, or candidate distribution.</p>
 
   <div class="worked-example">
     <h4>Worked Example: Manual Calculation of Reward Model Pairwise Loss</h4>
@@ -602,17 +602,18 @@ LoRA train states ~= base_weights + lora_params * (weights + grads + Adam m + Ad
     <div class="katex" data-expr="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" aria-label="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" role="img"></div>
   </div>
   <p>Core implication: Under the above modeling assumptions, we can construct an implicit reward difference related to preference probability using the <strong>log-probability ratio of the policy/reference</strong>, without training a separate Reward Model. DPO optimizes a classification-style loss induced by chosen/rejected preference pairs, not an arbitrary "direct reward maximization."</p>
-  <p>The <code>dpo_implicit_rewards</code> function in the assignment will explicitly compute this relationship: <span class="katex-inline" data-expr="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" aria-label="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" role="img"></span>. For each preference pair, the implicit reward margin for chosen/rejected is <span class="katex-inline" data-expr="\hat r_w-\hat r_l" aria-label="\hat r_w-\hat r_l" role="img"></span>, and <span class="katex-inline" data-expr="\sigma(\hat r_w-\hat r_l)" aria-label="\sigma(\hat r_w-\hat r_l)" role="img"></span> can be interpreted as the preference probability induced by the current policy/reference ratio. This diagnostic can reveal a common mistake: only comparing the raw log probability of the policy while forgetting the anchoring role of the reference model.</p>
+  <p>A DPO implicit-reward diagnostic explicitly computes this relationship: <span class="katex-inline" data-expr="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" aria-label="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" role="img"></span>. For each preference pair, the implicit reward margin for chosen/rejected is <span class="katex-inline" data-expr="\hat r_w-\hat r_l" aria-label="\hat r_w-\hat r_l" role="img"></span>, and <span class="katex-inline" data-expr="\sigma(\hat r_w-\hat r_l)" aria-label="\sigma(\hat r_w-\hat r_l)" role="img"></span> can be interpreted as the preference probability induced by the current policy/reference ratio. This diagnostic can reveal a common mistake: only comparing the raw log probability of the policy while forgetting the anchoring role of the reference model.</p>
 
   <h4>Worked Example: DPO Looks at the Improvement Relative to the Reference</h4>
   <p>Consider a preference pair <code>(prompt, chosen, rejected)</code>, with the log probabilities of the four sequences as follows. Note that the raw log probability of the policy here still favors the rejected response because <code>-11 &gt; -12</code>; but DPO does not directly compare these two numbers.</p>
   <div class="table-wrap">
     <table>
       <tr><th>Response</th><th>Policy logp</th><th>Reference logp</th><th>Log-ratio = policy - reference</th><th>Implicit reward, beta=0.1</th></tr>
-      <tr><td>chosen</td><td>-12.0</td><td>-15.0</td><td>3.0</td><td>0.3</td></tr>      <tr><td>rejected</td><td>-11.0</td><td>-10.0</td><td>-1.0</td><td>-0.1</td></tr>
+      <tr><td>chosen</td><td>-12.0</td><td>-15.0</td><td>3.0</td><td>0.3</td></tr>
+      <tr><td>rejected</td><td>-11.0</td><td>-10.0</td><td>-1.0</td><td>-0.1</td></tr>
     </table>
   </div>
-  <p>The absolute probability of chosen is still low, but it has improved by <code>3.0</code> relative to the reference; rejected has actually decreased by <code>1.0</code> relative to the reference. Therefore, the DPO logit is <code>beta * (3 - (-1)) = 0.4</code>, the current preference probability is <code>sigmoid(0.4) ≈ 0.599</code>, and the per-sample loss is <code>-log sigmoid(0.4) ≈ 0.513</code>. If a student only uses <code>policy_chosen_logp &gt; policy_rejected_logp</code> as the preference accuracy, they would misclassify this sample as a failure; the correct diagnosis should compare <code>chosen_log_ratio &gt; rejected_log_ratio</code>.</p>
+  <p>The absolute probability of chosen is still low, but it has improved by <code>3.0</code> relative to the reference; rejected has actually decreased by <code>1.0</code> relative to the reference. Therefore, the DPO logit is <code>beta * (3 - (-1)) = 0.4</code>, the current preference probability is <code>sigmoid(0.4) ≈ 0.599</code>, and the per-sample loss is <code>-log sigmoid(0.4) ≈ 0.513</code>. If the report only uses <code>policy_chosen_logp &gt; policy_rejected_logp</code> as preference accuracy, it would misclassify this sample as a failure; the correct diagnosis should compare <code>chosen_log_ratio &gt; rejected_log_ratio</code>.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO vs RLHF:</strong> The main advantage of DPO is simplifying the training pipeline: in common implementations, it does not require training a separate reward model, nor does it need the Actor-Critic rollout of PPO. Instead, it constructs the loss using the log probability ratios of policy/reference on chosen/rejected. It is usually easier to implement and tune than PPO-style RLHF, but its stability still depends on preference data quality, the reference model, <span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span>, length bias, and optimization settings. It cannot be unconditionally stated as superior to all RLHF methods.</div></div>
 </section>
 
@@ -636,10 +637,10 @@ LoRA train states ~= base_weights + lora_params * (weights + grads + Adam m + Ad
   </div>
 
   <h4>Converting Length Bias into Computable Statistics</h4>
-  <p>The course assignment <code>preference_length_bias(chosen_lengths, rejected_lengths)</code> writes the length difference for each preference pair as <span class="katex-inline" data-expr="\Delta \ell_i = \ell_i^w - \ell_i^l" aria-label="\Delta \ell_i = \ell_i^w - \ell_i^l" role="img"></span> and reports <code>mean_length_delta</code>, <code>chosen_longer_rate</code>, <code>rejected_longer_rate</code>, and <code>tie_rate</code>. If chosen is often significantly longer, DPO or the RM might learn the shortcut "write more to win"; if rejected is longer but still judged worse, students should further determine whether the issue is verbosity, off-topic content, factual errors, or safety boundary problems.</p>
+  <p>A length-bias diagnostic writes the length difference for each preference pair as <span class="katex-inline" data-expr="\Delta \ell_i = \ell_i^w - \ell_i^l" aria-label="\Delta \ell_i = \ell_i^w - \ell_i^l" role="img"></span> and reports <code>mean_length_delta</code>, <code>chosen_longer_rate</code>, <code>rejected_longer_rate</code>, and <code>tie_rate</code>. If chosen is often significantly longer, DPO or the RM might learn the shortcut "write more to win"; if rejected is longer but still judged worse, the analysis should determine whether the issue is verbosity, off-topic content, factual errors, or safety boundary problems.</p>
 
   <h4>Audit Post-Training Data Before Optimizing the Objective</h4>
-  <p>The objective functions of SFT, DPO, GRPO, and RLVR/RFT all assume the training samples are semantically trustworthy: the prompt covers the target task, chosen/rejected represents a stable preference, safety samples do not label dangerous responses as chosen, and held-out eval sets do not overlap with the training set. Real post-training pipelines typically mix human preferences, AI feedback, rejection sampling, verifiable problems, and safety data; the course does not require replicating a full industrial pipeline, but it does require turning basic data assumptions into computable audit tables.</p>
+  <p>The objective functions of SFT, DPO, GRPO, and RLVR/RFT all assume the training samples are semantically trustworthy: the prompt covers the target task, chosen/rejected represents a stable preference, safety samples do not label dangerous responses as chosen, and held-out eval sets do not overlap with the training set. Real post-training pipelines typically mix human preferences, AI feedback, rejection sampling, verifiable problems, and safety data; even a compact training run should turn basic data assumptions into computable audit tables.</p>
 
   <table class="metrics-table">
     <thead><tr><th>Check Area</th><th>What to Check</th><th>Priority Action on Failure</th></tr></thead>
@@ -651,7 +652,7 @@ LoRA train states ~= base_weights + lora_params * (weights + grads + Adam m + Ad
     </tbody>
   </table>
 
-  <p>The assignment <code>post_training_data_audit(records, thresholds)</code> aggregates each SFT, preference, or RLVR/RFT record into four diagnostic areas: <code>coverage</code>, <code>label_quality</code>, <code>leakage</code>, and <code>safety</code>, and outputs <code>action_items</code>. This step is not a "comprehensive dataset cleaning guide," but a minimal engineering assertion before training: if preference pairs for the same prompt are contradictory, chosen is significantly longer, eval overlap is non-zero, or unsafe chosen samples exist, then a subsequent decrease in DPO loss only indicates the model is getting closer to a flawed proxy objective.</p>
+  <p>A post-training data audit aggregates each SFT, preference, or RLVR/RFT record into four diagnostic areas: <code>coverage</code>, <code>label_quality</code>, <code>leakage</code>, and <code>safety</code>, and outputs <code>action_items</code>. This step is not a comprehensive dataset cleaning guide, but a minimal engineering assertion before training: if preference pairs for the same prompt are contradictory, chosen is significantly longer, eval overlap is non-zero, or unsafe chosen samples exist, then a subsequent decrease in DPO loss only indicates the model is getting closer to a flawed proxy objective.</p>
 
   <div class="code-block" data-lang="python">
 records = [
@@ -665,7 +666,7 @@ report = post_training_data_audit(records, thresholds={
     "max_unsafe_chosen_rate": 0.0,
 })</div>
 
-  <p>This audit integrates the fundamentals of preference learning into the objective functions of this chapter: DPO's <code>chosen/rejected</code> is not a natural ground truth, and GRPO's reward group is not naturally reliable. When students submit alignment experiments, they must first state whether the data checks support the objective, and then explain the log-ratio, KL, reward, and behavioral slices.</p>
+  <p>This audit integrates the fundamentals of preference learning into the objective functions of this chapter: DPO's <code>chosen/rejected</code> is not a natural ground truth, and GRPO's reward group is not naturally reliable. An alignment experiment should first state whether the data checks support the objective, and then explain the log-ratio, KL, reward, and behavioral slices.</p>
 
   <h4>Why the Reference Model is Crucial</h4>
   <p>The core comparison in DPO is not <span class="katex-inline" data-expr="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" aria-label="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" role="img"></span>, but the improvement of the policy relative to the reference:</p>
@@ -811,12 +812,12 @@ advantages ≈
  [ 0.000,  0.000],
  [ 1.225,  1.225]]</div>
   <p>This example illustrates: intra-group whitening eliminates the difference in reward scales across different prompts, but does not change the relative ranking of candidates within the same prompt. When implementing, use <code>std(unbiased=False)</code> corresponding to the population standard deviation, so that the population standard deviation of each whitened column is 1; if using PyTorch's default sample standard deviation, the advantage magnitude will be additionally reduced when the group sample size is small.</p>
-  <p>The complete GRPO policy loss also needs to extend the sequence-level advantage of each completion to the valid completion tokens, and then combine it with the old/new policy ratio to form the PPO clipped surrogate, while simultaneously calculating the masked approximate KL for the token log-probs of the current policy versus the reference policy. Therefore, the <code>grpo_policy_loss</code> in the Ch09 assignment reports <code>policy_loss</code>, <code>kl_loss</code>, <code>loss</code>, <code>clip_fraction</code>, <code>mean_ratio</code>, and <code>mean_advantage</code>; these quantities allow students to distinguish between "relatively higher reward," "policy update constrained by clipping," and "policy deviating from reference."</p>
+  <p>The complete GRPO policy loss also needs to extend the sequence-level advantage of each completion to the valid completion tokens, and then combine it with the old/new policy ratio to form the PPO clipped surrogate, while simultaneously calculating the masked approximate KL for the token log-probs of the current policy versus the reference policy. A GRPO loss report should include <code>policy_loss</code>, <code>kl_loss</code>, <code>loss</code>, <code>clip_fraction</code>, <code>mean_ratio</code>, and <code>mean_advantage</code>; these quantities distinguish between relatively higher reward, policy updates constrained by clipping, and policy drift away from the reference.</p>
 </section>
 
 <section class="card" id="s9-8b">
   <h3>9.8B From GRPO to DAPO / GSPO: Engineering Recipes for Reasoning RL</h3>
-  <p>After 2025, the focus of reasoning RL shifted from "whether GRPO can be used to train reasoning" further towards "how to train stably, reproducibly, and scalably." DAPO breaks down the hidden details of large-scale LLM RL into more explicit recipes, such as Clip-Higher, dynamic sampling, token-level policy gradient loss, and overlong reward shaping; GSPO changes the importance ratio from the token level to the sequence likelihood level, emphasizing stability in long training and MoE RL. The course does not require students to implement all these algorithms into industrial systems, but they must understand the engineering problems they collectively expose: rollout distribution, length growth, entropy, KL, clipping behavior, MoE routing volatility, and reward integrity will jointly determine whether an RL run is trustworthy.</p>
+  <p>After 2025, the focus of reasoning RL shifted from "whether GRPO can be used to train reasoning" toward "how to train stably, reproducibly, and scalably." DAPO breaks down the hidden details of large-scale LLM RL into more explicit recipes, such as Clip-Higher, dynamic sampling, token-level policy gradient loss, and overlong reward shaping; GSPO changes the importance ratio from the token level to the sequence likelihood level, emphasizing stability in long training and MoE RL. The key engineering problems are rollout distribution, length growth, entropy, KL, clipping behavior, MoE routing volatility, and reward integrity; together, they determine whether an RL run is trustworthy.</p>
 
   <div class="table-wrap">
     <table>
@@ -835,7 +836,7 @@ advantages ≈
 
 <section class="card" id="s9-8c">
   <h3>9.8C From Reasoning RL Research to a Deployable Evidence Chain</h3>
-  <p>The <a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1 report</a> is useful for this course not because students should memorize one recipe, but because it exposes a complete post-training systems problem. The revised arXiv version reports that reasoning ability can emerge under large-scale RL on verifiable tasks, while also highlighting why cold-start data, readability, language consistency, distillation, and evaluation are needed before a model becomes deployable. For training engineers, the lesson is: reasoning RL must be audited from data and reward to rollout behavior, capability retention, and inference cost.</p>
+  <p>The <a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1 report</a> is useful here not as a recipe to memorize, but because it exposes a complete post-training systems problem. The revised arXiv version reports that reasoning ability can emerge under large-scale RL on verifiable tasks, while also highlighting why cold-start data, readability, language consistency, distillation, and evaluation are needed before a model becomes deployable. For training engineers, the lesson is: reasoning RL must be audited from data and reward to rollout behavior, capability retention, and inference cost.</p>
 
   <div class="foundation-graph" role="img" aria-label="Reasoning RL deployable evidence chain">
     <svg viewBox="0 0 900 270">
@@ -1228,7 +1229,8 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
 <!-- 9.10A Alignment Evaluation Protocol -->
 <!-- ================================================================ -->
 <section class="card" id="s9-10a">
-  <h3>9.10A Alignment Evaluation Protocol: Preference Accuracy Is Not Enough</h3>  <p>DPO or GRPO training logs showing preference accuracy, reward mean, and KL values only indicate that the model has changed according to the training objective; they do not mean the model has become a better assistant. In an engineering course, it is necessary to separate the <strong>objective function</strong> from the <strong>evaluation question</strong>: training optimizes a proxy objective, but what ultimately matters is whether the model is helpful, honest, harmless, and whether original capabilities have degraded.</p>
+  <h3>9.10A Alignment Evaluation Protocol: Preference Accuracy Is Not Enough</h3>
+  <p>DPO or GRPO training logs showing preference accuracy, reward mean, and KL values only indicate that the model has changed according to the training objective; they do not mean the model has become a better assistant. Engineering evaluation must separate the <strong>objective function</strong> from the <strong>evaluation question</strong>: training optimizes a proxy objective, but what ultimately matters is whether the model is helpful, honest, harmless, and whether original capabilities have degraded.</p>
 
   <h4>Why a Single Win Rate is Insufficient</h4>
   <ul>
@@ -1284,7 +1286,7 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
       <tr><td><code>heldout_preference_acc</code></td><td>Marginal accuracy on unseen preference pairs</td><td>If training accuracy rises but held-out accuracy does not, it usually indicates overfitting or data bias</td></tr>
     </tbody>
   </table>
-  <p>The <code>dpo_implicit_rewards</code> in the assignment explicitly returns these quantities. Training engineers should look at the distribution, not just the mean: if a few long responses contribute most of the positive margin, the model might be learning "longer answers win more easily"; if both chosen and rejected are significantly increased by the policy relative to the reference, the KL anchor might be too weak, and the model is not truly suppressing low-quality responses.</p>
+  <p>A DPO reward-margin report should explicitly return these quantities. Training engineers should look at the distribution, not just the mean: if a few long responses contribute most of the positive margin, the model might be learning "longer answers win more easily"; if both chosen and rejected are significantly increased by the policy relative to the reference, the KL anchor might be too weak, and the model is not truly suppressing low-quality responses.</p>
 
   <h4>PPO/GRPO Also Need to Monitor Ratio and Clipping</h4>
   <p>GRPO uses within-group whitened advantages, but the policy update still controls the step size via a PPO-style clipped surrogate. The <code>mean_ratio</code>, <code>clip_fraction</code>, and <code>approx_kl</code> in the logs are key to judging training stability. If using a DAPO or GSPO-style recipe, dynamic sampling, completion length, entropy, sequence-level ratio, and MoE routing volatility should also be included in the same log table; otherwise, it's impossible to tell if gains come from better policy updates or from side effects of sampling, length, or routing.</p>
@@ -1311,7 +1313,7 @@ decoding: temperature=0.2, top_p=0.9, max_new_tokens=512
 optimization: preference_acc, reward_margin_p50/p95, approx_kl, length_delta
 behavior: task_success, hallucination_rate, unsafe_completion_rate, over_refusal_rate
 retention: math/code/readcomp slices compared against SFT baseline</div>
-  <p>If <code>approx_kl</code> is very low but behavior hasn't changed, the preference training might be too weak. If <code>approx_kl</code> is very high and math/code capabilities have decreased, an alignment tax has appeared. If the safe refusal rate increases but the benign sensitive request completion rate decreases, the model might have learned over-refusal. If a DAPO/GSPO-style RL curve looks better, it must also be checked whether the gains hold on held-out prompts, different length buckets, and MoE routing states. Course projects should place these behavioral slices and optimization logs in the same results table to determine if the alignment method is worth scaling up.</p>
+  <p>If <code>approx_kl</code> is very low but behavior hasn't changed, the preference training might be too weak. If <code>approx_kl</code> is very high and math/code capabilities have decreased, an alignment tax has appeared. If the safe refusal rate increases but the benign sensitive request completion rate decreases, the model might have learned over-refusal. If a DAPO/GSPO-style RL curve looks better, it must also be checked whether the gains hold on held-out prompts, different length buckets, and MoE routing states. A complete result table should place these behavioral slices and optimization logs together to determine whether the alignment method is worth scaling up.</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> Training records for preference optimization must include both internal objective function quantities and external behavioral quantities. Internal quantities indicate whether optimization is happening according to the formula; external behavioral quantities indicate whether it truly makes the model more useful, honest, and safe, without excessively sacrificing original capabilities.</div></div>
 </section>
@@ -1361,7 +1363,8 @@ retention: math/code/readcomp slices compared against SFT baseline</div>
 <!-- ================================================================ -->
 <section class="card" id="s9-12">
   <h3>9.12 Programming Exercise 6: Loading a LoRA Adapter and Merging for Inference</h3>
-  <p>In practical applications, LoRA adapters are typically distributed as separate weight files. During inference, the adapter is loaded and merged back into the base model.</p>  <div class="coding-exercise">
+  <p>In practical applications, LoRA adapters are typically distributed as separate weight files. During inference, the adapter is loaded and merged back into the base model.</p>
+  <div class="coding-exercise">
     <h4>Exercise 6: LoRA Merge Inference</h4>
     <div class="task">
       <p><strong>Task:</strong> Simulate loading a LoRA adapter, merging it into the base model for inference.</p>
@@ -1479,7 +1482,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
   </div>
 
   <h4>Grader Reliability: Validate the reward first, then train the policy</h4>
-  <p>The engineering order for RLVR/RFT should be: first run a fixed set of prompts, sample multiple candidates, record rewards, pass/fail, output length, grader errors, and suspicious hacking; only when the reward signal, cost, and integrity checks are credible should policy updates proceed. The <code>rlvr_grader_report</code> in the Ch09 assignment requires reporting three types of evidence:</p>
+  <p>The engineering order for RLVR/RFT should be: first run a fixed set of prompts, sample multiple candidates, record rewards, pass/fail, output length, grader errors, and suspicious hacking; only when the reward signal, cost, and integrity checks are credible should policy updates proceed. A grader reliability report should provide three types of evidence:</p>
   <ul>
     <li><strong>Reward signal:</strong> Pass rate should not be close to 0 or 1, reward standard deviation should not be close to 0, otherwise there is no effective learning signal.</li>
     <li><strong>Cost:</strong> Average completion tokens, rollout count, and training epochs should be controlled; long-CoT improvements must report token cost simultaneously.</li>

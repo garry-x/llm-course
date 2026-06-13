@@ -230,7 +230,7 @@
 
 对应章节：Ch09。
 
-本周阅读目标：区分 SFT、parameter-efficient fine-tuning、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据、AI/人工反馈、安全切片和可验证 reward 如何进入目标函数。
+本周阅读目标：区分 SFT、parameter-efficient fine-tuning、合成数据/蒸馏、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据、AI/人工反馈、安全切片、rejection sampling 和可验证 reward 如何进入目标函数。
 
 必读：
 
@@ -240,8 +240,8 @@
 - Hu et al. [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685). 重点看低秩增量和可训练参数比例。
 - Bai et al. [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862). 重点看 chosen/rejected 偏好数据、helpful/harmless 目标和在线反馈数据迭代。
 - Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). 重点看从 KL-constrained RL 到分类式 loss 的推导。
-- DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). 重点看 GRPO、推理行为和方法边界。
-- Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). 重点看 long-context RL、long2short、长度控制和多模态 reasoning 的工程取舍。
+- DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). 重点看 GRPO、冷启动数据、rejection sampling、蒸馏模型和方法边界。
+- Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). 重点看 long-context RL、long2short、长度控制、采样策略和多模态 reasoning 的工程取舍。
 
 选读：
 
@@ -254,6 +254,7 @@
 
 - DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
 - SFT 数据从 messages 变成 token 序列后，哪些信息必须保留下来才能检查 assistant-only loss、truncation 和 packing 边界？
+- 合成/蒸馏数据进入 SFT 或偏好优化前，为什么必须记录 teacher 版本、采样参数、verifier 准确性、人工抽检、去重和 eval overlap？
 - 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
 - `post_training_data_audit` 的 coverage、label quality、leakage 和 safety gate 分别对应 post-training 的哪类失败结论？
 - 如果 SFT/偏好数据的任务覆盖不足或 eval overlap 不为零，为什么不能用 DPO/GRPO 训练 loss 下降作为上线证据？

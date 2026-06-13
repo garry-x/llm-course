@@ -13,7 +13,7 @@
     {id:6, file:'ch06.html', title:'组装完整 GPT 模型', desc:'GPT-2 124M、MoE、权重加载、logit parity 与 checkpoint 兼容', sections:18},
     {id:7, file:'ch07.html', title:'训练循环', desc:'数据管线、AdamW、checkpoint、分布式、MFU、工业训练系统 gate', sections:26},
     {id:8, file:'ch08.html', title:'文本生成', desc:'采样、beam、reasoning/test-time compute、speculative 与结构化解码', sections:21},
-    {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT/偏好数据 gate、LoRA、DPO、GRPO、对齐评估与能力保留', sections:24},
+    {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT、合成蒸馏、偏好数据、LoRA、DPO、GRPO、RLVR 与能力保留', sections:24},
     {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache、continuous batching、RAG、tool use、PD 解耦与推理引擎', sections:30},
     {id:11, file:'ch11.html', title:'经典神经 NLP 与评测', desc:'RNN、Parsing、Seq2Seq、BERT、评测有效性、安全与 Capstone 报告', sections:19}
   ];

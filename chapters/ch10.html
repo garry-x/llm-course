@@ -44,6 +44,7 @@
     <li><strong>练习产出：</strong>提交 KV 显存计算、prefix cache 节省率、continuous batching admission gate、量化误差实验、RAG demo、tool schema/MCP runtime gate、production rollout gate、serving overload response gate、压测 JSON、P50/P95/P99 报告、指标结论摘要和上线方案；配套作业见 <a href="../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>前九章计算图、KV cache、生成策略、评测指标，以及 TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。<br><strong>本章内化：</strong>每个服务问题都会拆成 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和回退策略；KV、量化、prefix cache、RAG、tool gate 与多模态 token 都要进入同一张 SLO/成本账本。<br><strong>验收信号：</strong>你能写出一份上线报告，说明瓶颈在哪、优化改了哪个阶段、质量是否回归、容量边界是什么，以及何时拒绝“只看平均延迟”的结论。</div>
+  <p class="system-role"><strong>系统位置：</strong>本章把前九章的模型、训练、生成和对齐结果变成可承载流量的服务。它要求训练工程师交付可加载模型包，也要求推理工程师用 workload、SLO、容量、回滚和安全边界证明系统能上线。</p>
 </section>
 
 <!-- ================================================================ -->

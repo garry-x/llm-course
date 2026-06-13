@@ -44,6 +44,7 @@
     <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标、约束 token mask，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>概率分布、logits 变换、采样方差、自回归状态、KV cache 直觉和基础质量/延迟指标。<br><strong>本章内化：</strong>temperature、top-k、top-p、beam、self-consistency、reasoning budget 和 speculative decoding 都会被写成“改变候选分布、重复计算或接受率”的可测策略，而不是孤立调参技巧。<br><strong>验收信号：</strong>你能把一次生成策略上线决策拆成质量、输出 token、P95 latency、成本、marginal gain 和回退策略，并接到 Ch10 服务 SLO。</div>
+  <p class="system-role"><strong>系统位置：</strong>本章把训练得到的 logits 转成用户可见行为。采样、reasoning 预算和推测解码会同时影响质量、延迟、token 成本和安全边界，因此它是 Ch09 对齐评估与 Ch10 serving SLO 之间的桥。</p>
 </section>
 
 <!-- ================================================================ -->

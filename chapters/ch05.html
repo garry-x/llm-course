@@ -44,6 +44,7 @@
     <li><strong>练习产出：</strong>提交 Block 实现、梯度检查、归一化 ablation，以及 FFN 参数量、FLOPs、激活显存分析；配套作业见 <a href="../assignments/ch05_block/">assignments/ch05_block/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>PyTorch Module、残差相加、矩阵乘法、激活函数、LayerNorm/RMSNorm 统计量和反向传播检查。<br><strong>本章内化：</strong>Pre-Norm 稳定性会回到梯度路径；FFN/SwiGLU 会回到矩阵参数和激活门控；mHC 会回到残差连接如何受约束地混合。<br><strong>验收信号：</strong>你能解释一个 Transformer block 的前向、参数量、FLOPs 和梯度路径，并把 norm 或 FFN 的实现错误追到 Ch06 GPT 组装失败。</div>
+  <p class="system-role"><strong>系统位置：</strong>本章把 attention、FFN、norm 和残差组织成可堆叠的 block。它是 Ch06 GPT 组装的直接单元，也是 Ch07 训练稳定性、Ch10 kernel fusion 和模型解释性分析的共同依赖。</p>
 </section>
 
 <!-- ================================================================ -->

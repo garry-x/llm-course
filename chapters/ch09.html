@@ -44,6 +44,7 @@
     <li><strong>练习产出：</strong>提交 masked SFT、SFT chat template/mask/packing gate、LoRA 参数统计、post-training 数据审计、DPO/GRPO toy 实验、RLVR grader gate、偏好数据错误分析和安全风险说明；配套作业见 <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>log probability、sequence loss、reference model、KL、偏好数据统计、奖励信号和评测切片。<br><strong>本章内化：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 都会被还原成“数据格式、目标函数、约束项、采样假设和评测切片”五件事；post-training 数据 gate 会在目标函数前检查覆盖、泄漏、长度偏差和安全切片，而不是另开一条补课路径。<br><strong>验收信号：</strong>你能判断一个对齐实验是优化了目标行为、奖励漏洞、格式偏差还是评测泄漏，并把质量变化与 Ch08 生成成本、Ch10 服务安全边界一起报告。</div>
+  <p class="system-role"><strong>系统位置：</strong>本章把 Ch07 训练闭环和 Ch08 生成行为改造成面向任务、偏好、安全和推理能力的 post-training 系统。合成数据、蒸馏、拒绝采样、DPO/GRPO 和 RLVR 都必须回到数据来源、目标函数、评测切片和服务成本，而不是作为单独技巧堆叠。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -282,7 +283,7 @@ report = sft_chat_template_mask_report(
   <p>这个 gate 的重点不是替代 tokenizer，而是把 tokenizer 之后、训练 step 之前最容易出错的协议显式化。若 packing 多条样本但没有 block-diagonal attention，后一条样本会在普通 causal attention 下看到前一条样本；若 <code>max_seq_len</code> 截掉 assistant span，训练 loss 可能仍下降，但有效监督已经偏离目标行为。</p>
 
   <h4>4. 数据混合决定模型行为</h4>
-  <p>SFT 数据常来自多种来源：人工高质量指令、任务型数据、代码问答、数学解题、多轮客服、拒答样本、工具调用样本和合成数据。混合比例会直接改变模型行为：</p>
+  <p>SFT 数据常来自多种来源：人工高质量指令、任务型数据、代码问答、数学解题、多轮客服、拒答样本、工具调用样本和合成数据。合成数据不是“便宜人工数据”的同义词：它通常来自 teacher model、规则生成器、verifier 过滤或 rejection sampling，作用是扩大覆盖、暴露难例、把高预算推理行为蒸馏给较小模型。混合比例会直接改变模型行为：</p>
   <div class="table-wrap">
     <table>
       <tr><th>数据类型</th><th>主要作用</th><th>比例失衡的风险</th></tr>
@@ -291,14 +292,15 @@ report = sft_chat_template_mask_report(
       <tr><td>领域问答</td><td>适配业务术语和输出规范</td><td>小数据过拟合，遇到分布外问题时自信错误</td></tr>
       <tr><td>安全拒答</td><td>学习危险请求边界</td><td>过多会导致正常请求也被拒绝</td></tr>
       <tr><td>工具调用</td><td>学习结构化 action 和参数格式</td><td>普通问答中也可能误触发工具格式</td></tr>
+      <tr><td>合成/蒸馏</td><td>用 teacher、verifier 或多候选筛选扩展高价值任务</td><td>teacher 错误被放大，答案风格同质化，eval 泄漏或数据权属不清</td></tr>
     </table>
   </div>
-  <p>因此 SFT 数据配比不是“越多越好”。一个严谨的训练计划会先定义目标行为，再决定每类数据的采样权重，并在验证集上按任务切片观察变化。</p>
+  <p>因此 SFT 数据配比不是“越多越好”。一个严谨的训练计划会先定义目标行为，再决定每类数据的采样权重，并在验证集上按任务切片观察变化。对合成/蒸馏数据还要额外记录四件事：teacher 或生成器版本、采样温度和候选数、过滤规则或 verifier 准确性、以及是否和 held-out eval 或公开 benchmark 重叠。否则训练 loss 下降只能说明学生拟合了 teacher 输出，不能说明任务能力、推理可靠性或安全边界真的提升。</p>
 
   <h4>5. SFT 与评测污染</h4>
   <p>指令微调数据经常包含公开 benchmark 的题目、解答或近似改写。若污染进入训练集，模型在验证集上看似提升，实际只是记住了题面或答案格式。预训练阶段的污染很难彻底排除，但 SFT 阶段的数据量较小、来源更可控，更应该做基本去重和切分隔离：同一 prompt、同一题库、同一文档派生的样本不要同时出现在训练和验证中。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>SFT 的核心工程能力是让“模板、mask、packing、截断、数据混合和验证切片”共同服务于目标行为。只要其中一个环节错位，loss 仍然可能下降，但模型学到的就不是你以为的指令跟随能力。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>SFT 的核心工程能力是让“模板、mask、packing、截断、数据混合、合成数据来源和验证切片”共同服务于目标行为。只要其中一个环节错位，loss 仍然可能下降，但模型学到的就不是你以为的指令跟随、推理能力或安全边界。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1085,18 +1087,31 @@ retention: math/code/readcomp slices compared against SFT baseline</div>
 <!-- 9.11 On-Policy Distillation -->
 <!-- ================================================================ -->
 <section class="card" id="s9-11">
-  <h3>9.11 On-Policy Distillation 与可调推理预算</h3>
-  <p><strong>On-policy distillation</strong> 是一种把蒸馏数据尽量对齐到学生模型当前行为分布的方法。它关注的问题是：学生模型在真实推理时会生成哪些候选、犯哪些错误，以及教师或专家模型应如何在这些候选上给出改进信号。</p>
+  <h3>9.11 On-Policy Distillation、拒绝采样与可调推理预算</h3>
+  <p><strong>On-policy distillation</strong> 是一种把蒸馏数据尽量对齐到学生模型当前行为分布的方法。它关注的问题是：学生模型在真实推理时会生成哪些候选、犯哪些错误，以及教师、专家模型、规则 verifier 或人类审计应如何在这些候选上给出改进信号。现代 reasoning post-training 经常把高预算推理、rejection sampling、verifier 过滤和学生回灌组合起来：先用更强模型或更高 test-time compute 产生多个候选，再只保留可验证、格式正确、风险可控的样本给学生学习。</p>
 
   <h4>传统蒸馏的问题</h4>
-  <p>传统方法让学生模型学习教师模型的静态输出分布。但"蒸馏"出来的模型往往不如原始专家模型在特定领域表现好——因为学生只看到了教师的<strong>静态输出</strong>，而没有参与教师的"思考过程"。</p>
+  <p>传统方法让学生模型学习教师模型的静态输出分布。但"蒸馏"出来的模型往往不如原始专家模型在特定领域表现好——因为学生只看到了教师的<strong>静态输出</strong>，而没有参与教师的"思考过程"。更严重的是，如果 teacher 输出未经 verifier、去重、权限和 eval overlap 检查，学生会高效复制 teacher 的错误、风格偏差和泄漏样本。</p>
 
   <h4>On-policy 蒸馏的核心思路</h4>
   <ol>
     <li><strong>学生生成候选：</strong>用当前学生模型对 prompt 生成多个候选回答，暴露它真实会访问的错误区域。</li>
-    <li><strong>教师或专家打分/修正：</strong>教师模型、领域专家模型或规则系统对这些候选排序、修正或生成目标答案。</li>
+    <li><strong>教师或专家打分/修正：</strong>教师模型、领域专家模型、规则 verifier 或人工审计对这些候选排序、修正或生成目标答案。</li>
+    <li><strong>拒绝采样筛选：</strong>保留通过答案校验、格式约束、安全规则和重复/污染检查的候选，丢弃无法验证或疑似泄漏的样本。</li>
     <li><strong>回灌训练：</strong>把这些在学生分布上得到的信号用于 SFT、偏好优化或蒸馏损失，使学生逐步贴近更好的行为。</li>
   </ol>
+
+  <h4>合成数据进入课程报告时必须写清楚什么</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>问题</th><th>最低证据</th><th>缺失时的风险</th></tr>
+      <tr><td>谁生成</td><td>teacher/generator 版本、prompt 模板、采样参数和候选数</td><td>无法复现数据分布，也无法判断是否只是复制某个 teacher 风格</td></tr>
+      <tr><td>谁过滤</td><td>verifier 规则、人工抽检比例、错误类型和 pass/fail 分布</td><td>低质量或错误推理链被当成高质量监督</td></tr>
+      <tr><td>覆盖什么</td><td>任务切片、难度层级、长度分布、语言/领域配比和安全切片</td><td>模型只在少数高频模板上提升，泛化任务退化</td></tr>
+      <tr><td>不能泄漏什么</td><td>近重复、题库来源、eval overlap、数据权属和安全风险记录</td><td>benchmark 分数被污染，或者训练数据不能发布/商用</td></tr>
+    </table>
+  </div>
+  <p>把这些字段放进 Ch09，是因为合成数据已经成为 post-training 的常规工具；但它不是课程外的“数据增强小技巧”。它直接改变 SFT 的监督目标、DPO 的偏好分布、GRPO/RLVR 的探索边界，以及 Ch10 发布时需要说明的模型来源和风险。</p>
 
   <h4>可调推理预算</h4>
   <p>许多推理型系统会把 test-time compute 暴露成不同档位。课程中可把它理解为在质量、延迟和成本之间做选择：</p>
@@ -1105,7 +1120,7 @@ retention: math/code/readcomp slices compared against SFT baseline</div>
     <li><strong>深度模式：</strong>更多中间推理 token、自一致性采样或 rerank，提升难题成功率。</li>
     <li><strong>高预算模式：</strong>多候选、多工具或多轮反思，适合竞赛题、代码修复或高价值任务。</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>方法边界：</strong>on-policy distillation、GRPO/RL 和 test-time compute 是不同层面的技术：前者改变训练数据分布，GRPO/RL 改变策略优化信号，推理预算改变部署时花多少 token 和计算。课程报告必须同时写清质量提升、token 成本、延迟和适用任务。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>方法边界：</strong>on-policy distillation、rejection sampling、GRPO/RL 和 test-time compute 是不同层面的技术：蒸馏改变训练数据分布，拒绝采样改变进入训练集的候选质量，GRPO/RL 改变策略优化信号，推理预算改变部署时花多少 token 和计算。课程报告必须同时写清质量提升、token 成本、延迟、数据来源、过滤证据和适用任务。</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -1268,7 +1283,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>对齐评估协议</strong> — 同时看 helpfulness、honesty、harmlessness、过度拒答和能力保留</li>
     <li>✅ <strong>编程练习 6：LoRA 合并推理</strong> — 适配器加载与合并</li>
     <li>✅ <strong>RLVR / RFT Grader Gate</strong> — 验证 reward signal、成本和 reward hacking 风险</li>
-    <li>✅ <strong>On-policy distillation + 可调推理预算</strong> — 训练分布、教师信号和 test-time compute 的关系</li>
+    <li>✅ <strong>On-policy distillation / rejection sampling + 可调推理预算</strong> — 训练分布、教师信号、过滤证据和 test-time compute 的关系</li>
     <li>✅ <strong>对齐税</strong> — SS/OS 评估与缓解策略</li>
   </ul>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>

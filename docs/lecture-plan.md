@@ -467,6 +467,7 @@ Quick check：
 
 - 解释 instruction tuning 数据格式和 label mask。
 - 检查 chat template、assistant span、truncation 和 packing 边界是否支持 SFT 结论。
+- 说明人工、任务型、工具、安全和合成/蒸馏样本如何共同改变 SFT 行为。
 - 推导 LoRA 的低秩权重增量。
 - 区分 trainable parameters、merged weights 和推理成本。
 
@@ -474,18 +475,21 @@ Quick check：
 
 - prompt/padding labels 为 `-100`，只让 assistant response 贡献 loss。
 - supervised token ratio、assistant span truncation 和 packing attention boundary。
+- 合成/蒸馏数据需要记录 teacher/generator、采样参数、verifier、人工抽检、去重和 eval overlap。
 - LoRA 增量 `Delta W = B A * alpha / r`。
 
 课堂 demo：
 
 - 打印 SFT dataset labels，确认 prompt 被 mask。
 - 跑 `sft_chat_template_mask_report`，检查非法 role、assistant-only mask、截断和 packing gate。
+- 给一张 SFT 数据混合表，判断合成/蒸馏样本应进入哪个任务切片以及缺少哪些来源证据。
 - 对 Linear 层应用 LoRA，检查初始输出等于 base。
 
 Quick check：
 
 - 为什么不能对 `-100` 直接 gather？
 - 为什么 packing 短样本时只加 EOS 不一定等价于 block-diagonal attention？
+- 为什么 teacher 生成的高分答案仍然需要 verifier、去重和 held-out overlap 检查？
 - merge LoRA 后推理还需要 adapter 分支吗？
 
 课后产出：
@@ -500,7 +504,7 @@ Quick check：
 目标：
 
 - 从偏好数据解释 chosen/rejected。
-- 把 SFT、preference 和 RLVR/RFT 记录过一遍 coverage、label quality、leakage 和 safety gate。
+- 把 SFT、合成/蒸馏、preference 和 RLVR/RFT 记录过一遍 coverage、label quality、leakage 和 safety gate。
 - 从 Bradley-Terry 模型写出奖励模型 pairwise loss。
 - 推导 DPO log-ratio 的方向。
 - 用长度统计判断偏好数据是否鼓励冗长输出。
@@ -511,6 +515,7 @@ Quick check：
 
 - RM 训练最大化 `sigmoid(r_chosen - r_rejected)`，对应 `-logsigmoid` 损失。
 - Post-training 数据 gate 先检查任务/安全切片覆盖、同 prompt 标签冲突、长度偏差、eval overlap 和 unsafe chosen。
+- Rejection sampling 不是自动变好：候选生成、verifier 可靠性、过滤阈值、重复率和权属都要写入训练报告。
 - DPO 比较 policy 相对 reference 的 chosen/rejected log probability 改变量。
 - DPO 隐式 reward：`beta * (log pi_policy - log pi_ref)`，chosen/rejected margin 决定 preference probability。
 - PPO clipped objective 用 `ratio = exp(new_logp - old_logp)`，优化 `min(ratio*A, clip(ratio, 1-eps, 1+eps)*A)`，限制单步 policy 更新幅度。
@@ -522,6 +527,7 @@ Quick check：
 
 - 手算 chosen/rejected reward 的 pairwise loss 和 preference accuracy。
 - 给一组 SFT/preference 记录，判定 `post_training_data_audit` 的失败 gate 和 action item。
+- 比较 teacher 静态蒸馏、学生 on-policy 候选和 rejection sampling，指出它们分别改变数据分布、过滤质量还是策略优化信号。
 - 手造 chosen/rejected log-probs，计算 DPO loss、隐式 reward、margin 和 preference probability。
 - 给定 old/new log-probs 和 advantages，手算 PPO clipped surrogate、clip fraction 和 approx KL。
 - 手算带 padding mask 的 token-level 近似 KL。
@@ -533,6 +539,7 @@ Quick check：
 
 - RM accuracy 高是否足以说明偏好数据质量好？
 - 如果 post-training 数据 gate 失败，为什么不能用 DPO loss 下降作为成功证据？
+- 合成数据 pass rate 很高时，为什么还可能损害泛化或污染评测？
 - DPO 为什么需要 reference model？
 - DPO 的隐式 reward 是否等于一个独立训练好的 reward model？
 - PPO clipping 是否等价于 KL 惩罚？

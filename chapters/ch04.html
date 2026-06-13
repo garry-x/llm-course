@@ -44,6 +44,7 @@
     <li><strong>练习产出：</strong>提交 MHA/GQA/MLA 实现、参数量和 KV Cache 表格，以及一次不同 head 配置的 ablation 说明；可用 <a href="../assignments/ch04_multihead/" target="_blank">Ch04 多头注意力作业测试</a> 检查核心实现。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>Ch03 单头 attention、reshape/transpose/contiguous、head 维度拆分、参数量和 KV cache bytes 估算。<br><strong>本章内化：</strong>MHA、MQA、GQA 和 MLA 会被统一拆成 Q/K/V 投影、head layout、RoPE 位置通道和缓存账本；每个架构名都必须落回张量形状与带宽压力。<br><strong>验收信号：</strong>你能手算一层 attention 的参数、K/V cache 大小和 decode 带宽，并判断某个 head 压缩方案会在 Ch10 服务中省什么、可能损失什么。</div>
+  <p class="system-role"><strong>系统位置：</strong>本章把 Ch03 的单头检索扩展成多子空间表示，并第一次把模型结构和推理显存直接连起来。GQA/MLA 不只是架构名，而是 Ch10 KV cache、decode 带宽和服务容量规划的前置基础。</p>
 </section>
 
 <!-- ================================================================ -->

@@ -44,6 +44,7 @@
     <li><strong>练习产出：</strong>提交 GPTModel forward 测试、参数量逐项表、weight tying 验证和一次小 batch logits sanity check；配套作业见 <a href="../assignments/ch06_gpt/">assignments/ch06_gpt/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>token id、embedding、attention block、LM head、label shift、state_dict、dtype/device/contiguous 和模块注册。<br><strong>本章内化：</strong>本章把 Ch01-Ch05 串成第一次完整系统集成：<code>[B,T]</code> 到 <code>[B,T,D]</code> 到 <code>[B,T,V]</code>，再到 next-token loss、causal test、checkpoint loading 和 MoE 路由账本。<br><strong>验收信号：</strong>你能从输入 token 追到 logits/loss，并判断一次加载失败、shape mismatch 或未来信息泄漏究竟破坏了哪一层契约。</div>
+  <p class="system-role"><strong>系统位置：</strong>本章是课程从组件走向模型的集成点。只有能把 token、position、block、LM head、MoE 和 checkpoint shape 串起来，Ch07 的训练 loss、Ch08 的生成 logits 和 Ch10 的发布包才有共同对象。</p>
 </section>
 
 <!-- ================================================================ -->

@@ -7,7 +7,7 @@
   <link rel="apple-touch-icon" href="images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>LLM 深度学习 — 从代码出发，构建大语言模型</title>
-<meta name="description" content="系统学习大语言模型的完整课程——从 BPE、Transformer、GPT、训练、生成、对齐到 RAG、推理服务、多模态和机制可解释性。">
+<meta name="description" content="面向训练与推理工程师的 LLM 系统课程：从 token、Transformer、训练闭环、对齐到推理服务，把必要基础揉进每个章节。">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-ch="0">
@@ -41,31 +41,58 @@
         <span class="hero-tag">从代码到服务</span>
       </div>
       <h2>面向训练与推理工程师的 LLM 系统课程</h2>
-      <p>用 11 章建立从 tokenizer、attention、GPT 前向传播，到训练循环、对齐、生成策略和推理服务的完整工程视角。</p>
+      <p>用 11 章把 token 表示、Transformer 计算、训练闭环、对齐方法、生成策略和推理服务连成一条可实现、可评测、可上线的工程链路。</p>
       <div class="hero-actions">
         <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
         <a href="#chapters" class="btn btn-outline">查看章节</a>
       </div>
     </div>
-    <div class="hero-panel" aria-label="课程重点">
-      <h3>课程重点</h3>
+    <div class="hero-panel" aria-label="课程主线">
+      <h3>课程主线</h3>
       <ul>
-        <li><strong>模型内部</strong><span>BPE、Embedding、RoPE、Attention、Transformer Block、GPT 组装。</span></li>
-        <li><strong>训练闭环</strong><span>数据管线、AdamW、scheduler、checkpoint、分布式、MFU、对齐评估。</span></li>
-        <li><strong>推理上线</strong><span>采样、KV Cache、continuous batching、量化、RAG、压测、容量规划和服务发布。</span></li>
+        <li><strong>表示与计算</strong><span>文本怎样变成 token，token 怎样进入 attention、block 和 GPT 前向传播。</span></li>
+        <li><strong>训练与对齐</strong><span>数据、loss、optimizer、checkpoint、SFT、偏好优化和 reward 假设如何共同决定行为。</span></li>
+        <li><strong>生成与服务</strong><span>采样、reasoning 预算、KV cache、RAG、tool use、压测和发布 gate 如何支撑线上系统。</span></li>
       </ul>
     </div>
   </section>
 
-  <section class="learning-path">
-    <h3>章节内置基础</h3>
-    <div class="path-grid">
-      <div class="path-step"><strong>Ch01-Ch02 表示</strong><span>Python 数据结构、矩阵查表、向量点积和位置旋转直接进入 tokenizer、embedding、RoPE 与 token 成本。</span></div>
-      <div class="path-step"><strong>Ch03-Ch05 计算</strong><span>softmax、mask、广播、归一化、残差梯度和资源估算放进 attention、GQA/MLA 与 Transformer Block。</span></div>
-      <div class="path-step"><strong>Ch06-Ch07 训练</strong><span>自回归概率、cross entropy、optimizer state、随机性和统计判断落到 GPT 组装、训练 gate 与 checkpoint。</span></div>
-      <div class="path-step"><strong>Ch08-Ch09 对齐</strong><span>logits 分布、采样方差、KL/reference、偏好数据和 reward 假设融入生成策略与 post-training。</span></div>
-      <div class="path-step"><strong>Ch10 服务</strong><span>KV cache、排队、带宽、RAG 指标、tool 协议和 continuous batching admission 统一进入 SLO/成本账本。</span></div>
-      <div class="path-step"><strong>Ch11 评测</strong><span>RNN/LSTM、encoder-only、结构化预测和传统指标作为现代 LLM 任务建模与评测可靠性的工具。</span></div>
+  <section class="system-map">
+    <div class="section-heading">
+      <h3>系统化学习地图</h3>
+      <p>基础知识不作为单独补课路径出现，而是在每章变成代码、公式、诊断表和工程判断。</p>
+    </div>
+    <div class="system-grid">
+      <article class="system-step">
+        <span>01</span>
+        <strong>文本接口</strong>
+        <p>Ch01-Ch02 把 Python 数据结构、矩阵查表、点积和旋转位置编码放进 tokenizer、embedding、RoPE 与 token 成本。</p>
+      </article>
+      <article class="system-step">
+        <span>02</span>
+        <strong>Transformer 计算</strong>
+        <p>Ch03-Ch06 把 softmax、mask、广播、归一化、残差路径、MoE 和 shape trace 组合成完整 GPT 前向传播。</p>
+      </article>
+      <article class="system-step">
+        <span>03</span>
+        <strong>训练闭环</strong>
+        <p>Ch07 把 MLE、cross entropy、数据污染、optimizer state、checkpoint 和分布式成本变成训练 run 的最低证据。</p>
+      </article>
+      <article class="system-step">
+        <span>04</span>
+        <strong>生成与对齐</strong>
+        <p>Ch08-Ch09 把 logits 分布、采样方差、KL/reference、SFT 数据协议、偏好数据、合成数据和 reward gate 放进 post-training。</p>
+      </article>
+      <article class="system-step">
+        <span>05</span>
+        <strong>推理系统</strong>
+        <p>Ch10 把 KV cache、显存带宽、continuous batching、RAG/tool、长上下文、多模态和发布回滚统一到 SLO/成本账本。</p>
+      </article>
+      <article class="system-step">
+        <span>06</span>
+        <strong>评测与选型</strong>
+        <p>Ch11 把 RNN、seq2seq、BERT、结构化预测、传统指标和 judge 可靠性用于任务建模、评测结论和 capstone 报告。</p>
+      </article>
     </div>
   </section>
 

@@ -44,6 +44,7 @@
     <li><strong>练习产出：</strong>提交手写 attention、mask 单元测试、缩放因子的方差推导，以及一张 attention heatmap 分析；可用 <a href="../assignments/ch03_attention/" target="_blank">Ch03 注意力作业测试</a> 检查核心实现。</li>
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>矩阵乘法、softmax、mask 语义、概率归一化和基础广播规则。<br><strong>本章内化：</strong>这些基础会被放进 <code>QK^T / sqrt(d)</code>、mask-before-softmax、attention row sum、padding/causal 区分和数值稳定 softmax 的实现检查中。<br><strong>验收信号：</strong>你能定位 attention bug 属于 score shape、mask 时机、概率归一化还是可见性约束，并说明它会如何影响 Ch04 多头拆分、Ch06 因果 LM 和 Ch08 生成。</div>
+  <p class="system-role"><strong>系统位置：</strong>本章是 Transformer 的计算核心：把每个 token 的表示变成一次可微检索。它向前依赖 Ch02 的向量和位置，向后支撑多头压缩、GPT 因果训练、生成可见性和长上下文服务成本。</p>
 </section>
 
 <!-- ================================================================ -->

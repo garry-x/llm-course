@@ -159,7 +159,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 | 6 | **组装 GPT + DeepSeekMoE** — GPT-2 124M 完整模型 | `GPTModel` ~100行 | 5+5 |
 | 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
 | 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
-| 9 | **微调与对齐** — SFT/偏好数据 Gate/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT + post-training data audit + LoRA + GRPO/RLVR ~240行 | 8+5 |
+| 9 | **微调与对齐** — SFT/偏好数据/合成蒸馏/LoRA/DPO/GRPO/RLVR + R1 推理 | SFT 协议、post-training 数据审计、LoRA、DPO/GRPO/RLVR 和蒸馏数据质量分析 | 8+5 |
 | 10 | **推理优化与前沿** — KV Cache/量化/RAG/Structured Output/Tool/MCP Gate/vLLM/Triton/生产发布/长上下文/多模态 | KV Cache + 量化 + RAG + structured output gate + Tool/MCP Gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + 服务蓝图 | 11+5 |
 | 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + MLM mask | Ch11 |
 
@@ -237,48 +237,12 @@ llm-course/
 └── README.md
 ```
 
-## 页面特性
+## 内容维护原则
 
-| 特性 | 说明 |
-|------|------|
-| 👤 **用户账户** | 多账户切换，随机头像颜色，localStorage + IndexedDB 持久化 |
-| 📝 **章节笔记** | 右下角滑出面板，自动关联当前阅读小节，按用户隔离 |
-| 💾 **IndexedDB 存储** | 双写策略：localStorage 缓存(即时) + IDB 持久化(备份)，不丢数据 |
-| 🎨 **暗色/浅色双主题** | CSS 变量驱动，一键切换，localStorage 持久化 |
-| 📝 **编程练习驱动** | 每章 4-6 道编程题，参考解答可折叠（`LLM.toggleSolution`） |
-| 📐 **KaTeX 数学渲染** | 内联 + 块级公式，渲染失败红色降级显示 LaTeX 源码 |
-| 🔍 **章节搜索** | 侧边栏按章节标题/描述实时过滤 |
-| 📑 **自动目录生成** | JS 读取 `section.card` 生成 TOC，scroll 高亮当前小节 |
-| 📊 **阅读进度条** | 顶部 3px 渐变，GPU 合成（`transform: scaleX` + rAF 节流） |
-| 📋 **代码复制** | Clipboard API + `execCommand` HTTP 回退，📋→✓ 反馈 |
-| ⌨️ **键盘导航** | ← → 切换章节，Esc 关闭侧边栏 |
-| 📱 **响应式** | 桌面 / iPad Pro / 手机三级断点（960/640px），触控 ≥44px |
-| 🔤 **可调字号** | 小(14px) / 中(16px) / 大(18px)，localStorage 持久化 |
-| 🖼️ **11 张 SVG 图表** | CSS filter 暗色适配（`invert + hue-rotate`） |
-| 🏷️ **矢量 favicon** | SVG/PNG/ICO + apple-touch-icon (ComfyUI + FLUX.1-dev 生成) |
+首页和 README 只保留课程主线、章节入口、工程能力视图和运行方式。论文、技术报告和工具文档不在首页堆列表，而是进入对应章节和 [逐周阅读材料与复盘 Handout](docs/reading-list.html)，并要求学生把阅读结论落回公式、代码、gate 或 capstone 决策。
 
-## 延伸阅读
+后续扩展课程内容时优先遵循三条规则：
 
-**基础论文：**
-- Vaswani et al. (2017) — [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
-- Radford et al. (2019) — [Language Models are Unsupervised Multitask Learners (GPT-2)](https://d4mucfpksywv.cloudfront.net/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
-- Hoffmann et al. (2022) — [Training Compute-Optimal Large Language Models (Chinchilla)](https://arxiv.org/abs/2203.15556)
-
-**前沿架构案例：**
-- DeepSeek-V2 — [MLA + DeepSeekMoE](https://arxiv.org/abs/2405.04434) · DeepSeek-V3 — [FP8 + MTP + Aux-Loss-Free](https://arxiv.org/abs/2412.19437) · DeepSeek-R1 — [GRPO 与推理行为](https://arxiv.org/abs/2501.12948) · Kimi k1.5 — [Scaling RL with LLMs](https://arxiv.org/abs/2501.12599)
-
-**动手实践：**
-- Andrej Karpathy — [Neural Networks: Zero to Hero](https://www.youtube.com/playlist?list=PLAqhIrjkxBUWIvTOCzB7XwZBt03h4H3kW) · [nanoGPT](https://github.com/karpathy/nanoGPT)
-- Sebastian Raschka — [Build a Large Language Model (From Scratch)](https://www.manning.com/books/build-a-large-language-model-from-scratch)
-- 南京大学 — [LLM 从零到一实现之路](https://github.com/NJUDeepEngine/llm-course-lecture)
-
-**推理与部署：**
-- Kwon et al. (2023) — [vLLM: Efficient Memory Management for Large Language Model Serving](https://arxiv.org/abs/2309.06180)
-- Tillet et al. (2019) — [Triton: An Intermediate Language and Compiler for Tiled Neural Network Computations](https://dl.acm.org/doi/10.1145/3315508.3329973)
-- Dao et al. (2022) — [FlashAttention: Fast and Memory-Efficient Exact Attention](https://arxiv.org/abs/2205.14135)
-- Frantar et al. (2023) — [GPTQ: Accurate Post-Training Quantization for GPT](https://arxiv.org/abs/2210.17323)
-
-**对齐与微调：**
-- Hu et al. (2021) — [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)
-- Rafailov et al. (2023) — [Direct Preference Optimization (DPO)](https://arxiv.org/abs/2305.18290)
-- Ouyang et al. (2022) — [Training Language Models to Follow Instructions (InstructGPT)](https://arxiv.org/abs/2203.02155)
+- 新概念必须进入相关章节的目标函数、张量形状、系统指标或评测协议，不新增孤立补课路线。
+- 前沿案例必须说明它解决的工程瓶颈、依赖的基础知识、适用边界和报告证据。
+- 首页只回答“这门课如何系统地培养训练/推理工程师”，不承担资料导航站或产品功能说明。

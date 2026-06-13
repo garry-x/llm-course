@@ -103,29 +103,78 @@
   </div>
   <p>Why are <strong>two</strong> different sublayers needed? Attention provides "<strong>information retrieval</strong>" — each token aggregates information from the entire sequence. The FFN provides "<strong>information processing</strong>" — each token performs a complex nonlinear transformation after receiving information. Without the FFN, the model would be just a linear weighted summation system with extremely limited expressiveness.</p>
 
-  <div class="diagram">
-  ┌─────────────────────────────────────────────────┐
-  │              Transformer Block                  │
-  │  ┌──────┐     ┌──────────┐     ┌──────────┐    │
-  │  │Input │────→│ LayerNorm│────→│ Attention │    │
-  │  │ x    │     │ (Pre)    │     │ (MHA/GQA)│    │
-  │  └──┬───┘     └──────────┘     └────┬─────┘    │
-  │     │                               │          │
-  │     └─────────── (+) ───────────────┘          │
-  │                 │   Residual Connection         │
-  │                 ▼                               │
-  │          ┌──────────┐     ┌──────────┐         │
-  │          │ LayerNorm│────→│  FFN     │         │
-  │          │ (Pre)    │     │SwiGLU   │         │
-  │          └──────────┘     └────┬─────┘         │
-  │                                │               │
-  │              (+) ─────────────┘               │
-  │                 ▼                               │
-  │              ┌──────┐                          │
-  │              │Output│                          │
-  │              │ x''  │                          │
-  │              └──────┘                          │
-  └─────────────────────────────────────────────────┘</div>
+  <div class="svg-diagram flow-diagram">
+    <svg viewBox="0 0 900 430" role="img" aria-label="Pre-norm Transformer block with attention, residual addition, feed-forward network, and output residual stream">
+      <defs>
+        <marker id="block-flow-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#b35c22"/>
+        </marker>
+        <style>
+          .block-bg{fill:#fbf9f5;stroke:#e8e3da}
+          .block-box{fill:#fff;stroke:#d4cec4;stroke-width:1.4}
+          .block-accent{fill:#fdf5ed;stroke:#b35c22;stroke-width:1.6}
+          .block-norm{fill:#e8f0fe;stroke:#7baaf7;stroke-width:1.6}
+          .block-title{font:700 20px system-ui,-apple-system,sans-serif;fill:#1c1c1c}
+          .block-h{font:700 14px system-ui,-apple-system,sans-serif;fill:#1c1c1c}
+          .block-t{font:500 12px system-ui,-apple-system,sans-serif;fill:#5c554a}
+          .block-mono{font:600 12px "JetBrains Mono",monospace;fill:#5c554a}
+          .block-line{stroke:#b35c22;stroke-width:2;fill:none;marker-end:url(#block-flow-arrow)}
+          .block-residual{stroke:#7baaf7;stroke-width:2;fill:none;stroke-dasharray:6 4;marker-end:url(#block-flow-arrow)}
+          .block-label{fill:#fbf9f5;stroke:#e8e3da;stroke-width:.8}
+        </style>
+      </defs>
+      <rect class="block-bg" x="10" y="10" width="880" height="410" rx="12"/>
+      <text class="block-title" x="450" y="42" text-anchor="middle">Transformer Block: Pre-Norm, Attention, FFN, and Residual Paths</text>
+
+      <rect class="block-accent" x="70" y="92" width="140" height="60" rx="8"/>
+      <text class="block-h" x="140" y="116" text-anchor="middle">Input</text>
+      <text class="block-mono" x="140" y="136" text-anchor="middle">x [B, T, D]</text>
+
+      <rect class="block-norm" x="280" y="92" width="150" height="60" rx="8"/>
+      <text class="block-h" x="355" y="116" text-anchor="middle">LayerNorm</text>
+      <text class="block-t" x="355" y="136" text-anchor="middle">pre-norm</text>
+
+      <rect class="block-box" x="510" y="92" width="170" height="60" rx="8"/>
+      <text class="block-h" x="595" y="116" text-anchor="middle">Attention</text>
+      <text class="block-t" x="595" y="136" text-anchor="middle">MHA / GQA</text>
+
+      <circle cx="450" cy="202" r="24" fill="#fdf5ed" stroke="#b35c22" stroke-width="1.6"/>
+      <text class="block-h" x="450" y="198" text-anchor="middle">+</text>
+      <text class="block-t" x="450" y="216" text-anchor="middle">residual</text>
+
+      <rect class="block-norm" x="280" y="258" width="150" height="60" rx="8"/>
+      <text class="block-h" x="355" y="282" text-anchor="middle">LayerNorm</text>
+      <text class="block-t" x="355" y="302" text-anchor="middle">pre-norm</text>
+
+      <rect class="block-box" x="510" y="258" width="170" height="60" rx="8"/>
+      <text class="block-h" x="595" y="282" text-anchor="middle">FFN</text>
+      <text class="block-t" x="595" y="302" text-anchor="middle">SwiGLU</text>
+
+      <circle cx="450" cy="360" r="24" fill="#fdf5ed" stroke="#b35c22" stroke-width="1.6"/>
+      <text class="block-h" x="450" y="356" text-anchor="middle">+</text>
+      <text class="block-t" x="450" y="374" text-anchor="middle">residual</text>
+
+      <rect class="block-accent" x="700" y="330" width="140" height="60" rx="8"/>
+      <text class="block-h" x="770" y="354" text-anchor="middle">Output</text>
+      <text class="block-mono" x="770" y="374" text-anchor="middle">x'' [B, T, D]</text>
+
+      <path class="block-line" d="M210 122 L280 122"/>
+      <path class="block-line" d="M430 122 L510 122"/>
+      <path class="block-line" d="M595 152 C595 185 520 202 474 202"/>
+      <path class="block-residual" d="M140 152 C140 202 350 202 426 202"/>
+      <path class="block-line" d="M450 226 L450 240 C450 250 430 258 430 258"/>
+      <path class="block-line" d="M430 288 L510 288"/>
+      <path class="block-line" d="M595 318 C595 348 520 360 474 360"/>
+      <path class="block-residual" d="M450 226 C240 242 212 360 426 360"/>
+      <path class="block-line" d="M474 360 L700 360"/>
+
+      <text class="block-t" x="450" y="69" text-anchor="middle">Both sublayers return to the residual width D, so blocks can be stacked repeatedly.</text>
+      <rect class="block-label" x="206" y="214" width="168" height="24" rx="6"/>
+      <text class="block-t" x="290" y="230" text-anchor="middle">x + Attention(Norm(x))</text>
+      <rect class="block-label" x="184" y="370" width="152" height="24" rx="6"/>
+      <text class="block-t" x="260" y="386" text-anchor="middle">x' + FFN(Norm(x'))</text>
+    </svg>
+  </div>
   <p>The output dimension of each Block remains <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span>, which allows the model to stack many layers. However, whether the depth can be trained stably also depends on the normalization position, initialization, residual scaling, optimizer, learning rate schedule, and data scale.</p>
 </section>
 

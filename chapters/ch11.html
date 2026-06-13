@@ -38,7 +38,7 @@
     <li><strong>Learning Goals:</strong> Distinguish the modeling assumptions of recurrent, structured prediction, encoder-decoder, encoder-only, and decoder-only architectures.</li>
     <li><strong>Chapter Outputs:</strong> RNN gradient paths, arc-standard parsing trace, seq2seq additive attention, MLM mask, BERT QA span, NER span F1, and BLEU/ROUGE/UAS/LAS/EM/F1 metrics.</li>
     <li><strong>Completion Criteria:</strong> You can choose BERT fine-tuning, seq2seq, decoder-only prompting, or a structured parser for a given task and explain the rationale for your choice.</li>
-    <li><strong>Exercise Outputs:</strong> Accompanying assignments are available at <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>.</li>
+    <li><strong>Practice Artifacts:</strong> Runnable examples for RNN gradients, parsing traces, seq2seq attention, MLM masking, BERT QA spans, NER span F1, and evaluation summaries. Optional practice files are available at <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>.</li>
   </ul>
   <div class="dependency-note"><strong>Prerequisite Skills:</strong> Sequence modeling, teacher forcing, encoder/decoder visibility, structured prediction, BLEU/ROUGE/EM/F1, LLM-as-judge, and confidence intervals.<br><strong>Internalization for This Chapter:</strong> RNN, seq2seq, BERT, CRF, span QA, and evaluation metrics will be embedded as engineering selection tools within this chapter, not as standalone historical topics: they help determine whether a task should use open-ended generation, retrieval ranking, extraction, classification, or structured decoding.<br><strong>Validation Signal:</strong> You can map an NLP/LLM task to the appropriate model family, decoding method, and metrics, and explain the respective applicability boundaries of traditional metrics and modern LLM evaluation.</div>
   <p class="system-role"><strong>System Position:</strong> This chapter is not a history lesson, but a way to fill in the task boundaries and evaluation language for modern LLM engineering. Many production problems are not suited for free-form generation; understanding encoder-only models, structured prediction, and traditional metrics is necessary to decide when to use an LLM and when to use a smaller, more stable model family.</p>
@@ -101,12 +101,13 @@
     <div class="katex" data-expr="\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_T} \prod_{i=t+1}^{T} \frac{\partial h_i}{\partial h_{i-1}}" aria-label="\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_T} \prod_{i=t+1}^{T} \frac{\partial h_i}{\partial h_{i-1}}" role="img"></div>
   </div>
   <p>If the spectral norm of these factors is consistently less than 1, gradients vanish; if consistently greater than 1, gradients explode. LSTMs/GRUs mitigate this with gating and approximately linear memory paths. Transformer self-attention shortens the path between any two positions to a single attention operation, but at the cost of a quadratic attention matrix and memory/bandwidth pressure.</p>
-  <div class="info-box tip"><span class="icon">💡</span><div>The <code>scalar_rnn_forward</code> and <code>recurrent_gradient_factors</code> in the Ch11 assignment manually compute this product using a 1D RNN, making "vanishing gradients" more than just a slogan.</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>A scalar RNN forward pass and recurrent-gradient-factor calculation make this product explicit, turning "vanishing gradients" from a slogan into a measurable sequence of multipliers.</div></div>
 </section>
 
 <section class="card" id="s11-3">
   <h3>11.3 Dependency Parsing: Structured Prediction is Not an Attention Heatmap</h3>
-  <p>Dependency parsing predicts a head and a dependency label for each token, outputting a directed tree. Its distinction from an attention heatmap is important: attention is a continuous weight, useful for diagnostics; a dependency tree is a discrete structure that must satisfy constraints like a single root, acyclicity, and one head per word.</p>  <p>The Arc-standard transition system constructs trees using <code>stack</code>, <code>buffer</code>, and <code>arcs</code>:</p>
+  <p>Dependency parsing predicts a head and a dependency label for each token, outputting a directed tree. Its distinction from an attention heatmap is important: attention is a continuous weight, useful for diagnostics; a dependency tree is a discrete structure that must satisfy constraints like a single root, acyclicity, and one head per word.</p>
+  <p>The Arc-standard transition system constructs trees using <code>stack</code>, <code>buffer</code>, and <code>arcs</code>:</p>
   <table>
     <tr><th>Action</th><th>Precondition</th><th>Effect</th></tr>
     <tr><td>SHIFT</td><td>buffer is non-empty</td><td>Push the first token of the buffer onto the stack</td></tr>
@@ -127,7 +128,7 @@
       <tr><td>5</td><td><code>[saw]</code></td><td><code>[]</code></td><td><code>ROOT(root)</code></td><td><code>ROOT -> saw</code></td></tr>
     </table>
   </div>
-  <p>This example illustrates that parsing is not about independently classifying each token: the legality of an action depends on the current stack/buffer state, and an incorrect action will destroy the final tree structure. The <code>run_arc_standard_transitions</code> function in the Ch11 assignment is precisely for students to execute this transition table and return the head, label, arcs, and trace for each token.</p>
+  <p>This example illustrates that parsing is not about independently classifying each token: the legality of an action depends on the current stack/buffer state, and an incorrect action will destroy the final tree structure. A transition trace should return the head, label, arcs, and stack/buffer state for each token so that tree construction can be audited step by step.</p>
   <p>Evaluation typically uses UAS and LAS:</p>
   <div class="math-box"><div class="label">Formula 11.3 Attachment scores</div>
     <div class="katex" data-expr="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" aria-label="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" role="img"></div>
@@ -168,7 +169,7 @@ v   = [1]</div>
 
 <section class="card" id="s11-5">
   <h3>11.5 BERT / Encoder-only: MLM, Classification, and Extractive QA</h3>
-  <p>A BERT-style encoder can bidirectionally see the left and right context within the input; it is not an autoregressive generator. One of its pre-training objectives is Masked Language Modeling: cross-entropy is only computed at masked positions, while unmasked tokens use an ignore index. The <code>masked_lm_loss_from_logits</code> function in the course assignment explicitly returns the masked-token loss, accuracy, and the positions contributing to the loss, helping to distinguish between "which tokens in the input are visible" and "which positions contribute to the training objective".</p>
+  <p>A BERT-style encoder can bidirectionally see the left and right context within the input; it is not an autoregressive generator. One of its pre-training objectives is Masked Language Modeling: cross-entropy is only computed at masked positions, while unmasked tokens use an ignore index. An MLM diagnostic should return the masked-token loss, accuracy, and positions contributing to the loss, helping distinguish between "which tokens in the input are visible" and "which positions contribute to the training objective."</p>
   <table>
     <tr><th>Dimension</th><th>Encoder-only / BERT</th><th>Decoder-only / GPT</th></tr>
     <tr><td>Visibility</td><td>Bidirectional self-attention</td><td>Causal mask, only sees left prefix</td></tr>
@@ -182,19 +183,19 @@ v   = [1]</div>
   </div>
   <p>If the no-answer score for <code>[CLS]</code> is the highest, the model should return an empty answer. This differs from a decoder-only LLM generating "I don't know": BERT QA's answer must be bound to an input token span.</p>
   <h4>BIO sequence labeling</h4>
-  <p>NER, slot filling, and token classification often label each token as <code>B-TYPE</code>, <code>I-TYPE</code>, or <code>O</code>. <code>B-ORG I-ORG</code> represents a continuous organization entity, and <code>O</code> represents outside an entity. The <code>bio_tags_to_spans(tokens, tags)</code> function in the course assignment decodes token-level tags into span-level output; for example, <code>["B-LOC", "I-LOC"]</code> corresponds to a LOC span. If a sequence starts with <code>I-LOC</code>, many evaluation scripts will tolerate it as the start of a new entity; a strict system could also choose to report an error directly, but this must be clearly stated in the data protocol.</p>
-  <p>Entity recognition typically uses <strong>span-level F1</strong>, rather than just token accuracy. A predicted entity is considered a true positive only if its <code>type</code>, <code>start</code>, and <code>end</code> all exactly match the gold span; a boundary off by one token or a wrong type counts as a false positive, while the corresponding gold span remains a false negative. The <code>span_f1(gold_spans, pred_spans)</code> function in the Ch11 assignment implements this definition into computable TP/FP/FN, precision, recall, and F1.</p>
+  <p>NER, slot filling, and token classification often label each token as <code>B-TYPE</code>, <code>I-TYPE</code>, or <code>O</code>. <code>B-ORG I-ORG</code> represents a continuous organization entity, and <code>O</code> represents outside an entity. A BIO decoder converts token-level tags into span-level output; for example, <code>["B-LOC", "I-LOC"]</code> corresponds to a LOC span. If a sequence starts with <code>I-LOC</code>, many evaluation scripts will tolerate it as the start of a new entity; a strict system could also choose to report an error directly, but this must be clearly stated in the data protocol.</p>
+  <p>Entity recognition typically uses <strong>span-level F1</strong>, rather than just token accuracy. A predicted entity is considered a true positive only if its <code>type</code>, <code>start</code>, and <code>end</code> all exactly match the gold span; a boundary off by one token or a wrong type counts as a false positive, while the corresponding gold span remains a false negative. Span-level evaluation should convert this definition into computable TP/FP/FN, precision, recall, and F1.</p>
   <h4>Viterbi structured decoding</h4>
   <p>Per-token argmax ignores constraints between labels: for example, <code>B-ORG</code> followed by <code>I-ORG</code> is usually more reasonable than jumping back to <code>O</code>, and <code>O</code> directly followed by <code>I-PER</code> should often be penalized. Linear-chain CRFs or similar structured decoding methods formulate the path score as the sum of emission scores and transition scores:</p>
   <div class="math-box"><div class="label">Formula 11.7 Linear-chain path score</div>
     <div class="katex" data-expr="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" aria-label="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" role="img"></div>
   </div>
-  <p>Viterbi dynamic programming saves the "best path score ending with a certain tag" and a backpointer at each step <code>t</code>, with a complexity of <code>O(TK^2)</code>. The <code>viterbi_decode</code> function in the Ch11 assignment requires students to implement this decoding process by hand, understanding how structured prediction transforms the output of a local classifier into a globally consistent label sequence.</p>
+  <p>Viterbi dynamic programming saves the "best path score ending with a certain tag" and a backpointer at each step <code>t</code>, with a complexity of <code>O(TK^2)</code>. Implementing this decoding process by hand makes clear how structured prediction transforms the output of a local classifier into a globally consistent label sequence.</p>
   <p>Training a CRF also requires normalizing over all possible paths, not just the optimal one. The Forward algorithm replaces the <code>max</code> in Viterbi with <code>logsumexp</code> to compute the log-partition:</p>
   <div class="math-box"><div class="label">Formula 11.8 CRF log-partition</div>
     <div class="katex" data-expr="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" aria-label="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" role="img"></div>
   </div>
-  <p>The <code>linear_chain_log_partition</code> function in the Ch11 assignment uses log-space forward DP to compute this normalization term, and <code>linear_chain_crf_nll</code> explicitly computes the gold path score and returns <code>log_partition - gold_score</code>. They have the same state shape as <code>viterbi_decode</code>, but different semantics: Viterbi is used to predict the optimal path, while CRF NLL is used during training to compare the gold path against all competing paths.</p>
+  <p>Log-space forward DP computes this normalization term, while CRF negative log likelihood computes the gold path score and returns <code>log_partition - gold_score</code>. It has the same state shape as Viterbi, but different semantics: Viterbi is used to predict the optimal path, while CRF NLL is used during training to compare the gold path against all competing paths.</p>
 </section>
 
 <section class="card" id="s11-5a">
@@ -350,9 +351,9 @@ assert audit["overall_pass"]</div>
   </ul>
   <p>For example, Model X has a 95% refusal rate on the harmful set, but also a 60% refusal rate on the benign medical-summary set. This is not simply "safer," but a case of severe over-refusal. The alignment evaluation in Ch09 and the deployment SLO in Ch10 should be interpreted together with this section: safety, quality, latency, and cost must all pass muster simultaneously.</p>
 
-  <h4>Write modern evaluations as runnable functions</h4>
-  <p>The Ch11 assignment puts this section into four types of functions. <code>summarize_pairwise_judgments</code> takes blind pairwise records, calculates raw win rate, tie-adjusted win rate, and win rate grouped by task, helping students see that the same model might win on QA, tie or lose on math. <code>judge_reliability_audit</code> further checks sample size, position bias, length bias, swap consistency, and human label agreement. <code>safety_evaluation_metrics</code> requires splitting samples into harmful, benign sensitive, and ordinary groups, calculating attack success, harmful refusal, over-refusal, and task utility respectively. <code>benchmark_result_summary</code> organizes task, sample size, metrics, model, prompt, temperature, failure types, and non-extrapolable scope into a structured conclusion.</p>
-  <p>The common purpose of these three functions is to prevent misinterpreting "a single average score" as a complete engineering conclusion. Training engineers need to use them to judge whether alignment has harmed capability; inference engineers need to use them to judge whether quality, safety, latency, and cost simultaneously meet requirements for deployment.</p>
+  <h4>Write modern evaluations as runnable diagnostics</h4>
+  <p>A modern evaluation report should be reducible to runnable diagnostics. Pairwise judgment summaries calculate raw win rate, tie-adjusted win rate, and win rate grouped by task, showing that the same model might win on QA while tying or losing on math. Judge reliability audits check sample size, position bias, length bias, swap consistency, and human label agreement. Safety metrics split samples into harmful, benign sensitive, and ordinary groups, then report attack success, harmful refusal, over-refusal, and task utility. Benchmark summaries organize task, sample size, metrics, model, prompt, temperature, failure types, and non-extrapolable scope into a structured conclusion.</p>
+  <p>The common purpose of these diagnostics is to prevent misinterpreting "a single average score" as a complete engineering conclusion. Training engineers use them to judge whether alignment has harmed capability; inference engineers use them to judge whether quality, safety, latency, and cost simultaneously meet deployment requirements.</p>
 
   <h4>Worked Example: How to write a qualified conclusion from the same result</h4>
   <p>Less rigorous writing: <code>Model A is 8% better than Model B.</code></p>
@@ -430,12 +431,13 @@ assert audit["overall_pass"]</div>
   </div>
 
   <h4>2. Safety evaluation must be written for the scenario, not as a slogan</h4>
-  <p>"Model safety" cannot be separated from the application scenario. The core risks for medical Q&A are misleading advice, privacy, and expression of uncertainty; for a code agent, they are execution permissions, supply chain, and data exfiltration; for educational tutoring, they are incorrect feedback, over-reliance on writing, and learning dependency. In course projects, first clearly describe the target scenario, users, model permissions, and error costs, then select samples and metrics.</p>
+  <p>"Model safety" cannot be separated from the application scenario. The core risks for medical Q&A are misleading advice, privacy, and expression of uncertainty; for a code agent, they are execution permissions, supply chain, and data exfiltration; for educational tutoring, they are incorrect feedback, over-reliance on writing, and learning dependency. A safety report should first clearly describe the target scenario, users, model permissions, and error costs, then select samples and metrics.</p>
   <div class="table-wrap">
     <table>
       <tr><th>Scenario</th><th>Sample Slices That Must Be Covered</th><th>Insufficient Evaluation Method</th></tr>
       <tr><td>Medical education Q&A</td><td>General educational questions, emergency symptoms, medication, private information, questions that should advise seeing a doctor</td><td>Only checking if the answer is fluent or if it refuses</td></tr>
-      <tr><td>Enterprise RAG</td><td>Documents within permissions, documents outside permissions, outdated documents, conflicting documents, missing citations</td><td>Only looking at final answer accuracy, ignoring permissions and citations</td></tr>      <tr><td>Code Agent</td><td>Read-only tasks, file writing tasks, internet tasks, dangerous commands, dependency installation</td><td>Only looks at pass rate, ignores tool call boundaries</td></tr>
+      <tr><td>Enterprise RAG</td><td>Documents within permissions, documents outside permissions, outdated documents, conflicting documents, missing citations</td><td>Only looking at final answer accuracy, ignoring permissions and citations</td></tr>
+      <tr><td>Code Agent</td><td>Read-only tasks, file writing tasks, internet tasks, dangerous commands, dependency installation</td><td>Only looks at pass rate, ignores tool call boundaries</td></tr>
       <tr><td>Multimodal Document Understanding</td><td>Small text, tables, signatures, faces, ID documents, chart values</td><td>Uses generic VQA scores to represent document safety</td></tr>
     </table>
   </div>
@@ -452,7 +454,8 @@ assert audit["overall_pass"]</div>
   <p>Therefore, this system should at least report retrieval recall, citation accuracy, factual error rate, harmful advice rate, general medical education completion rate, emergency referral rate, PII log handling method, and limitation descriptions in the user interface. The key here is not to create more tables, but to enable model behavior, data sources, user risks, and deployment boundaries to be described using the same engineering language.</p>
 
   <h4>3. Safety, Alignment, Evaluation, and Serving Are the Same Pipeline</h4>
-  <p>Chapter 9 discusses how to use SFT/DPO/GRPO to change model behavior, Chapter 10 discusses how to turn a model into a serviceable system, and this section discusses the risk boundaries of these behaviors in real-world scenarios. A model can improve in harmlessness while over-refusing on benign sensitive questions; it can also perform well on an offline safety set but fail in an Agent scenario due to excessive tool permissions. Course projects should include safety slices in the results table alongside quality, latency, and cost, rather than just writing "safety has been considered" in the conclusion.</p>  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Social impact is not an abstract moral discussion, nor is it a single safety score. LLM engineers must be able to map risks to data, objective functions, interface permissions, user scenarios, and evaluation slices, and explain what capabilities, latency, or cost each mitigation action will sacrifice.</div></div>
+  <p>Chapter 9 discusses how to use SFT/DPO/GRPO to change model behavior, Chapter 10 discusses how to turn a model into a serviceable system, and this section discusses the risk boundaries of these behaviors in real-world scenarios. A model can improve in harmlessness while over-refusing on benign sensitive questions; it can also perform well on an offline safety set but fail in an Agent scenario due to excessive tool permissions. A credible result table should include safety slices alongside quality, latency, and cost, rather than just writing "safety has been considered" in the conclusion.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Social impact is not an abstract moral discussion, nor is it a single safety score. LLM engineers must be able to map risks to data, objective functions, interface permissions, user scenarios, and evaluation slices, and explain what capabilities, latency, or cost each mitigation action will sacrifice.</div></div>
 </section>
 
 <section class="card" id="s11-6d">
@@ -569,7 +572,7 @@ assert audit["overall_pass"]</div>
 
 <section class="card" id="s11-8">
   <h3>11.8 Experimental Conclusions: From Metrics to Decidable Judgments</h3>
-  <p>This section trains students to organize code outputs, written derivations, reading materials, and experimental metrics into decidable conclusions. The core is not "running a demo successfully," but answering a clear technical question and allowing the reader to judge under what conditions the conclusion holds.</p>
+  <p>This section organizes code outputs, written derivations, reading materials, and experimental metrics into decidable conclusions. The core is not "running a demo successfully," but answering a clear technical question and allowing the reader to judge under what conditions the conclusion holds.</p>
 
   <h4>1. Formulate the Question as a Testable Proposition</h4>
   <p>A good technical question should be falsifiable by data and experiments. For example:</p>
@@ -606,8 +609,8 @@ assert audit["overall_pass"]</div>
 </section>
 
 <section class="card" id="s11-9">
-  <h3>11.9 Programming Assignment Correspondence</h3>
-  <p>Ch11 assignments translate the concepts of this chapter into runnable functions:</p>
+  <h3>11.9 Runnable Diagnostics Map</h3>
+  <p>The runnable diagnostics translate the concepts of this chapter into concrete checks:</p>
   <table>
     <tr><th>Function</th><th>Corresponding Concept</th><th>Question It Should Explain</th></tr>
     <tr><td><code>scalar_rnn_forward</code>, <code>recurrent_gradient_factors</code></td><td>RNN recurrence and BPTT</td><td>Why long-distance gradients vanish or explode</td></tr>
@@ -622,7 +625,8 @@ assert audit["overall_pass"]</div>
     <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>Why metric choice can change the conclusion</td></tr>
     <tr><td><code>summarize_pairwise_judgments</code></td><td>LLM-as-judge</td><td>How to calculate tie-adjusted win rate and decompose wins/losses by task</td></tr>
     <tr><td><code>judge_reliability_audit</code></td><td>Judge reliability audit</td><td>How to check for position bias, length bias, swap consistency, and human label agreement rate</td></tr>
-    <tr><td><code>safety_evaluation_metrics</code></td><td>Safety evaluation</td><td>Why attack success, refusal, over-refusal, and task utility must be reported simultaneously</td></tr>    <tr><td><code>benchmark_result_summary</code></td><td>Benchmark reporting</td><td>How to turn metrics into engineering conclusions that include samples, inference settings, failure types, and boundaries</td></tr>
+    <tr><td><code>safety_evaluation_metrics</code></td><td>Safety evaluation</td><td>Why attack success, refusal, over-refusal, and task utility must be reported simultaneously</td></tr>
+    <tr><td><code>benchmark_result_summary</code></td><td>Benchmark reporting</td><td>How to turn metrics into engineering conclusions that include samples, inference settings, failure types, and boundaries</td></tr>
   </table>
 </section>
 

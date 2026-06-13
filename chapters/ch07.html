@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>自回归概率分解、cross entropy、optimizer state、随机性控制、train/val split 和实验统计。<br><strong>本章内化：</strong>这些基础会直接进入 data curation gate、loss/ppl、AdamW/Muon、learning-rate schedule、gradient clipping、checkpoint resume、数据 packing、seed 和 ablation 报告。<br><strong>验收信号：</strong>你不只是让 loss 下降，而是能解释数据来源、过滤/去重、曲线方差、baseline、恢复点、token budget 和训练成本，并把这些结果传给 Ch08 生成质量和 Ch09 对齐实验。</div>
   <p class="system-role"><strong>系统位置：</strong>本章把 Ch06 模型变成可复现训练 run。它不仅教优化器，还把数据策展、污染排查、完整 checkpoint、实验统计和成本账本接到 Ch09 post-training。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第7章知识脑图：学习本章前需要懂自回归概率、交叉熵、数据切分和 optimizer state，本章会学预训练闭环，学完后可以继续读 scaling laws 和数据混合">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-07" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第7章 Pretraining</tspan><tspan class="dep-sub" x="430" dy="22">可复现训练闭环</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：优化目标</tspan><tspan class="dep-sub" x="129" dy="18">AR probability / CE</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：实验状态</tspan><tspan class="dep-sub" x="129" dy="18">split / optimizer / seed</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：规模规律</tspan><tspan class="dep-sub" x="731" dy="18">scaling laws</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：数据工程</tspan><tspan class="dep-sub" x="731" dy="18">mixture / dedup / filtering</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：data -> loss -> optimizer -> checkpoint -> report</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>MLE / CE / PPL</td><td>把 next-token negative log likelihood、cross entropy 和 perplexity 的关系写成同一套指标。</td><td><strong>材料：</strong>Kaplan/Chinchilla scaling laws。<br><strong>知识点：</strong>loss-to-capability、domain perplexity、eval loss 分层。</td></tr>
+        <tr><td>数据切分与污染</td><td>说明 train/val/test、去重、近重复和 benchmark contamination 为什么决定曲线可信度。</td><td><strong>材料：</strong>MinHash/SimHash、contamination detection 研究。<br><strong>知识点：</strong>数据混合、去重、质量过滤、benchmark 污染。</td></tr>
+        <tr><td>optimizer state</td><td>把 weights、grads、moments、scheduler、scaler 和随机状态一起纳入 checkpoint。</td><td><strong>材料：</strong>AdamW、Muon、ZeRO/FSDP、mixed precision 文档。<br><strong>知识点：</strong>optimizer memory、checkpoint resume、容错训练。</td></tr>
+        <tr><td>随机性与统计</td><td>要求记录 seed、方差、baseline、ablation 和 confidence interval，避免单 run 叙事。</td><td><strong>材料：</strong>ablation study 指南、confidence interval/bootstrapping。<br><strong>知识点：</strong>run-to-run variance、训练实验报告规范。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经覆盖 loss、PPL、数据切分、污染、optimizer state、checkpoint resume 和实验统计；扩展阅读应聚焦 scaling laws、数据配比、去重和分布漂移，而不是另设作业导向内容。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

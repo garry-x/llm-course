@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>PyTorch Module、残差相加、矩阵乘法、激活函数、LayerNorm/RMSNorm 统计量和反向传播检查。<br><strong>本章内化：</strong>Pre-Norm 稳定性会回到梯度路径；FFN/SwiGLU 会回到矩阵参数和激活门控；mHC 会回到残差连接如何受约束地混合。<br><strong>验收信号：</strong>你能解释一个 Transformer block 的前向、参数量、FLOPs 和梯度路径，并把 norm 或 FFN 的实现错误追到 Ch06 GPT 组装失败。</div>
   <p class="system-role"><strong>系统位置：</strong>本章把 attention、FFN、norm 和残差组织成可堆叠的 block。它是 Ch06 GPT 组装的直接单元，也是 Ch07 训练稳定性、Ch10 kernel fusion 和模型解释性分析的共同依赖。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第5章知识脑图：学习本章前需要懂残差、norm、FFN 和梯度路径，本章会学 Transformer block，学完后可以继续读 norm、FFN 变体和 kernel fusion">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-05" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第5章 Block</tspan><tspan class="dep-sub" x="430" dy="22">可堆叠 Transformer 单元</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：稳定路径</tspan><tspan class="dep-sub" x="129" dy="18">residual / norm</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：非线性层</tspan><tspan class="dep-sub" x="129" dy="18">FFN / activation / backprop</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：结构变体</tspan><tspan class="dep-sub" x="731" dy="18">DeepNorm / GLU family</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：实现优化</tspan><tspan class="dep-sub" x="731" dy="18">fused RMSNorm / SwiGLU</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：norm -> attention -> residual -> FFN -> stable stack</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>残差不变形</td><td>强调 block 输入输出都保持 <code>[B,T,D]</code>，attention、FFN 和 mHC 都必须回到同一残差通道。</td><td><strong>材料：</strong>DeepNorm、ReZero、residual scaling。<br><strong>知识点：</strong>深层 Transformer 稳定性、残差缩放、mHC。</td></tr>
+        <tr><td>Norm 统计量</td><td>区分 LayerNorm/RMSNorm 在 feature 维上做归一化，解释 Pre-Norm 为什么保护深层梯度。</td><td><strong>材料：</strong>LayerNorm、RMSNorm、ScaleNorm、Sandwich Norm。<br><strong>知识点：</strong>Pre-Norm/Post-Norm、训练曲线差异。</td></tr>
+        <tr><td>FFN / SwiGLU</td><td>把 token-wise expansion、gate、activation 和投影参数量逐项算清。</td><td><strong>材料：</strong>GLU Variants、SwiGLU、MoE expert FFN。<br><strong>知识点：</strong>门控激活、fused SwiGLU kernel、参数/FLOPs 账本。</td></tr>
+        <tr><td>梯度路径</td><td>用残差主路、norm 位置和激活饱和解释 loss spike、梯度爆炸/消失和梯度裁剪。</td><td><strong>材料：</strong>activation checkpointing、gradient clipping 实践报告。<br><strong>知识点：</strong>loss spike 诊断、训练稳定性报告。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经覆盖 block 可堆叠性、Pre-Norm、RMSNorm、SwiGLU、残差和梯度路径；扩展阅读可继续看 DeepNorm、Sandwich Norm、GLU 族和 fused RMSNorm/SwiGLU，但不需要额外补基础章节。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

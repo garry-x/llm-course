@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>Python 列表/字典、bytes/string 边界、循环不变量、简单复杂度和测试驱动实现。<br><strong>本章内化：</strong>这些基础会直接落到 pair counting、非重叠 merge、encode/decode 可逆性、特殊 token 合约和 token 成本估算里。<br><strong>验收信号：</strong>你能不用外部补课路线，直接在本章代码中解释每个中间结构为什么存在，以及 tokenizer 改动如何传导到 Ch02 embedding、Ch07 token budget 和 Ch10 服务成本。</div>
   <p class="system-role"><strong>系统位置：</strong>本章定义 LLM 的文本接口契约。后续 embedding、训练 token budget、chat template、KV cache 和计费口径都依赖同一套 token 序列，因此分词不是预处理附属品，而是贯穿训练与推理的第一层工程边界。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第1章知识脑图：学习本章前需要懂字节与数据结构，本章会学 BPE，学完后可以继续读 tokenizer 评测与多语言成本">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-01" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第1章 BPE</tspan><tspan class="dep-sub" x="430" dy="22">文本 -> token id</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：文本表示</tspan><tspan class="dep-sub" x="129" dy="18">bytes / Unicode / token id</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：实现基础</tspan><tspan class="dep-sub" x="129" dy="18">dict / loop / complexity</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：分词器</tspan><tspan class="dep-sub" x="731" dy="18">SentencePiece / tiktoken</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：算法族</tspan><tspan class="dep-sub" x="731" dy="18">WordPiece / Unigram LM</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：pair count -> merge -> encode/decode -> token cost</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>bytes / Unicode / token id</td><td>把 UTF-8 文本拆成 bytes，再映射到整数 id，解释为什么 byte-level BPE 能覆盖中文、emoji、代码和未知字符。</td><td><strong>材料：</strong>SentencePiece、OpenAI tiktoken。<br><strong>知识点：</strong>byte fallback、多语言压缩率、tokenizer fairness。</td></tr>
+        <tr><td>pair 计数与非重叠 merge</td><td>用循环不变量说明每轮只统计相邻 pair，并按 merge 优先级做非重叠替换。</td><td><strong>材料：</strong>WordPiece、Unigram LM、BPE dropout。<br><strong>知识点：</strong>预分词、merge tie-breaking、subword regularization。</td></tr>
+        <tr><td>词表大小与序列长度</td><td>把 vocab size、平均 token 数、P95 token 数和 embedding 参数量放在同一张成本账里。</td><td><strong>材料：</strong>tokenizer benchmark 报告、模型 tokenizer config。<br><strong>知识点：</strong>token budget、上下文窗口利用率、KV cache 成本。</td></tr>
+        <tr><td>特殊 token 合约</td><td>明确 BOS/EOS/PAD、chat role token 和 tokenizer 文件必须随模型版本一起发布。</td><td><strong>材料：</strong>Hugging Face tokenizer config、chat template 文档。<br><strong>知识点：</strong>role token、tool-call token、multimodal special token。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经把 bytes、BPE 合并、可逆解码、特殊 token 和 token 成本讲到实现层；扩展阅读可以继续比较 WordPiece、Unigram LM、SentencePiece、tiktoken 与多语言 tokenization fairness，但不需要作为额外先修路径。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

@@ -242,7 +242,7 @@
 - Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). 重点看从 KL-constrained RL 到分类式 loss 的推导。
 - DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). 重点看 GRPO、冷启动数据、rejection sampling、蒸馏模型和方法边界。
 - Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). 重点看 long-context RL、long2short、长度控制、采样策略和多模态 reasoning 的工程取舍。
-- Yu et al. [DAPO: An Open-Source LLM Reinforcement Learning System at Scale](https://arxiv.org/abs/2503.14476). 重点看 dynamic sampling、decoupled clipping、token-level policy gradient loss、overlong reward shaping 和开源 RL recipe 如何服务可复现训练。
+- Yu et al. [DAPO: An Open-Source LLM Reinforcement Learning System at Scale](https://arxiv.org/abs/2503.14476). 重点看 Clip-Higher、dynamic sampling、token-level policy gradient loss、overlong reward shaping 和开源 RL recipe 如何服务可复现训练。
 - Zheng et al. [Group Sequence Policy Optimization](https://arxiv.org/abs/2507.18071). 重点看 sequence-level importance ratio、length normalization、MoE RL 稳定性和为什么 token-level ratio 噪声会影响长训练。
 
 选读：
@@ -280,13 +280,14 @@
 - Dettmers et al. [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314). 重点看 4-bit quantization 与 LoRA 结合。
 - Yu et al. [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu). 重点看 iteration-level scheduling 和 continuous batching 为什么能减少队列浪费。
 - vLLM documentation: [Optimization and Tuning](https://docs.vllm.ai/en/stable/configuration/optimization/) 与 [serve scheduler arguments](https://docs.vllm.ai/en/stable/cli/serve/). 重点看 `max_num_seqs`、`max_num_batched_tokens`、chunked prefill、KV cache capacity 和 queue/SLO 之间的关系。
+- vLLM documentation: [Disaggregated Prefilling](https://docs.vllm.ai/en/latest/features/disagg_prefill/). 重点看为什么 prefill/decode 分离能分别调 TTFT 与 ITL、为什么该功能仍应和 chunked prefill、KV transfer 与故障恢复一起评估。
 - PyTorch and vLLM. [Disaggregated Inference at Scale with PyTorch & vLLM](https://pytorch.org/blog/disaggregated-inference-at-scale-with-pytorch-vllm/). 重点看 prefill/decode 分离如何同时影响 TTFT、TPOT、throughput 和 KV transfer。
 - OpenAI. [Function calling](https://developers.openai.com/api/docs/guides/function-calling) 与 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). 重点看 function tools、JSON schema、strict structured output 和 tool call output 如何构成服务端协议。
 - vLLM. [Structured Outputs](https://docs.vllm.ai/en/latest/features/structured_outputs/) 与 SGLang. [Structured Outputs](https://docs.sglang.ai/advanced_features/structured_outputs.html). 重点看 OpenAI-compatible serving 中的 JSON schema、choice、regex、grammar/EBNF constrained decoding，以及为什么仍要做 parse/schema/retry/safety 回归。
 - vLLM. [Quantization](https://docs.vllm.ai/en/latest/features/quantization/) 与 [Quantized KV Cache](https://docs.vllm.ai/en/latest/features/quantization/quantized_kvcache/). 重点看 FP8/INT8/INT4、weight-only 与 KV cache quantization 分别作用在什么资源上，以及为什么 KV cache 量化要用长上下文质量 gate 验证。
 - NVIDIA TensorRT-LLM. [Quantization](https://nvidia.github.io/TensorRT-LLM/latest/features/quantization.html) 与 Transformer Engine [FP8/FP4 primer](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html). 重点看 SmoothQuant、AWQ、FP8 KV cache、FP8/FP4 scale metadata、硬件代际和 kernel 支持如何决定真实收益。
 - Xiao et al. [SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models](https://arxiv.org/abs/2211.10438)、Frantar et al. [GPTQ](https://arxiv.org/abs/2210.17323)、Lin et al. [AWQ](https://arxiv.org/abs/2306.00978). 重点看 W8A8 激活 outlier、近似二阶 weight quantization 和 activation-aware weight-only quantization 的不同假设。
-- Model Context Protocol. [Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) 与 [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation、authorization、用户同意、数据隐私和 tool safety。
+- Model Context Protocol. [Specification](https://modelcontextprotocol.io/specification/2025-06-18) / [Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) 与 [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation、authorization、用户同意、数据隐私和 tool safety。
 - Anthropic. [Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp). 重点看工具定义和中间结果如何消耗上下文，以及为什么大型 agent 系统需要延迟加载工具、执行环境处理和结果摘要。
 - Anthropic. [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) 与 Claude Cookbook [Context engineering: memory, compaction, and tool clearing](https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools). 重点看 active context、context rot、compaction、tool-result clearing、memory 和为什么 agent/RAG 不能只靠扩大 context window。
 - OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) 与 [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). 重点看 prompt injection、insecure output handling、insecure plugin design、excessive agency 和外部内容隔离。
@@ -311,7 +312,7 @@
 - SGLang [Speculative Decoding](https://docs.sglang.ai/advanced_features/speculative_decoding.html) documentation。重点看 EAGLE-2/EAGLE-3、MTP、standalone draft model、NGRAM 和 OOM/benchmark 注意事项。
 - SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。
 - TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。
-- Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化。
+- Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化；同时检查工具列表膨胀后对 TTFT、上下文窗口和工具选择准确率的影响。
 - OpenAI Agents SDK guardrails 与 tracing。重点看 input/output/tool guardrails 在 agent workflow 中运行的不同位置，以及 tracing 如何记录 LLM generation、tool calls、handoffs、guardrail events 和 custom spans。
 - Google SRE Book. [Release Engineering](https://sre.google/sre-book/release-engineering/) 与 [Service Level Objectives](https://sre.google/sre-book/service-level-objectives/). 重点看发布工程、回滚、SLO 与业务风险之间的连接。
 - llama.cpp 官方文档中 quantization、CPU/GPU offload 和本地部署边界。

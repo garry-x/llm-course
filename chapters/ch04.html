@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>Ch03 单头 attention、reshape/transpose/contiguous、head 维度拆分、参数量和 KV cache bytes 估算。<br><strong>本章内化：</strong>MHA、MQA、GQA 和 MLA 会被统一拆成 Q/K/V 投影、head layout、RoPE 位置通道和缓存账本；每个架构名都必须落回张量形状与带宽压力。<br><strong>验收信号：</strong>你能手算一层 attention 的参数、K/V cache 大小和 decode 带宽，并判断某个 head 压缩方案会在 Ch10 服务中省什么、可能损失什么。</div>
   <p class="system-role"><strong>系统位置：</strong>本章把 Ch03 的单头检索扩展成多子空间表示，并第一次把模型结构和推理显存直接连起来。GQA/MLA 不只是架构名，而是 Ch10 KV cache、decode 带宽和服务容量规划的前置基础。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第4章知识脑图：学习本章前需要懂 head layout 和 KV cache 估算，本章会学 MHA、GQA 和 MLA，学完后可以继续读 KV quantization 和 serving kernels">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-04" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第4章 Multi-Head</tspan><tspan class="dep-sub" x="430" dy="22">多子空间与 KV 账本</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：head layout</tspan><tspan class="dep-sub" x="129" dy="18">reshape / transpose</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：缓存成本</tspan><tspan class="dep-sub" x="129" dy="18">head dim / KV bytes</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：KV 优化</tspan><tspan class="dep-sub" x="731" dy="18">PagedAttention / quant</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：推理内核</tspan><tspan class="dep-sub" x="731" dy="18">FlashDecoding / FlashMLA</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：MHA -> MQA/GQA -> MLA -> KV cache cost</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>head layout</td><td>把 <code>[B,T,D]</code> 拆成 <code>[B,H,T,Dh]</code>，逐步标注 reshape、transpose 和 contiguous 的语义。</td><td><strong>材料：</strong>tensor parallel attention、head pruning 文章。<br><strong>知识点：</strong>head specialization、attention 可视化、并行切分。</td></tr>
+        <tr><td>KV head ratio</td><td>比较 MHA、MQA、GQA 的 Q head 数和 K/V head 数，计算 cache 按哪个维度缩小。</td><td><strong>材料：</strong>GQA paper、PagedAttention、vLLM KV cache 文档。<br><strong>知识点：</strong>GQA conversion、KV quantization、decode bandwidth profiling。</td></tr>
+        <tr><td>RoPE 通道</td><td>说明 RoPE 作用在 Q/K 的 head dim 成对通道上，位置必须和 cache 中的 token 对齐。</td><td><strong>材料：</strong>RoPE scaling、prefix cache 实现说明。<br><strong>知识点：</strong>位置重映射、cache 命中条件、RoPE 与 GQA/MLA 组合。</td></tr>
+        <tr><td>MLA latent cache</td><td>把低维 latent cache、恢复 K/V 和注意力计算分开，说明省显存不等于零成本。</td><td><strong>材料：</strong>DeepSeek MLA、FlashMLA。<br><strong>知识点：</strong>latent KV cache、kernel support、质量/显存权衡。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经把多头形状、GQA/MQA/MLA 和 KV cache 账本讲到可手算；扩展阅读可放到 KV cache 量化、PagedAttention、FlashDecoding 和 MLA kernel 支持，作为 Ch10 服务优化的延伸。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

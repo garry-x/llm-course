@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>前九章计算图、KV cache、生成策略、评测指标，以及 TTFT、TPOT、throughput、P95/P99、active KV tokens、显存峰值和 cache hit rate。<br><strong>本章内化：</strong>每个服务问题都会拆成 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和回退策略；KV、量化、prefix cache、RAG、tool gate 与多模态 token 都要进入同一张 SLO/成本账本。<br><strong>验收信号：</strong>你能写出一份上线报告，说明瓶颈在哪、优化改了哪个阶段、质量是否回归、容量边界是什么，以及何时拒绝“只看平均延迟”的结论。</div>
   <p class="system-role"><strong>系统位置：</strong>本章把前九章的模型、训练、生成和对齐结果变成可承载流量的服务。它要求训练工程师交付可加载模型包，也要求推理工程师用 workload、SLO、容量、回滚和安全边界证明系统能上线。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第10章知识脑图：学习本章前需要懂模型计算图、KV cache、生成策略和 SLO，本章会学 LLM serving，学完后可以继续读 disaggregated prefilling、MCP 和多模态服务">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-10" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第10章 Serving</tspan><tspan class="dep-sub" x="430" dy="22">模型变成在线系统</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：推理状态</tspan><tspan class="dep-sub" x="129" dy="18">KV / decoding / metrics</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：线上指标</tspan><tspan class="dep-sub" x="129" dy="18">TTFT / TPOT / P99</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：推理系统</tspan><tspan class="dep-sub" x="731" dy="18">vLLM / SGLang / TRT-LLM</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：Agent 服务</tspan><tspan class="dep-sub" x="731" dy="18">MCP / RAG / tool safety</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：prefill/decode -> cache -> RAG/tool -> SLO/rollback</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>prefill / decode</td><td>把 TTFT、TPOT、ITL、prefill batch 和 decode batch 分开看，定位瓶颈阶段。</td><td><strong>材料：</strong>vLLM optimization/disaggregated prefilling、Orca、SGLang scheduler。<br><strong>知识点：</strong>chunked prefill、continuous batching、speculative serving。</td></tr>
+        <tr><td>KV 与显存</td><td>用 active KV tokens、cache hit、quantization、prefix cache 和 eviction 估算容量。</td><td><strong>材料：</strong>PagedAttention、vLLM KV cache、TensorRT-LLM KV transfer。<br><strong>知识点：</strong>prefix cache、KV quantization、long-context capacity planning。</td></tr>
+        <tr><td>RAG / tool 协议</td><td>把 retrieval、schema、permission、observation、预算和 trace 放到同一条 agent 工作流。</td><td><strong>材料：</strong>MCP tools spec、Anthropic code execution with MCP、OWASP LLM Top 10。<br><strong>知识点：</strong>tool routing、schema lazy loading、sandbox、prompt injection。</td></tr>
+        <tr><td>SLO / canary / cost</td><td>用 P95/P99、error budget、成本、质量回归和 rollback 共同决定是否上线。</td><td><strong>材料：</strong>Google SRE SLO/Release Engineering、LLM serving postmortem。<br><strong>知识点：</strong>canary、load shedding、cost attribution、多模态容量模型。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章原有 serving、RAG、tool、量化和多模态内容较全；已补充 MCP 工具上下文预算、vLLM disaggregated prefilling 的实验性边界，以及 Qwen2.5-VL 报告里的 dynamic resolution、window attention 和时间编码视角。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->
@@ -673,7 +708,8 @@ class SimpleRAG:
   <p>Agent 循环必须有硬预算。常见预算包括最大 tool calls、最大 wall-clock time、最大 observation tokens、最大外部 API cost、最大失败重试次数和最大连续同类工具调用次数。预算不是产品体验细节，而是推理服务的容量控制：一个请求如果反复搜索、读长文档、执行代码，会同时拉高 TTFT、总延迟、外部服务成本和上下文 token 数。</p>
 
   <h4>工具上下文预算与 agent trace</h4>
-  <p>工具系统上线后，token 成本不只来自用户 prompt 和模型回答。每个 tool definition、schema、候选调用、observation、修复提示和最终回答都会占用上下文。MCP 2025-11-25 规范把 host/client/server、resources、prompts、tools，以及 client-side 的 sampling、roots、elicitation 都放进同一套 JSON-RPC 协议；这让工具生态更可组合，也让一次 agent run 的上下文、权限和观测边界更复杂。</p>
+  <p>工具系统上线后，token 成本不只来自用户 prompt 和模型回答。每个 tool definition、schema、候选调用、observation、修复提示和最终回答都会占用上下文。MCP 2025 系列规范把 host/client/server、resources、prompts、tools，以及 client-side 的 sampling、roots、elicitation 都放进同一套 JSON-RPC 协议；这让工具生态更可组合，也让一次 agent run 的上下文、权限和观测边界更复杂。</p>
+  <p>MCP 官方 tools 规范把工具看成 server 暴露给模型调用的能力：每个工具有名称、描述性 metadata 和输入 schema。这个抽象解决了“怎么接工具”的接口问题，但不自动解决“该暴露哪些工具”和“工具结果该怎样进入上下文”。当一个 agent 连接几十个 MCP server、上百个工具时，直接把全部 schema 放进 active context 会抬高 TTFT、占用窗口并增加误选工具概率；因此工具系统还需要 tool routing、schema lazy loading、结果摘要和执行环境内处理。</p>
   <p>高阶推理工程师需要把 agent run 当成可追踪的分布式工作流，而不是单次文本生成。最小 trace 应记录：输入 guardrail 是否触发、模型生成了哪些 tool proposal、schema/permission/budget 哪个 gate 通过或失败、每个工具的 latency/status/摘要、observation 是否被隔离、最终 output guardrail 是否通过，以及整次 run 的 prompt tokens、tool tokens、observation tokens、output tokens 和 wall time。</p>
   <div class="table-wrap">
     <table>
@@ -1521,6 +1557,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
     </table>
   </div>
   <p>这不是“所有服务都应该拆”。如果请求短、并发低、模型小或 KV 传输成本高，统一引擎更简单。解耦只有在 prefill 与 decode 的负载差异足够大、网络/进程间 KV 传输可控、并且调度器能按 SLO 做 admission control 时才值得。</p>
+  <p>工业文档里也会把这件事写得很克制：vLLM 把 disaggregated prefilling 标为 experimental，强调它能分别调 TTFT 和 ITL，也能缓解 prefill 插入 decode 时造成的尾部 ITL；但它不是免费收益，因为系统新增了 KV transfer connector、跨实例调度和故障恢复边界。课程里判断这类功能时，应把它和 chunked prefill、prefix cache、DP/TP 配置放在同一个实验矩阵里比较。</p>
 
   <h4>2. KV cache 传输是新的系统边界</h4>
   <p>解耦后，请求路径变成：router 接收请求，prefill worker 处理 prompt 并产生 KV blocks，然后把 KV cache 和少量元数据传给 decode worker。这里新增了三类工程问题：</p>
@@ -1864,6 +1901,7 @@ def forward(image, text_prompt):
       <tr><td>Open-source efficient VLM</td><td>通过数据配比、训练 recipe、测试时策略和高效推理改进通用多模态能力</td><td>开源模型报告通常更适合学习 ablation：vision encoder、分辨率、数据混合和推理策略分别贡献了什么</td></tr>
     </table>
   </div>
+  <p>例如 Qwen2.5-VL 报告把 dynamic resolution、window attention、object localization、document/chart parsing 和 absolute time encoding 放在同一条线上：它不是单纯“图像分辨率更高”，而是在回答视觉细节、计算开销和时间定位如何同时进入模型。读这类报告时要把机制拆成三个问题：视觉 token 怎么产生，哪些任务需要保留局部像素细节，视频/长文档的时间或位置编码怎样影响 prefill 成本。</p>
   <p>这些路线不是互斥的。一个生产系统可能用强多模态模型处理开放式视觉问答，用 OCR-first 路径处理发票和合同，用轻量视觉模型做路由或预筛选，再把关键文本和少量图像 crop 交给长上下文模型。工程师要能把产品需求翻译成“需要保留什么视觉信息、允许丢掉什么信息、哪一步最贵”。</p>
 
   <h4>架构家族：视觉信息什么时候进入语言模型</h4>

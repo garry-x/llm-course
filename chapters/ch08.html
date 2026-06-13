@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>概率分布、logits 变换、采样方差、自回归状态、KV cache 直觉和基础质量/延迟指标。<br><strong>本章内化：</strong>temperature、top-k、top-p、beam、self-consistency、reasoning budget 和 speculative decoding 都会被写成“改变候选分布、重复计算或接受率”的可测策略，而不是孤立调参技巧。<br><strong>验收信号：</strong>你能把一次生成策略上线决策拆成质量、输出 token、P95 latency、成本、marginal gain 和回退策略，并接到 Ch10 服务 SLO。</div>
   <p class="system-role"><strong>系统位置：</strong>本章把训练得到的 logits 转成用户可见行为。采样、reasoning 预算和推测解码会同时影响质量、延迟、token 成本和安全边界，因此它是 Ch09 对齐评估与 Ch10 serving SLO 之间的桥。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第8章知识脑图：学习本章前需要懂 logits 分布、自回归状态和 KV cache，本章会学解码策略，学完后可以继续读 speculative decoding 和 verifier">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-08" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第8章 Decoding</tspan><tspan class="dep-sub" x="430" dy="22">logits 变成回答</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：概率分布</tspan><tspan class="dep-sub" x="129" dy="18">logits / temperature</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：生成状态</tspan><tspan class="dep-sub" x="129" dy="18">AR loop / KV cache</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：加速生成</tspan><tspan class="dep-sub" x="731" dy="18">speculative / EAGLE</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：搜索评估</tspan><tspan class="dep-sub" x="731" dy="18">verifier / best-of-n</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：logits -> filter/search -> tokens -> quality/cost</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>logits 到分布</td><td>把 temperature、top-k、top-p、min-p 和 repetition penalty 都放在 softmax 前后的正确位置。</td><td><strong>材料：</strong>contrastive decoding、typical sampling、grammar decoding。<br><strong>知识点：</strong>logit bias、constrained decoding、采样分布校准。</td></tr>
+        <tr><td>自回归循环</td><td>每步追加一个 token，更新 position 和 KV cache，并把停止条件、EOS 和 max tokens 写清楚。</td><td><strong>材料：</strong>streaming generation、continuous batching、decode profiling。<br><strong>知识点：</strong>stop sequence、EOS、decode-side latency。</td></tr>
+        <tr><td>search 与 sampling</td><td>比较 greedy、beam、随机采样、self-consistency、best-of-n 的质量和计算代价。</td><td><strong>材料：</strong>self-consistency、best-of-n、Tree-of-Thought。<br><strong>知识点：</strong>verifier/reranker、pass@k、搜索成本。</td></tr>
+        <tr><td>reasoning budget</td><td>把思考 token、并行样本、verifier、early stop 和 marginal gain 变成可控预算。</td><td><strong>材料：</strong>test-time scaling、speculative decoding、EAGLE/MTP。<br><strong>知识点：</strong>draft model、接受率、成本-质量曲线。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经把 logits 变换、自回归循环、采样、搜索、reasoning budget 和成本指标放到同一框架；扩展阅读可深入 speculative decoding、draft model、verifier 和 test-time scaling。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

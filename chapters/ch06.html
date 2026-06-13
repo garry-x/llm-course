@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>token id、embedding、attention block、LM head、label shift、state_dict、dtype/device/contiguous 和模块注册。<br><strong>本章内化：</strong>本章把 Ch01-Ch05 串成第一次完整系统集成：<code>[B,T]</code> 到 <code>[B,T,D]</code> 到 <code>[B,T,V]</code>，再到 next-token loss、causal test、checkpoint loading 和 MoE 路由账本。<br><strong>验收信号：</strong>你能从输入 token 追到 logits/loss，并判断一次加载失败、shape mismatch 或未来信息泄漏究竟破坏了哪一层契约。</div>
   <p class="system-role"><strong>系统位置：</strong>本章是课程从组件走向模型的集成点。只有能把 token、position、block、LM head、MoE 和 checkpoint shape 串起来，Ch07 的训练 loss、Ch08 的生成 logits 和 Ch10 的发布包才有共同对象。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第6章知识脑图：学习本章前需要懂 token、embedding、block、LM head 和 label shift，本章会学 GPT 组装，学完后可以继续读 MoE 与 checkpoint 格式">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-06" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第6章 GPT</tspan><tspan class="dep-sub" x="430" dy="22">组件组装成模型</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：输入到表示</tspan><tspan class="dep-sub" x="129" dy="18">token / embedding / block</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：训练接口</tspan><tspan class="dep-sub" x="129" dy="18">LM head / label shift</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：模型变体</tspan><tspan class="dep-sub" x="731" dy="18">MoE / expert routing</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：发布格式</tspan><tspan class="dep-sub" x="731" dy="18">safetensors / HF config</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：[B,T] -> logits [B,T,V] -> loss/checkpoint</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>端到端 shape</td><td>逐层追踪 <code>[B,T]</code> 到 <code>[B,T,D]</code> 到 <code>[B,T,V]</code>，把 logits 与 vocab 对齐。</td><td><strong>材料：</strong>Hugging Face model config、GPT weight tying。<br><strong>知识点：</strong>vocab resize、tensor parallel output head。</td></tr>
+        <tr><td>label shift</td><td>明确位置 <code>t</code> 的 logits 预测 <code>t+1</code>，prompt、target 和 ignore index 各自怎么切。</td><td><strong>材料：</strong>chat SFT 数据格式、prefix LM objective。<br><strong>知识点：</strong>SFT mask、packed sequence loss、instruction tuning。</td></tr>
+        <tr><td>参数与 state_dict</td><td>用 names、shapes、dtype、device 和 tied weights 解释 checkpoint 如何被加载和验证。</td><td><strong>材料：</strong>safetensors、FSDP/TP checkpoint 转换文档。<br><strong>知识点：</strong>checkpoint sharding、权重命名、模型发布包校验。</td></tr>
+        <tr><td>MoE 路由账本</td><td>区分 total params、active params、expert load、router loss 和通信/容量限制。</td><td><strong>材料：</strong>Switch Transformer、Mixtral、DeepSeek MoE。<br><strong>知识点：</strong>expert parallel、load balancing loss、active params。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经把 GPT 前向、label shift、LM head、checkpoint 和 MoE 路由讲成一条端到端路径；扩展阅读可看 safetensors、HF config、tensor parallel checkpoint 和现代 MoE 负载均衡。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

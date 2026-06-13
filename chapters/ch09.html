@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>log probability、sequence loss、reference model、KL、偏好数据统计、奖励信号和评测切片。<br><strong>本章内化：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 都会被还原成“数据格式、目标函数、约束项、采样假设和评测切片”五件事；post-training 数据 gate 会在目标函数前检查覆盖、泄漏、长度偏差和安全切片，而不是另开一条补课路径。<br><strong>验收信号：</strong>你能判断一个对齐实验是优化了目标行为、奖励漏洞、格式偏差还是评测泄漏，并把质量变化与 Ch08 生成成本、Ch10 服务安全边界一起报告。</div>
   <p class="system-role"><strong>系统位置：</strong>本章把 Ch07 训练闭环和 Ch08 生成行为改造成面向任务、偏好、安全和推理能力的 post-training 系统。合成数据、蒸馏、拒绝采样、DPO/GRPO 和 RLVR 都必须回到数据来源、目标函数、评测切片和服务成本，而不是作为单独技巧堆叠。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第9章知识脑图：学习本章前需要懂 log probability、KL、偏好数据和奖励信号，本章会学 post-training，学完后可以继续读 reasoning RL 和 reward modeling">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第9章 Post-training</tspan><tspan class="dep-sub" x="430" dy="22">行为对齐与推理 RL</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：目标函数</tspan><tspan class="dep-sub" x="129" dy="18">logprob / KL / mask</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：反馈数据</tspan><tspan class="dep-sub" x="129" dy="18">preference / reward</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：对齐算法</tspan><tspan class="dep-sub" x="731" dy="18">DPO / GRPO / GSPO</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：推理 RL</tspan><tspan class="dep-sub" x="731" dy="18">DAPO / RLVR / RFT</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：data -> objective -> rollout -> eval slices</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>sequence logprob</td><td>SFT、DPO、GRPO 都要在 mask 后比较 token logprob，并区分 prompt token 与 completion token。</td><td><strong>材料：</strong>DPO、IPO、KTO、long-context SFT。<br><strong>知识点：</strong>sequence-level objective、SFT mask、packing loss。</td></tr>
+        <tr><td>reference 与 KL</td><td>解释 reference model 如何限制 policy drift，以及 KL、clip 和 length normalization 的不同作用。</td><td><strong>材料：</strong>PPO、GRPO、GSPO、DAPO。<br><strong>知识点：</strong>KL scheduling、policy drift、clip ratio、length normalization。</td></tr>
+        <tr><td>偏好与奖励数据</td><td>把 chosen/rejected、verifiable reward、合成数据和拒绝采样放到数据来源与标签假设中检查。</td><td><strong>材料：</strong>reward modeling、RLHF/RLAIF、RLVR。<br><strong>知识点：</strong>synthetic data、grader reliability、reward 数据切片。</td></tr>
+        <tr><td>rollout 统计</td><td>同时看长度、entropy、pass rate、clip fraction、有效 rollout 比例和失败类型。</td><td><strong>材料：</strong>DeepSeek-R1、Kimi k1.5、DAPO。<br><strong>知识点：</strong>reasoning RL recipe、length control、test-time compute。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章原有 SFT/LoRA/DPO/GRPO/RLVR 主线基本完整；已补充 DAPO 的 Clip-Higher、dynamic sampling、token-level policy gradient loss 和 overlong reward shaping，用来覆盖 2025 reasoning RL recipe 的关键工程信号。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->
@@ -721,16 +756,18 @@ advantages ≈
 
 <section class="card" id="s9-8b">
   <h3>9.8B 从 GRPO 到 DAPO / GSPO：reasoning RL 的工程配方</h3>
-  <p>2025 年以后，reasoning RL 的重点从“是否能用 GRPO 训练推理”进一步转向“如何稳定、可复现、可扩展地训练”。DAPO 把大规模 LLM RL 的隐藏细节拆成更明确的 recipe，例如 decoupled clipping、dynamic sampling、token-level policy gradient loss 和 overlong reward shaping；GSPO 则把 importance ratio 从 token 级改成 sequence likelihood 级，在长训练和 MoE RL 中强调稳定性。课程不要求学生把这些算法全部实现成工业系统，但要理解它们共同暴露的工程问题：rollout 分布、长度增长、entropy、KL、clip 行为、MoE 路由波动和 reward integrity 会共同决定一次 RL run 是否可信。</p>
+  <p>2025 年以后，reasoning RL 的重点从“是否能用 GRPO 训练推理”进一步转向“如何稳定、可复现、可扩展地训练”。DAPO 把大规模 LLM RL 的隐藏细节拆成更明确的 recipe，例如 Clip-Higher、dynamic sampling、token-level policy gradient loss 和 overlong reward shaping；GSPO 则把 importance ratio 从 token 级改成 sequence likelihood 级，在长训练和 MoE RL 中强调稳定性。课程不要求学生把这些算法全部实现成工业系统，但要理解它们共同暴露的工程问题：rollout 分布、长度增长、entropy、KL、clip 行为、MoE 路由波动和 reward integrity 会共同决定一次 RL run 是否可信。</p>
 
   <div class="table-wrap">
     <table>
       <tr><th>方法</th><th>解决的痛点</th><th>课程里需要检查的信号</th></tr>
       <tr><td>GRPO</td><td>去掉 Critic，用同 prompt 多个 completion 的组内相对 reward 做 advantage</td><td>group reward std、mean advantage、clip fraction、approx KL、每 prompt rollout 数</td></tr>
-      <tr><td>DAPO</td><td>把大规模 RL recipe 显式化，避免静态采样、过长输出和 clip 设置让训练失稳或只学会变长</td><td>dynamic sampling 命中率、completion length 分布、entropy、reward pass rate、overlong 样本比例</td></tr>
+      <tr><td>DAPO</td><td>把大规模 RL recipe 显式化，避免静态采样、过长输出和 clip 设置让训练失稳或只学会变长</td><td>dynamic sampling 命中率、completion length 分布、entropy、reward pass rate、clip-higher 区间、overlong 样本比例</td></tr>
       <tr><td>GSPO</td><td>用 sequence-level ratio 和 clipping 降低 token-level ratio 噪声，特别关注 MoE RL 稳定性</td><td>sequence log-prob ratio、length-normalized ratio、MoE routing volatility、recompute/inference logprob mismatch</td></tr>
     </table>
   </div>
+
+  <p>DAPO 的几个工程点可以逐一映射到训练日志。<strong>Clip-Higher</strong>关注的是探索空间：如果上界 clipping 太紧，低概率但可能正确的 token 很难被提高概率，entropy 会过早塌缩；如果放得过宽，又可能出现过度探索和重复。<strong>Dynamic sampling</strong>关注的是有效梯度：若同一 prompt 的所有 rollout 全对或全错，组内优势接近 0，继续采样只是浪费。<strong>Token-level policy gradient loss</strong>关注长 CoT：sequence mean loss 会让长短答案权重混乱，token 级聚合更容易看到长度对梯度的影响。<strong>Overlong reward shaping</strong>关注的是成本和噪声：过长 completion 不能简单截断后当作普通负样本，否则模型可能学到“写得越长越安全”或“碰到长度上限就丢 reward”。</p>
 
   <p>把这些方法放进 Ch09 的原因，是它们都在提醒同一件事：RL 算法名字本身不能证明 reasoning 能力提升。一个合格报告至少要同时画出 reward、pass@k 或任务成功率、平均 completion tokens、P95 completion length、entropy、approx KL、clip fraction、有效 rollout 比例和失败类型。如果准确率提升伴随输出长度持续膨胀、entropy 塌缩、clip fraction 极端、或只在训练题型上有效，工程结论应是“reward/采样/长度控制需要重做”，不是“扩大训练规模”。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>DAPO/GSPO 不是 GRPO 的替代记忆点，而是把 Ch07 的训练稳定性、Ch08 的 test-time compute、Ch09 的 reward gate 和 Ch10 的上线成本连在一起。高阶训练工程师要能读懂这些日志，并解释一次 RL run 是在学习可泛化推理，还是在利用 grader、长度或路由噪声。</div></div>

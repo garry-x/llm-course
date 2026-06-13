@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>矩阵乘法、softmax、mask 语义、概率归一化和基础广播规则。<br><strong>本章内化：</strong>这些基础会被放进 <code>QK^T / sqrt(d)</code>、mask-before-softmax、attention row sum、padding/causal 区分和数值稳定 softmax 的实现检查中。<br><strong>验收信号：</strong>你能定位 attention bug 属于 score shape、mask 时机、概率归一化还是可见性约束，并说明它会如何影响 Ch04 多头拆分、Ch06 因果 LM 和 Ch08 生成。</div>
   <p class="system-role"><strong>系统位置：</strong>本章是 Transformer 的计算核心：把每个 token 的表示变成一次可微检索。它向前依赖 Ch02 的向量和位置，向后支撑多头压缩、GPT 因果训练、生成可见性和长上下文服务成本。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第3章知识脑图：学习本章前需要懂矩阵乘法、softmax 和 mask，本章会学 self-attention，学完后可以继续读 FlashAttention 和 sparse attention">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-03" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第3章 Attention</tspan><tspan class="dep-sub" x="430" dy="22">可微检索与可见性</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：矩阵概率</tspan><tspan class="dep-sub" x="129" dy="18">matmul / softmax</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：可见性</tspan><tspan class="dep-sub" x="129" dy="18">mask / broadcasting</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：高效注意力</tspan><tspan class="dep-sub" x="731" dy="18">FlashAttention</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：长序列</tspan><tspan class="dep-sub" x="731" dy="18">Longformer / linear attention</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：QK score -> mask -> softmax -> weighted value</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>Q/K/V 语义</td><td>把 query 看成当前 token 的问题，key 看成可检索索引，value 看成被加权搬运的信息。</td><td><strong>材料：</strong>Transformer cross-attention、retrieval attention、attention sink 分析。<br><strong>知识点：</strong>head specialization、可解释性、检索式注意力。</td></tr>
+        <tr><td>softmax 概率</td><td>强调每一行 attention weight 归一化，温度 scale 会改变熵和梯度。</td><td><strong>材料：</strong>FlashAttention / FlashAttention-2。<br><strong>知识点：</strong>online softmax、IO-aware attention、低精度数值稳定性。</td></tr>
+        <tr><td>causal 与 padding mask</td><td>区分“不能看未来”和“不能看 padding”，并解释两者在训练和推理中的来源不同。</td><td><strong>材料：</strong>packed sequence、sliding-window attention、block sparse attention。<br><strong>知识点：</strong>mask 组合、prefix LM 可见性、长序列训练。</td></tr>
+        <tr><td>复杂度账本</td><td>把 score 矩阵写成 <code>[B,H,T,T]</code>，直接连接显存、长上下文和服务成本。</td><td><strong>材料：</strong>Longformer、Performer、linear attention、Mamba/SSM 综述。<br><strong>知识点：</strong>稀疏注意力、线性注意力、hybrid architecture。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经把 attention 的概率、mask、shape 和复杂度讲清楚；如果继续深入，可读 FlashAttention 的 IO-aware 视角和长序列稀疏注意力，但这些属于性能扩展，不影响本章主线理解。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

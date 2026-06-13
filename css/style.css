@@ -694,6 +694,24 @@ td{color:var(--text-secondary)}
   color:var(--text-secondary);font-size:.86rem;line-height:1.7
 }
 .system-role strong{color:var(--accent);font-weight:700}
+.foundation-map{margin-top:18px}
+.foundation-map h4{margin-top:0}
+.foundation-graph{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px;margin:10px 0 14px;
+  overflow:hidden
+}
+.foundation-graph svg{
+  display:block;width:100%;max-width:860px;height:auto;margin:0 auto;
+  font-family:var(--font-sans)
+}
+.foundation-graph .dep-node{fill:var(--surface);stroke:var(--border-strong);stroke-width:1.2}
+.foundation-graph .dep-node-core{fill:var(--accent-light);stroke:var(--accent);stroke-width:1.4}
+.foundation-graph .dep-line{stroke:var(--accent);stroke-width:1.6;fill:none;opacity:.72}
+.foundation-graph .dep-title{fill:var(--text);font-size:14px;font-weight:700}
+.foundation-graph .dep-sub{fill:var(--text-secondary);font-size:11px}
+.foundation-table table{font-size:.82rem}
+.foundation-table td{vertical-align:top;line-height:1.62}
 
 /* ---- Course index ---- */
 .course-index{

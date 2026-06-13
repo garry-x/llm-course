@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>序列建模、teacher forcing、encoder/decoder 可见性、结构化预测、BLEU/ROUGE/EM/F1、LLM-as-judge 和置信区间。<br><strong>本章内化：</strong>RNN、seq2seq、BERT、CRF、span QA 和评测指标会作为工程选型工具嵌入本章，而不是独立怀旧专题：它们帮助判断任务该用开放生成、检索排序、抽取、分类还是结构化解码。<br><strong>验收信号：</strong>你能把一个 NLP/LLM 任务映射到合适模型族、解码方式和指标，并说明传统指标与现代 LLM 评测各自的适用边界。</div>
   <p class="system-role"><strong>系统位置：</strong>本章不是历史补课，而是给现代 LLM 工程补齐任务边界和评测语言。很多生产问题并不适合自由生成；理解 encoder-only、结构化预测和传统指标，才能判断何时用 LLM、何时用更小更稳的模型族。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第11章知识脑图：学习本章前需要懂序列建模、可见性、结构化输出和指标，本章会学 NLP 任务边界与评测，学完后可以继续读 LLM-as-judge 和可靠评测">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-11" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第11章 NLP Tasks</tspan><tspan class="dep-sub" x="430" dy="22">任务边界与评测</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：模型可见性</tspan><tspan class="dep-sub" x="129" dy="18">encoder / decoder / MLM</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：评测基础</tspan><tspan class="dep-sub" x="129" dy="18">F1 / EM / judge</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：结构任务</tspan><tspan class="dep-sub" x="731" dy="18">CRF / span QA / rerank</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：可靠评测</tspan><tspan class="dep-sub" x="731" dy="18">LLM-as-judge / CI</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：task type -> model family -> output space -> metric</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>可见性</td><td>比较 RNN、encoder、decoder、encoder-decoder、MLM 与 causal LM 的输入输出可见范围。</td><td><strong>材料：</strong>BERT、T5、encoder-only reranker、causal LM pipeline。<br><strong>知识点：</strong>任务选型、可见性约束、hybrid NLP pipeline。</td></tr>
+        <tr><td>结构化输出空间</td><td>把 tags、spans、arcs、JSON schema 和 constrained decoding 作为输出空间设计问题。</td><td><strong>材料：</strong>CRF、span QA、structured outputs、grammar decoding。<br><strong>知识点：</strong>schema-based evaluation、constrained decoding、结构化抽取。</td></tr>
+        <tr><td>指标定义</td><td>区分 BLEU、ROUGE、F1、EM、UAS/LAS、human eval 和 LLM-as-judge 的适用边界。</td><td><strong>材料：</strong>MT/Summarization/QA/NLI benchmark、LLM-as-judge 指南。<br><strong>知识点：</strong>rubric design、pairwise eval、judge calibration。</td></tr>
+        <tr><td>不确定性与污染</td><td>要求置信区间、bootstrap、prompt 设置、样本切片和 contamination 检查。</td><td><strong>材料：</strong>bootstrap CI、benchmark contamination 研究、eval harness。<br><strong>知识点：</strong>slice-based evaluation、置信区间、评测复现。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经把传统 NLP 模型族、结构化预测和现代 LLM 评测放回工程选型语境；后续扩展应集中在 LLM-as-judge 校准、数据污染检测和面向业务切片的可靠评测，而不是增加历史模型清单。</p>
+  </div>
 </section>
 
 <section class="card" id="s11-1">

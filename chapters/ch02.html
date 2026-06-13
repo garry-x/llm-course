@@ -45,6 +45,41 @@
   </ul>
   <div class="dependency-note"><strong>先修能力：</strong>矩阵查表、向量点积、sin/cos 周期、二维旋转和张量 shape 追踪。<br><strong>本章内化：</strong>one-hot 乘 embedding 矩阵会在 2.1 被改写成查表；点积和旋转矩阵会在 RoPE 推导里证明“注意力分数只依赖相对位置”；shape 纪律会贯穿 token embedding、position ids、batch/seq 维度和外推实验。<br><strong>验收信号：</strong>你能从 <code>[B,T]</code> 追到 <code>[B,T,D]</code>，并解释位置编码 bug 为什么会影响 Ch03 attention score 和 Ch10 prefix cache。</div>
   <p class="system-role"><strong>系统位置：</strong>本章把离散 token 接到连续向量空间，并给每个位置可计算的几何语义。它承接 Ch01 的 token ID，向后决定 Ch03 attention 的相似度计算、Ch08 长上下文生成和 Ch10 prefix cache 的位置一致性。</p>
+  <div class="foundation-map">
+    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第2章知识脑图：学习本章前需要懂查表、点积和旋转，本章会学 embedding 与位置编码，学完后可以继续读 RoPE scaling 和长上下文">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-02" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第2章 Embedding</tspan><tspan class="dep-sub" x="430" dy="22">token id -> vector</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：向量基础</tspan><tspan class="dep-sub" x="129" dy="18">one-hot / dot product</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：位置几何</tspan><tspan class="dep-sub" x="129" dy="18">sin/cos / rotation / shape</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：位置编码</tspan><tspan class="dep-sub" x="731" dy="18">RoPE / ALiBi</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：长上下文</tspan><tspan class="dep-sub" x="731" dy="18">YARN / LongRoPE</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：[B,T] -> [B,T,D] -> position-aware representation</tspan></text>
+      </svg>
+    </div>
+    <div class="table-wrap foundation-table">
+      <table>
+        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>one-hot 与查表</td><td>把 <code>input_ids [B,T]</code> 解释成从 <code>E [V,D]</code> 中选择行，而不是把 one-hot 真正 materialize。</td><td><strong>材料：</strong>Hugging Face token embedding resize、GPT weight tying。<br><strong>知识点：</strong>embedding tying、新增 token 初始化、vocab resize。</td></tr>
+        <tr><td>向量点积与相似度</td><td>用点积、范数和角度解释相似 token 表示为什么会在注意力与 LM head 中复用。</td><td><strong>材料：</strong>logit lens、representation probing 文章。<br><strong>知识点：</strong>embedding geometry、cosine/dot-product 差异、表示可解释性。</td></tr>
+        <tr><td>位置函数</td><td>用 sinusoidal 和 RoPE 说明“顺序”如何进入向量空间，同时不改变 token identity。</td><td><strong>材料：</strong>RoPE、ALiBi、YARN、LongRoPE。<br><strong>知识点：</strong>位置外推、RoPE scaling、long-context benchmark。</td></tr>
+        <tr><td>shape 纪律</td><td>贯穿 <code>[B,T,D]</code>、position ids、RoPE 成对通道和 batch broadcasting。</td><td><strong>材料：</strong>tensor parallel embedding、prefix cache 实现说明。<br><strong>知识点：</strong>embedding shard、position ids 重建、cache 位置一致性。</td></tr>
+      </table>
+    </div>
+    <p><strong>本章覆盖情况：</strong>本章已经覆盖 one-hot 查表、位置函数、RoPE 几何和 shape 追踪；为支撑长上下文工程，后续可扩展阅读 NTK/YARN/LongRoPE 等位置外推方法，但核心先修已在本章内完成。</p>
+  </div>
 </section>
 
 <!-- ================================================================ -->

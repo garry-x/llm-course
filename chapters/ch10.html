@@ -1793,6 +1793,16 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
       <tr><td>SLO class and priority</td><td>Lets realtime, batch, and background requests use different queues</td><td>Batch jobs consume decode slots needed by interactive sessions</td></tr>
     </table>
   </div>
+  <p>Recent production-oriented systems make the same lesson concrete: scaling from one engine replica to many replicas can destroy the prefix-cache locality that made the single replica fast. A standard round-robin or least-connections load balancer may scatter related prompts across workers; each worker then recomputes the same system prompt, tool schema, RAG template, or conversation prefix. A routing report should therefore compare routing policies, not only engine kernels.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Routing Policy</th><th>Best For</th><th>What It Misses</th><th>Must Report</th></tr>
+      <tr><td>Round-robin / least-loaded</td><td>Stateless short prompts with little prefix reuse</td><td>Cache locality, prompt length skew, tenant-specific SLOs</td><td>queue time, worker utilization, cache hit rate baseline</td></tr>
+      <tr><td>Session-aware routing</td><td>Multi-turn conversations where the same user returns repeatedly</td><td>Shared prefixes across users, such as common system prompts or enterprise templates</td><td>session hit rate, per-session active KV, isolation policy</td></tr>
+      <tr><td>Prefix-cache-aware routing</td><td>Repeated prompts, agent templates, RAG scaffolds, and batch workloads with shared prefixes</td><td>Load imbalance if one hot prefix attracts too much traffic</td><td>prefix hit rate, recomputed tokens avoided, TTFT delta, worker skew</td></tr>
+      <tr><td>Load + cache hybrid routing</td><td>High-concurrency production traffic with both cache reuse and SLO pressure</td><td>Incorrect latency prediction under sudden long-context or tool-heavy requests</td><td>predicted vs. actual latency, cache benefit, SLO breach rate, fallback rate</td></tr>
+    </table>
+  </div>
 
   <h4>Cache Hierarchy Is a Cost Model, Not Just a Storage Feature</h4>
   <p>Multi-tier KV cache is attractive because GPU memory is scarce and expensive, while CPU memory or disk can hold larger working sets. But every tier adds read latency, transfer bandwidth limits, eviction decisions, and correctness boundaries. Use a cache tier only when the hit pattern and reuse value justify the transfer. A long system prompt reused across thousands of requests is a good candidate; a one-off private document may not be worth offloading unless it belongs to a multi-turn session with clear privacy controls.</p>

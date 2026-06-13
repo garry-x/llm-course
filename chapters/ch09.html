@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 9: Fine-tuning and Alignment</h2>
   <p class="subtitle">SFT, LoRA, DPO, and GRPO — Turning a Pretrained Model into a Useful Assistant</p>
-  <div class="reading-time">⏱ Estimated Reading: 170 minutes · 22 sections · 8 programming exercises · 5 conceptual exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 180 minutes · 27 sections · 8 programming exercises · 5 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -36,11 +36,11 @@
   <ul>
     <li><strong>Prerequisites:</strong> Chapter 7 training loop, Chapter 8 generation, and log probability.</li>
     <li><strong>Learning Goals:</strong> Distinguish between pre-training, SFT, PEFT, preference optimization, and reinforcement learning alignment, and derive the loss signals for SFT mask, LoRA, DPO, and GRPO.</li>
-    <li><strong>Chapter Output:</strong> Minimal implementations of SFT/LoRA/DPO/GRPO/RLVR and a map of applicable scenarios.</li>
+    <li><strong>Chapter Output:</strong> Minimal implementations of SFT/LoRA/DPO/GRPO/RLVR, an agentic RL rollout map, and a map of applicable scenarios.</li>
     <li><strong>Completion Criteria:</strong> You can determine whether a requirement should use SFT, LoRA, DPO, or RL-based methods.</li>
     <li><strong>Practice Artifacts:</strong> Build masked SFT, SFT chat template/mask/packing diagnostics, LoRA parameter statistics, post-training data audit, DPO/GRPO toy experiments, RLVR grader reliability reports, preference data error analysis, and safety risk explanations. Optional practice files are available at <a href="../assignments/ch09_alignment/">assignments/ch09_alignment/</a>.</li>
   </ul>
-  <div class="dependency-note"><strong>Prerequisite Skills:</strong> log probability, sequence loss, reference model, KL, preference data statistics, reward signal, and evaluation slices.<br><strong>Internalization for this Chapter:</strong> SFT, LoRA, DPO, GRPO, RLVR/RFT will all be reduced to five things: "data format, objective function, constraint term, sampling assumption, and evaluation slice"; the post-training data audit checks coverage, leakage, length bias, and safety slices before the objective function, rather than opening a separate remedial path.<br><strong>Validation Signal:</strong> You can determine whether an alignment experiment optimized target behavior, reward hacking, format bias, or evaluation leakage, and report quality changes alongside Ch08 generation cost and Ch10 service safety boundaries.</div>
+  <div class="dependency-note"><strong>Prerequisite Skills:</strong> log probability, sequence loss, reference model, KL, preference data statistics, reward signal, tool-call state, and evaluation slices.<br><strong>Internalization for this Chapter:</strong> SFT, LoRA, DPO, GRPO, RLVR/RFT, and agentic RL will all be reduced to five things: "data format, objective function, constraint term, sampling assumption, and evaluation slice"; the post-training data audit checks coverage, leakage, length bias, tool-state validity, and safety slices before the objective function, rather than opening a separate remedial path.<br><strong>Validation Signal:</strong> You can determine whether an alignment experiment optimized target behavior, reward hacking, format bias, tool shortcut, or evaluation leakage, and report quality changes alongside Ch08 generation cost and Ch10 service safety boundaries.</div>
   <p class="system-role"><strong>Where This Chapter Fits:</strong> This chapter transforms the Ch07 training loop and Ch08 generation behavior into a post-training system oriented toward tasks, preferences, safety, and reasoning ability. Synthetic data, distillation, rejection sampling, DPO/GRPO, and RLVR must all be traced back to data source, objective function, evaluation slice, and service cost, rather than being stacked as separate tricks.</p>
   <div class="foundation-map">
     <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
@@ -1033,6 +1033,94 @@ advantages ≈
   <div class="info-box key"><span class="icon">🔑</span><div><strong>System Judgment:</strong> For advanced post-training, "RL works" is not proven by a reward curve. The proof requires a system ledger: rollout freshness, weight-sync correctness, reward integrity, token cost, throughput, checkpoint recovery, and held-out behavior must all point to the same conclusion.</div></div>
 </section>
 
+<section class="card" id="s9-8e">
+  <h3>9.8E Agentic RL with Tools and Environments: From One Answer to a Trajectory</h3>
+  <p>Single-turn RLVR treats each completion as an answer. Agentic RL treats the model as a policy inside a partially observable environment: it observes a user task, decides whether to think, answer, call a tool, inspect the result, call another tool, and eventually stop. The training sample is no longer only <code>(prompt, response, reward)</code>; it becomes a trajectory with messages, tool calls, environment observations, intermediate errors, final reward, token logprobs, policy versions, and replay metadata.</p>
+  <p>This distinction matters because tool-use success can improve for the wrong reason. A model may learn to call a search tool too often, exploit a weak simulator, memorize benchmark database IDs, ignore failed tool results, or produce JSON that is syntactically valid but semantically unsafe. Recent tooling such as <a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html" target="_blank">verl Agentic RL</a>, <a href="https://verl.readthedocs.io/en/latest/sglang_multiturn/multiturn.html" target="_blank">verl multi-turn rollout</a>, and <a href="https://arxiv.org/html/2509.01055v1" target="_blank">VerlTool</a> reflects the same engineering direction: agent training needs asynchronous rollout, multi-turn tool calls, reward services, tracing, and a standardized trajectory interface rather than a local <code>model.generate()</code> loop.</p>
+
+  <div class="foundation-graph" role="img" aria-label="Agentic RL trajectory from task through tool calls environment observations reward and training update">
+    <svg viewBox="0 0 980 410">
+      <defs>
+        <marker id="agent-rl-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .ag-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .ag-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .ag-env{fill:rgba(16,185,129,.10);stroke:var(--success);stroke-width:2}
+        .ag-risk{fill:rgba(239,68,68,.10);stroke:#ef4444;stroke-width:1.8}
+        .ag-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#agent-rl-arrow-09)}
+        .ag-dash{fill:none;stroke:var(--text-secondary);stroke-width:1.6;stroke-dasharray:5 4;marker-end:url(#agent-rl-arrow-09)}
+        .ag-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .ag-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="ag-node" x="34" y="72" width="126" height="70" rx="10"/>
+      <text text-anchor="middle" x="97" y="100"><tspan class="ag-title">Task State</tspan><tspan class="ag-sub" x="97" dy="18">user, memory</tspan></text>
+      <path class="ag-line" d="M160 107 H220"/>
+      <rect class="ag-core" x="220" y="72" width="140" height="70" rx="10"/>
+      <text text-anchor="middle" x="290" y="100"><tspan class="ag-title">Policy Step</tspan><tspan class="ag-sub" x="290" dy="18">answer or tool call</tspan></text>
+      <path class="ag-line" d="M360 107 H420"/>
+      <rect class="ag-env" x="420" y="72" width="150" height="70" rx="10"/>
+      <text text-anchor="middle" x="495" y="100"><tspan class="ag-title">Environment</tspan><tspan class="ag-sub" x="495" dy="18">tool, DB, browser</tspan></text>
+      <path class="ag-line" d="M570 107 H630"/>
+      <rect class="ag-node" x="630" y="72" width="138" height="70" rx="10"/>
+      <text text-anchor="middle" x="699" y="100"><tspan class="ag-title">Observation</tspan><tspan class="ag-sub" x="699" dy="18">result, error, cost</tspan></text>
+      <path class="ag-line" d="M768 107 H828"/>
+      <rect class="ag-core" x="828" y="72" width="120" height="70" rx="10"/>
+      <text text-anchor="middle" x="888" y="100"><tspan class="ag-title">Stop / Act</tspan><tspan class="ag-sub" x="888" dy="18">final response</tspan></text>
+      <path class="ag-line" d="M699 142 C680 188 356 188 290 142"/>
+      <text text-anchor="middle" x="496" y="205"><tspan class="ag-sub">multi-turn loop: the next action conditions on tool observations and previous messages</tspan></text>
+
+      <rect class="ag-env" x="202" y="262" width="156" height="78" rx="10"/>
+      <text text-anchor="middle" x="280" y="290"><tspan class="ag-title">Reward Service</tspan><tspan class="ag-sub" x="280" dy="19">tests, judge, rubric</tspan><tspan class="ag-sub" x="280" dy="16">tool outcome</tspan></text>
+      <rect class="ag-core" x="412" y="262" width="156" height="78" rx="10"/>
+      <text text-anchor="middle" x="490" y="290"><tspan class="ag-title">Trajectory Log</tspan><tspan class="ag-sub" x="490" dy="19">tokens, logprobs</tspan><tspan class="ag-sub" x="490" dy="16">versions, latency</tspan></text>
+      <rect class="ag-core" x="622" y="262" width="156" height="78" rx="10"/>
+      <text text-anchor="middle" x="700" y="290"><tspan class="ag-title">Policy Update</tspan><tspan class="ag-sub" x="700" dy="19">GRPO / PPO</tspan><tspan class="ag-sub" x="700" dy="16">KL and clipping</tspan></text>
+      <path class="ag-dash" d="M888 142 C820 226 364 226 280 262"/>
+      <path class="ag-line" d="M358 301 H412"/>
+      <path class="ag-line" d="M568 301 H622"/>
+
+      <rect class="ag-risk" x="58" y="260" width="104" height="78" rx="10"/>
+      <text text-anchor="middle" x="110" y="288"><tspan class="ag-title">Risks</tspan><tspan class="ag-sub" x="110" dy="19">shortcut</tspan><tspan class="ag-sub" x="110" dy="16">leakage</tspan></text>
+      <rect class="ag-risk" x="820" y="260" width="118" height="78" rx="10"/>
+      <text text-anchor="middle" x="879" y="288"><tspan class="ag-title">Release</tspan><tspan class="ag-sub" x="879" dy="19">SLO, safety</tspan><tspan class="ag-sub" x="879" dy="16">rollback</tspan></text>
+      <path class="ag-line" d="M778 301 H820"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">Figure 9-6: Agentic RL trains over trajectories, not isolated answers. The reward must account for final task success, tool behavior, environment validity, latency, and safety.</p>
+
+  <h4>1. What changes when tools enter the RL loop</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Dimension</th><th>Single-Turn RLVR</th><th>Agentic RL with Tools</th><th>Engineering Consequence</th></tr>
+      <tr><td>Training unit</td><td>Prompt, completion, final reward</td><td>Trajectory of messages, tool calls, observations, errors, and final answer</td><td>Store a full replayable trajectory, not only the final text</td></tr>
+      <tr><td>Action space</td><td>Next tokens until answer</td><td>Next tokens plus structured tool calls, stop decisions, and sometimes environment commands</td><td>Validate tool schemas and preserve token-level logprobs for policy updates</td></tr>
+      <tr><td>Reward</td><td>Exact answer, unit tests, grader score</td><td>Final success, tool outcome, cost, invalid-call penalty, safety constraints</td><td>Separate final reward from process penalties so the model does not win through unsafe shortcuts</td></tr>
+      <tr><td>Rollout bottleneck</td><td>Model generation throughput</td><td>Model generation, tool latency, external environment variance, and long-tail tasks</td><td>Use asynchronous rollout, load balancing, timeouts, and trace sampling</td></tr>
+      <tr><td>Failure analysis</td><td>Wrong answer, format error, reward hacking</td><td>Wrong tool, stale observation, hidden simulator leak, permission violation, repeated calls</td><td>Classify failures by decision step and environment state, not just final answer</td></tr>
+    </table>
+  </div>
+
+  <h4>2. Trajectory fields that must be logged</h4>
+  <p>An agentic RL run is hard to debug unless every sampled trajectory can be replayed. The minimum ledger should include: prompt id, environment id and version, policy version, reference version, random seed, message history, generated tokens, token logprobs, tool call JSON, tool response, tool latency, invalid-call flag, safety-filter flag, final answer, reward components, total tokens, wall-clock time, sample age, and trainer step that consumed the trajectory. OpenAI's <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">reinforcement fine-tuning</a> workflow similarly treats grader definition, prompt dataset, validation split, checkpoint monitoring, and deployment decision as a single training system rather than a loss function in isolation.</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Reward Component</th><th>Example</th><th>Failure It Catches</th><th>Metric</th></tr>
+      <tr><td>Final task success</td><td>Correct booking change, valid SQL result, passing code tests</td><td>The agent uses tools but fails the user goal</td><td>success rate, pass@k, held-out win rate</td></tr>
+      <tr><td>Tool-call validity</td><td>Schema-valid arguments, allowed tool, correct tenant or resource id</td><td>Invalid JSON, unauthorized API call, wrong resource</td><td>invalid-call rate, permission violation rate</td></tr>
+      <tr><td>Observation use</td><td>Final answer cites or uses actual tool output</td><td>The model ignores tool failures or hallucinates results</td><td>observation-consistency rate, unsupported-claim rate</td></tr>
+      <tr><td>Cost and latency</td><td>Penalty for unnecessary calls or excessive reasoning tokens</td><td>Reward improves only by calling every tool repeatedly</td><td>calls per task, token cost, p95 wall-clock time</td></tr>
+      <tr><td>Safety and rollback</td><td>Block dangerous side effects unless confirmed</td><td>The agent optimizes task success by violating policy boundaries</td><td>unsafe-action rate, confirmed-action precision</td></tr>
+    </table>
+  </div>
+
+  <h4>3. Evaluation must be trajectory-aware</h4>
+  <p>For agentic RL, a good evaluation report answers more than "did the final answer pass?" It also asks whether the model chose the right tool, handled tool errors, respected permissions, avoided unnecessary calls, remained robust under alternate environment seeds, and preserved general assistant behavior outside the trained environment. This is why benchmarks and systems around tool-use RL increasingly emphasize multi-turn tasks, real or simulated tools, browser/search/database/code environments, trace inspection, and out-of-distribution environment versions.</p>
+  <p>The practical release rule is conservative: do not promote an agentic RL checkpoint unless the held-out success gain remains after controlling for tool-call count, reasoning token budget, simulator version, and prompt template. Otherwise the model may have learned the environment harness rather than the underlying skill.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Takeaway:</strong> Agentic RL turns post-training into environment engineering. The model policy, tool schema, simulator, reward service, trajectory ledger, and deployment permissions must be evaluated together, or the reward curve cannot be trusted.</div></div>
+</section>
+
 <!-- ================================================================ -->
 <!-- Programming Exercise 4: GRPO Advantage -->
 <!-- ================================================================ -->
@@ -1607,6 +1695,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>Alignment Evaluation Protocol</strong> — Simultaneously assess helpfulness, honesty, harmlessness, over-refusal, and capability retention</li>
     <li>✅ <strong>Programming Exercise 6: LoRA Merge Inference</strong> — Adapter loading and merging</li>
     <li>✅ <strong>RLVR / RFT Grader Reliability</strong> — Validate reward signal, cost, and reward hacking risk</li>
+    <li>✅ <strong>Agentic RL with Tools and Environments</strong> — Train and evaluate multi-turn tool-use trajectories with replayable logs, reward components, and serving constraints</li>
     <li>✅ <strong>On-policy distillation / rejection sampling + adjustable inference budget</strong> — Relationship between training distribution, teacher signal, filtering evidence, and test-time compute</li>
     <li>✅ <strong>Alignment Tax</strong> — SS/OS evaluation and mitigation strategies</li>
   </ul>
@@ -1616,6 +1705,8 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <a href="https://arxiv.org/abs/2305.18290" target="_blank">DPO — Rafailov et al. (2023)</a> ·
     <a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1 — GRPO/RL Reasoning</a> ·
     <a href="https://www.nature.com/articles/s41586-025-09422-z" target="_blank">DeepSeek-R1 — Nature 2025</a> ·
+    <a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html" target="_blank">verl Agentic RL</a> ·
+    <a href="https://arxiv.org/html/2509.01055v1" target="_blank">VerlTool — Agentic RL with Tool Use</a> ·
     <a href="https://arxiv.org/abs/2305.14314" target="_blank">QLoRA — Dettmers et al. (2023)</a></div></div>
 </section>
 

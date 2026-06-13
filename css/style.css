@@ -88,11 +88,12 @@ body{
 .sidebar-header h1 a:hover{color:#fff}
 .sidebar-header p{font-size:.72rem;margin-top:3px;opacity:.5}
 
-/* nav links — 46px height for touch */
+/* nav links */
 .sidebar-nav{flex:1;padding:8px 0}
 .sidebar-nav a{
-  display:flex;align-items:center;gap:10px;min-height:44px;padding:0 18px;
-  color:var(--sidebar-text);text-decoration:none;font-size:.82rem;
+  display:grid;grid-template-columns:28px minmax(0,1fr);align-items:start;column-gap:10px;
+  min-height:44px;padding:8px 16px 8px 17px;color:var(--sidebar-text);
+  text-decoration:none;font-size:.8rem;line-height:1.38;
   transition:all var(--transition);border-left:3px solid transparent;
   font-family:var(--font-body)
 }
@@ -103,8 +104,11 @@ body{
 }
 .sidebar-nav a .ch-num{
   width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:.7rem;font-weight:700;
+  justify-content:center;font-size:.7rem;font-weight:700;align-self:start;margin-top:1px;
   background:rgba(255,255,255,.06);flex-shrink:0
+}
+.sidebar-nav a .ch-label{
+  min-width:0;padding-top:4px;overflow-wrap:break-word;hyphens:auto
 }
 .sidebar-nav a.active .ch-num{background:var(--accent);color:#fff}
 .sidebar-nav a.completed .ch-num{background:var(--success);color:#fff}
@@ -435,9 +439,9 @@ td{color:var(--text-secondary)}
     width:56px;min-width:56px;transform:translateX(0)
   }
   .sidebar-header h1,.sidebar-header p,
-  .sidebar-nav a span:not(.ch-num),.sidebar-footer .theme-toggle span{display:none}
-  .sidebar-nav a{gap:0;justify-content:center;padding:0;min-height:48px}
-  .sidebar-nav a .ch-num{width:32px;height:32px;font-size:.75rem}
+  .sidebar-nav a .ch-label,.sidebar-footer .theme-toggle span{display:none}
+  .sidebar-nav a{display:flex;align-items:center;justify-content:center;gap:0;padding:0;min-height:48px}
+  .sidebar-nav a .ch-num{width:32px;height:32px;font-size:.75rem;margin-top:0}
   .sidebar-footer{padding:8px}
   .theme-toggle{justify-content:center;padding:8px;min-height:48px;font-size:1rem}
   .theme-toggle span{display:none}
@@ -448,10 +452,13 @@ td{color:var(--text-secondary)}
   }
   .sidebar:hover .sidebar-header h1,
   .sidebar:hover .sidebar-header p,
-  .sidebar:hover .sidebar-nav a span,
+  .sidebar:hover .sidebar-nav a .ch-label,
   .sidebar:hover .sidebar-footer .theme-toggle span{display:initial}
-  .sidebar:hover .sidebar-nav a{gap:10px;justify-content:flex-start;padding:0 18px}
-  .sidebar:hover .sidebar-nav a .ch-num{width:28px;height:28px}
+  .sidebar:hover .sidebar-nav a{
+    display:grid;grid-template-columns:28px minmax(0,1fr);align-items:start;
+    column-gap:10px;padding:8px 16px 8px 17px
+  }
+  .sidebar:hover .sidebar-nav a .ch-num{width:28px;height:28px;margin-top:1px}
   .sidebar:hover .theme-toggle{justify-content:flex-start;padding:8px 12px}
   .sidebar:hover .theme-toggle span{display:inline}
 
@@ -476,7 +483,11 @@ td{color:var(--text-secondary)}
   .sidebar-header h1,.sidebar-header p,
   .sidebar-footer .theme-toggle span,
   .sidebar-nav a span{display:initial}
-  .sidebar-nav a{gap:10px;justify-content:flex-start;padding:0 18px}
+  .sidebar-nav a{
+    display:grid;grid-template-columns:28px minmax(0,1fr);align-items:start;
+    column-gap:10px;padding:8px 16px 8px 17px
+  }
+  .sidebar-nav a .ch-num{margin-top:1px}
   .theme-toggle{justify-content:flex-start;padding:8px 12px}
   .theme-toggle span{display:inline}
   .menu-toggle{display:flex;align-items:center;justify-content:center}

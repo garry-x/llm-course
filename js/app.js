@@ -51,12 +51,12 @@
     if(!nav) return;
     var html = '<a href="'+homeHref()+'" class="'+(currentCh===0?'active ':'')+'home-link"'+
       (currentCh===0?' aria-current="page"':'')+'>'+
-      '<span class="ch-num">⌂</span> Home</a>';
+      '<span class="ch-num">⌂</span><span class="ch-label">Home</span></a>';
     CHAPTERS.forEach(function(ch){
       var cls = (ch.id===currentCh?'active ':'')+(completed.has(ch.id)?'completed ':'');
       html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'"'+
         (ch.id===currentCh?' aria-current="page"':'')+'>'+
-        '<span class="ch-num">'+ch.id+'</span> '+ch.title+'</a>';
+        '<span class="ch-num">'+ch.id+'</span><span class="ch-label">'+ch.title+'</span></a>';
     });
     nav.innerHTML = html;
   }

@@ -124,7 +124,8 @@ python -c "import torch; print(torch.__version__)"</div>
     <li><strong>Smaller vocabulary</strong> (small V): Fewer parameters, but sequences are longer, increasing computation and inference latency.</li>
   </ul>
 
-  <h4>Why Not Use Words Directly? — Zipf's Law</h4>  <p>Natural language follows Zipf's law: the frequency of the <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>-th most frequent word is proportional to <span class="katex-inline" data-expr="1/k" aria-label="1/k" role="img"></span>. This means about half of all words appear only once—if a "word"-level vocabulary is used, rare words cause severe sparsity issues. Additionally, word-level vocabularies cannot handle out-of-vocabulary (OOV) words.</p>
+  <h4>Why Not Use Words Directly? — Zipf's Law</h4>
+  <p>Natural language follows Zipf's law: the frequency of the <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>-th most frequent word is proportional to <span class="katex-inline" data-expr="1/k" aria-label="1/k" role="img"></span>. This means about half of all words appear only once—if a "word"-level vocabulary is used, rare words cause severe sparsity issues. Additionally, word-level vocabularies cannot handle out-of-vocabulary (OOV) words.</p>
   <p>The insight of Subword Tokenization is: <strong>find an intermediate granularity between "characters" and "words"</strong>. Common words (e.g., "the", "and") are kept as complete tokens, rare words are decomposed into smaller subwords (e.g., "tokenization" → "token" + "ization"), and any OOV word can fall back to the character or even byte level.</p>
 
   <h4>Byte-level Design of BPE</h4>
@@ -136,8 +137,8 @@ python -c "import torch; print(torch.__version__)"</div>
 <!-- 1.4 BPE Algorithm Principle – Compression Perspective -->
 <!-- ================================================================ -->
 <section class="card" id="s1-4">
-  <h3>1.4 The Essence of the BPE Algorithm: Symbol Induction Driven by Data Compression</h3>
-  <p>BPE (Byte Pair Encoding) was proposed by Gage (1994) for general-purpose data compression and introduced to neural machine translation by Sennrich et al. (2016). The key to understanding BPE is: <strong>it is not an NLP-specific method, but a general compression strategy</strong>.</p>
+  <h3>1.4 BPE as Data-Driven Compression: Inducing Symbols from Frequency</h3>
+  <p>BPE (Byte Pair Encoding) was proposed by Gage (1994) for general-purpose data compression and introduced to neural machine translation by Sennrich et al. (2016). The key point is that BPE is not an NLP-specific trick; it is a general compression strategy adapted to text modeling.</p>
 
   <h4>Core Observation: Frequent Patterns = Redundancy</h4>
   <p>In any byte sequence, certain adjacent byte pairs appear repeatedly. For example, in English text, the byte sequence "t" + "h" appears with very high frequency. BPE's strategy is: <strong>merge this high-frequency pair into a new symbol</strong>, thereby shortening the sequence length. Each merge is equivalent to discovering a repeated pattern and abstracting it into a higher-level symbol.</p>
@@ -213,7 +214,7 @@ Vocabulary evolution: 8 → 9 → 10 → 11 symbols</div>
 <!-- ================================================================ -->
 <section class="card" id="s1-5">
   <h3>1.5 Programming Exercise 1: Counting Adjacent Token Pair Frequencies</h3>
-  <p>The first step in BPE training is to obtain the current token sequence and count the occurrences of all adjacent pairs. This is the "eye" of the algorithm, determining what gets merged each time.</p>
+  <p>The first step in BPE training is to obtain the current token sequence and count the occurrences of all adjacent pairs. These statistics determine which pair is merged at each iteration.</p>
 
   <div class="coding-exercise">
     <h4>🖥️ Exercise 1: Implement _get_stats</h4>
@@ -256,7 +257,7 @@ def _get_stats(ids):
 <!-- 1.6 Theory: Why Choose the Most Frequent Pair -->
 <!-- ================================================================ -->
 <section class="card" id="s1-6">
-  <h3>1.6 Deep Dive: The Compression Heuristic of Frequency Selection</h3>
+  <h3>1.6 Detailed Analysis: The Compression Heuristic of Frequency Selection</h3>
   <p>The previous section implemented <code>_get_stats</code>. The next question is: <strong>Why does BPE always merge the most frequent pair?</strong></p>
 
   <h4>Compression Perspective</h4>
@@ -274,7 +275,8 @@ def _get_stats(ids):
   <p>The <strong>Pointwise Mutual Information (PMI)</strong> of two tokens <span class="katex-inline" data-expr="a, b" aria-label="a, b" role="img"></span> is defined as:</p>
   <div class="math-box"><div class="label">Pointwise Mutual Information</div>
     <div class="katex" data-expr="\text{PMI}(a,b) = \log \frac{p(a,b)}{p(a)p(b)}" aria-label="\text{PMI}(a,b) = \log \frac{p(a,b)}{p(a)p(b)}" role="img"></div>
-  </div>  <p>High frequency does not necessarily mean high PMI—for example, "t" + "h" is very common in English, but this is because "t" and "h" are each common individually. A truly "meaningful" combination is a pair whose frequency far exceeds the product of the independent probabilities of its components. Standard BPE implementations use raw frequency directly rather than PMI, which can produce suboptimal merges for high-frequency but weakly correlated pairs (e.g., " " + "t"). This is one of the known limitations of BPE.</p>
+  </div>
+  <p>High frequency does not necessarily mean high PMI—for example, "t" + "h" is very common in English, but this is because "t" and "h" are each common individually. A truly "meaningful" combination is a pair whose frequency far exceeds the product of the independent probabilities of its components. Standard BPE implementations use raw frequency directly rather than PMI, which can produce suboptimal merges for high-frequency but weakly correlated pairs (e.g., " " + "t"). This is one of the known limitations of BPE.</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Improvement Idea:</strong> Some tokenizer training criteria incorporate the marginal benefit or likelihood change of candidate segments into the selection, rather than only looking at raw frequency. WordPiece commonly uses a score related to segment probability to reduce the bias toward high-frequency but weakly correlated combinations; it shares a similar intuition with PMI, but cannot be simply stated as "equivalent to PMI".</div></div>
 </section>
 
@@ -380,7 +382,7 @@ def _merge(ids, pair, new_id):
         </li>
         <li>Each iteration finds the highest frequency pair (using <code>max(stats, key=stats.get)</code>)</li>
         <li>New token ids start from 256 and increment</li>
-        <li>After training, the sequence itself can be discarded—we only need the merges rules</li>
+        <li>After training, the sequence itself can be discarded—we only need the merge rules</li>
       </ul>
       <pre># Expected usage
 text = "low " * 100 + "lower " * 80 + "lowest " * 60
@@ -813,7 +815,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
     <li>✅ <strong>_merge</strong> — Core operation to replace a pair in a sequence</li>
     <li>✅ <strong>train</strong> — Complete BPE training loop, from bytes to target vocabulary</li>
     <li>✅ <strong>encode / decode</strong> — Inference using the trained merges and vocab</li>
-    <li>✅ Understood the <strong>data compression essence</strong> of BPE and the <strong>information-theoretic basis</strong> of frequency selection</li>
+    <li>✅ Understood the <strong>compression view</strong> of BPE and the <strong>information-theoretic basis</strong> of frequency selection</li>
     <li>✅ Can evaluate a tokenizer based on compression rate, reversibility, multilingual cost, vocabulary budget, and special tokens</li>
     <li>✅ Can explain how chat templates, label masks, tool-call markers, and multimodal placeholders form one tokenizer interface contract</li>
     <li>✅ Can explain corpus ratio, Unicode normalization, byte fallback, and fertility metrics in multilingual tokenizer training</li>
@@ -843,8 +845,9 @@ round-trip tests pass for multilingual and tool-call samples</div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">Check Answer</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
-  </div>  <div class="exercise" data-answer="3" data-explain="From an information theory perspective, BPE makes a trade-off between vocabulary size and sequence length. A large vocabulary has many embedding matrix parameters but short sequences (fast inference); a small vocabulary has few parameters but long sequences (slow inference). BPE compromises between the two through subwords.">
-    <h4>Exercise 2: From an information theory perspective, what core contradiction does BPE's "subword" level tokenization solve?</h4>
+  </div>
+  <div class="exercise" data-answer="3" data-explain="From an information theory perspective, BPE makes a trade-off between vocabulary size and sequence length. A large vocabulary has many embedding matrix parameters but short sequences (fast inference); a small vocabulary has few parameters but long sequences (slow inference). BPE compromises between the two through subwords.">
+    <h4>Exercise 2: From an information theory perspective, what engineering trade-off does BPE's subword tokenization address?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q2" value="0"> A. The problem of polysemy</label>
       <label><input type="radio" name="q2" value="1"> B. The problem of grammatical errors</label>
@@ -882,7 +885,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="During encoding, find all pairs in the current sequence that exist in the merges, and select the pair with the highest merge rank (in this chapter's implementation, the one with the smallest new_id, i.e., the pair merged earliest during training). This is a greedy process that repeatedly applies a fixed merge priority, without needing to re-statisticize input frequencies.">
+  <div class="exercise" data-answer="2" data-explain="During encoding, find all pairs in the current sequence that exist in the merges, and select the pair with the highest merge rank (in this chapter's implementation, the one with the smallest new_id, i.e., the pair merged earliest during training). This is a greedy process that repeatedly applies a fixed merge priority, without recomputing input frequencies.">
     <h4>Exercise 5: During encoding, how does BPE determine which pair should be merged next?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q5" value="0"> A. Merge the pair with the highest frequency</label>

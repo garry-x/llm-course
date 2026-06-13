@@ -91,7 +91,7 @@
 <!-- ================================================================ -->
 <section class="card" id="s7-1">
   <h3>7.1 Language Modeling = Maximum Likelihood Estimation (MLE)</h3>
-  <p>The core training objective of large language models is <strong>Next-token Prediction</strong>. But this is not just a "task"—its mathematical essence is <strong>Maximum Likelihood Estimation (MLE)</strong>. Understanding this is key to truly grasping why this loss function is "correct."</p>
+  <p>The core training objective of large language models is <strong>next-token prediction</strong>. More precisely, this task implements <strong>Maximum Likelihood Estimation (MLE)</strong>. Understanding that connection explains why the loss function is the right statistical objective for autoregressive language modeling.</p>
 
   <h4>Autoregressive Decomposition: The Chain Rule</h4>
   <p>Given a token sequence <span class="katex-inline" data-expr="(x_1, x_2, \ldots, x_T)" aria-label="(x_1, x_2, \ldots, x_T)" role="img"></span>, its joint probability can be decomposed via the probability <strong>chain rule</strong> as:</p>
@@ -584,7 +584,8 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
     <div class="katex" data-expr="\frac{\partial L}{\partial z_i}=p_i-\mathbf{1}[i=y]" aria-label="\frac{\partial L}{\partial z_i}=p_i-\mathbf{1}[i=y]" role="img"></div>
   </div>
 
-  <p>This gradient identity is central: the gradient for the correct token is <span class="katex-inline" data-expr="p_y-1" aria-label="p_y-1" role="img"></span>, which is usually negative, so gradient descent increases the correct token's logit. The gradient for an incorrect token is <span class="katex-inline" data-expr="p_i" aria-label="p_i" role="img"></span>; gradient descent decreases that logit, with a magnitude proportional to the probability the model currently assigns to it.</p>  <h4>How Gradients Flow Back to the LM Head and Embedding</h4>
+  <p>This gradient identity is central: the gradient for the correct token is <span class="katex-inline" data-expr="p_y-1" aria-label="p_y-1" role="img"></span>, which is usually negative, so gradient descent increases the correct token's logit. The gradient for an incorrect token is <span class="katex-inline" data-expr="p_i" aria-label="p_i" role="img"></span>; gradient descent decreases that logit, with a magnitude proportional to the probability the model currently assigns to it.</p>
+  <h4>How Gradients Flow Back to the LM Head and Embedding</h4>
   <p>If the logits come from a tied LM head:</p>
   <div class="math-box"><div class="label">LM Head</div>
     <div class="katex" data-expr="z_t = h_t E^\top" aria-label="z_t = h_t E^\top" role="img"></div>
@@ -1357,8 +1358,8 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
 <!-- 7.13 DualPipe -->
 <!-- ================================================================ -->
 <section class="card" id="s7-13">
-  <h3>7.13 DualPipe Pipeline Parallelism—The Art of Eliminating Bubbles</h3>
-  <p><strong>DualPipe</strong> is a pipeline parallelism optimization introduced by DeepSeek-V3, whose core is to solve the <strong>bubble</strong> problem in standard pipeline parallelism.</p>
+  <h3>7.13 DualPipe Pipeline Parallelism—Reducing Pipeline Bubbles</h3>
+  <p><strong>DualPipe</strong> is a pipeline parallelism optimization introduced by DeepSeek-V3. Its goal is to reduce the <strong>bubble</strong> problem in standard pipeline parallelism.</p>
 
   <h4>Problems with Traditional Pipelines</h4>
   <p>In GPipe, all micro-batches complete the forward pass before starting the backward pass. This leads to a large number of idle GPUs at the beginning and end of the pipeline:</p>
@@ -1595,7 +1596,7 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
   </div>
   <p>More frequent checkpoints mean less loss upon failure, but the cost of writing to disk, network, and object storage increases; sparser checkpoints mean faster normal training, but the cost of rerunning after failure is higher. The training engineer's task is to choose an interval where throughput, storage, and failure recovery are all acceptable, not to blindly "save at every step".</p>
 
-  <h4>7. A qualified training run table</h4>
+  <h4>7. A complete training run table</h4>
   <div class="table-wrap">
     <table>
       <tr><th>Stage</th><th>Configuration</th><th>Conditions to Proceed</th><th>Signals to Stop or Revert</th></tr>
@@ -1657,7 +1658,8 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
   <h3>Concept Practice and Consolidation</h3>
 
   <div class="exercise" data-answer="2" data-explain="Cross-entropy loss measures the difference between two probability distributions. For language modeling, the true distribution is one-hot (probability of the correct token is 1), so cross-entropy simplifies to negative log-likelihood—the negative logarithm of the probability the model assigns to the correct token.">
-    <h4>Exercise 1: What is the cross-entropy loss of a language model equivalent to?</h4>    <div class="opts" role="radiogroup">
+    <h4>Exercise 1: What is the cross-entropy loss of a language model equivalent to?</h4>
+    <div class="opts" role="radiogroup">
       <label><input type="radio" name="q71" value="0"> A. Average probability of all tokens predicted by the model</label>
       <label><input type="radio" name="q71" value="1"> B. Entropy of the model output</label>
       <label><input type="radio" name="q71" value="2"> C. Negative log-likelihood (NLL) of the correct token</label>

@@ -202,7 +202,8 @@ v   = [1]</div>
   <h3>11.5A Worked Example: MLM loss, masked-token accuracy, and extractive QA span</h3>
   <p>A common mistake in training and predicting with encoder-only models is conflating "all tokens in the input are visible" with "all positions contribute to the loss". BERT's self-attention can bidirectionally see the entire sentence, but the MLM loss is only computed at masked positions.</p>
 
-  <h4>MLM: Averaging only over masked positions</h4>  <p>Let the input tokens be <code>[CLS] the cat sat [SEP]</code>, and the mask positions be <code>[2, 3]</code>. Then the model input and labels are:</p>
+  <h4>MLM: Averaging only over masked positions</h4>
+  <p>Let the input tokens be <code>[CLS] the cat sat [SEP]</code>, and the mask positions be <code>[2, 3]</code>. Then the model input and labels are:</p>
   <div class="code-block" data-lang="text">
 masked input: [CLS] the [MASK] [MASK] [SEP]
 labels:       None  None cat    sat    None</div>
@@ -323,7 +324,8 @@ labels:       None  None cat    sat    None</div>
       <tr><td>Statistics</td><td>Sample size, repeated runs, confidence intervals, pairwise tests, distribution of error types</td><td>Small-sample win rates fluctuate greatly but are treated as stable conclusions</td></tr>
       <tr><td>Boundaries</td><td>What can and cannot be inferred from this set of results? Is it only applicable to a specific domain, language, length, or load?</td><td>Generalizing results from a single task to general capability or production reliability</td></tr>
     </table>
-  </div>  <h4>LLM-as-judge is not a free human evaluation</h4>
+  </div>
+  <h4>LLM-as-judge Requires Calibration</h4>
   <p>LLM-as-judge can reduce the cost of evaluating open-ended outputs, but it suffers from position bias, length bias, style bias, and model homophily bias. A more robust setup is pairwise blind comparison: hide model names, randomly swap the A/B order, and let the judge decide which response better meets the rubric, recording ties.</p>
   <p>Industrial evaluation also requires a reliability audit before using judge scores. OpenAI's eval guidelines suggest aligning the model grader with human labels before using it for optimization; works like MT-Bench / Chatbot Arena also caution that pairwise judges are affected by position, verbosity, and style biases. Therefore, this course does not permit reporting a single win rate. At least four questions must be answered: whether the same candidate is chosen after swapping the A/B order, whether the judge has an abnormal preference for the first position, whether it has an abnormal preference for longer responses, and whether the agreement rate with a small set of human gold labels is sufficient.</p>
   <div class="code-block" data-lang="python">
@@ -587,7 +589,7 @@ assert audit["overall_pass"]</div>
     <li><strong>Inference Engineering:</strong> Does increasing RAG top-k from 3 to 8 improve pass rate? What is its impact on P95 TTFT, prompt tokens, context packing misses, and cost?</li>
     <li><strong>Serving Engineering:</strong> When concurrency increases from 1 to 8, do P95/P99 latencies still meet the SLO? Is the bottleneck queuing, prefill, decode, retrieval, or post-processing?</li>
   </ul>
-  <p>These questions all have baselines, change items, metrics, and conclusion boundaries. In contrast, "building a chatbot" or "training a small model" is not a qualified technical proposition because it cannot explain what change led to what effect.</p>
+  <p>These questions all have baselines, change items, metrics, and conclusion boundaries. In contrast, "building a chatbot" or "training a small model" is not a well-posed technical proposition because it cannot explain what change led to what effect.</p>
 
   <h4>2. The Conclusion Structure Should Cover Modeling, System, and Evaluation</h4>
   <div class="table-wrap">

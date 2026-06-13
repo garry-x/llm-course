@@ -84,7 +84,7 @@
 <!-- ================================================================ -->
 <section class="card" id="s5-1">
   <h3>5.1 Decoder-Only Architecture Overview — The Transformer Block as the Main Reusable Unit</h3>
-  <p>Many mainstream autoregressive LLMs (such as the language models in the GPT, Llama, and DeepSeek series) adopt a <strong>Decoder-only</strong> architecture: there is no separate encoder; it mainly consists of stacked <strong>Transformer Blocks</strong>. Still, note that encoder-only, encoder-decoder, or hybrid architectures also exist in NLP and multimodal systems; this chapter focuses on the decoder-only route. Each Block contains two core sublayers:</p>
+  <p>Many mainstream autoregressive LLMs (such as the language models in the GPT, Llama, and DeepSeek series) use a <strong>decoder-only</strong> architecture: there is no separate encoder, and the model is mainly a stack of <strong>Transformer blocks</strong>. Encoder-only, encoder-decoder, and hybrid architectures still matter in NLP and multimodal systems; this chapter focuses on the decoder-only route. Each block contains two core sublayers:</p>
   <ul>
     <li><strong>Self-Attention Layer</strong> — Allows tokens to exchange information (completed in Chapter 4)</li>
     <li><strong>Feed-Forward Neural Network (FFN)</strong> — Performs a nonlinear transformation independently for each token</li>
@@ -398,7 +398,7 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
 <!-- ================================================================ -->
 <section class="card" id="s5-5">
   <h3>5.5 Theory: FFN as Key-Value Memory — How Models Store Knowledge</h3>
-  <p>The FFN is more than just a "nonlinear transformation." From an interpretability perspective, Geva et al. (2021) revealed the essence of the FFN: <strong>a large-scale key-value memory</strong>.</p>
+  <p>The FFN is more than just a "nonlinear transformation." From an interpretability perspective, Geva et al. (2021) showed that an FFN can behave like <strong>a large-scale key-value memory</strong>.</p>
 
   <h4>Revisiting the FFN</h4>
   <p>The computation of a standard FFN:</p>
@@ -604,7 +604,8 @@ print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for 
   </div>
   <p>To maintain a similar parameter budget to the 4x FFN, let <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" aria-label="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" role="img"></span>, yielding <span class="katex-inline" data-expr="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" aria-label="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" role="img"></span>. Therefore, 8/3 is not an empirical arbitrary value, but the <strong>balancing result of introducing a gating mechanism under the same parameter budget</strong>. The assignments <code>swiglu_hidden_size_for_param_budget</code> and <code>ffn_parameter_counts</code> require students to recalculate this balance using specific integer dimensions, rather than just memorizing the conclusion.</p>
 
-  <h4>What Gated Multiplication Changes</h4>  <p>In GELU FFN, the output of the intermediate neuron is primarily determined by a single path <span class="katex-inline" data-expr="\phi(W_1x)" aria-label="\phi(W_1x)" role="img"></span>. SwiGLU introduces element-wise multiplication:</p>
+  <h4>What Gated Multiplication Changes</h4>
+  <p>In GELU FFN, the output of the intermediate neuron is primarily determined by a single path <span class="katex-inline" data-expr="\phi(W_1x)" aria-label="\phi(W_1x)" role="img"></span>. SwiGLU introduces element-wise multiplication:</p>
   <div class="math-box"><div class="label">Element-wise gating in SwiGLU</div>
     <div class="katex" data-expr="z_i = \mathrm{SiLU}(w_{1,i}^{\top}x)\cdot (w_{2,i}^{\top}x)" aria-label="z_i = \mathrm{SiLU}(w_{1,i}^{\top}x)\cdot (w_{2,i}^{\top}x)" role="img"></div>
   </div>
@@ -626,8 +627,9 @@ print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for 
 <!-- ================================================================ -->
 <!-- 5.6C Block Resource Estimation -->
 <!-- ================================================================ -->
-<section class="card" id="s5-6c">  <h3>5.6C Parameters, FLOPs, and Activation Memory of a Single Transformer Block</h3>
-  <p>Simply writing <code>TransformerBlock.forward</code> is not enough. In training engineering, one must be able to estimate why a block is expensive: parameters mainly come from projection matrices, FLOPs mainly from matrix multiplications and the quadratic term of attention, and training activation memory stores Q/K/V, FFN intermediate values, and attention scores.</p>
+<section class="card" id="s5-6c">
+  <h3>5.6C Parameters, FLOPs, and Activation Memory of a Single Transformer Block</h3>
+  <p>Writing <code>TransformerBlock.forward</code> is only the first step. Training engineers also need to estimate why a block is expensive: parameters mainly come from projection matrices, FLOPs mainly come from matrix multiplications and the quadratic attention term, and training activation memory stores Q/K/V, FFN intermediate values, and attention scores.</p>
 
   <h4>Parameter Count Approximation</h4>
   <p>For a Pre-Norm block, ignoring bias, the Q/K/V/O projections of MHA are approximately <span class="katex-inline" data-expr="4d_{\text{model}}^2" aria-label="4d_{\text{model}}^2" role="img"></span>. SwiGLU has three matrices, approximately <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}}" aria-label="3d_{\text{model}}d_{\text{ff}}" role="img"></span>. Two RMSNorm layers have only <span class="katex-inline" data-expr="2d_{\text{model}}" aria-label="2d_{\text{model}}" role="img"></span> learnable scaling parameters.</p>
@@ -649,9 +651,9 @@ print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for 
     </table>
   </div>
   <p>Under the same configuration, the main forward FLOPs are approximately <code>3.72B</code>: QKV projection is about <code>0.91B</code>, attention score and value mixing are each about <code>0.05B</code>, output projection is about <code>0.30B</code>, and the three linear layers of SwiGLU are about <code>2.42B</code>. For short sequences with <code>T=128</code>, the FFN is already the dominant computational term; when <code>T</code> increases, the <code>T^2</code> term of attention quickly becomes significant.</p>
-  <p>The main activation memory is approximately <code>4.63 MiB</code>, of which attention scores account for <code>B * H * T^2 * 2 bytes = 0.75 MiB</code>. If half of these activations are checkpointed, the main activations saved during the forward pass can be reduced by about <code>2.31 MiB</code>; the cost is an additional recomputation of about <code>1.86B</code> FLOPs during the backward pass, increasing the simplified training FLOPs from <code>3 * forward</code> to approximately <code>1.17x</code>. This is the essence of activation checkpointing: it does not change the model, but trades extra computation for training memory.</p>
+  <p>The main activation memory is approximately <code>4.63 MiB</code>, of which attention scores account for <code>B * H * T^2 * 2 bytes = 0.75 MiB</code>. If half of these activations are checkpointed, the main activations saved during the forward pass can be reduced by about <code>2.31 MiB</code>; the cost is an additional recomputation of about <code>1.86B</code> FLOPs during the backward pass, increasing the simplified training FLOPs from <code>3 * forward</code> to approximately <code>1.17x</code>. Activation checkpointing does not change the model function; it trades extra computation for lower training memory.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Usage Boundaries:</strong> This is a course-level order-of-magnitude estimate. It does not include kernel fusion, optimizer states, dropout masks, communication, allocator fragmentation, or specific hardware efficiency. Its purpose is to allow students to explain "which term grows quadratically with T, which grows with d_model and d_ff," and why checkpointing trades computation for training memory.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Scope of Estimate:</strong> This is a course-level order-of-magnitude estimate. It does not include kernel fusion, optimizer states, dropout masks, communication, allocator fragmentation, or specific hardware efficiency. Its purpose is to allow students to explain "which term grows quadratically with T, which grows with d_model and d_ff," and why checkpointing trades computation for training memory.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -768,7 +770,7 @@ x = x + dropout(ffn(norm2(x)))</div>  <p>The meaning of this position is: during
   <p>Modern decoder-only LLMs often omit bias in QKV, output projection, and SwiGLU linear layers, and use RMSNorm instead of LayerNorm with beta. This is not a hard theorem, but a set of engineering conventions: reduce parameters and kernel branches, and cooperate with the scale control of Pre-Norm/RMSNorm. If reproducing a specific checkpoint, the bias strategy must be consistent with the original model; otherwise, the parameter count, state_dict keys, and output distribution will all mismatch.</p>
 
   <h4>5. Activation checkpointing is chosen per sublayer</h4>
-  <p>Checkpointing does not have to be a "one-size-fits-all" approach for the entire block. A more reasonable choice depends on which part of the activation is most expensive:</p>
+  <p>Checkpointing does not need to use one setting for the entire block. A more effective choice depends on which activations dominate memory:</p>
   <div class="table-wrap">
     <table>
       <tr><th>Sublayer</th><th>Primary Activations</th><th>When to Prioritize Checkpointing</th><th>Cost</th></tr>

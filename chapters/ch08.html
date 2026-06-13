@@ -113,7 +113,8 @@
 </section>
 
 
-<section class="card" id="s8-2">  <h3>8.2 Why Greedy Decoding Fails — Repetition Traps and Exposure Bias</h3>
+<section class="card" id="s8-2">
+  <h3>8.2 Why Greedy Decoding Fails — Repetition Traps and Exposure Bias</h3>
   <p>Greedy Decoding selects the token with the highest probability at each step: <span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>. It is the simplest strategy, but it has two fundamental flaws.</p>
 
   <h4>Flaw 1: Repetition Loop</h4>
@@ -123,7 +124,7 @@
   <p>During training, the model sees the <strong>true</strong> ground truth token at each step. However, during inference, the model sees the <strong>self-generated</strong> token. The distributions in these two scenarios differ — the conditional distribution during training is <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{true}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{true}})" role="img"></span>, while during inference it is <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{generated}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{generated}})" role="img"></span>. An error at one step gets amplified in subsequent steps; this is <strong>error accumulation</strong>.</p>
 
   <h4>Entropy Control Perspective of the Temperature Parameter</h4>
-  <p>The solution is to introduce <strong>randomness</strong> — sampling from the probability distribution instead of taking the maximum. The temperature parameter <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> controls the degree of this randomness:</p>
+  <p>A common remedy is to introduce <strong>randomness</strong>: sample from the probability distribution instead of always taking the maximum. The temperature parameter <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> controls the degree of this randomness:</p>
   <div class="math-box"><div class="label">Equation 8.2 Temperature Sampling</div>
     <div class="katex" data-expr="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}" aria-label="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}" role="img"></div>
   </div>
@@ -251,13 +252,14 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
 <!-- 8.5 From Temperature to Top-K/Top-P -->
 <!-- ================================================================ -->
 <section class="card" id="s8-5">
-  <h3>8.5 From Temperature to Top-K / Top-P: Truncating the "Boring Tail"</h3>
-  <p>Temperature sampling is good, but it has one problem: when the vocabulary is large (e.g., 50257), the tail of the softmax contains a large number of tokens with extremely low probability. Even with <span class="katex-inline" data-expr="T=0.8" aria-label="T=0.8" role="img"></span>, the model still has a small probability of sampling these "meaningless" tokens, generating an absurd word. Top-K and Top-P are used to truncate this "boring tail".</p>
+  <h3>8.5 From Temperature to Top-K / Top-P: Truncating the Low-Value Tail</h3>
+  <p>Temperature sampling helps, but a large vocabulary still leaves a long softmax tail of extremely low-probability tokens. Even with <span class="katex-inline" data-expr="T=0.8" aria-label="T=0.8" role="img"></span>, the model can still sample low-quality or off-topic tokens. Top-K and Top-P reduce this risk by truncating the low-value tail.</p>
 
   <h4>The Logic of Top-K</h4>
   <p>Keep only the K tokens with the highest probability, re-normalize them, and sample from this set. K is a fixed value (GPT-2 default K=40).</p>
 
-  <h4>Inherent Problem with Top-K</h4>  <p>K is <strong>fixed</strong>. In some contexts, there might only be 3 reasonable choices (K=40 introduces too much noise), while in other contexts, there might be 100 reasonable continuations (K=40 truncates too many possibilities). For example:</p>
+  <h4>Inherent Problem with Top-K</h4>
+  <p>K is <strong>fixed</strong>. In some contexts, there might only be 3 reasonable choices (K=40 introduces too much noise), while in other contexts, there might be 100 reasonable continuations (K=40 truncates too many possibilities). For example:</p>
   <ul>
     <li><strong>"The capital of the United States is ____"</strong> — The distribution is extremely sharp; the probability of "Washington" might be over 90%. With K=40, you still sample from 40 tokens, with a small chance of selecting "New York" (clearly wrong)</li>
     <li><strong>"Write her a poem about ____"</strong> — The distribution is very flat; K=40 might be too restrictive for creativity</li>
@@ -282,7 +284,7 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
       <tr><td>cumulative</td><td>0.634</td><td>0.867</td><td>0.953</td><td>0.985</td><td>0.996</td><td>1.000</td></tr>
     </table>
   </div>
-  <p><code>top-k=3</code> would fixedly retain <code>A,B,C</code>, then re-normalize them to approximately <code>[0.718, 0.264, 0.097]</code>. <code>top-p=0.9</code> would start accumulating from the highest probability until the cumulative probability exceeds 0.9; here <code>A+B=0.867</code> is not enough, adding <code>C</code> brings it to <code>0.953</code>, so the candidate set is also <code>A,B,C</code>. If changed to <code>top-p=0.8</code>, the candidate set would only need <code>A,B</code>.</p>
+  <p><code>top-k=3</code> would always retain <code>A,B,C</code>, then re-normalize them to approximately <code>[0.718, 0.264, 0.097]</code>. <code>top-p=0.9</code> would start accumulating from the highest probability until the cumulative probability exceeds 0.9; here <code>A+B=0.867</code> is not enough, adding <code>C</code> brings it to <code>0.953</code>, so the candidate set is also <code>A,B,C</code>. If changed to <code>top-p=0.8</code>, the candidate set would only need <code>A,B</code>.</p>
   <p>The key difference is not this singleton, but the behavior when the distribution shape changes. If the distribution is very sharp, e.g., <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>, <code>top-p=0.9</code> only retains the highest probability token; if the distribution is flat, e.g., <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>, <code>top-p=0.9</code> needs to retain the first 5 tokens. A fixed <code>top-k</code> does not automatically adjust the candidate set size based on contextual uncertainty.</p>
 </section>
 
@@ -818,7 +820,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
 <!-- ================================================================ -->
 <section class="card" id="s8-8">
   <h3>8.8 DeepSeek MTP – The Theory of Multi-Token Prediction</h3>
-  <p><strong>Multi-Token Prediction (MTP)</strong> is an important technical innovation in DeepSeek-V3. Traditional language models predict only <strong>one</strong> future token at a time, whereas MTP allows the model to predict <strong>multiple</strong> future tokens at once.</p>
+  <p><strong>Multi-Token Prediction (MTP)</strong> is a training and inference technique used in DeepSeek-V3. Traditional language models predict only <strong>one</strong> future token at a time, whereas MTP allows the model to predict <strong>multiple</strong> future tokens at once.</p>
 
   <h4>MTP During Training: Multi-Output Head Architecture</h4>
   <p>A standard language model has only one output head (LM Head), which maps the last hidden state <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> to vocabulary logits to predict <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>. MTP adds <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> additional output heads (MTP Heads), each predicting a future token at a different offset:</p>
@@ -1041,7 +1043,7 @@ report = test_time_compute_budget_report(
     },
 )
 assert report["recommended_strategy"] == "self_consistency_5"</div>
-  <p>The purpose of this budget check is not to replace benchmarks, but to prevent the conclusion of "trading unlimited sampling for scores" from polluting deployment decisions. If best-of-16 has the highest accuracy but exceeds the token and latency budget, a qualified report should state "requires distillation, routing to hard problems, optimizing parallel sampling, or rejecting this strategy", rather than directly using the highest score as the production strategy.</p>
+  <p>The purpose of this budget check is not to replace benchmarks, but to prevent the conclusion of "trading unlimited sampling for scores" from polluting deployment decisions. If best-of-16 has the highest accuracy but exceeds the token and latency budget, a deployment report should state "requires distillation, routing to hard problems, optimizing parallel sampling, or rejecting this strategy", rather than directly using the highest score as the production strategy.</p>
 
   <h4>4. Format of a Qualified Strategy Description</h4>
   <p>A production generation policy should be written in the following form:</p>

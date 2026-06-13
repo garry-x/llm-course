@@ -185,6 +185,21 @@ body[data-ch="0"] .main{max-width:1120px}
 [data-theme="dark"] .katex .mathnormal{color:var(--text)}
 /* KaTeX error fallback */
 .katex .error{color:var(--accent)!important;font-style:italic}
+.math-fallback{
+  font-family:var(--font-mono);
+  font-size:.9em;
+  color:var(--text);
+  background:var(--accent-light);
+  border-radius:4px;
+  padding:0 3px;
+  overflow-wrap:anywhere
+}
+.katex.math-fallback,.katex-block.math-fallback{
+  display:block;
+  padding:8px 10px;
+  margin:6px 0;
+  overflow-x:auto
+}
 
 /* ---- SVG Diagrams ---- */
 .svg-diagram{
@@ -625,20 +640,6 @@ td{color:var(--text-secondary)}
   animation:fadeSlide .25s ease
 }
 @keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-
-/* ---- Card Entrance Animation (homepage) ---- */
-.chapter-item{animation:slideIn .4s ease backwards}
-.chapter-item:nth-child(1){animation-delay:.05s}
-.chapter-item:nth-child(2){animation-delay:.1s}
-.chapter-item:nth-child(3){animation-delay:.15s}
-.chapter-item:nth-child(4){animation-delay:.2s}
-.chapter-item:nth-child(5){animation-delay:.25s}
-.chapter-item:nth-child(6){animation-delay:.3s}
-.chapter-item:nth-child(7){animation-delay:.35s}
-.chapter-item:nth-child(8){animation-delay:.4s}
-.chapter-item:nth-child(9){animation-delay:.45s}
-.chapter-item:nth-child(10){animation-delay:.5s}
-@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
 
 /* ---- System map ---- */
 .system-map{

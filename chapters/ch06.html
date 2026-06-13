@@ -464,7 +464,7 @@ sample 2 labels: [GPT, EOS,  -100, -100]</div>
     </table>
   </div>
 
-  <h4>Why Don't Some Large Models Use It?</h4>
+  <h4>Why Some Large Models Do Not Use It</h4>
   <p>As the proportion of non-embedding parameters increases, the parameter savings from Weight Tying decrease: in models with tens to hundreds of billions of parameters, <span class="katex-inline" data-expr="|V|d_{\text{model}}" aria-label="|V|d_{\text{model}}" role="img"></span> is often no longer the dominant factor in the total parameter count. The benefit of an untied LM Head is that input representations and output classifiers can learn separately, which is suitable for architectures requiring larger output capacity, special vocabulary designs, or multi-modal output interfaces. However, this is not a fixed rule: whether to tie depends on vocabulary size, hidden dimension, total parameter scale, training stability, and the engineering trade-offs of the model family.</p>
 
   <h4>Impact on Backpropagation</h4>
@@ -583,12 +583,12 @@ total_params = count_parameters(model)</div>
     <li><strong>Parameter Sharing Verification:</strong> If tie_weights=True, confirm that <code>lm_head.weight</code> and <code>token_embedding.weight</code> are the same tensor object</li>
   </ul>
 
-  <p>A common cause of training failure is an excessively large initialization standard deviation. GPT-2 uses 0.02, but if 0.1 is mistakenly used, the logits of deep networks may produce NaN. This is because the variance of the residual stream accumulates layer by layer over 12 layers:</p>
+  <p>A common cause of training failure is an excessively large initialization standard deviation. GPT-2 uses 0.02, but if 0.1 is mistakenly used, the logits of deep networks may produce NaN. The reason is that residual-stream variance accumulates layer by layer over 12 layers:</p>
 
   <div class="math-box"><div class="label">Variance Accumulation in Residual Stream</div>
     <div class="katex" data-expr="\text{Var}(x^{(L)}) \approx \text{Var}(x^{(0)}) + L \cdot \text{Var}(f^{(l)}(x^{(l-1)})) + \text{cross-terms}" aria-label="\text{Var}(x^{(L)}) \approx \text{Var}(x^{(0)}) + L \cdot \text{Var}(f^{(l)}(x^{(l-1)})) + \text{cross-terms}" role="img"></div>
   </div>
-  <p>When <span class="katex-inline" data-expr="\text{Var}(f^{(l)})" aria-label="\text{Var}(f^{(l)})" role="img"></span> is too large, the accumulation over <span class="katex-inline" data-expr="L=12" aria-label="L=12" role="img"></span> layers can exceed the representable range of float16. This is also why std=0.02 in <code>_init_weights</code> is not chosen arbitrarily – it comes from the analysis of residual variance in the GPT-2 paper.</p>
+  <p>When <span class="katex-inline" data-expr="\text{Var}(f^{(l)})" aria-label="\text{Var}(f^{(l)})" role="img"></span> is too large, the accumulation over <span class="katex-inline" data-expr="L=12" aria-label="L=12" role="img"></span> layers can exceed the representable range of float16. This is also why <code>std=0.02</code> in <code>_init_weights</code> is not arbitrary: it follows the residual-variance analysis in the GPT-2 paper.</p>
 
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Practical Advice:</strong> Write a <code>test_forward_pass()</code> function as part of your CI. Run it after every model architecture change to catch problems in minutes instead of hours.</div></div>
 </section>
@@ -634,7 +634,8 @@ LM head:             0 if tied, V * d if untied</div>
   <p>When weights are shared, the output layer logits are written as <span class="katex-inline" data-expr="Z=HE^\top" aria-label="Z=HE^\top" role="img"></span>. The cross-entropy gradient first acts on all vocab logits, then propagates back to the hidden states and the embedding matrix:</p>
   <div class="math-box"><div class="label">Tied LM Head Gradient Path</div>
     <div class="katex" data-expr="G=\frac{\partial L}{\partial Z},\qquad \frac{\partial L}{\partial H}=GE,\qquad \frac{\partial L}{\partial E}=G^\top H" aria-label="G=\frac{\partial L}{\partial Z},\qquad \frac{\partial L}{\partial H}=GE,\qquad \frac{\partial L}{\partial E}=G^\top H" role="img"></div>
-  </div>  <p>Therefore, rows not corresponding to target tokens also receive output gradients through the softmax probability. Token rows indexed by the input sequence also receive gradients from the embedding lookup path. Understanding this, weight tying is not just about "saving parameters," but a modeling constraint that forces the input token space and the output classifier to share a geometric structure.</p>
+  </div>
+  <p>Therefore, rows not corresponding to target tokens also receive output gradients through the softmax probability. Token rows indexed by the input sequence also receive gradients from the embedding lookup path. Understanding this, weight tying is not just about "saving parameters," but a modeling constraint that forces the input token space and the output classifier to share a geometric structure.</p>
 
   <h4>4. Causal mask: Inference constraints must hold during training</h4>
   <p>During training, teacher forcing allows the model to see the entire sequence at once; however, each position within the model can still only attend to past and current positions. The causal constraint for dense attention is:</p>
@@ -1055,7 +1056,8 @@ def load_hf_weights_to_model(hf_model, our_model):
   <p>Suppose the router probabilities for 4 tokens across 3 experts are <code>[0.7,0.2,0.1]</code>, <code>[0.6,0.3,0.1]</code>, <code>[0.1,0.8,0.1]</code>, and <code>[0.2,0.2,0.6]</code>, and the top-1 selected expert ids are <code>[0,0,1,2]</code>. The actual assignment proportion <code>load</code> is <code>[0.5,0.25,0.25]</code>; the average router probability is <code>[0.4,0.375,0.225]</code>. The Switch-style auxiliary loss can be written as <code>n_experts * sum_i load_i * prob_i</code>, so for this example it is <code>3 * (0.5*0.4 + 0.25*0.375 + 0.25*0.225) = 1.05</code>.</p>
   <p>The purpose of this loss is not to make each token activate all experts equally, but to penalize batch-level router collapse. Looking only at top-k counts ignores whether the router softmax is already biased towards a few experts; looking only at the average probability ignores whether the actual top-k assignment is already congested. Therefore, the <code>moe_load_balance_loss</code> in the Ch06 assignment returns <code>load_fraction</code>, <code>mean_router_prob</code>, and the loss simultaneously.</p>
 
-  <h4>Capacity, Token Dispatch, and Load Imbalance</h4>  <p>Parameter budget only answers "how many experts are theoretically activated per token," but does not answer "whether a batch can execute smoothly." In practice, the MoE layer needs to dispatch tokens to experts. If each expert has a capacity of <span class="katex-inline" data-expr="C" aria-label="C" role="img"></span> tokens, and expert <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> receives <span class="katex-inline" data-expr="n_i" aria-label="n_i" role="img"></span> tokens, then:</p>
+  <h4>Capacity, Token Dispatch, and Load Imbalance</h4>
+  <p>Parameter budget only answers "how many experts are theoretically activated per token"; it does not answer whether a batch can execute smoothly. In practice, the MoE layer needs to dispatch tokens to experts. If each expert has a capacity of <span class="katex-inline" data-expr="C" aria-label="C" role="img"></span> tokens, and expert <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> receives <span class="katex-inline" data-expr="n_i" aria-label="n_i" role="img"></span> tokens, then:</p>
   <div class="math-box"><div class="label">Expert overflow</div>
     <div class="katex" data-expr="\operatorname{overflow}_i=\max(0,n_i-C),\qquad \operatorname{drop\_rate}=\frac{\sum_i \operatorname{overflow}_i}{B\cdot T\cdot k}" aria-label="\operatorname{overflow}_i=\max(0,n_i-C),\qquad \operatorname{drop\_rate}=\frac{\sum_i \operatorname{overflow}_i}{B\cdot T\cdot k}" role="img"></div>
   </div>

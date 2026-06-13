@@ -101,7 +101,7 @@
     <li><strong>Semantic question:</strong> "it" should refer to the "most plausible" thing — the cat sat on the mat, so it could be "the cat" or "the mat" — this requires a different matching rule</li>
     <li><strong>Positional question:</strong> The noun before "it" is "mat", and further back is "cat" — the model needs to distinguish tokens at position 5 and position 1</li>
   </ul>
-  <p>Single-head attention can only use one <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>-dimensional space to encode all these complex matching rules. <strong>This is insufficient</strong> — it's like asking a single judge to preside over civil, criminal, and administrative cases simultaneously with only one set of criteria.</p>
+  <p>Single-head attention can only use one <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>-dimensional space to encode all these matching rules. That forces syntactic, semantic, and positional evidence into the same similarity function, which is often too restrictive.</p>
 
   <h4>Multi-Head Attention's Solution: Parallel Subspaces</h4>
   <p>The core idea of Multi-Head Attention (MHA) is: split the input <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span>-dimensional space into <span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span> subspaces of dimension <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>, where each head <strong>independently</strong> computes attention in its own subspace, and finally all head outputs are concatenated and fused through the output projection <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span>:</p>
@@ -129,7 +129,7 @@
     <p>Both have the same number of parameters, but MHA produces two attention maps in different projection spaces, then concatenates the two 4-dimensional head outputs back to 8 dimensions and mixes them with <code>W_O</code>. Its representational advantage comes from "multiple learnable similarity functions working in parallel," not from simply adding parameters.</p>
   </div>
   <p>In other words, multi-head attention is not about "getting bigger," but about <strong>reorganizing</strong> the existing parameter budget into multiple smaller subspaces. Each subspace learns a different attention pattern, and the final <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span> is responsible for integrating these scattered pieces of information together.</p>
-  <p>This is a classic embodiment of "<strong>Divide and Conquer</strong>" in deep learning—decomposing a large problem into multiple smaller, more specialized sub-problems solved in parallel.</p>
+  <p>This is a fixed-budget decomposition: instead of adding a larger attention module, the model splits representation space into several smaller subspaces that can specialize in different matching patterns.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Why same parameters but better results?</strong> Each head has independent Q/K/V projections and can learn different similarity functions; the output projection <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span> then recombines these subspace results. MHA's benefit comes from representational decomposition and learnable mixing, not from "more heads, more parameters."</div></div>
 </section>
 <section class="card">
@@ -245,7 +245,7 @@ class MultiHeadAttention(nn.Module):
 
   <h4>Competition and Cooperation Between Heads</h4>
   <p>Interestingly, there is a <strong>competitive relationship</strong> between attention heads. If one head has already captured a certain syntactic pattern, there is no "marginal benefit" for other heads to capture the same pattern. This encourages each head to discover different patterns—similar to "<strong>Negative Correlation Learning</strong>," a classic ensemble learning strategy.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Essence:</strong> The success of multi-head attention stems from "<strong>divide and conquer + differentiated initialization</strong>." The total parameter count remains unchanged, but by splitting a large space into multiple smaller subspaces, each subspace can focus more on specific matching patterns. This is equivalent to using multiple "narrow experts" instead of one "generalist" under a fixed parameter budget.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Mechanism:</strong> Multi-head attention combines subspace decomposition with differentiated initialization. The total parameter count remains unchanged, but splitting a large space into multiple smaller subspaces lets each subspace focus on different matching patterns. It is similar to using several narrow specialists instead of one broad matcher under a fixed parameter budget.</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -359,7 +359,7 @@ print(f"QKV projection parameters are the same: {mha.W_qkv.weight.numel()} == {s
 <section class="card" id="s4-5">
   <h3>4.5 MHA vs MQA vs GQA—The Evolution of KV Cache</h3>
 
-  <h4>The Big Problem During Inference: KV Cache</h4>
+  <h4>The Inference Bottleneck: KV Cache</h4>
   <p>In autoregressive generation, only one new token <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> is generated per step, but it needs to compute attention with <strong>all historical tokens</strong>. If the K and V of all historical tokens were recomputed at every step, the computation would be <span class="katex-inline" data-expr="O(L^2)" aria-label="O(L^2)" role="img"></span>. Therefore, we <strong>cache</strong> the K and V vectors of historical tokens—this is the KV Cache.</p>
   <p>In standard MHA, the size of the KV Cache is:</p>
   <div class="math-box"><div class="label">MHA KV Cache Size (per sequence)</div>
@@ -644,7 +644,7 @@ class GroupedQueryAttention(nn.Module):
   <h4>The Necessity of Decoupled RoPE</h4>
   <p>MLA faces a key problem: the RoPE rotation itself is a <strong>linear orthogonal transformation</strong>, but it depends on the token position; this position-dependent rotation generally cannot be interchanged with the fixed decompression matrix, nor can it be uniformly absorbed into the same Q projection. If RoPE is applied to the decompressed K, the matrix absorption for the content part is no longer directly valid.</p>
   <p>DeepSeek's solution is <strong>decoupled RoPE</strong>: split K into two parts—the content part (via low-rank compression/decompression) and the RoPE part (projected separately, without compression). During inference, only the content part participates in matrix absorption, while the RoPE part computes its dot product contribution separately.</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>Significance of MLA:</strong> In standard MHA, KV Cache accounts for 30-40% of total GPU memory (even higher for long contexts). MLA reduces KV Cache by approximately 93%, making the inference cost of DeepSeek-V2/V3 only about 1/7 that of a similarly sized Llama 3. This is one of the core technological pillars of the "cost-effective" DeepSeek series.</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Why MLA matters:</strong> In standard MHA, KV Cache accounts for 30-40% of total GPU memory (even higher for long contexts). MLA reduces KV Cache by approximately 93%, making the inference cost of DeepSeek-V2/V3 only about 1/7 that of a similarly sized Llama 3. This is one of the core technological pillars behind DeepSeek's cost-efficient model family.</div></div>
 </section>
 
 <!-- ================================================================ -->

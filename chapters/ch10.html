@@ -111,7 +111,8 @@
   <h3>10.2 KV Cache — Avoiding Redundant Computation During Decoding</h3>
   <p>In autoregressive generation, when computing attention at each step, we are repeatedly computing the Key (K) and Value (V) matrices for all previous tokens. The core idea of the <strong>KV Cache</strong> is to cache the K and V from previous steps to avoid redundant computation.</p>
 
-  <h4>Computational Cost Comparison</h4>  <p>Without KV Cache, the input sequence length at step t is t, and the attention computation cost is <span class="katex-inline" data-expr="O(t^2)" aria-label="O(t^2)" role="img"></span>—the cost grows quadratically as the sequence lengthens. With KV Cache, each step only needs to compute the K and V of the new token, reducing the attention computation cost to <span class="katex-inline" data-expr="O(t)" aria-label="O(t)" role="img"></span>:</p>
+  <h4>Computational Cost Comparison</h4>
+  <p>Without KV Cache, the input sequence length at step t is t, and the attention computation cost is <span class="katex-inline" data-expr="O(t^2)" aria-label="O(t^2)" role="img"></span>—the cost grows quadratically as the sequence lengthens. With KV Cache, each step only needs to compute the K and V of the new token, reducing the attention computation cost to <span class="katex-inline" data-expr="O(t)" aria-label="O(t)" role="img"></span>:</p>
   <div class="math-box"><div class="label">Equation 10.1 KV Cache Update</div>
     <div class="katex" data-expr="K_{\text{cache}} = [K_{\text{cache}}; K_{\text{new}}], \quad V_{\text{cache}} = [V_{\text{cache}}; V_{\text{new}}]" aria-label="K_{\text{cache}} = [K_{\text{cache}}; K_{\text{new}}], \quad V_{\text{cache}} = [V_{\text{cache}}; V_{\text{new}}]" role="img"></div>
   </div>
@@ -443,7 +444,7 @@ print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
   <p>The quantization calibration set should not just be a few dozen short English chit-chat samples. Inference engineers should treat the calibration samples as a microcosm of the serving workload: prompt/output length, RAG citations, tool/JSON schema, code/math, Chinese or multilingual, safety refusals, long-context positions, and a small amount of multimodal input should all be covered according to the target product's proportions. GPTQ uses approximate second-order information to control weight quantization error; AWQ protects salient channels based on activation distribution; SmoothQuant migrates the difficulty of activation outliers to the weight side. The common prerequisite for these methods is that the calibration distribution and the online distribution must not be severely misaligned.</p>
 
   <h4>10.6.2 Release Decision: Quantization Gains Must Be Reported Alongside Quality Regression</h4>
-  <p>Don't just write "4-bit saves memory" or "FP8 is faster." A qualified quantization release report should include at least: unquantized baseline, quantization format, group size / scale granularity, calibration set source, engine/kernel version, peak memory, tokens/s, TTFT/TPOT P95, perplexity or fixed task scores, structured output/schema pass rate, RAG citation recall, safety refusal/over-refusal, long-context position recall, and failure examples. If throughput improvement is only seen on short prompts, it cannot be inferred that long-context, RAG, agent tool, or multimodal paths are also safe.</p>
+  <p>Do not write only "4-bit saves memory" or "FP8 is faster." A production-ready quantization release report should include at least: unquantized baseline, quantization format, group size / scale granularity, calibration set source, engine/kernel version, peak memory, tokens/s, TTFT/TPOT P95, perplexity or fixed task scores, structured output/schema pass rate, RAG citation recall, safety refusal/over-refusal, long-context position recall, and failure examples. If throughput improvement is only seen on short prompts, it cannot be inferred that long-context, RAG, agent tool, or multimodal paths are also safe.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> Weight-only quantization does not automatically reduce KV cache; KV cache quantization does not automatically improve throughput for all requests; FP8/FP4 is not just a dtype, but a combination of hardware, scale, kernel, and evaluation. A release decision must put resource gains and task-slice regressions in the same table.</div></div>
 
   <h4>Programming Exercise 3: Implement Symmetric INT8 Quantization</h4>
@@ -519,7 +520,8 @@ print(f"INT8 quantization error: {nrmse(weight, dq_w):.2f}%")
   <h3>10.7 FlashAttention—IO-Aware Attention Acceleration</h3>
   <p><strong>FlashAttention</strong> (Dao et al., 2022) is one of the most important attention acceleration techniques in recent years. It does not change the mathematical result, but significantly reduces the number of GPU HBM accesses through an <strong>IO-aware algorithm</strong>.</p>
 
-  <h4>The Problem with Standard Attention: HBM Bottleneck</h4>  <p>Standard attention writes <span class="katex-inline" data-expr="S = QK^\top \in \mathbb{R}^{L \times L}" aria-label="S = QK^\top \in \mathbb{R}^{L \times L}" role="img"></span> to HBM, reads it for softmax, then writes <span class="katex-inline" data-expr="P = \text{softmax}(S)" aria-label="P = \text{softmax}(S)" role="img"></span> back. This is <span class="katex-inline" data-expr="O(L^2)" aria-label="O(L^2)" role="img"></span> HBM reads and writes—when L=128K, this is about 32GB of HBM traffic (just storing one intermediate matrix).</p>
+  <h4>The Problem with Standard Attention: HBM Bottleneck</h4>
+  <p>Standard attention writes <span class="katex-inline" data-expr="S = QK^\top \in \mathbb{R}^{L \times L}" aria-label="S = QK^\top \in \mathbb{R}^{L \times L}" role="img"></span> to HBM, reads it for softmax, then writes <span class="katex-inline" data-expr="P = \text{softmax}(S)" aria-label="P = \text{softmax}(S)" role="img"></span> back. This is <span class="katex-inline" data-expr="O(L^2)" aria-label="O(L^2)" role="img"></span> HBM reads and writes—when L=128K, this is about 32GB of HBM traffic (just storing one intermediate matrix).</p>
 
   <h4>Three Key Ideas of FlashAttention</h4>
   <ul>
@@ -918,7 +920,7 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
   <h3>10.9B Context Engineering: Managing Context as a Finite Resource</h3>
   <p>Agents, RAG, tool calls, long conversations, and long-document Q&A all pack large amounts of information into the model's context. The core of context engineering is not "writing longer prompts", but deciding which tokens enter the active context for each inference round, which remain in external storage, which are compressed into summaries, which tool results can be cleared, and which evidence must retain citations. Anthropic describes context engineering as extending from prompt engineering to managing the overall state of system instructions, tools, MCP, external data, and message history; this is the same system problem as the RAG, tool protocol, and long-context checks in this chapter.</p>
 
-  <p>Advanced reasoning engineers should view context as a runtime resource with a budget. A larger context window only raises the upper limit, it does not automatically guarantee retrieval quality; irrelevant tool results, duplicate retrieved fragments, overly long historical messages, and uncompressed observations increase prefill costs and may cause the model to lose focus on key facts. A qualified design breaks down "what information the user task needs" into auditable context layers:</p>
+  <p>Advanced reasoning engineers should view context as a runtime resource with a budget. A larger context window only raises the upper limit, it does not automatically guarantee retrieval quality; irrelevant tool results, duplicate retrieved fragments, overly long historical messages, and uncompressed observations increase prefill costs and may cause the model to lose focus on key facts. A sound design breaks down "what information the user task needs" into auditable context layers:</p>
   <div class="table-wrap">
     <table>
       <tr><th>Layer</th><th>What to Include</th><th>Primary Risk</th><th>Check Signal</th></tr>
@@ -1084,7 +1086,7 @@ print(f"Quantization Speedup: {result_cache['ms_per_token'] / result_quant['ms_p
   </table>
 
   <h4>Benchmark Summary: Write Evaluation Results Clearly</h4>
-  <p>A benchmark summary is not a complex algorithm; it is a guard against vague conclusions. A qualified summary should at least include: <code>task</code>, <code>sample_size</code>, <code>baseline</code>, <code>metrics</code>, <code>risks</code>, <code>uncertainty</code>, and <code>conclusion</code>. The point is not the document format, but preventing evaluation conclusions from being misinterpreted outside the data conditions.</p>
+  <p>A benchmark summary is not a complex algorithm; it is a guard against vague conclusions. A usable summary should at least include: <code>task</code>, <code>sample_size</code>, <code>baseline</code>, <code>metrics</code>, <code>risks</code>, <code>uncertainty</code>, and <code>conclusion</code>. The point is not the document format, but preventing evaluation conclusions from being misinterpreted outside the data conditions.</p>
 
   <div class="code-block" data-lang="python">
 summary = build_benchmark_summary(
@@ -1375,7 +1377,7 @@ summary = build_benchmark_summary(
   <div class="math-box"><div class="label">Per-token KV cache</div>
     <div class="katex" data-expr="2 \cdot 32 \cdot 8 \cdot 128 \cdot 2 = 131072\text{ bytes} \approx 128\text{ KiB/token}" aria-label="2 \cdot 32 \cdot 8 \cdot 128 \cdot 2 = 131072\text{ bytes} \approx 128\text{ KiB/token}" role="img"></div>
   </div>
-  <p>If the average active context length per request is <code>6,000</code> tokens, the KV Cache per request is approximately <code>768 MiB</code>. If the service node only has <code>48 GiB</code> of GPU memory available for KV, it can theoretically accommodate at most about <code>64</code> such active requests; considering fragmentation, prefill peaks, temporary buffers, and safety margins, the admission limit might need to be reduced to <code>40-50</code>. This is why high-QPS services cannot be rate-limited solely by tokens/s; they must also be limited by active KV tokens:</p>
+  <p>If the average active context length per request is <code>6,000</code> tokens, the KV Cache per request is approximately <code>768 MiB</code>. If the service node only has <code>48 GiB</code> of GPU memory available for KV, it can theoretically accommodate at most about <code>64</code> such active requests; considering fragmentation, prefill peaks, temporary buffers, and safety margins, the admission limit might need to be reduced to <code>40-50</code>. This is why high-QPS services cannot be rate-limited solely by tokens/s; they also need limits on active KV tokens:</p>
   <ul>
     <li><strong>Rate limiting by request count:</strong> Simple, but cannot distinguish between a 256-token short request and a 128K long-context request.</li>
     <li><strong>Rate limiting by active tokens:</strong> Closer to KV Cache memory pressure, suitable for long-context services.</li>
@@ -1442,7 +1444,7 @@ report = long_context_serving_check_report(
 <!-- ================================================================ -->
 <section class="card" id="s10-13a">
   <h3>10.13A Inference Stress Test Report — From Workload to Bottleneck Attribution</h3>
-  <p>Stress testing an inference service is not simply about producing a <code>tokens/s</code> number. The engineer needs to answer: under the target business load, can the service stably meet the SLO? If not, is the problem prefill, decode, KV Cache, retrieval, queuing, or network streaming output? A qualified inference stress test report should form a closed loop connecting <strong>load assumptions, experimental matrix, layered metrics, capacity calculations, and tuning actions</strong>.</p>
+  <p>Stress testing an inference service is not simply about producing a <code>tokens/s</code> number. The engineer needs to answer: under the target business load, can the service stably meet the SLO? If not, is the problem prefill, decode, KV Cache, retrieval, queuing, or network streaming output? A useful inference stress test report should form a closed loop connecting <strong>load assumptions, experimental matrix, layered metrics, capacity calculations, and tuning actions</strong>.</p>
 
   <h4>Step 1: Describe the Workload as Measurable Distributions</h4>
   <p>Do not summarize all requests with "average 1,000 tokens." The performance of an LLM service is highly dependent on length distributions: the bottleneck for short prompts is usually scheduling and the first token; long-context requests amplify prefill and KV Cache; long-output requests occupy the decode batch for a long time. A useful service report should stratify at least according to the table below:</p>
@@ -1621,7 +1623,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   </div>
 
   <h4>Worked Example: How to Hand Off a LoRA + Quantized Model</h4>
-  <p>Suppose a team trained a LoRA adapter for a Chinese customer service RAG system. The training side reports an improved preference win rate after DPO, but the inference side wants to use INT4 weight quantization to reduce costs. A qualified release process should not just say "deploy after merging LoRA". A more rigorous sequence is:</p>
+  <p>Suppose a team trained a LoRA adapter for a Chinese customer service RAG system. The training side reports an improved preference win rate after DPO, but the inference side wants to use INT4 weight quantization to reduce costs. A release process should not stop at "deploy after merging LoRA". A more rigorous sequence is:</p>
   <ol>
     <li>Pin the base model, tokenizer, chat template, and SFT/DPO adapter versions.</li>
     <li>Decide whether the adapter is merged offline into a single weight, or loaded dynamically per tenant on the server side.</li>
@@ -2004,7 +2006,7 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
       <tr><td><strong>Registers</strong></td><td>256 KB/SM</td><td>~50 TB/s</td><td>~1 cycle</td><td>Single Thread</td></tr>
     </table>
   </div>
-  <p>Key Ratio: <strong>SRAM bandwidth is ~10× that of HBM, but its capacity is only ~1/400 of HBM</strong>. The essence of GPU optimization is: <strong>perform computations in SRAM as much as possible, minimizing data transfers between HBM and SRAM</strong>.</p>
+  <p>Key ratio: <strong>SRAM bandwidth is ~10× that of HBM, but its capacity is only ~1/400 of HBM</strong>. GPU optimization therefore tries to <strong>perform computations in SRAM as much as possible while minimizing data transfers between HBM and SRAM</strong>.</p>
 
   <h4>A Concrete Example: Matrix Multiplication (GEMM)</h4>
   <p>Suppose we want to compute <span class="katex-inline" data-expr="C = A \times B" aria-label="C = A \times B" role="img"></span>, where A and B are both 1024×1024 FP16 matrices.</p>
@@ -2192,7 +2194,7 @@ assert report["decision"] == "enable_speculative_decoding_for_this_workload"</di
 <!-- 10.20 Multimodal LLM -->
 <!-- ================================================================ -->
 <section class="card" id="s10-20">
-  <h3>10.20 Multimodal LLM—Let the Model See the World</h3>
+  <h3>10.20 Multimodal LLM—Vision and Multimodal Inputs</h3>
   <p>Many frontier assistant models have integrated text, image, audio, or video capabilities into a single interaction interface. The course focuses here on stable architectural abstractions: encoding non-text modalities into vector sequences, then projecting them into a representation space the LLM can process; specific product capabilities, context lengths, and latency will vary with model and API version.</p>
 
   <h4>Core Architecture: Vision Encoder + Projection + LLM</h4>
@@ -2261,7 +2263,7 @@ def forward(image, text_prompt):
   </ul>
   <p>Freezing strategies must also match the data scale: training only the projector is low-cost and preserves LLM language ability, but the ceiling for visual tasks is limited; unfreezing the LLM or vision encoder can improve cross-modal capabilities but is more prone to forgetting original language abilities and requires more careful learning rates, data mixtures, and task sampling.</p>
 
-  <h4>Multimodal Data Mixture: It's Not Just Pasting Images and Text Together</h4>
+  <h4>Multimodal Data Mixture: Beyond Pasting Images and Text Together</h4>
   <p>Multimodal capability comes from the task distribution, not from the fact that "the model has seen images." A document understanding model needs a large number of OCR, table, layout, and field extraction samples; a visual grounding model needs boxes, points, or region descriptions; a video model needs frame sequences, timestamps, event boundaries, and action sequences; a GUI agent also needs screenshots, control positions, action history, and execution results.</p>
   <div class="table-wrap">
     <table>

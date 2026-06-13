@@ -91,7 +91,7 @@
 <!-- ================================================================ -->
 <section class="card" id="s2-1">
   <h3>2.1 From One-Hot to Dense Embeddings — Why Distributed Representations Are Needed</h3>
-  <p>Chapter 1 converted text into a token sequence <span class="katex-inline" data-expr="[t_1, t_2, ..., t_n]" aria-label="[t_1, t_2, ..., t_n]" role="img"></span>, where each <span class="katex-inline" data-expr="t_i \in \{0,1,...,V-1\}" aria-label="t_i \in \{0,1,...,V-1\}" role="img"></span>. The question now is: how to convert this integer into a vector that a neural network can process?</p>
+  <p>Chapter 1 converted text into a token sequence <span class="katex-inline" data-expr="[t_1, t_2, ..., t_n]" aria-label="[t_1, t_2, ..., t_n]" role="img"></span>, where each <span class="katex-inline" data-expr="t_i \in \{0,1,...,V-1\}" aria-label="t_i \in \{0,1,...,V-1\}" role="img"></span>. The next question is how to convert each integer token ID into a vector that a neural network can process.</p>
 
   <h4>One-Hot Encoding and Its Problems</h4>
   <p>The most straightforward idea is One-Hot encoding: map token <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> to a vector of length <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span>, where the <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>-th bit is 1 and the rest are 0. For example, with a vocabulary size of 5, "apple" (token 3) is encoded as <span class="katex-inline" data-expr="[0,0,0,1,0]" aria-label="[0,0,0,1,0]" role="img"></span>.</p>
@@ -100,7 +100,8 @@
   <p><strong>2. Semantic Flatness.</strong> The cosine similarity between any two different One-Hot vectors is 0. "king" and "queen" are as "dissimilar" in One-Hot space as "king" and "apple" — the model cannot extract any semantic relationships from the representation.</p>
   <p><strong>3. Extremely Low Parameter Efficiency.</strong> Multiplying a One-Hot vector by a <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span> weight matrix is equivalent to looking up the <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>-th row. So why not just use a lookup table directly?</p>
 
-  <h4>Distributed Representations: The Core Breakthrough</h4>  <p>The solution is <strong>learnable dense embeddings</strong>: a matrix <span class="katex-inline" data-expr="\mathbf{E} \in \mathbb{R}^{V \times d}" aria-label="\mathbf{E} \in \mathbb{R}^{V \times d}" role="img"></span> (where <span class="katex-inline" data-expr="d \ll V" aria-label="d \ll V" role="img"></span>) maps tokens to a low-dimensional continuous space:</p>
+  <h4>Distributed Representations: The Core Breakthrough</h4>
+  <p>The standard solution is <strong>learnable dense embeddings</strong>: a matrix <span class="katex-inline" data-expr="\mathbf{E} \in \mathbb{R}^{V \times d}" aria-label="\mathbf{E} \in \mathbb{R}^{V \times d}" role="img"></span> (where <span class="katex-inline" data-expr="d \ll V" aria-label="d \ll V" role="img"></span>) maps tokens to a low-dimensional continuous space:</p>
   <div class="katex" data-expr="\mathbf{e}_t = \mathbf{E}[t, :] \in \mathbb{R}^{d}" aria-label="\mathbf{e}_t = \mathbf{E}[t, :] \in \mathbb{R}^{d}" role="img"></div>
   <p>This is <strong>Token Embedding</strong>—equivalent to looking up the <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>-th row in a table. The key difference is: <strong>embedding vectors are trainable</strong>. Through language model training, semantically similar tokens will obtain similar vectors.</p>
 
@@ -444,7 +445,8 @@ E[token_ids] =
     <p>For position 0, all even dimensions are 0 and all odd dimensions are 1, which corresponds exactly to <code>row0[0::2] == 0</code> and <code>row0[1::2] == 1</code> in the assignment tests. Higher-frequency dimensions quickly distinguish adjacent positions; lower-frequency dimensions change very little over short distances and are used to carry longer-range positional changes.</p>
   </div>
 
-  <h4>Why This Sinusoidal Design Works</h4>  <p><strong>Multi-scale frequency:</strong> Lower-indexed dimensions (small <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use higher frequencies, so the sin/cos waveforms change quickly and capture local positional differences. Higher-indexed dimensions (large <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use lower frequencies, so they change slowly and help represent broader positional structure. This design mimics Fourier features: by encoding positions onto basis functions with different frequencies, the model can learn to attend to high-frequency or low-frequency dimensions as needed.</p>
+  <h4>Why This Sinusoidal Design Works</h4>
+  <p><strong>Multi-scale frequency:</strong> Lower-indexed dimensions (small <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use higher frequencies, so the sin/cos waveforms change quickly and capture local positional differences. Higher-indexed dimensions (large <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use lower frequencies, so they change slowly and help represent broader positional structure. This design mimics Fourier features: by encoding positions onto basis functions with different frequencies, the model can learn to attend to high-frequency or low-frequency dimensions as needed.</p>
 
   <p><strong>Linear representation of relative positions:</strong> For any offset <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>, the encoding at position <span class="katex-inline" data-expr="pos + k" aria-label="pos + k" role="img"></span> can be expressed as a <strong>linear transformation</strong> of the encoding at position <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span>:</p>
   <div class="math-box"><div class="label">Linearity property of relative positions</div>
@@ -561,13 +563,14 @@ print(f"Trainable parameters: {sum(p.numel() for p in pe.parameters())}")
   </div>
   <p>The key step in the derivation: <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span>. This is due to the group property of rotation matrices—rotating by <span class="katex-inline" data-expr="-m" aria-label="-m" role="img"></span> (transpose = inverse rotation) and then by <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> is equivalent to rotating directly by <span class="katex-inline" data-expr="n-m" aria-label="n-m" role="img"></span>. <strong>The attention score depends only on <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></strong>, and absolute positions are completely eliminated.</p>
 
-  <h4>Favorable Properties of RoPE</h4>
+  <h4>Useful Properties of RoPE</h4>
   <ul>
     <li><strong>Relative Position:</strong> The derivation proves the dot product depends only on <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></li>
     <li><strong>Norm Preservation:</strong> <span class="katex-inline" data-expr="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" aria-label="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" role="img"></span>, because the rotation matrix is orthogonal (<span class="katex-inline" data-expr="R^\top R = I" aria-label="R^\top R = I" role="img"></span>)</li>
     <li><strong>Relative Phase:</strong> When <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> increases, the phase differences across different frequency dimensions change the attention scoring pattern. RoPE provides the model with a distance-related inductive bias, but does not guarantee that the dot product score for any arbitrary pair of vectors decreases monotonically with distance, nor does it equate to automatic extrapolation to infinite context lengths.</li>
     <li><strong>Does not affect V:</strong> RoPE only modifies Q and K, not V. This is because positional information only affects "who attends to whom," not "what content is attended to."</li>
-  </ul>  <div class="info-box key"><span class="icon">🔑</span><div><strong>Essential difference from Sinusoidal:</strong> Sinusoidal adds position information at the <strong>embedding layer</strong> (breaking permutation equivariance), while RoPE encodes position on Q/K at the <strong>attention layer</strong> (exploiting permutation equivariance in the dot product). RoPE's mathematical foundation is the group property of rotation matrices, not simply "adding a vector".</div></div>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Essential difference from Sinusoidal:</strong> Sinusoidal adds position information at the <strong>embedding layer</strong> (breaking permutation equivariance), while RoPE encodes position on Q/K at the <strong>attention layer</strong> (exploiting permutation equivariance in the dot product). RoPE's mathematical foundation is the group property of rotation matrices, not simply "adding a vector".</div></div>
 </section>
 
 <!-- ================================================================ -->
@@ -654,7 +657,7 @@ print("Norm preserved ✅")</div>
 <!-- 2.8 Verification of Relative Position Property -->
 <!-- ================================================================ -->
 <section class="card" id="s2-8">
-  <h3>2.8 In-depth Verification: RoPE's Relative Position Property</h3>
+  <h3>2.8 Verification: RoPE's Relative Position Property</h3>
   <p>After implementing RoPE in the previous section, let's use numerical experiments to <strong>verify</strong> its core claim: <span class="katex-inline" data-expr="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" aria-label="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" role="img"></span> depends only on <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>.</p>
 
   <h4>Theoretical Derivation Review</h4>
@@ -905,7 +908,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
     <li>✅ <strong>RoPE</strong> — Rotary Position Embedding, where the dot product depends only on relative position</li>
     <li>✅ Verified the relative position property of RoPE through <strong>mathematical derivation and numerical experiments</strong></li>
   </ul>
-  <p>Starting from Chapter 3, we will enter the core part of the LLM—the attention mechanism. You will implement Scaled Dot-Product Attention, Causal Mask, and finally understand the complete working principle of single-head attention.</p>
+  <p>Chapter 3 moves into the central mechanism of the LLM: attention. You will implement scaled dot-product attention and causal masking, then connect them into a complete single-head attention module.</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>Further Reading:</strong>
     <a href="https://arxiv.org/abs/1706.03762" target="_blank">Vaswani et al. (2017) — Attention Is All You Need (§3.5)</a> ·
     <a href="https://arxiv.org/abs/2104.09864" target="_blank">Su et al. (2021) — RoFormer: Enhanced Transformer with Rotary Position Embedding</a> ·

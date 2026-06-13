@@ -317,6 +317,16 @@
     initCodeCopy();
     initReadingBar();
     // KaTeX
+    function renderMathFallback(){
+      document.querySelectorAll('.katex-inline,.katex-block,.katex[data-expr]').forEach(function(el){
+        var expr = el.getAttribute('data-expr');
+        if(!expr) return;
+        if(!el.getAttribute('aria-label')) el.setAttribute('aria-label', expr);
+        if(!el.getAttribute('role')) el.setAttribute('role', 'img');
+        if(!el.textContent) el.textContent = expr;
+        el.classList.add('math-fallback');
+      });
+    }
     if(window.katex){
       var macros = { '\\parallel': '\\mathrel{/\\!\\!/}' };
       function prepareMathNode(el, expr){
@@ -337,6 +347,8 @@
         try{ katex.render(expr, el, {displayMode:true, throwOnError:true, strict:false, macros:macros, trust:true}) }
         catch(e){ console.warn('KaTeX display:', expr, e.message); el.textContent=expr; el.style.color='#cc4444'; }
       });
+    } else {
+      renderMathFallback();
     }
   }
 

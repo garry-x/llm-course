@@ -101,7 +101,7 @@
   <p>When many factors in the product are less than 1, the gradient approaches zero after T steps, making it difficult for the model to learn long-range dependencies. The gating mechanism of LSTMs can significantly alleviate the gradient propagation problem, but they still retain the sequential computation path and the fixed-dimensional state bottleneck.</p>
 
   <h4>The Breakthrough of Attention: Retrieval Instead of Memory</h4>
-  <p>The core insight of the Transformer is very simple: <strong>Don't force information to "pass through" intermediate positions to reach the target position</strong>. Each position should be able to directly "see" any other position in the sequence and extract information directly from the source.</p>
+  <p>The central insight of the Transformer is: <strong>do not force information to pass through intermediate positions before reaching the target position</strong>. Each position should be able to directly read any other position in the sequence and extract information from the source.</p>
   <p>Compared with an RNN, where information from the first token must be carried step by step through the hidden state, attention gives each position a direct read path to other positions in the same layer. This shortens the information path and makes long-range dependencies easier to represent.</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Advantage of Attention: The information path length between any two positions within a single layer is O(1).</strong> A position can directly read the value of another position in the same layer, rather than passing it along time steps one by one. This facilitates parallel training and long-range dependency modeling; the actual context length it can handle also depends on attention complexity, positional encoding, training distribution, and inference system.</div></div>
 </section>
@@ -264,7 +264,8 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 <!-- ================================================================ -->
 <!-- 3.4A Worked Example -->
 <!-- ================================================================ -->
-<section class="card" id="s3-4a">  <h3>3.4A Worked Example: Hand-calculating Attention with a Causal Mask</h3>
+<section class="card" id="s3-4a">
+  <h3>3.4A Worked Example: Hand-calculating Attention with a Causal Mask</h3>
   <p>Consider a single query position <code>t=2</code>, with head dimension <span class="katex-inline" data-expr="d_k=2" aria-label="d_k=2" role="img"></span>. The query at the current position and the three key/value pairs are as follows:</p>
   <div class="table-wrap">
     <table>
@@ -306,8 +307,8 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 <!-- 3.5 Theory: √dₖ -->
 <!-- ================================================================ -->
 <section class="card" id="s3-5">
-  <h3>3.5 Deep Dive: Why Divide by √dₖ? — Variance Analysis and Gradient Behavior</h3>
-  <p>This is a seemingly simple but profoundly deep design detail in the Transformer paper. Let's understand it from a probability theory perspective.</p>
+  <h3>3.5 Detailed Analysis: Why Divide by √dₖ? — Variance Analysis and Gradient Behavior</h3>
+  <p>This design detail looks small, but it directly affects softmax saturation and gradient flow. We can understand it from a probability theory perspective.</p>
 
   <h4>Problem: What happens without scaling?</h4>
   <p>Assume each element of Q and K is independent and identically distributed, with mean 0 and variance 1. Then the dot product <span class="katex-inline" data-expr="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" aria-label="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" role="img"></span> is the sum of <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> independent random variables.</p>
@@ -330,7 +331,7 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 <!-- 3.6 Theory: Softmax Temperature -->
 <!-- ================================================================ -->
 <section class="card" id="s3-6">
-  <h3>3.6 Deep Dive: Softmax Temperature, Gradient Saturation, and the "Sharpness" of Attention Distributions</h3>
+  <h3>3.6 Detailed Analysis: Softmax Temperature, Gradient Saturation, and the "Sharpness" of Attention Distributions</h3>
   <p>After implementing basic Scaled Dot-Product Attention, let's delve deeper into the mathematical behavior of softmax in this process.</p>
 
   <h4>Gradient of the Softmax Function</h4>
@@ -798,7 +799,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
 
   <h4>Analogy: Dictionary Lookup (Hash Table)</h4>
   <p>Traditional dictionary lookup: Given a query key, find the <strong>exact same</strong> key in the dictionary and return the corresponding value. This is a hard match—either it matches, or it doesn't.</p>
-  <p>Attention mechanism's dictionary lookup: Given a query vector, perform a <strong>soft match</strong> (dot product + softmax) against <strong>all</strong> keys, and return the <strong>weighted average</strong> of all values. This is a soft match—every value contributes a bit, with the contribution determined by similarity.</p>
+  <p>Attention as dictionary lookup: given a query vector, perform a <strong>soft match</strong> (dot product + softmax) against <strong>all</strong> keys, and return the <strong>weighted average</strong> of all values. Every value contributes to some degree, with its contribution determined by similarity.</p>
 
   <h4>Mathematical Correspondence</h4>
   <div class="table-wrap">

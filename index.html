@@ -35,64 +35,12 @@
 <main class="main">
   <section class="hero">
     <div class="hero-copy">
-      <div class="hero-tags">
-        <span class="hero-tag">Training Engineering</span>
-        <span class="hero-tag">Inference Engineering</span>
-        <span class="hero-tag">From Code to Service</span>
-      </div>
       <h2>A Systematic LLM Course for Training and Inference Engineers</h2>
-      <p>11 chapters connecting token representation, Transformer computation, training loops, alignment methods, generation strategies, and inference serving into a realizable, evaluable, deployable engineering pipeline.</p>
+      <p>Build the LLM pipeline end to end: tokenization, Transformer computation, training, alignment, generation, serving, and evaluation.</p>
       <div class="hero-actions">
         <a href="chapters/ch01.html" class="btn btn-primary">Start Learning →</a>
         <a href="#chapters" class="btn btn-outline">View Chapters</a>
       </div>
-    </div>
-    <div class="hero-panel" aria-label="Course Roadmap">
-      <h3>Course Roadmap</h3>
-      <ul>
-        <li><strong>Representation & Computation</strong><span>How text becomes tokens, and how tokens enter attention, blocks, and GPT forward pass.</span></li>
-        <li><strong>Training & Alignment</strong><span>How data, loss, optimizer, checkpoint, SFT, preference optimization, and reward hypotheses collectively determine behavior.</span></li>
-        <li><strong>Generation & Serving</strong><span>How sampling, reasoning budget, KV cache, RAG, tool use, stress testing, and release gates support production systems.</span></li>
-      </ul>
-    </div>
-  </section>
-
-  <section class="system-map">
-    <div class="section-heading">
-      <h3>Systematic Learning Map</h3>
-      <p>Foundational knowledge does not appear as separate remedial paths but is embedded in each chapter as code, formulas, diagnostic tables, and engineering judgment.</p>
-    </div>
-    <div class="system-grid">
-      <article class="system-step">
-        <span>01</span>
-        <strong>Text Interface</strong>
-        <p>Ch01-Ch02 embed Python data structures, matrix lookup tables, dot products, and rotary position encoding into tokenizer, embedding, RoPE, and token cost.</p>
-      </article>
-      <article class="system-step">
-        <span>02</span>
-        <strong>Transformer Computation</strong>
-        <p>Ch03-Ch06 combine softmax, mask, broadcasting, normalization, residual paths, MoE, and shape traces into a complete GPT forward pass.</p>
-      </article>
-      <article class="system-step">
-        <span>03</span>
-        <strong>Training Loop</strong>
-        <p>Ch07 turns MLE, cross entropy, data contamination, optimizer state, checkpoint, and distributed cost into the minimum evidence for a training run.</p>
-      </article>
-      <article class="system-step">
-        <span>04</span>
-        <strong>Generation & Alignment</strong>
-        <p>Ch08-Ch09 embed logits distribution, sampling variance, KL/reference, SFT data protocol, preference data, synthetic data, and reward gates into post-training.</p>
-      </article>
-      <article class="system-step">
-        <span>05</span>
-        <strong>Inference System</strong>
-        <p>Ch10 unifies KV cache, memory bandwidth, continuous batching, RAG/tool, long context, multimodality, and release rollback into SLO/cost ledger.</p>
-      </article>
-      <article class="system-step">
-        <span>06</span>
-        <strong>Evaluation & Selection</strong>
-        <p>Ch11 uses RNN, seq2seq, BERT, structured prediction, traditional metrics, and judge reliability for task modeling and evaluation conclusions.</p>
-      </article>
     </div>
   </section>
 
@@ -114,7 +62,7 @@
     var isDone = done.has(ch.id);
     return '<a href="'+ch.file+'" class="chapter-item'+(isDone?' completed':'')+'">'+
       '<span class="ch-num-big">'+(isDone?'✓':ch.id)+'</span>'+
-      '<span class="ch-info"><h4>Chapter '+ch.id+' '+ch.title+'</h4><p>'+ch.desc+'</p></span>'+
+      '<span class="ch-info"><h4>Chapter '+ch.id+' '+ch.title+'</h4></span>'+
       '<span class="ch-meta">'+ch.sections+' sections</span></a>';
   }).join('');
 })();

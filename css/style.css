@@ -565,18 +565,17 @@ td{color:var(--text-secondary)}
 
 /* ---- Hero Enhancements ---- */
 .hero{
-  position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 360px;
-  gap:36px;align-items:center;
+  position:relative;overflow:hidden;
   background:var(--surface);
-  border-radius:var(--radius);padding:48px 52px;margin-bottom:18px;
+  border-radius:var(--radius);padding:42px 48px;margin-bottom:20px;
   box-shadow:var(--shadow-card);border:1px solid var(--border);text-align:left
 }
 .hero::before{
   content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,transparent,var(--accent),transparent)
 }
-.hero h2{font-size:2.35rem;font-weight:700;margin-bottom:14px;position:relative;line-height:1.25;text-wrap:balance}
-.hero p{color:var(--text-secondary);font-size:1.02rem;max-width:620px;margin:0 0 28px;position:relative;line-height:1.75}
+.hero h2{font-size:2.12rem;font-weight:700;margin-bottom:12px;position:relative;line-height:1.25;text-wrap:balance;max-width:760px}
+.hero p{color:var(--text-secondary);font-size:1rem;max-width:720px;margin:0 0 24px;position:relative;line-height:1.7}
 .hero-actions{display:flex;align-items:center;gap:12px;position:relative}
 .hero .btn{padding:12px 28px;font-size:.95rem}
 .hero-tags{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;margin-bottom:20px;position:relative}
@@ -600,7 +599,7 @@ td{color:var(--text-secondary)}
 /* ---- Chapter List Items (homepage) ---- */
 .chapter-list{display:flex;flex-direction:column;gap:10px;margin-bottom:32px}
 .chapter-item{
-  display:flex;align-items:center;gap:16px;padding:18px 22px;
+  display:flex;align-items:center;gap:16px;padding:14px 18px;
   background:var(--surface);border-radius:var(--radius);
   box-shadow:var(--shadow);text-decoration:none;color:var(--text);
   transition:all var(--transition);border:1px solid var(--border);
@@ -615,13 +614,13 @@ td{color:var(--text-secondary)}
 .chapter-item:hover::after{width:100%}
 .chapter-item.completed{border-left:3px solid var(--success)}
 .chapter-item .ch-num-big{
-  width:48px;height:48px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0;
+  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:.98rem;font-weight:700;flex-shrink:0;
   background:var(--accent-light);color:var(--accent);position:relative;z-index:1
 }
 .chapter-item.completed .ch-num-big{background:#f2faf5;color:var(--success)}
 .chapter-item .ch-info{flex:1;position:relative;z-index:1}
-.chapter-item .ch-info h4{font-size:.95rem;font-weight:700;margin-bottom:2px}
+.chapter-item .ch-info h4{font-size:.94rem;font-weight:700;margin-bottom:0}
 .chapter-item .ch-info p{font-size:.8rem;color:var(--text-secondary);margin:0}
 .chapter-item .ch-meta{font-size:.75rem;color:var(--text-secondary);text-align:right;position:relative;z-index:1}
 
@@ -714,7 +713,7 @@ td{color:var(--text-secondary)}
 
 /* ---- Course index ---- */
 .course-index{
-  padding:8px 0 0;margin:0 0 28px
+  padding:0;margin:0 0 28px
 }
 .course-index h3{
   font-family:var(--font-heading);font-size:1.1rem;font-weight:700;

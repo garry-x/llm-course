@@ -280,7 +280,8 @@
 - PyTorch and vLLM. [Disaggregated Inference at Scale with PyTorch & vLLM](https://pytorch.org/blog/disaggregated-inference-at-scale-with-pytorch-vllm/). 重点看 prefill/decode 分离如何同时影响 TTFT、TPOT、throughput 和 KV transfer。
 - OpenAI. [Function calling](https://developers.openai.com/api/docs/guides/function-calling) 与 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). 重点看 function tools、JSON schema、strict structured output 和 tool call output 如何构成服务端协议。
 - vLLM. [Structured Outputs](https://docs.vllm.ai/en/latest/features/structured_outputs/) 与 SGLang. [Structured Outputs](https://docs.sglang.ai/advanced_features/structured_outputs.html). 重点看 OpenAI-compatible serving 中的 JSON schema、choice、regex、grammar/EBNF constrained decoding，以及为什么仍要做 parse/schema/retry/safety 回归。
-- Model Context Protocol. [Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18) 与 [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation 以及用户同意、数据隐私和 tool safety。
+- Model Context Protocol. [Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) 与 [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation、authorization、用户同意、数据隐私和 tool safety。
+- Anthropic. [Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp). 重点看工具定义和中间结果如何消耗上下文，以及为什么大型 agent 系统需要延迟加载工具、执行环境处理和结果摘要。
 - OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) 与 [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). 重点看 prompt injection、insecure output handling、insecure plugin design、excessive agency 和外部内容隔离。
 - OpenAI. [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices) 与 [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 prototype 到 production 时的可靠性、监控、评测和成本控制如何进入上线判断。
 - Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) 与 [Implementing SLOs](https://sre.google/workbook/implementing-slos/). 重点看 canary/control、流量分阶段、SLO/SLI 和 error budget 如何转成发布 gate。
@@ -298,7 +299,7 @@
 - SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。
 - TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。
 - Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化。
-- OpenAI Agents SDK guardrails。重点看 input/output/tool guardrails 在 agent workflow 中运行的不同位置。
+- OpenAI Agents SDK guardrails 与 tracing。重点看 input/output/tool guardrails 在 agent workflow 中运行的不同位置，以及 tracing 如何记录 LLM generation、tool calls、handoffs、guardrail events 和 custom spans。
 - Google SRE Book. [Release Engineering](https://sre.google/sre-book/release-engineering/) 与 [Service Level Objectives](https://sre.google/sre-book/service-level-objectives/). 重点看发布工程、回滚、SLO 与业务风险之间的连接。
 - llama.cpp 官方文档中 quantization、CPU/GPU offload 和本地部署边界。
 - Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。
@@ -317,7 +318,8 @@
 - 长 prompt 进入 continuous batching 时，chunked prefill 和 prefix cache 分别缓解哪类 TTFT 问题？
 - tool/function calling 为什么不能只依赖 prompt 约束？schema、权限和循环预算分别拦截哪类失败？
 - 结构化输出上线时，为什么要同时报告 JSON parse rate、schema valid rate、repair retry、fallback/refusal、P95 latency 和 safety violation，而不是只看一次示例输出？
-- MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、敏感数据外发、observation isolation 和 recursive sampling？
+- MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、roots/elicitation、敏感数据外发、observation isolation 和 recursive sampling？
+- agent trace 为什么要记录 guardrail events、tool spans、context budget 和 side-effect log？这些字段分别帮助定位哪类生产事故？
 - 生产发布时，为什么候选模型即使离线 pass rate 更高，也必须经过 canary/control、per-version quality/safety/SLO/cost monitoring 和 rollback readiness gate？
 - 服务运行中 queue backlog、KV cache nearing full、swapped requests、TPOT 变差、timeout 上升和单租户超配额分别指向哪些不同的 overload response？
 - prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？

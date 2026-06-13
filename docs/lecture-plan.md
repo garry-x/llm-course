@@ -641,7 +641,8 @@ Quick check：
 - RAG context packing 在 context budget 与 reserved output budget 下选择带 citation 的 chunk；Recall 命中但没有进入 prompt 仍然会失败。
 - Tool call gate：schema validation、permission check、loop budget 和 observation injection 必须在工具执行前后分开处理。
 - Structured output gate：JSON parse、schema adherence、repair retry/P95 latency、fallback/refusal 和 safety violation 必须分开报告。
-- MCP/runtime gate：server trust、用户同意、敏感数据外发、外部 observation 隔离、recursive LLM sampling 和 runtime budget 不能由 schema 通过来替代。
+- MCP/runtime gate：server trust、用户同意、roots/elicitation、敏感数据外发、外部 observation 隔离、recursive LLM sampling 和 runtime budget 不能由 schema 通过来替代。
+- Agent trace：输入/输出/tool guardrail events、tool spans、context budget、side-effect log 和最终 output status 必须能复盘整次 agent run。
 - Production rollout gate：候选发布包先与 stable baseline 比较 offline quality、安全、SLO、错误率和成本，再用 canary sample、流量比例、control comparison、required monitors 和 rollback readiness 决定 promote、继续低流量灰度或 block/rollback。
 - 视觉 token 数如何影响 prefill latency 和 KV cache 成本。
 
@@ -656,7 +657,8 @@ Quick check：
 - 给定候选 chunk、token 预算和预留输出预算，手算哪些 citation 进入 prompt。
 - 给定结构化输出记录，填写 `structured_output_reliability_report`，判断 parse、schema、retry、fallback 和 safety gate。
 - 给定一组工具调用，填写 `validate_tool_call_plan` 输出，判断 schema、permission 和 budget gate。
-- 给定一个 remote MCP tool event，填写 `tool_runtime_security_report` 输出，判断 server trust、consent、data privacy、observation isolation 和 sampling/budget gate。
+- 给定一个 remote MCP tool event，填写 `tool_runtime_security_report` 输出，判断 server trust、consent、roots/elicitation、data privacy、observation isolation 和 sampling/budget gate。
+- 给定一条 agent trace，定位延迟、越权、上下文膨胀或 guardrail tripwire 来自哪一步。
 - 给定 stable baseline、candidate metrics 和 rollout policy，填写 `production_rollout_gate_report`，判断 offline quality、安全、SLO、cost、canary、rollback/monitoring gate。
 - 对 per-channel INT8 权重做 roundtrip。
 - 对同一张图设计 VQA、OCR、图表和定位四类问题，比较指标差异。
@@ -668,7 +670,8 @@ Quick check：
 - Recall@k 命中了相关 chunk，为什么答案仍然可能缺引用或编造？
 - INT8 降低的是权重显存、KV cache 还是两者？
 - 为什么 structured output 或 function calling 仍然需要服务端 schema 校验和权限检查？
-- 为什么 MCP server allowlist、用户批准和工具输出隔离是 runtime gate，而不是 prompt 文案？
+- 为什么 MCP server allowlist、用户批准、roots/elicitation 和工具输出隔离是 runtime gate，而不是 prompt 文案？
+- 为什么工具数量很多时，直接把所有 tool definitions 放进上下文会影响 TTFT、成本和工具选择准确率？
 - 为什么离线 eval 提升不能跳过 canary、control、per-version monitoring 和 rollback？
 - 一个多模态模型 VQA 分数高，是否能推出 OCR 或视觉定位可靠？
 

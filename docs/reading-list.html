@@ -294,7 +294,8 @@
 <li>PyTorch and vLLM. <a href="https://pytorch.org/blog/disaggregated-inference-at-scale-with-pytorch-vllm/">Disaggregated Inference at Scale with PyTorch &amp; vLLM</a>. 重点看 prefill/decode 分离如何同时影响 TTFT、TPOT、throughput 和 KV transfer。</li>
 <li>OpenAI. <a href="https://developers.openai.com/api/docs/guides/function-calling">Function calling</a> 与 <a href="https://developers.openai.com/api/docs/guides/structured-outputs">Structured Outputs</a>. 重点看 function tools、JSON schema、strict structured output 和 tool call output 如何构成服务端协议。</li>
 <li>vLLM. <a href="https://docs.vllm.ai/en/latest/features/structured_outputs/">Structured Outputs</a> 与 SGLang. <a href="https://docs.sglang.ai/advanced_features/structured_outputs.html">Structured Outputs</a>. 重点看 OpenAI-compatible serving 中的 JSON schema、choice、regex、grammar/EBNF constrained decoding，以及为什么仍要做 parse/schema/retry/safety 回归。</li>
-<li>Model Context Protocol. <a href="https://modelcontextprotocol.io/specification/2025-06-18">Specification 2025-06-18</a> 与 <a href="https://modelcontextprotocol.io/docs/getting-started/intro">What is MCP?</a>. 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation 以及用户同意、数据隐私和 tool safety。</li>
+<li>Model Context Protocol. <a href="https://modelcontextprotocol.io/specification/2025-11-25">Specification 2025-11-25</a> 与 <a href="https://modelcontextprotocol.io/docs/getting-started/intro">What is MCP?</a>. 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation、authorization、用户同意、数据隐私和 tool safety。</li>
+<li>Anthropic. <a href="https://www.anthropic.com/engineering/code-execution-with-mcp">Code execution with MCP: Building more efficient agents</a>. 重点看工具定义和中间结果如何消耗上下文，以及为什么大型 agent 系统需要延迟加载工具、执行环境处理和结果摘要。</li>
 <li>OWASP. <a href="https://owasp.org/www-project-top-10-for-large-language-model-applications/">Top 10 for LLM Applications</a> 与 <a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/">LLM01 Prompt Injection</a>. 重点看 prompt injection、insecure output handling、insecure plugin design、excessive agency 和外部内容隔离。</li>
 <li>OpenAI. <a href="https://developers.openai.com/api/docs/guides/production-best-practices">Production best practices</a> 与 <a href="https://developers.openai.com/api/docs/guides/evaluation-best-practices">Evaluation best practices</a>. 重点看 prototype 到 production 时的可靠性、监控、评测和成本控制如何进入上线判断。</li>
 <li>Google SRE. <a href="https://sre.google/workbook/canarying-releases/">Canarying Releases</a> 与 <a href="https://sre.google/workbook/implementing-slos/">Implementing SLOs</a>. 重点看 canary/control、流量分阶段、SLO/SLI 和 error budget 如何转成发布 gate。</li>
@@ -312,7 +313,7 @@
 <li>SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。</li>
 <li>TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。</li>
 <li>Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化。</li>
-<li>OpenAI Agents SDK guardrails。重点看 input/output/tool guardrails 在 agent workflow 中运行的不同位置。</li>
+<li>OpenAI Agents SDK guardrails 与 tracing。重点看 input/output/tool guardrails 在 agent workflow 中运行的不同位置，以及 tracing 如何记录 LLM generation、tool calls、handoffs、guardrail events 和 custom spans。</li>
 <li>Google SRE Book. <a href="https://sre.google/sre-book/release-engineering/">Release Engineering</a> 与 <a href="https://sre.google/sre-book/service-level-objectives/">Service Level Objectives</a>. 重点看发布工程、回滚、SLO 与业务风险之间的连接。</li>
 <li>llama.cpp 官方文档中 quantization、CPU/GPU offload 和本地部署边界。</li>
 <li>Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。</li>
@@ -331,7 +332,8 @@
 <li>长 prompt 进入 continuous batching 时，chunked prefill 和 prefix cache 分别缓解哪类 TTFT 问题？</li>
 <li>tool/function calling 为什么不能只依赖 prompt 约束？schema、权限和循环预算分别拦截哪类失败？</li>
 <li>结构化输出上线时，为什么要同时报告 JSON parse rate、schema valid rate、repair retry、fallback/refusal、P95 latency 和 safety violation，而不是只看一次示例输出？</li>
-<li>MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、敏感数据外发、observation isolation 和 recursive sampling？</li>
+<li>MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、roots/elicitation、敏感数据外发、observation isolation 和 recursive sampling？</li>
+<li>agent trace 为什么要记录 guardrail events、tool spans、context budget 和 side-effect log？这些字段分别帮助定位哪类生产事故？</li>
 <li>生产发布时，为什么候选模型即使离线 pass rate 更高，也必须经过 canary/control、per-version quality/safety/SLO/cost monitoring 和 rollback readiness gate？</li>
 <li>服务运行中 queue backlog、KV cache nearing full、swapped requests、TPOT 变差、timeout 上升和单租户超配额分别指向哪些不同的 overload response？</li>
 <li>prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？</li>

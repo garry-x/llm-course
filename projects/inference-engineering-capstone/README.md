@@ -189,14 +189,14 @@ python capacity_plan.py \
 4. **Workload definition.** 固定请求数量、并发、prompt token 分布、max output tokens、是否 streaming、是否 RAG/tool/JSON、是否多样本 reasoning 或 verifier rerank。
 5. **Baseline.** 明确 baseline，例如 no-RAG、prompt-only JSON、concurrency=1 或默认 capacity setting。
 6. **Ablation.** 一次只改变一个工程因素：top-k、concurrency、context length、JSON mode/retry、SLO threshold 或容量假设。
-7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、structured output 的 parse/schema/retry/fallback/safety gate、tool call schema/permission/budget 问题、MCP/runtime security gate、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
+7. **Quality result.** 报告 pass rate、失败案例、RAG 命中/引用问题、structured output 的 parse/schema/retry/fallback/safety gate、tool call schema/permission/budget 问题、MCP/runtime security gate、agent trace/guardrail 事件、reasoning budget gate、judge reliability audit 和安全拒答/过度拒答。
 8. **System result.** 报告 P50/P95/P99 latency、TTFT、TPOT、tokens/s、error rate，并说明瓶颈在排队、prefill、decode、RAG 检索还是后处理。
 9. **Continuous batching admission.** 若采用或讨论 high-concurrency serving，报告 `max_num_seqs`、`max_num_batched_tokens`、prefix cache、chunked prefill、admitted/queued、queue wait 和 active KV gate。
 10. **Speculative decoding gate.** 若采用或讨论 speculative decoding，报告 acceptance rate、speedup、draft overhead、tokens per verify step、quality regression、memory overhead 和 QPS/workload fit，并说明是否启用。
 11. **Long-context gate.** 若服务承诺长文档、长代码库或长会话，报告 context fit、needle/citation recall、head/middle/tail position robustness、P95 TTFT/latency、KV usage、prefix cache hit rate 和是否需要 RAG/context packing/compaction。
 12. **PD / KV transfer analysis.** 若 workload 中长 prompt、RAG 或多模态请求造成 TTFT 波动，拆分 prefill、KV transfer、decode queue、TPOT 和 active KV tokens，判断是否需要 prefill/decode 解耦。
 13. **Structured output gate.** 若服务返回 JSON、工具参数或结构化抽取结果，报告 JSON parse rate、schema valid rate、retry rate、avg retries、P95 latency、fallback/refusal rate、safety violation rate 和 action items。
-14. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、data egress、unisolated observation、recursive sampling 和 runtime budget 结果。
+14. **Tool / MCP runtime gate.** 若服务暴露工具或连接 MCP server，报告 schema pass rate、unknown/untrusted server、permission/consent failure、roots/elicitation 越界、data egress、unisolated observation、recursive sampling、tool context tokens、guardrail events 和 runtime budget 结果。
 15. **Production rollout gate.** 将 stable baseline 与 candidate 放进同一张表，报告 offline quality、安全、SLO、错误率、成本、canary traffic/sample、control comparison、required monitors 和 rollback readiness；结论只能是 promote、继续低流量 canary、降级或 block/rollback。
 16. **Overload response.** 报告 queue pressure、KV pressure、decode saturation、error budget、tenant fairness 和 degradation readiness；每个失败项必须有明确动作，例如 load shedding、排队隔离、上下文截断、max-token 降级、扩容、回滚或 incident page。
 17. **Capacity and cost.** 用 `capacity_plan.py` 估算权重显存、KV Cache、active KV tokens、admission limit、max batch、每 1M tokens 成本和安全余量。

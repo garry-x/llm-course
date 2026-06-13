@@ -652,6 +652,20 @@ class SimpleRAG:
   <h4>循环预算：防止 agent 把系统拖入不可控状态</h4>
   <p>Agent 循环必须有硬预算。常见预算包括最大 tool calls、最大 wall-clock time、最大 observation tokens、最大外部 API cost、最大失败重试次数和最大连续同类工具调用次数。预算不是产品体验细节，而是推理服务的容量控制：一个请求如果反复搜索、读长文档、执行代码，会同时拉高 TTFT、总延迟、外部服务成本和上下文 token 数。</p>
 
+  <h4>工具上下文预算与 agent trace</h4>
+  <p>工具系统上线后，token 成本不只来自用户 prompt 和模型回答。每个 tool definition、schema、候选调用、observation、修复提示和最终回答都会占用上下文。MCP 2025-11-25 规范把 host/client/server、resources、prompts、tools，以及 client-side 的 sampling、roots、elicitation 都放进同一套 JSON-RPC 协议；这让工具生态更可组合，也让一次 agent run 的上下文、权限和观测边界更复杂。</p>
+  <p>高阶推理工程师需要把 agent run 当成可追踪的分布式工作流，而不是单次文本生成。最小 trace 应记录：输入 guardrail 是否触发、模型生成了哪些 tool proposal、schema/permission/budget 哪个 gate 通过或失败、每个工具的 latency/status/摘要、observation 是否被隔离、最终 output guardrail 是否通过，以及整次 run 的 prompt tokens、tool tokens、observation tokens、output tokens 和 wall time。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Agent trace 字段</th><th>回答的问题</th><th>没有它的后果</th></tr>
+      <tr><td>guardrail events</td><td>输入、工具、输出哪一层拦截了风险</td><td>只知道请求失败，不知道该改 prompt、schema 还是权限策略</td></tr>
+      <tr><td>tool spans</td><td>每次调用的参数摘要、权限、latency、status 和 retry</td><td>无法定位延迟来自模型生成、工具 API 还是重试循环</td></tr>
+      <tr><td>context budget</td><td>tool definitions 和 observations 吃掉了多少上下文</td><td>长工具列表或大 observation 把关键用户上下文挤出窗口</td></tr>
+      <tr><td>side-effect log</td><td>是否发生写入、发信、下单、代码执行或外部数据发送</td><td>无法审计越权执行，也无法回滚有副作用操作</td></tr>
+    </table>
+  </div>
+  <p>当工具数量从几个增长到几十、几百甚至更多时，把所有 tool definitions 直接塞进模型上下文会让 prefill 变慢、成本上升，也会增加错误选择概率。更稳的设计是按任务路由可用工具、延迟加载 tool schema、把大结果留在执行环境中处理，只把摘要、引用和必要字段回填给模型。Anthropic 的 MCP code-execution 方案正是利用“让 agent 写代码调用工具”来减少工具定义和中间结果反复穿过上下文窗口；课程里不要求复刻这套系统，但要求学生把工具上下文当作 SLO 和成本账本的一部分。</p>
+
   <h4>编程练习：结构化输出可靠性 gate</h4>
   <p>结构化输出不只是“模型看起来输出了 JSON”。生产服务至少要区分五类信号：JSON 是否可解析、字段是否满足业务 schema、repair retry 是否把延迟推高、fallback/refusal 是否异常增加，以及格式路径是否绕过 safety/output guardrail。Ch10 作业中的 <code>structured_output_reliability_report</code> 把这些信号放进一张 gate 表，适用于 JSON mode、JSON schema、guided decoding、regex/grammar constrained decoding 或工具调用前的参数生成。</p>
   <pre><code class="language-python">schema = {
@@ -698,7 +712,7 @@ assert report["decision"] == "execute_tool_calls"</code></pre>
   <p>这个练习对应线上系统中的“工具执行前置网关”。OpenAI structured outputs / function calling、MCP tool manifests 和 Agent guardrails 的接口形式会变化，但核心不变：模型生成的工具调用只是提案，服务端必须把 schema、权限和预算当作硬边界。</p>
 
   <h4>MCP / remote tool 的第二层 gate</h4>
-  <p>schema 通过只说明“参数看起来合法”，不能说明工具可以安全执行。MCP 把 host、client、server、resources、prompts、tools、sampling 和 roots 标准化，适合把外部系统接入 AI 应用；但它也把 arbitrary data access、code execution path、server-initiated sampling 和外部 observation 带进了推理服务。课程中把这类风险放进第二层 runtime gate：</p>
+  <p>schema 通过只说明“参数看起来合法”，不能说明工具可以安全执行。MCP 最新规范把 host、client、server、resources、prompts、tools、sampling、roots 和 elicitation 标准化，适合把外部系统接入 AI 应用；但它也把 arbitrary data access、code execution path、server-initiated sampling、用户补充信息请求和外部 observation 带进了推理服务。课程中把这类风险放进第二层 runtime gate：</p>
   <div class="table-wrap">
     <table>
       <tr><th>Gate</th><th>要检查什么</th><th>失败时动作</th></tr>
@@ -706,6 +720,7 @@ assert report["decision"] == "execute_tool_calls"</code></pre>
       <tr><td>Permission / consent</td><td>工具权限是否超出用户、租户和任务范围；写入、发信、代码执行是否有用户批准</td><td>降级为 read-only、请求人工确认或拒绝执行</td></tr>
       <tr><td>Data privacy</td><td>参数或上下文是否把 PII、凭据、私有文档外发给 remote tool</td><td>脱敏、阻断外发、改用本地工具或显式授权</td></tr>
       <tr><td>Observation isolation</td><td>网页、检索片段、文件内容、工具输出是否被标为不可信数据，而不是新系统指令</td><td>结构化 observation、指令/数据分离、引用检查</td></tr>
+      <tr><td>Roots / elicitation</td><td>server 请求的文件/URI 边界和向用户追问的信息是否在任务范围内</td><td>限制 roots、拒绝越界 elicitation、要求用户确认</td></tr>
       <tr><td>Sampling / budget</td><td>MCP server 是否请求递归 LLM sampling；tool calls、observation tokens、wall time 是否超预算</td><td>禁用 sampling、要求审批、停止循环或摘要 observation</td></tr>
     </table>
   </div>
@@ -746,7 +761,7 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
 
   <p>若模型连续三次搜索相同 query，系统应停止工具循环并要求模型基于已有 observation 作答或向用户澄清。若检索结果为空，模型不应编造作业要求，而应报告“未找到足够证据”，并给出下一步可执行动作。这种行为边界和 Ch11 的 benchmark validity、安全评估是同一件事：高分 agent 不是工具调用越多越好，而是在正确时机调用正确工具，并在证据不足时停止。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tool use 是推理工程的一部分。它同时改变质量、延迟、成本和风险：你需要评测工具选择、参数正确性、循环预算、工具结果忠实性和安全边界，而不是只看最终回答是否看起来合理。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tool use 是推理工程的一部分。它同时改变质量、延迟、成本和风险：你需要评测工具选择、参数正确性、循环预算、工具结果忠实性、安全边界、agent trace 和工具上下文预算，而不是只看最终回答是否看起来合理。</div></div>
 </section>
 
 <!-- ================================================================ -->

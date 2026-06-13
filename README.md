@@ -49,9 +49,9 @@ This course is organized around "how large models are represented, computed, tra
 |--------|------------------------|---------------|
 | Representation Layer | Ch01-Ch02 | How text becomes tokens, how tokens become vectors, how the model obtains positional information |
 | Transformer Core | Ch03-Ch06 | How attention, mask, multi-head, GQA/MLA, Norm, FFN, MoE, and GPT forward propagation combine |
-| Training Loop | Ch07 | Why next-token prediction is equivalent to maximum likelihood, how loss, PPL, optimizer, checkpoint/resume integrity, and distributed training gates work |
+| Training Loop | Ch07 | Why next-token prediction is equivalent to maximum likelihood, how loss, PPL, optimizer, checkpoint/resume integrity, and distributed training diagnostics work |
 | Generation & Inference | Ch08-Ch10 | How prefill/decode, sampling, speculative decoding, KV Cache, FlashAttention, sparse/linear attention, RAG, multimodal serving, and inference services trade off |
-| Fine-tuning & Alignment | Ch09 | How SFT chat template/mask/packing gates, preference data gates, LoRA, preference modeling, DPO, GRPO/DAPO/GSPO, RLVR/RFT, and rollout/training systems change model behavior |
+| Fine-tuning & Alignment | Ch09 | How SFT chat template/mask/packing diagnostics, preference data audits, LoRA, preference modeling, DPO, GRPO/DAPO/GSPO, RLVR/RFT, and rollout/training systems change model behavior |
 | Classic NLP & Evaluation | Week 8 Topic / Ch11 Assignments | How RNN/LSTM, dependency parsing, seq2seq, BERT/MLM, BLEU/ROUGE/F1/EM connect to modern LLMs |
 | Frontier Engineering Cases | Ch04-Ch10 | What engineering bottlenecks designs like MLA, MoE, FP8, GRPO/DAPO/GSPO, sparse/compressed attention, linear attention, SSM/Mamba-style layers, dynamic-resolution vision, and multimodal serving solve |
 
@@ -69,9 +69,9 @@ Foundational knowledge appears in place according to chapter tasks. Each chapter
 |---------|------------------------|----------------------------------------|
 | Ch01-Ch02 | Python data structures, matrix lookup, vector dot product, positional rotation, and shape trace | Token cost, embedding parameters, context utilization, and prefix cache prerequisites |
 | Ch03-Ch05 | Softmax, mask, broadcasting, matrix multiplication, normalization, residual paths, and resource estimation | Attention correctness, GQA/MLA memory benefits, block stability, and FLOPs budget |
-| Ch06-Ch07 | Autoregressive probability decomposition, cross entropy, optimizer state, randomness, and experimental statistics | GPT assembly, training curve interpretation, checkpoint/resume integrity, data gates, and scaling decisions |
+| Ch06-Ch07 | Autoregressive probability decomposition, cross entropy, optimizer state, randomness, and experimental statistics | GPT assembly, training curve interpretation, checkpoint/resume integrity, data diagnostics, and scaling decisions |
 | Ch08-Ch09 | Logits distribution, sampling variance, KL/reference model, chat template, assistant mask, preference data, and reward assumptions | Generation strategy deployment, reasoning budget, SFT/DPO/GRPO quality and safety boundaries |
-| Ch10 | Queuing, memory/bandwidth, KV cache, sparse/compressed attention, linear attention, SSM/hybrid sequence architecture, quantization calibration/regression, stress test metrics, RAG retrieval metrics, context engineering, model routing, admission control, release gates, and overload response | TTFT/TPOT/P95, memory contract analysis, quantization release gate, context engineering gate, model routing gate, continuous batching admission, P/D decoupling, capacity planning, canary/control, load shedding, and fallback |
+| Ch10 | Queuing, memory/bandwidth, KV cache, sparse/compressed attention, linear attention, SSM/hybrid sequence architecture, quantization calibration/regression, stress test metrics, RAG retrieval metrics, context engineering, model routing, admission control, release evidence, and overload response | TTFT/TPOT/P95, memory contract analysis, quantization release diagnostics, context engineering report, model routing checks, continuous batching admission, P/D decoupling, capacity planning, canary/control, load shedding, and fallback |
 | Ch11 | Sequence modeling, structured prediction, encoder-only, traditional metrics, judge reliability, and agent/workflow evaluation | Choosing generation/extraction/ranking/structured decoding, determining if final answer, trajectory, state, safety, and cost evidence support deployment conclusions |
 
 Supplementary learning materials:
@@ -106,7 +106,7 @@ If your goal is to become an LLM training engineer, the learning objective shoul
 | Training Loop Engineering | Ch06-Ch07 | Organize PyTorch Dataset/DataLoader, forward, loss, backward, optimizer, scheduler |
 | Stability & Recovery | Ch07 | Use seed, grad clipping, checkpoint integrity, distributed resume, and anomaly troubleshooting to protect training |
 | Monitoring & Evaluation | Ch07-Ch09 | Record train_loss, val_loss, ppl, lr, grad_norm, tokens/s, and interpret curves |
-| Fine-tuning & Alignment | Ch09 | Distinguish data formats, losses, rollout logs, weight sync, staleness, and applicable scenarios for SFT/preference data gates, LoRA, DPO, GRPO/DAPO/GSPO, RLVR/RFT |
+| Fine-tuning & Alignment | Ch09 | Distinguish data formats, losses, rollout logs, weight sync, staleness, and applicable scenarios for SFT/preference data audits, LoRA, DPO, GRPO/DAPO/GSPO, RLVR/RFT |
 | Distribution & Cost | Ch07, Ch10 | Understand AMP, FSDP/ZeRO, global batch tokens, MFU, GPU hours, distributed checkpoint, checkpoint storage, and scale rehearsal |
 
 ## Quick Start
@@ -147,10 +147,10 @@ This repository recommends using `.venv` in the root directory to run local code
 | 4 | **Multi-Head Attention & MLA** — MHA → GQA → DeepSeek MLA | `MultiHeadAttention` ~60 lines | 5+5 |
 | 5 | **Transformer Block** — RMSNorm + FFN/SwiGLU + mHC | `TransformerBlock` ~50 lines | 5+5 |
 | 6 | **Assemble GPT + DeepSeekMoE** — GPT-2 124M Complete Model | `GPTModel` ~100 lines | 5+5 |
-| 7 | **Training Loop** — AdamW/Muon + FP8/MXFP8 + Distributed Strategy Ledger | Complete training script + strategy/gate report | 7+5 |
-| 8 | **Text Generation** — Sampling strategies + reasoning budget + MTP speculative decoding + constrained generation | Text generator + test-time compute gate | 7+5 |
+| 7 | **Training Loop** — AdamW/Muon + FP8/MXFP8 + Distributed Strategy Ledger | Complete training script + strategy diagnostics report | 7+5 |
+| 8 | **Text Generation** — Sampling strategies + reasoning budget + MTP speculative decoding + constrained generation | Text generator + test-time compute diagnostics | 7+5 |
 | 9 | **Fine-tuning & Alignment** — SFT/preference data/synthetic distillation/LoRA/DPO/GRPO/DAPO/GSPO/RLVR + rollout systems + R1 reasoning | SFT protocol, post-training data audit, LoRA, DPO/GRPO/RLVR, reasoning RL logs, rollout system ledger, and distillation data quality analysis | 8+5 |
-| 10 | **Inference Optimization & Frontiers** — KV Cache/quantization release gate/RAG/Context Engineering/Structured Output/Tool/MCP Gate/vLLM/Triton/MoE serving/Model routing/Production release/KV-aware routing/Long context/Multimodal | KV Cache + quantization calibration/regression + RAG + context engineering gate + structured output gate + Tool/MCP Gate + MoE serving gate + model routing gate + rollout gate + overload response + continuous batching admission + P/D pool plan + KV-aware cache hierarchy + speculative gate + long-context gate + LSH + service blueprint | 11+5 |
+| 10 | **Inference Optimization & Frontiers** — KV Cache/quantization release diagnostics/RAG/Context Engineering/Structured Output/Tool and MCP runtime/vLLM/Triton/MoE serving/Model routing/Production release/KV-aware routing/Long context/Multimodal | KV Cache + quantization calibration/regression + RAG + context engineering report + structured output reliability + Tool/MCP runtime checks + MoE serving report + model routing checks + rollout evidence + overload response + continuous batching admission + P/D pool plan + KV-aware cache hierarchy + speculative decoding diagnostics + long-context validation + LSH + service blueprint | 11+5 |
 | Topic | **Classic NLP & Evaluation** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics / agent workflow eval | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + agent eval protocol + MLM mask | Ch11 |
 
 > **Total: Covers 11 chapters of programming assignments, written derivation problems, and classic NLP topic assignments.**

@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 2: Embedding Layer and Positional Encoding</h2>
   <p class="subtitle">Implement TokenEmbedding, Sinusoidal Encoding, and RoPE — Representing Meaning and Order</p>
-  <div class="reading-time">⏱ Estimated reading: 120 minutes · 19 sections · 4 programming exercises · 6 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 120 minutes · 19 sections · 4 programming exercises · 6 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -393,7 +393,7 @@ E[token_ids] =
   </div>
   <p>Where <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span> is a permutation matrix. Swapping the order of input tokens will also swap the output in the same way—this is <strong>equivariant</strong>, not invariant. Without positional encoding, the attention layer can model interactions based on token content, but it cannot know the absolute positions or relative order of these tokens.</p>
 
-  <h4>Why is Self-Attention Permutation Equivariant?</h4>
+  <h4>Why Self-Attention Is Permutation Equivariant</h4>
   <p>From the formula, the computation of attention scores <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> involves dot products between all pairs of tokens. If the input rows (token order) are permuted, the rows of Q and K are permuted accordingly, but the value of <span class="katex-inline" data-expr="Q_i^\top K_j" aria-label="Q_i^\top K_j" role="img"></span> depends only on the <strong>content</strong> of token <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> and token <span class="katex-inline" data-expr="j" aria-label="j" role="img"></span>, not on their <strong>positions</strong>. Therefore, the output rows are also permuted—the output for each token remains the same, only its position changes.</p>
   <p>This means that without positional encoding:</p>
   <ul>
@@ -401,7 +401,7 @@ E[token_ids] =
     <li>"The 1st token" and "The 1000th token" would be treated identically—no positional decay</li>
     <li>The model cannot leverage word order, a fundamental syntactic signal</li>
   </ul>
-  <p><strong>Solution:</strong> Add positional signals to the representation of each token to break permutation symmetry. Mainstream approaches fall into two categories:</p>
+  <p><strong>Solution:</strong> Add positional signals to each token representation to break permutation symmetry. Common approaches fall into two categories:</p>
   <ul>
     <li><strong>Additive Encoding:</strong> Add a position vector to the embedding vector, e.g., Sinusoidal, Learned PE</li>
     <li><strong>Rotary Encoding:</strong> Modify the attention computation to encode position in Q/K, e.g., RoPE</li>
@@ -444,7 +444,7 @@ E[token_ids] =
     <p>For position 0, all even dimensions are 0 and all odd dimensions are 1, which corresponds exactly to <code>row0[0::2] == 0</code> and <code>row0[1::2] == 1</code> in the assignment tests. Higher-frequency dimensions quickly distinguish adjacent positions; lower-frequency dimensions change very little over short distances and are used to carry longer-range positional changes.</p>
   </div>
 
-  <h4>Why is it designed this way?</h4>  <p><strong>Multi-scale frequency:</strong> Low dimensions (small <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use high frequencies—sin/cos waveforms change quickly, encoding large differences between adjacent positions, suitable for encoding <strong>local positional information</strong>. High dimensions (large <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use low frequencies—change slowly, suitable for encoding <strong>global positional information</strong>. This design mimics Fourier features: by encoding positions onto basis functions of different frequencies, the model can learn to selectively attend to high-frequency or low-frequency dimensions.</p>
+  <h4>Why This Sinusoidal Design Works</h4>  <p><strong>Multi-scale frequency:</strong> Lower-indexed dimensions (small <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use higher frequencies, so the sin/cos waveforms change quickly and capture local positional differences. Higher-indexed dimensions (large <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use lower frequencies, so they change slowly and help represent broader positional structure. This design mimics Fourier features: by encoding positions onto basis functions with different frequencies, the model can learn to attend to high-frequency or low-frequency dimensions as needed.</p>
 
   <p><strong>Linear representation of relative positions:</strong> For any offset <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>, the encoding at position <span class="katex-inline" data-expr="pos + k" aria-label="pos + k" role="img"></span> can be expressed as a <strong>linear transformation</strong> of the encoding at position <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span>:</p>
   <div class="math-box"><div class="label">Linearity property of relative positions</div>
@@ -546,7 +546,7 @@ print(f"Trainable parameters: {sum(p.numel() for p in pe.parameters())}")
     \end{pmatrix} \quad \text{where } \theta_i = 10000^{-2i/d}" role="img"></div>
   </div>
 
-  <h4>Why does the rotation matrix make the dot product depend only on relative positions?</h4>
+  <h4>Why RoPE Makes Dot Products Depend Only on Relative Position</h4>
   <p>The key lies in the property of <span class="katex-inline" data-expr="R_{\Theta,m}" aria-label="R_{\Theta,m}" role="img"></span>:</p>
   <div class="math-box"><div class="label">Derivation of Relative Position Dependency</div>
     <div class="katex" data-expr="\begin{aligned}
@@ -975,7 +975,7 @@ scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
   </div>
 
   <div class="exercise" data-answer="0" data-explain="The core innovation of RoPE is modifying the attention computation (rotation of Q/K), rather than adding positional encoding to the embedding vector. Sinusoidal and Learned PE are both additive schemes—adding a position vector to the embedding layer. The mathematical foundation of RoPE is the group property of rotation matrices.">
-    <h4>Exercise 3: What is the most fundamental difference between RoPE and Sinusoidal encoding?</h4>
+    <h4>Exercise 3: What is the central difference between RoPE and sinusoidal encoding?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q3" value="0"> A. RoPE modifies the representations of Q and K (rotation), while Sinusoidal adds a position vector to the embedding layer</label>
       <label><input type="radio" name="q3" value="1"> B. RoPE uses trigonometric functions while Sinusoidal does not</label>

@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -582,7 +582,7 @@ swiglu = SwiGLU(768)
 print(f"FFN parameter count: {sum(p.numel() for p in ffn.parameters()):,}")
 print(f"SwiGLU parameter count: {sum(p.numel() for p in swiglu.parameters()):,}")
 print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for p in ffn.parameters()):.3f}")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why is SwiGLU often adopted?</strong> The gating mechanism allows the model to <strong>selectively</strong> pass information—when the gate value is close to 0, information in that dimension is blocked. Compared to GELU's "all neurons activate but to different degrees," SwiGLU provides more flexible "on/off" control. SwiGLU performs well in many Transformer practice reports, but the specific PPL improvement depends on model scale, data, width balancing, training budget, and implementation details, and should not be treated as a fixed gain.</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why SwiGLU is often adopted:</strong> the gating mechanism allows the model to <strong>selectively</strong> pass information. When the gate value is close to 0, information in that dimension is blocked. Compared with GELU's "all neurons activate, but to different degrees" behavior, SwiGLU provides more flexible token-level control. SwiGLU performs well in many Transformer reports, but the specific PPL improvement depends on model scale, data, width balancing, training budget, and implementation details; it should not be treated as a fixed gain.</p>
     </div>
   </div>
 </section>
@@ -807,7 +807,7 @@ x = x + dropout(ffn(norm2(x)))</div>  <p>The meaning of this position is: during
   </div>
   <p>The error of central difference is <span class="katex-inline" data-expr="O(\epsilon^2)" aria-label="O(\epsilon^2)" role="img"></span>, while the error of forward difference is <span class="katex-inline" data-expr="O(\epsilon)" aria-label="O(\epsilon)" role="img"></span>. Therefore, central difference is more accurate — at the cost of two forward passes per parameter dimension.</p>
 
-  <h4>Why is gradcheck needed?</h4>
+  <h4>Why gradcheck matters</h4>
   <p>Consider a manually implemented backward function with a sign error:</p>
   <div class="code-block" data-lang="python">
   # Wrong backward: should be dx = grad * w, but written as dx = grad / w

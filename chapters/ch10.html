@@ -289,7 +289,7 @@ mla = kv_cache_memory_analysis(60, 1, 128, 128000)
 gqa = kv_cache_memory_analysis(60, 8, 128, 128000)
 print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
       f"(Standard GQA: {gqa['total_cache_gb']:.1f} GB)")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why is MLA so effective?</strong> Standard MHA has independent K/V per head, GQA shares by groups. MLA goes further—projecting K/V into a low-dimensional latent space, caching the compressed vectors instead of full K/V. DeepSeek-V2/V3 report MLA as a KV cache compression scheme; the specific compression ratio depends on the latent dimension, RoPE branch, and implementation configuration. The toy configuration here is only for building order-of-magnitude intuition, not for treating it as a fixed specification of any real model.</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why MLA is effective:</strong> standard MHA has independent K/V per head, and GQA shares K/V by groups. MLA goes further by projecting K/V into a low-dimensional latent space and caching compressed vectors instead of full K/V. DeepSeek-V2/V3 report MLA as a KV cache compression scheme; the specific compression ratio depends on the latent dimension, RoPE branch, and implementation configuration. The toy configuration here is only for building order-of-magnitude intuition, not for treating it as a fixed specification of any real model.</p>
     </div>
   </div>
 </section>
@@ -1298,7 +1298,7 @@ summary = build_benchmark_summary(
     </table>
   </div>
 
-  <h4>What should an OpenAI-compatible interface support?</h4>
+  <h4>What an OpenAI-compatible interface should support</h4>
   <p>Production services typically need to be compatible with interfaces like <code>/v1/chat/completions</code>, because upper-layer applications, Agent frameworks, and evaluation tools can all connect directly. Minimum features include:</p>
   <ul>
     <li><strong>Non-streaming and streaming output:</strong> Standard JSON response + Server-Sent Events (SSE) token stream.</li>
@@ -1336,7 +1336,7 @@ summary = build_benchmark_summary(
   </div>
   <p>When deploying a router, it must be compared against a baseline of "all requests go to the strong model." The minimum report includes: sample count per routing branch, quality/safety/schema/RAG metrics, P95 TTFT/TPOT, average cost, escalation rate, error fallback rate, router latency, unroutable samples, and manual spot checks. If the router keeps the overall pass rate unchanged but sends medical, financial, code execution, or long-context slices to the wrong model, it cannot be released. If the fallback model does not support the same tokenizer, tool schema, response_format, or safety policy, it cannot be treated as a transparent replacement.</p>
 
-  <h4>SLO: What should an inference service promise?</h4>
+  <h4>SLO: What an inference service should promise</h4>
   <p>Do not only look at average latency. What online users perceive is tail latency and stability. A reasonable course-level SLO example:</p>
   <div class="table-wrap">
     <table>
@@ -1945,7 +1945,7 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
   <h3>10.16 Engram—A Hippocampus-Inspired External Memory Case Study</h3>
   <p>RAG (10.8) places knowledge <strong>outside the model</strong>, relying on vector retrieval for recall. As a cutting-edge design case, <strong>Engram</strong> (derived from the neuroscience term "memory trace") can be understood as integrating external memory more tightly into the model's forward pass: it posits a hippocampus-inspired knowledge base running in parallel with the backbone network, using hash indexing to reduce candidate recall cost. The complexity here should be understood as an engineering approximation of hash bucket lookup, not a mathematical guarantee for end-to-end QA quality or worst-case retrieval complexity.</p>
 
-  <h4>Why is it needed?</h4>
+  <h4>Why Engram-style memory is useful</h4>
   <p>The cost of attention grows with context length. Packing all factual knowledge into parameters or context is expensive. Engram places enumerable knowledge entries into an <strong>independent, updatable</strong> library, indexed using <strong>Locality-Sensitive Hashing (LSH)</strong>—a query vector is mapped to a bucket by the same set of hash functions, and entries within the hit bucket are considered neighbors, avoiding a full library scan.</p>
 
   <h4>Differences from RAG</h4>
@@ -2013,7 +2013,7 @@ class LSHMemory:
         # Exact comparison only within same-bucket candidates (bucket size << N)
         sims = [torch.dot(vec, v) / (vec.norm() * v.norm() + 1e-9) for v, _ in cand]
         return cand[int(torch.tensor(sims).argmax())][1]</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why is it often called approximately constant time?</strong> Hashing divides the full library into many small buckets. A query typically only compares against the few candidates within the hit bucket, making the average query cost potentially much lower than a full library scan. The trade-off is <strong>approximation</strong>: similar vectors are highly probable, but not guaranteed, to fall into the same bucket; worst-case scenarios, bucket distribution, and multi-probe probing can affect complexity. This course presents Engram only as a cutting-edge case study for "external memory + LSH retrieval," not treating specific benchmarks as established facts.</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why query time is often described as approximately constant:</strong> hashing divides the full library into many small buckets. A query typically compares only against the few candidates in the hit bucket, making the average query cost much lower than a full library scan. The trade-off is <strong>approximation</strong>: similar vectors are highly likely, but not guaranteed, to fall into the same bucket; worst-case inputs, bucket imbalance, and multi-probe search can all affect complexity. This course presents Engram only as a cutting-edge case study for "external memory + LSH retrieval," not as a claim that specific benchmark numbers are established facts.</div>
     </div>
   </div>
 </section>

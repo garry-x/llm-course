@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -812,7 +812,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
     </table>
   </div>
 
-  <h4>Why "Differentiable" is Key</h4>
+  <h4>Why Differentiability Matters</h4>
   <p>If the match were hard (0 or 1), gradients could not propagate—you wouldn't know how "slightly changing the match degree" would affect the output. Softmax turns the match into a <strong>continuous probability distribution</strong>, allowing gradients to flow smoothly from the output to the projection matrices <span class="katex-inline" data-expr="W^Q, W^K, W^V" aria-label="W^Q, W^K, W^V" role="img"></span> of Q, K, V. This is the mathematical foundation for why attention can be trained end-to-end.</p>
 
   <h4>Comparison with Convolution</h4>
@@ -832,7 +832,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
     <li>✅ <strong>Causal Mask</strong> — Ensured the causal constraint for autoregressive generation</li>
     <li>✅ <strong>Masked softmax contract</strong> — Understood the numerical risks of padding keys, padding queries, and all-masked rows</li>
     <li>✅ <strong>Attention Visualization</strong> — Built an intuitive understanding of attention behavior</li>
-    <li>✅ <strong>Attention Heatmap Interpretation Boundaries</strong> — Learned it is suitable for diagnosing routing patterns but cannot be used alone as a causal explanation</li>
+    <li>✅ <strong>Attention Heatmap Interpretation Boundaries</strong> — Learned that heatmaps can diagnose routing patterns but cannot serve as standalone causal explanations</li>
     <li>✅ <strong>Deep understanding of √dₖ</strong> — Mastered the scaling factor from variance analysis and gradient perspectives</li>
   </ul>
   <p>These pieces of code total about <strong>60 lines</strong>, but they are the common foundation for all modern LLMs like GPT, Llama, and Claude. In Chapter 4, we will extend single-head attention to <strong>multi-head attention</strong> and delve into implementing DeepSeek's MLA.</p>
@@ -914,7 +914,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
   </div>
 
   <div class="exercise" data-answer="1" data-explain="If all keys for a certain query row are masked, the denominator of softmax becomes 0, and many implementations produce NaN. During training, padding keys are usually masked, and the output of padding query rows is skipped using loss/output masks; do not simply zero out the padding query row and then apply softmax directly.">
-    <h4>Exercise 6: Why is it particularly important to avoid an all-masked row when combining causal mask and padding mask?</h4>
+    <h4>Exercise 6: Why must causal and padding masks avoid producing an all-masked row?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q6" value="0"> A. Because an all-masked row changes the attention complexity from O(n²) to O(n³)</label>
       <label><input type="radio" name="q6" value="1"> B. Because that row's softmax has no visible keys, the denominator is 0, potentially producing NaN</label>

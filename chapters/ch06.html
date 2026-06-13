@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -23,8 +23,8 @@
 <article class="chapter">
   <h2>Chapter 6: Assembling the Complete GPT Model</h2>
   <p class="subtitle">GPT-2 124M from Scratch plus DeepSeekMoE Sparse Activation</p>
-  <div class="reading-time">⏱ Estimated reading: 110 minutes · 12 sections · 5 programming exercises · 5 concept exercises</div>
-  <div class="font-controls"><span>Font size:</span>
+  <div class="reading-time">⏱ Estimated Reading: 110 minutes · 12 sections · 5 programming exercises · 5 concept exercises</div>
+  <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
@@ -162,14 +162,14 @@
     </svg>
   </div>
 
-  <h4>Key Differences Between GPT-2 and Subsequent Models</h4>
+  <h4>Key Differences Between GPT-2 and Later Decoder-Only Models</h4>
   <ul>
-    <li><strong>Absolute Position Encoding:</strong> GPT-2 uses learnable Position Embeddings (1024 positions × 768 dimensions), not RoPE. RoPE is used by subsequent models like Llama, DeepSeek, etc.</li>
+    <li><strong>Absolute Position Encoding:</strong> GPT-2 uses learnable position embeddings (1024 positions × 768 dimensions), not RoPE. RoPE is used by later models such as Llama and DeepSeek.</li>
     <li><strong>LayerNorm with bias:</strong> GPT-2 uses LayerNorm with bias in each Block (not RMSNorm)</li>
     <li><strong>GELU Activation:</strong> GPT-2's FFN uses GELU, not SwiGLU</li>
     <li><strong>Weight Tying:</strong> GPT-2 shares weights between Embedding and LM Head</li>
   </ul>
-  <p>In subsequent chapters, we will see how these design choices were progressively improved by later models.</p>
+  <p>In later chapters, we will see how modern decoder-only models change these design choices for longer context, better stability, and lower serving cost.</p>
 </section>
 
 <!-- ================================================================ -->
@@ -933,7 +933,7 @@ def load_hf_weights_to_model(hf_model, our_model):
 <!-- ================================================================ -->
 <section class="card" id="s6-8">
   <h3>6.8 Theory: MoE Architecture — Decoupling Capacity and Per-Token Computation</h3>
-  <p><strong>Mixture of Experts (MoE)</strong> is the most important extension beyond the GPT-2 architecture for LLMs. It replaces the FFN in each layer with multiple "expert" networks, activating only a few of them per token, achieving <strong>sparse activation</strong>—a large total parameter count but a forward pass computation cost dependent only on the activated parameters.</  p>
+  <p><strong>Mixture of Experts (MoE)</strong> is one of the most important extensions beyond the GPT-2 architecture for LLMs. It replaces the FFN in each layer with multiple "expert" networks and activates only a few of them per token. This creates <strong>sparse activation</strong>: the model can have a large total parameter count while the forward-pass cost depends mainly on the activated parameters.</p>
 
   <h4>Core Design of DeepSeekMoE</h4>
   <div class="math-box"><div class="label">MoE Forward Computation</div>
@@ -1016,7 +1016,7 @@ def load_hf_weights_to_model(hf_model, our_model):
     </svg>
   </div>
 
-  <h4>Why Does Activating Only a Few Experts Still Work?</h4>
+  <h4>Why Activating Only a Few Experts Can Still Work</h4>
   <p>The core assumption of MoE is <strong>conditional computation</strong>: different tokens do not need to pass through exactly the same FFN parameters. The router selects experts based on the hidden state, directing different input patterns—such as mathematical symbols, code snippets, entity names, and format tokens—to different parameter subsets. Whether this assumption holds depends on the training data, the router's representational capacity, expert capacity, and load balancing; if the router collapses onto a few experts, MoE degenerates into an expensive and unstable approximation of a dense model.</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Trade-off:</strong> MoE uses more total parameters to increase capacity and top-K sparse activation to control per-token computation. However, it introduces additional problems: router training, expert load balancing, cross-device communication, and intra-batch token dispatch; these system costs must be analyzed together with the capacity benefits.</div></div>
@@ -1257,7 +1257,7 @@ for step in range(10):
 <section class="card">
   <h3>📝 Concept Practice & Reinforcement</h3>
 
-  <div class="exercise" data-answer="2" data-explain="GPT-2 uses learnable absolute position encoding (Position Embedding), where each position has an independent 768-dimensional vector added to the token embedding. RoPE is a relative position encoding used by subsequent models like Llama and DeepSeek.">
+  <div class="exercise" data-answer="2" data-explain="GPT-2 uses learnable absolute position encoding (Position Embedding), where each position has an independent 768-dimensional vector added to the token embedding. RoPE is a relative position encoding used by later models such as Llama and DeepSeek.">
     <h4>Exercise 1: Which position encoding method does GPT-2 use?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q61" value="0"> A. RoPE (Rotary Position Embedding)</label>

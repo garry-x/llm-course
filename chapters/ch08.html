@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -117,7 +117,7 @@
   <p>Greedy Decoding selects the token with the highest probability at each step: <span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>. It is the simplest strategy, but it has two fundamental flaws.</p>
 
   <h4>Flaw 1: Repetition Loop</h4>
-  <p>Once the model enters a high-probability local pattern, subsequent <code>argmax</code> steps may continuously select similar or identical tokens. This is especially noticeable near common phrases, punctuation, or function words in the training data. The cause is typically a combination of factors: an overly sharp conditional distribution, existing repetitive patterns in the context, a lack of random exploration, and the absence of stopping constraints. These factors together can trap greedy decoding in a repetition loop, but it cannot be simply attributed to a single token's Key/Query necessarily self-reinforcing.</p>
+  <p>Once the model enters a high-probability local pattern, later <code>argmax</code> steps may keep selecting similar or identical tokens. This is especially noticeable near common phrases, punctuation, or function words in the training data. The cause is usually a combination of factors: an overly sharp conditional distribution, repetitive patterns already present in the context, no random exploration, and weak stopping constraints. These factors can trap greedy decoding in a repetition loop; it should not be reduced to a single Key/Query self-reinforcement story.</p>
 
   <h4>Flaw 2: Exposure Bias</h4>
   <p>During training, the model sees the <strong>true</strong> ground truth token at each step. However, during inference, the model sees the <strong>self-generated</strong> token. The distributions in these two scenarios differ — the conditional distribution during training is <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{true}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{true}})" role="img"></span>, while during inference it is <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{generated}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{generated}})" role="img"></span>. An error at one step gets amplified in subsequent steps; this is <strong>error accumulation</strong>.</p>
@@ -965,7 +965,7 @@ def speculative_decoding(target_model, draft_model,
 <!-- ================================================================ -->
 <section class="card" id="s8-10">
   <h3>8.10 Context Window and Attention Sink</h3>
-  <p><strong>Context Window</strong> is the maximum number of tokens a model can "see" during a single generation. Why is longer better?</p>
+  <p><strong>Context Window</strong> is the maximum number of tokens a model can "see" during a single generation. A longer window helps only when the model can still retrieve, prioritize, and use the relevant information inside that window.</p>
   <ul>
     <li><strong>Long-range Dependencies:</strong> A novel's foreshadowing might be revealed hundreds of pages later; a function definition is at the beginning of a file, but its call is at the end. Longer context means better cross-paragraph reasoning.</li>
     <li><strong>Few-shot Learning:</strong> Placing more examples (in-context examples) in the prompt improves model performance. The longer the context, the more examples can be accommodated.</li>
@@ -1122,7 +1122,7 @@ next_token = sample_next_token(masked, strategy="greedy")
     </div>
   </div>
 
-  <h4>Mainstream Tools</h4>
+  <h4>Common Tools</h4>
   <div class="table-wrap">
     <table>
       <tr><th>Tool</th><th>Principle</th><th>Supported Engines</th></tr>
@@ -1241,7 +1241,7 @@ next_token = sample_next_token(masked, strategy="greedy")
   </div>
 
   <div class="exercise" data-answer="2" data-explain="When the paper's assumptions hold, speculative decoding uses rejection sampling to preserve the target model's sampling distribution. The accept/reject criterion min(1, p/q) is key to distribution correction; the actual benefit in a real system still depends on the acceptance rate, draft model speed, and scheduling implementation.">
-    <h4>Exercise 3: Why can speculative decoding preserve the target sampling distribution?</h4>
+    <h4>Exercise 3: How can speculative decoding preserve the target sampling distribution?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q3" value="0"> A. Because it uses quantization to reduce precision</label>
       <label><input type="radio" name="q3" value="1"> B. Because it only accelerates in simple contexts</label>

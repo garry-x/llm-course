@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 4 Multi-Head Attention & MLA</h2>
   <p class="subtitle">From MHA to GQA to DeepSeek MLA — A Path to KV Cache Compression</p>
-  <div class="reading-time">⏱ Estimated Reading: 100 min · 12 sections · 5 programming exercises · 5 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 100 minutes · 12 sections · 5 programming exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -103,7 +103,7 @@
   </ul>
   <p>Single-head attention can only use one <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>-dimensional space to encode all these complex matching rules. <strong>This is insufficient</strong> — it's like asking a single judge to preside over civil, criminal, and administrative cases simultaneously with only one set of criteria.</p>
 
-  <h4>The Solution of Multi-Head Attention: Parallel Subspaces</h4>
+  <h4>Multi-Head Attention's Solution: Parallel Subspaces</h4>
   <p>The core idea of Multi-Head Attention (MHA) is: split the input <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span>-dimensional space into <span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span> subspaces of dimension <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>, where each head <strong>independently</strong> computes attention in its own subspace, and finally all head outputs are concatenated and fused through the output projection <span class="katex-inline" data-expr="W_O" aria-label="W_O" role="img"></span>:</p>
   <div class="math-box"><div class="label">Multi-Head Attention Formula</div>
     <div class="katex" data-expr="\text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, \dots, \text{head}_{n_h}) \mathbf{W}_O" aria-label="\text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, \dots, \text{head}_{n_h}) \mathbf{W}_O" role="img"></div>    <div class="katex" data-expr="\text{head}_i = \text{Attention}(\mathbf{X}\mathbf{W}_{Q_i}, \mathbf{X}\mathbf{W}_{K_i}, \mathbf{X}\mathbf{W}_{V_i})" aria-label="\text{head}_i = \text{Attention}(\mathbf{X}\mathbf{W}_{Q_i}, \mathbf{X}\mathbf{W}_{K_i}, \mathbf{X}\mathbf{W}_{V_i})" role="img"></div>
@@ -599,7 +599,7 @@ class GroupedQueryAttention(nn.Module):
   <h4>Limitations of GQA</h4>
   <p>GQA reduces the number of KV heads from <span class="katex-inline" data-expr="n_h" aria-label="n_h" role="img"></span> to <span class="katex-inline" data-expr="n_g" aria-label="n_g" role="img"></span>, but each KV head still stores a <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>-dimensional vector. Can we compress the individual KV vectors themselves? This is the core innovation of DeepSeek MLA.</p>
 
-  <h4>Core Idea of Low-Rank Decomposition</h4>
+  <h4>Low-Rank Decomposition Core Idea</h4>
   <p>MLA (Multi-head Latent Attention) treats KV storage as a <strong>low-rank approximation</strong> problem:</p>
   <div class="math-box"><div class="label">MLA Low-Rank Compression</div>
     <div class="katex" data-expr="\mathbf{c}_t^{KV} = W_{DKV} \cdot \mathbf{h}_t \quad (\text{Compress to } d_c \text{-dim latent space})" aria-label="\mathbf{c}_t^{KV} = W_{DKV} \cdot \mathbf{h}_t \quad (\text{Compress to } d_c \text{-dim latent space})" role="img"></div>

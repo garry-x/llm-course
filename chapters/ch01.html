@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 1 BPE Tokenizer</h2>
   <p class="subtitle">Implementing Byte Pair Encoding from Scratch — The Text Interface of LLMs</p>
-  <div class="reading-time">⏱ Estimated reading: 120 minutes · 17 sections · 5 programming exercises · 5 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 120 minutes · 17 sections · 5 programming exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -164,8 +164,8 @@ python -c "import torch; print(torch.__version__)"</div>
   </div>
   <p>Each merge operation shortens the sequence length by <span class="katex-inline" data-expr="\text{freq}" aria-label="\text{freq}" role="img"></span> (the occurrence count of that pair). After <span class="katex-inline" data-expr="V - 256" aria-label="V - 256" role="img"></span> merges, the total sequence length is significantly reduced, while the vocabulary grows from 256 to <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span>.</p>
 
-  <h4>Why is Merging the Most Frequent Pair Reasonable?</h4>
-  <p>From a <strong>compression</strong> perspective: Suppose we have a token sequence and want to replace a certain adjacent pair with a new merged symbol. After replacement, the sequence length is shortened, and the replacement rule is deterministic. Merging the most frequent pair is equivalent to <strong>maximizing the sequence length compression ratio at each step</strong>. This is a greedy heuristic that does not guarantee finding the globally optimal merge sequence; practical effectiveness also depends on the corpus, pre-tokenization, and vocabulary budget.</p>
+  <h4>Why the Most Frequent Pair Is a Reasonable Merge</h4>
+  <p>From a <strong>compression</strong> perspective: suppose we have a token sequence and want to replace an adjacent pair with a new merged symbol. After replacement, the sequence is shorter, and the replacement rule is deterministic. Merging the most frequent pair is equivalent to <strong>maximizing the sequence-length reduction at the current step</strong>. This is a greedy heuristic rather than a guarantee of a globally optimal merge sequence; practical effectiveness also depends on the corpus, pre-tokenization, and vocabulary budget.</p>
   <p>From an <strong>information theory</strong> perspective: Frequently co-occurring adjacent symbol pairs are often worth lexicalizing, but raw frequency is not equivalent to mutual information. High-frequency pairs might simply result from the combination of high-frequency single bytes. Therefore, BPE's selection criterion is more accurately described as <strong>local compression gain</strong>, not an optimal estimate of PMI or semantic association.</p>
 
   <h4>A Concrete Example</h4>
@@ -883,7 +883,7 @@ round-trip tests pass for multilingual and tool-call samples</div>
   </div>
 
   <div class="exercise" data-answer="2" data-explain="During encoding, find all pairs in the current sequence that exist in the merges, and select the pair with the highest merge rank (in this chapter's implementation, the one with the smallest new_id, i.e., the pair merged earliest during training). This is a greedy process that repeatedly applies a fixed merge priority, without needing to re-statisticize input frequencies.">
-    <h4>Exercise 5: How does BPE determine which pair should be merged currently during encoding?</h4>
+    <h4>Exercise 5: During encoding, how does BPE determine which pair should be merged next?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q5" value="0"> A. Merge the pair with the highest frequency</label>
       <label><input type="radio" name="q5" value="1"> B. Randomly select a mergeable pair</label>

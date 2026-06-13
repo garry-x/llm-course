@@ -188,7 +188,7 @@
 <!-- ================================================================ -->
 <section class="card" id="s9-2">
   <h3>9.2 Theory of Supervised Fine-Tuning (SFT) — The Core Role of Loss Masking</h3>
-  <p><strong>Supervised Fine-Tuning (SFT)</strong> is the most basic alignment method. We continue training the model on human-annotated instruction-response pairs, adjusting the model's behavior pattern.</p>
+  <p><strong>Supervised Fine-Tuning (SFT)</strong> is a foundational alignment method. We continue training the model on human-annotated instruction-response pairs so that its behavior better matches the target assistant interface.</p>
 
   <h4>Key Detail of SFT: Compute Loss Only on the Response Part</h4>
   <p>A common misconception is that the training objective of SFT is the same as pre-training — both are cross-entropy. However, a key difference is <strong>loss masking</strong>: in SFT, the instruction part (prompt) does not contribute to the loss; only the response part participates in gradient updates.</p>
@@ -533,7 +533,7 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
     total = sum(p.numel() for p in model.parameters())
     print(f"Trainable parameters: {trainable:,} / {total:,} ({trainable/total*100:.2f}%)")
     return model</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why is B initialized to 0?</strong> This way, at the start of training, <span class="katex-inline" data-expr="BA = 0" aria-label="BA = 0" role="img"></span>, the LoRA path has no effect on the output. The model starts from the original weights and then gradually learns the fine-tuning direction. If both B and A were randomly initialized, the model would have a random offset from the start, potentially destroying pre-trained knowledge.</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why B starts at zero:</strong> at the start of training, <span class="katex-inline" data-expr="BA = 0" aria-label="BA = 0" role="img"></span>, so the LoRA path has no effect on the output. The model starts from the original weights and gradually learns the fine-tuning direction. If both B and A were randomly initialized, the model would begin with a random offset, potentially damaging pretrained knowledge.</p>
     </div>
   </div>
 </section>
@@ -581,7 +581,7 @@ LoRA train states ~= base_weights + lora_params * (weights + grads + Adam m + Ad
 <!-- 9.6 DPO Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s9-6">
-  <h3>9.6 The Mathematical Equivalence of DPO — Why is a Reward Model Not Needed?</h3>
+  <h3>9.6 The Mathematical Equivalence of DPO — Why DPO Does Not Need a Separate Reward Model</h3>
   <p><strong>DPO (Direct Preference Optimization)</strong> (Rafailov et al., 2023) is an important theoretical contribution. It shows that, under assumptions like the Bradley-Terry preference model and KL-regularized reward maximization, the reward function can be reparameterized as the log-probability ratio of the policy/reference, allowing the construction of an optimization objective directly from preference pairs without first explicitly training a separate Reward Model.</p>
 
   <h4>Core Derivation</h4>
@@ -1664,7 +1664,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
   </div>
 
   <div class="exercise" data-answer="2" data-explain="The core mathematical insight of DPO is: under the Bradley-Terry preference model, the reward function can be expressed as a closed-form function of the policy model, thus eliminating the need to explicitly train a Reward Model.">
-    <h4>Exercise 4: Why doesn't DPO need to train a Reward Model?</h4>
+    <h4>Exercise 4: Why does DPO not need to train a separate reward model?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. Because DPO uses direct human scoring to replace the reward model</label>
       <label><input type="radio" name="q4" value="1"> B. Because DPO does not use preference information at all</label>

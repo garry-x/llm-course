@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 11 Classic Neural NLP and Evaluation</h2>
   <p class="subtitle">RNN, Dependency Parsing, Seq2Seq, and BERT — Connecting Classic Neural NLP to Modern LLMs</p>
-  <div class="reading-time">Estimated Reading: 145 minutes · 15 sections · 5 runnable exercises · 5 conceptual exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 145 minutes · 15 sections · 5 runnable exercises · 5 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -355,7 +355,7 @@ assert audit["overall_pass"]</div>
   <p>A modern evaluation report should be reducible to runnable diagnostics. Pairwise judgment summaries calculate raw win rate, tie-adjusted win rate, and win rate grouped by task, showing that the same model might win on QA while tying or losing on math. Judge reliability audits check sample size, position bias, length bias, swap consistency, and human label agreement. Safety metrics split samples into harmful, benign sensitive, and ordinary groups, then report attack success, harmful refusal, over-refusal, and task utility. Benchmark summaries organize task, sample size, metrics, model, prompt, temperature, failure types, and non-extrapolable scope into a structured conclusion.</p>
   <p>These diagnostics share one purpose: preventing a single average score from being mistaken for a complete engineering conclusion. Training engineers use them to judge whether alignment has harmed capability; inference engineers use them to judge whether quality, safety, latency, and cost meet deployment requirements together.</p>
 
-  <h4>Worked Example: How to write a qualified conclusion from the same result</h4>
+  <h4>Worked Example: How to Write a Qualified Conclusion from the Same Result</h4>
   <p>Less rigorous writing: <code>Model A is 8% better than Model B.</code></p>
   <p>More rigorous writing: On <code>n=300</code> Chinese customer service QA samples, with a fixed system prompt, temperature=0, max output=512, the pairwise win rate of Model A relative to Model B is <code>58%</code>. The main improvements come from format adherence and citation completeness; the factual error rate dropped from <code>11%</code> to <code>8%</code>, but the P95 TTFT increased from <code>720ms</code> to <code>980ms</code>. Furthermore, this result does not cover English, code, multi-turn tool calls, or high-concurrency load. Therefore, it supports "under this Chinese customer service RAG workload, A is worth entering a canary experiment," but does not support "A is a generally stronger model."</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Course Standard:</strong> An evaluation answer is not a list of scores, but an engineering conclusion constrained by conditions. You must specify the task, samples, inference settings, metrics, failure types, statistical uncertainty, and non-extrapolable scope.</div></div>

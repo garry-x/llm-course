@@ -14,7 +14,7 @@
 
 <button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Building Large Language Models from Code</p></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
@@ -23,7 +23,7 @@
 <article class="chapter">
   <h2>Chapter 7 Training Loop</h2>
   <p class="subtitle">From MLE to AdamW/Muon, FP8/MXFP8/NVFP4, and DualPipe — Training Efficiency at Scale</p>
-  <div class="reading-time">⏱ Estimated Reading: 150 min · 21 sections · 6 programming exercises · 7 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 150 minutes · 21 sections · 6 programming exercises · 7 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -584,7 +584,7 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
     <div class="katex" data-expr="\frac{\partial L}{\partial z_i}=p_i-\mathbf{1}[i=y]" aria-label="\frac{\partial L}{\partial z_i}=p_i-\mathbf{1}[i=y]" role="img"></div>
   </div>
 
-  <p>This result is very important: the gradient for the correct token is <span class="katex-inline" data-expr="p_y-1" aria-label="p_y-1" role="img"></span>, which is usually negative; gradient descent will increase the logit for the correct token. The gradient for an incorrect token is <span class="katex-inline" data-expr="p_i" aria-label="p_i" role="img"></span>; gradient descent will decrease their logits, with the magnitude of the decrease proportional to the probability the model currently assigns to them.</p>  <h4>How Gradients Flow Back to the LM Head and Embedding</h4>
+  <p>This gradient identity is central: the gradient for the correct token is <span class="katex-inline" data-expr="p_y-1" aria-label="p_y-1" role="img"></span>, which is usually negative, so gradient descent increases the correct token's logit. The gradient for an incorrect token is <span class="katex-inline" data-expr="p_i" aria-label="p_i" role="img"></span>; gradient descent decreases that logit, with a magnitude proportional to the probability the model currently assigns to it.</p>  <h4>How Gradients Flow Back to the LM Head and Embedding</h4>
   <p>If the logits come from a tied LM head:</p>
   <div class="math-box"><div class="label">LM Head</div>
     <div class="katex" data-expr="z_t = h_t E^\top" aria-label="z_t = h_t E^\top" role="img"></div>
@@ -707,7 +707,7 @@ def cross_entropy_manual(logits, targets):
   <h3>7.6 Theoretical Understanding of Learning Rate Scheduling</h3>
   <p>Many modern LLM training runs use <strong>Warmup + Cosine Decay</strong> or a similar smooth decay schedule. This is not an arbitrary choice: warmup can alleviate optimization instability in the early stages of training, and smooth decay reduces perturbations caused by abrupt learning rate changes.</p>
 
-  <h4>Why is Warmup Needed?</h4>
+  <h4>Why Warmup Is Needed</h4>
   <p>At the first step of Adam, <span class="katex-inline" data-expr="m_1 = (1-\beta_1)g_1" aria-label="m_1 = (1-\beta_1)g_1" role="img"></span>, <span class="katex-inline" data-expr="v_1 = (1-\beta_2)g_1^2" aria-label="v_1 = (1-\beta_2)g_1^2" role="img"></span>. Without warmup, the initial update step size is approximately equivalent to:</p>
   <div class="math-box"><div class="label">Formula 7.9 Adam Initial Step Size (No Warmup)</div>
     <div class="katex" data-expr="\Delta\theta_1 \approx -\eta \cdot \text{sign}(g_1) \cdot \frac{\sqrt{1-\beta_2}}{1-\beta_1} \approx -2\eta \cdot \text{sign}(g_1)" aria-label="\Delta\theta_1 \approx -\eta \cdot \text{sign}(g_1) \cdot \frac{\sqrt{1-\beta_2}}{1-\beta_1} \approx -2\eta \cdot \text{sign}(g_1)" role="img"></div>
@@ -731,7 +731,7 @@ def cross_entropy_manual(logits, targets):
   <h3>7.7 Programming Exercise 3: Implementing the AdamW Optimizer</h3>
   <p>AdamW is currently the most widely used optimizer for LLM training. Its core innovation is <strong>Decoupled Weight Decay</strong>.</p>
 
-  <h4>Why is Decoupling Necessary?</h4>
+  <h4>Why Decoupled Weight Decay Matters</h4>
   <p>In standard Adam, <span class="katex-inline" data-expr="L_2" aria-label="L_2" role="img"></span> regularization adds <span class="katex-inline" data-expr="\lambda \|\theta\|^2" aria-label="\lambda \|\theta\|^2" role="img"></span> to the loss function, whose gradient is <span class="katex-inline" data-expr="2\lambda\theta" aria-label="2\lambda\theta" role="img"></span>. However, Adam's adaptive learning rate <strong>incorrectly scales</strong> this regularization term—regularization for parameters with large gradients is diminished, while regularization for parameters with small gradients is amplified. AdamW places the weight decay <strong>after</strong> the Adam update, independent of gradient computation and momentum:</p>
 
   <div class="math-box"><div class="label">Equation 7.10 AdamW Update Rule</div>
@@ -799,7 +799,7 @@ class AdamW:
                 p.data *= (1 - self.lr * self.weight_decay)
             # 4. Adam update
             p.data -= self.lr * m_hat / (torch.sqrt(v_hat) + self.eps)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why is bias correction necessary?</strong> Adam initializes <span class="katex-inline" data-expr="m_0 = 0, v_0 = 0" aria-label="m_0 = 0, v_0 = 0" role="img"></span>, so the momentum estimates in the first few steps are heavily biased towards 0. Bias correction compensates for this bias by dividing by <span class="katex-inline" data-expr="1-\beta^t" aria-label="1-\beta^t" role="img"></span>. As t increases, <span class="katex-inline" data-expr="1-\beta^t \to 1" aria-label="1-\beta^t \to 1" role="img"></span>, and the correction automatically disappears.</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why bias correction is necessary:</strong> Adam initializes <span class="katex-inline" data-expr="m_0 = 0, v_0 = 0" aria-label="m_0 = 0, v_0 = 0" role="img"></span>, so the momentum estimates in the first few steps are heavily biased toward 0. Bias correction compensates for this bias by dividing by <span class="katex-inline" data-expr="1-\beta^t" aria-label="1-\beta^t" role="img"></span>. As t increases, <span class="katex-inline" data-expr="1-\beta^t \to 1" aria-label="1-\beta^t \to 1" role="img"></span>, and the correction automatically disappears.</p>
     </div>
   </div>
 </section>
@@ -1421,10 +1421,10 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
 <!-- 7.15 Distributed Training -->
 <!-- ================================================================ -->
 <section class="card" id="s7-15">
-  <h3>7.15 Distributed Training—From Single GPU to Thousand-Card Clusters</h3>
+  <h3>7.15 Distributed Training—From Single GPU to Thousand-GPU Clusters</h3>
   <p>So far, we have assumed all training runs on a single GPU. But real LLM training (e.g., Llama 3 405B) requires running in parallel on <strong>thousands of GPUs</strong> for weeks. Distributed training is not an "optional" optimization—it is a prerequisite that makes large model training <strong>possible</strong>.</p>
 
-  <h4>First, Ask Two Questions: Can It Fit, Can It Run Fast</h4>
+  <h4>Start with Two Questions: Does It Fit, and Can It Run Efficiently?</h4>
   <p>The first principle of distributed training is not "more GPUs are better," but to break down the bottlenecks:</p>
   <ul>
     <li><strong>Capacity Issue:</strong> Can parameters, gradients, optimizer states, activations, and communication buffers fit into a single GPU's memory.</li>
@@ -1682,7 +1682,7 @@ model = FSDP(model)  # Automatically shards parameters, gradients, optimizer sta
   </div>
 
   <div class="exercise" data-answer="2" data-explain="Perplexity is the exponentiation of the cross-entropy loss. It is a measure of the model's 'average number of candidate tokens it hesitates over' at each position. PPL=1 indicates perfection, PPL=V (vocabulary size) indicates random guessing.">
-    <h4>Exercise 3: What is the mathematical definition of Perplexity and its physical meaning?</h4>
+    <h4>Exercise 3: What is the mathematical definition of perplexity, and how should it be interpreted?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q73" value="0"> A. The reciprocal of the model's output probability, measuring confidence</label>
       <label><input type="radio" name="q73" value="1"> B. The mean of the correct token's probability, measuring accuracy</label>

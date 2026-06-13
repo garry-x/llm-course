@@ -288,6 +288,7 @@
 - Xiao et al. [SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models](https://arxiv.org/abs/2211.10438)、Frantar et al. [GPTQ](https://arxiv.org/abs/2210.17323)、Lin et al. [AWQ](https://arxiv.org/abs/2306.00978). 重点看 W8A8 激活 outlier、近似二阶 weight quantization 和 activation-aware weight-only quantization 的不同假设。
 - Model Context Protocol. [Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) 与 [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation、authorization、用户同意、数据隐私和 tool safety。
 - Anthropic. [Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp). 重点看工具定义和中间结果如何消耗上下文，以及为什么大型 agent 系统需要延迟加载工具、执行环境处理和结果摘要。
+- Anthropic. [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) 与 Claude Cookbook [Context engineering: memory, compaction, and tool clearing](https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools). 重点看 active context、context rot、compaction、tool-result clearing、memory 和为什么 agent/RAG 不能只靠扩大 context window。
 - OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) 与 [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). 重点看 prompt injection、insecure output handling、insecure plugin design、excessive agency 和外部内容隔离。
 - OpenAI. [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices) 与 [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 prototype 到 production 时的可靠性、监控、评测和成本控制如何进入上线判断。
 - Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) 与 [Implementing SLOs](https://sre.google/workbook/implementing-slos/). 重点看 canary/control、流量分阶段、SLO/SLI 和 error budget 如何转成发布 gate。
@@ -330,6 +331,7 @@
 - 结构化输出上线时，为什么要同时报告 JSON parse rate、schema valid rate、repair retry、fallback/refusal、P95 latency 和 safety violation，而不是只看一次示例输出？
 - MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、roots/elicitation、敏感数据外发、observation isolation 和 recursive sampling？
 - agent trace 为什么要记录 guardrail events、tool spans、context budget 和 side-effect log？这些字段分别帮助定位哪类生产事故？
+- context engineering gate 为什么要同时报告 active context、retrieved context、summary、memory、tool observation 和 cleared results 的 token 占比、引用保留、summary fidelity、权限和 P95 TTFT？
 - 生产发布时，为什么候选模型即使离线 pass rate 更高，也必须经过 canary/control、per-version quality/safety/SLO/cost monitoring 和 rollback readiness gate？
 - 模型路由或级联上线时，为什么平均成本下降不能替代 route branch 的质量、安全、schema、RAG 和高风险任务切片回归？
 - 服务运行中 queue backlog、KV cache nearing full、swapped requests、TPOT 变差、timeout 上升和单租户超配额分别指向哪些不同的 overload response？

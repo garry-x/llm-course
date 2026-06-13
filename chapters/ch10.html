@@ -784,6 +784,38 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Tool use 是推理工程的一部分。它同时改变质量、延迟、成本和风险：你需要评测工具选择、参数正确性、循环预算、工具结果忠实性、安全边界、agent trace 和工具上下文预算，而不是只看最终回答是否看起来合理。</div></div>
 </section>
 
+<section class="card" id="s10-9b">
+  <h3>10.9B Context Engineering：把上下文当成有限资源管理</h3>
+  <p>Agent、RAG、工具调用、长会话和长文档问答都会把大量信息塞进模型上下文。上下文工程的核心不是“写更长 prompt”，而是决定每一轮推理时哪些 token 进入 active context，哪些留在外部存储，哪些压缩成摘要，哪些工具结果可以清除，哪些证据必须保留引用。Anthropic 把 context engineering 描述为从 prompt engineering 进一步扩展到管理 system instructions、tools、MCP、外部数据和消息历史的整体状态；这和本章的 RAG、tool protocol、long-context gate 是同一个系统问题。</p>
+
+  <p>高阶推理工程师要把上下文看成带预算的运行时资源。更大的 context window 只能提高上限，不自动保证召回质量；无关工具结果、重复检索片段、过长历史消息和未经压缩的观察会增加 prefill 成本，也可能让模型在关键事实上失焦。一个合格设计会把“用户任务需要什么信息”拆成可审计的上下文层次：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>层次</th><th>放什么</th><th>主要风险</th><th>检查信号</th></tr>
+      <tr><td>Active context</td><td>当前用户目标、系统策略、必要工具 schema、关键证据和最近观察</td><td>无关 token 挤掉关键事实，TTFT 上升</td><td>context token breakdown、needle/citation hit、P95 TTFT</td></tr>
+      <tr><td>Retrieved context</td><td>RAG chunk、rerank 结果、引用 id、可重取的工具片段</td><td>召回了但未进入 prompt，或证据被截断</td><td>Recall@k、citation recall、context packing skipped docs</td></tr>
+      <tr><td>Compressed context</td><td>长会话摘要、任务进度、已完成决策和未解决问题</td><td>摘要丢失约束或混入错误结论</td><td>summary fidelity probe、constraint retention、regression samples</td></tr>
+      <tr><td>External memory</td><td>跨会话偏好、项目状态、可检索笔记、审计日志</td><td>过期、越权、污染或把用户私密信息带入新任务</td><td>memory source/version、permission、freshness、delete/update path</td></tr>
+      <tr><td>Cleared tool results</td><td>可重新获取的大型文件/API 输出，只保留调用记录和摘要</td><td>清除了不可重建证据，导致无法审计</td><td>tool result handle、refetchability、side-effect log</td></tr>
+    </table>
+  </div>
+
+  <p>这些层次对应不同工程动作。<strong>选择（select）</strong>决定哪些文档、工具和历史片段进入窗口；<strong>压缩（compress）</strong>把长轨迹变成可验证摘要；<strong>清除（clear）</strong>把大而可重取的工具结果移出 active context；<strong>写入（write）</strong>把需要跨会话保留的信息写进外部 memory；<strong>隔离（isolate）</strong>让子任务、subagent 或工具执行环境拥有自己的上下文，避免把所有中间状态都污染主对话。</p>
+
+  <h4>Context engineering gate</h4>
+  <p>课程项目中的 agent/RAG 报告应加入一个最小 context gate。它不要求学生实现完整记忆系统，但要证明上下文策略没有牺牲质量、安全或成本：</p>
+  <ul>
+    <li><strong>Token budget：</strong>报告 system、tool schema、history、retrieved context、observations、summary 和 output 的 token 占比。</li>
+    <li><strong>Evidence retention：</strong>对关键事实做 head/middle/tail、引用 id 和 summary fidelity 检查，确认压缩后仍能回答。</li>
+    <li><strong>Cost / latency：</strong>比较原始长上下文、RAG packing、compaction 和 tool-result clearing 的 P95 TTFT、总 latency 与 prompt token 成本。</li>
+    <li><strong>Memory safety：</strong>跨会话 memory 必须记录来源、更新时间、权限、删除路径和是否含 PII/凭据。</li>
+    <li><strong>Observation isolation：</strong>外部网页、文件、工具输出和 MCP resources 必须被标为不可信数据，不能升级成系统指令。</li>
+  </ul>
+
+  <p>一个常见失败是“长上下文路径 pass rate 提升，但 token 成本和 TTFT 成倍上涨，而且引用不稳定”。这时 action item 不一定是换更大模型，而可能是减少 tool schema、延迟加载工具、改 chunk/rerank、压缩历史、清除可重取 observation，或把长期状态写入受权限控制的 memory。Context engineering 因此是 RAG、Agent、long-context serving 和 observability 的交叉点。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>上下文不是无限免费的“提示词空间”。它是模型工作内存、延迟成本、隐私边界和质量证据的共同载体；任何 agent 或 RAG 上线报告都应说明上下文从哪里来、为什么进入窗口、何时被压缩或清除，以及这些动作是否破坏引用、权限和 SLO。</div></div>
+</section>
+
 <!-- ================================================================ -->
 <!-- 编程练习 5: Benchmark -->
 <!-- ================================================================ -->

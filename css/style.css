@@ -1,6 +1,6 @@
 /* ================================================================
-   LLM 深度学习课程 — Editorial Technical 样式
-   iPad Pro 13" 优化 · 三级响应式 · 触控友好
+   LLM Deep Learning Course — Editorial Technical Styles
+   iPad Pro 13" Optimized · Three-Level Responsive · Touch-Friendly
    ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600;6..72,700&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -230,8 +230,7 @@ body[data-ch="0"] .main{max-width:1120px}
   background:var(--surface);border-radius:var(--radius);padding:24px 28px;
   margin:16px 0;box-shadow:var(--shadow-card);border:2px solid var(--accent);
   border-left:5px solid var(--accent)
-}
-.coding-exercise h4{
+}.coding-exercise h4{
   font-family:var(--font-heading);font-size:1rem;font-weight:700;
   margin-bottom:8px;color:var(--accent)
 }

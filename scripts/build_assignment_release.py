@@ -77,9 +77,9 @@ def rewrite_readme_for_student_release(text: str) -> str:
             if line.strip() == "```":
                 skip_fence = False
             continue
-        if "reference_solution" in line or "参考实现" in line or "课程内置参考" in line:
+        if "reference_solution" in line or "reference implementation" in line or "built-in course reference" in line:
             if "```" not in line:
-                skip_fence = "默认测试" in line or "课程内置参考" in line
+                skip_fence = "default tests" in line or "built-in course reference" in line
             continue
         cleaned_lines.append(line)
     cleaned = "\n".join(cleaned_lines).strip() + "\n\n"
@@ -107,8 +107,7 @@ def build_assignment(name: str, out_dir: Path) -> dict[str, object]:
                 rewrite_readme_for_student_release(source.read_text(encoding="utf-8")),
                 encoding="utf-8",
             )
-        else:
-            shutil.copy2(source, target)
+        else:            shutil.copy2(source, target)
 
     (dst / "RELEASE_MANIFEST.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",

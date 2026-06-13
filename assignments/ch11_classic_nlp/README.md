@@ -1,12 +1,12 @@
 # Supplemental Assignment: Classic NLP and Evaluation
 
-本补充作业对应经典 NLP 专题 handout 和第 9 周讨论课。目标是把 RNN 长程依赖、dependency parsing transition system、seq2seq cross-attention、BERT/MLM mask 与 loss、BIO sequence labeling 与 span-level F1、Viterbi structured decoding、linear-chain CRF forward algorithm 与 CRF NLL、BLEU、ROUGE、Exact Match/F1、LLM-as-judge 可靠性审计和 safety evaluation 从概念题推进到可运行实现。
+This supplemental assignment corresponds to the classic NLP topic handout and Week 9 discussion session. The goal is to advance conceptual questions on RNN long-range dependencies, dependency parsing transition system, seq2seq cross-attention, BERT/MLM mask and loss, BIO sequence labeling and span-level F1, Viterbi structured decoding, linear-chain CRF forward algorithm and CRF NLL, BLEU, ROUGE, Exact Match/F1, LLM-as-judge reliability audit and safety evaluation into runnable implementations.
 
 ## Files
 
-- `starter.py`: 学生起始代码。
-- `reference_solution.py`: 参考实现。
-- `tests.py`: 可运行测试。
+- `starter.py`: Student starter code.
+- `reference_solution.py`: Reference implementation.
+- `tests.py`: Runnable tests.
 
 ## Run
 
@@ -14,7 +14,7 @@
 .venv/bin/python assignments/ch11_classic_nlp/tests.py
 ```
 
-默认测试 `reference_solution.py`。测试学生代码时：
+Default tests `reference_solution.py`. To test student code:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
@@ -22,44 +22,44 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py
 
 ## Requirements
 
-- `attachment_scores` 计算 UAS/LAS，必须检查 heads 与 labels 长度一致。
-- `run_arc_standard_transitions` 执行 `SHIFT`、`LEFT_ARC(label)`、`RIGHT_ARC(label)` 和 `ROOT(label)`，返回 heads、labels、arcs 和 stack/buffer trace。
-- `scalar_rnn_forward` 和 `recurrent_gradient_factors` 展示 tanh RNN 的状态递推与 BPTT 梯度乘积。
-- `additive_attention_context` 按 `v^T tanh(W_s s_t + W_h h_i)` 计算 alignment scores、softmax weights 和 context vector。
-- `sentence_bleu` 使用 clipped n-gram precision 和 brevity penalty。
-- `rouge_l_f1` 使用最长公共子序列计算 precision、recall 和 F1。
-- `exact_match_and_f1` 对 QA 字符串做标准化，再计算 exact match 和 token F1。
-- `build_mlm_example` 根据 mask positions 生成 BERT-style masked input 和 labels。
-- `masked_lm_loss_from_logits` 只在非 ignored label 位置计算 MLM cross entropy 和 masked-token accuracy。
-- `bio_tags_to_spans` 根据 BIO tags 解码 token classification / NER 实体 span，必须区分 `B-`、`I-` 和 `O`。
-- `span_f1` 必须用 `(type, start, end)` 精确匹配实体 span，报告 precision、recall、F1、TP、FP 和 FN。
-- `viterbi_decode` 使用 emission、transition、start/end scores 解码 linear-chain sequence model 的最优 tag path。
-- `linear_chain_log_partition` 使用 logsumexp forward algorithm 计算所有 tag path 的 CRF 归一化项。
-- `linear_chain_crf_nll` 必须计算 gold path score，并返回 `log_partition - gold_score` 的结构化负对数似然。
-- `select_extractive_qa_span` 根据 encoder-only QA head 的 start/end logits 选择合法答案 span，并支持 `[CLS]` no-answer。
-- `summarize_pairwise_judgments` 汇总 blind pairwise LLM-as-judge 结果，计算 raw win rate、tie-adjusted win rate 和按任务分组的胜率。
-- `judge_reliability_audit` 必须检查 LLM-as-judge 记录的样本量、A/B 位置偏置、长答案偏置、swapped-order 一致性和与人工 gold label 的一致性；未通过时应给出重新随机顺序、控制长度、换 judge prompt/model 或补人工标注的 action items。
-- `safety_evaluation_metrics` 按 harmful、benign sensitive 和 ordinary 三类样本计算 attack success、harmful refusal、over-refusal 和 task utility。
-- `benchmark_result_summary` 把 task、sample size、metrics、prompt/temperature/model、失败类型和不可外推范围组织成结构化 benchmark 结论。
+- `attachment_scores` computes UAS/LAS, must check that heads and labels have consistent lengths.
+- `run_arc_standard_transitions` executes `SHIFT`, `LEFT_ARC(label)`, `RIGHT_ARC(label)` and `ROOT(label)`, returns heads, labels, arcs and stack/buffer trace.
+- `scalar_rnn_forward` and `recurrent_gradient_factors` demonstrate tanh RNN state recurrence and BPTT gradient products.
+- `additive_attention_context` computes alignment scores, softmax weights and context vector via `v^T tanh(W_s s_t + W_h h_i)`.
+- `sentence_bleu` uses clipped n-gram precision and brevity penalty.
+- `rouge_l_f1` computes precision, recall and F1 using the longest common subsequence.
+- `exact_match_and_f1` normalizes QA strings, then computes exact match and token F1.
+- `build_mlm_example` generates BERT-style masked input and labels based on mask positions.
+- `masked_lm_loss_from_logits` computes MLM cross entropy and masked-token accuracy only at non-ignored label positions.
+- `bio_tags_to_spans` decodes token classification / NER entity spans from BIO tags, must distinguish `B-`, `I-` and `O`.
+- `span_f1` must exactly match entity spans using `(type, start, end)`, reports precision, recall, F1, TP, FP and FN.
+- `viterbi_decode` decodes the optimal tag path for a linear-chain sequence model using emission, transition, start/end scores.
+- `linear_chain_log_partition` computes the CRF normalization term over all tag paths using the logsumexp forward algorithm.
+- `linear_chain_crf_nll` must compute the gold path score and return the structured negative log-likelihood `log_partition - gold_score`.
+- `select_extractive_qa_span` selects a valid answer span based on encoder-only QA head start/end logits, and supports `[CLS]` no-answer.
+- `summarize_pairwise_judgments` aggregates blind pairwise LLM-as-judge results, computes raw win rate, tie-adjusted win rate, and per-task win rates.
+- `judge_reliability_audit` must check LLM-as-judge records for sample size, A/B position bias, long answer bias, swapped-order consistency and agreement with human gold labels; when checks fail, should provide action items for re-randomizing order, controlling length, changing judge prompt/model, or supplementing human annotations.
+- `safety_evaluation_metrics` computes attack success, harmful refusal, over-refusal and task utility across harmful, benign sensitive and ordinary sample categories.
+- `benchmark_result_summary` organizes task, sample size, metrics, prompt/temperature/model, failure types and non-extrapolatable scope into a structured benchmark conclusion.
 
 ## Written Drill Expectations
 
-- 按 `classic-nlp-handout.md` 的 `I saw her` worked example，写出 stack / buffer / arcs transition table。
-- 给定标量 RNN 参数，手算 3 步 hidden state 和 `prod_t w_hh * (1 - h_t^2)`，解释梯度消失或爆炸。
-- 写出 seq2seq 的 `p(y | x)` 条件概率分解、teacher forcing loss，并解释 cross-attention 中 `alpha_{t,i}` 与 `c_t` 的含义。
-- 给定一组 beam candidates，比较 sum log prob、length-normalized score 和 length penalty 后的排序。
-- 给定 BERT tokens、mask positions、vocab logits 和 labels，写出 masked input、loss positions、MLM cross entropy 和 masked-token accuracy；给定 start/end logits，写出抽取式 QA 的最佳答案 span。
-- 给定 BIO tags，解码实体 span；给定 gold/pred spans，计算 span-level precision、recall、F1，并说明非法 `I-` 开头或类型切换为什么通常要作为新 span 处理或在严格评测中报错。
-- 给定 emission 和 transition score table，手算 Viterbi DP 表、CRF forward alpha table、gold path score 和 CRF NLL，说明 max-path decoding、logsumexp 归一化与训练目标的区别。
-- 给定一个 candidate/reference，说明 BLEU clipped precision、ROUGE-L、EM/F1 分别会奖励或惩罚什么。
-- 构造一个 BLEU、ROUGE、EM/F1 或 LLM-as-judge 看似高分但人工质量差的 metric failure case。
-- 给定 pairwise judge 记录，计算 tie-adjusted win rate，并说明为什么必须随机 A/B 顺序、隐藏模型名、按任务分层看结果，以及用 swapped-order consistency 和 human-label agreement 审计 judge 是否可信。
-- 给定 harmful、benign sensitive 和 ordinary 三组输出计数，分别计算 attack success rate、over-refusal rate 和 task utility，解释为什么高拒答率不能单独代表安全性。
+- Following the `I saw her` worked example from `classic-nlp-handout.md`, write out the stack / buffer / arcs transition table.
+- Given scalar RNN parameters, manually compute 3-step hidden states and `prod_t w_hh * (1 - h_t^2)`, explaining gradient vanishing or explosion.
+- Write out the conditional probability decomposition `p(y | x)` for seq2seq, teacher forcing loss, and explain the meaning of `alpha_{t,i}` and `c_t` in cross-attention.
+- Given a set of beam candidates, compare ranking by sum log prob, length-normalized score, and length penalty.
+- Given BERT tokens, mask positions, vocab logits and labels, write out the masked input, loss positions, MLM cross entropy and masked-token accuracy; given start/end logits, write out the best answer span for extractive QA.
+- Given BIO tags, decode entity spans; given gold/pred spans, compute span-level precision, recall, F1, and explain why an illegal `I-` start or type switch is typically treated as a new span or flagged as an error in strict evaluation.
+- Given emission and transition score tables, manually compute the Viterbi DP table, CRF forward alpha table, gold path score and CRF NLL, explaining the difference between max-path decoding, logsumexp normalization and the training objective.
+- Given a candidate/reference, explain what BLEU clipped precision, ROUGE-L, EM/F1 would reward or penalize.
+- Construct a metric failure case where BLEU, ROUGE, EM/F1 or LLM-as-judge gives a high score but human quality is poor.
+- Given pairwise judge records, compute the tie-adjusted win rate, and explain why A/B order must be randomized, model names hidden, results stratified by task, and judge trustworthiness audited via swapped-order consistency and human-label agreement.
+- Given output counts for harmful, benign sensitive and ordinary groups, compute attack success rate, over-refusal rate and task utility respectively, explaining why a high refusal rate alone does not represent safety.
 
-## 评分 Rubric
+## Scoring Rubric
 
-| 项目 | 分值 | 标准 |
+| Item | Points | Criteria |
 |------|:--:|------|
-| Written questions | 40 | 解释 RNN 长程依赖、dependency parsing、seq2seq/cross-attention、beam search length bias、BIO sequence labeling、span-level F1、Viterbi/CRF forward/CRF NLL、BLEU、ROUGE-L、QA EM/F1、BERT MLM mask/loss、LLM-as-judge 偏置和 LLM 评测之间的关系 |
-| Programming parts | 50 | 实现 arc-standard transition parsing、RNN recurrence、BPTT gradient factors、UAS/LAS、seq2seq additive attention、BIO span decoding、span-level F1、Viterbi decoding、CRF log-partition、CRF NLL、BLEU、ROUGE-L、QA EM/F1、MLM mask example、MLM loss、extractive QA span selection、pairwise judge 汇总、judge reliability audit 和 safety metrics |
-| Analysis / style | 10 | 构造至少 2 个指标高但人工质量差的例子，并说明指标局限；benchmark 结论必须包含任务、样本量、推理设置、judge 偏置审计、失败类型和不可外推范围 |
+| Written questions | 40 | Explain relationships among RNN long-range dependencies, dependency parsing, seq2seq/cross-attention, beam search length bias, BIO sequence labeling, span-level F1, Viterbi/CRF forward/CRF NLL, BLEU, ROUGE-L, QA EM/F1, BERT MLM mask/loss, LLM-as-judge bias and LLM evaluation |
+| Programming parts | 50 | Implement arc-standard transition parsing, RNN recurrence, BPTT gradient factors, UAS/LAS, seq2seq additive attention, BIO span decoding, span-level F1, Viterbi decoding, CRF log-partition, CRF NLL, BLEU, ROUGE-L, QA EM/F1, MLM mask example, MLM loss, extractive QA span selection, pairwise judge aggregation, judge reliability audit and safety metrics |
+| Analysis / style | 10 | Construct at least 2 examples where metrics are high but human quality is poor, and explain metric limitations; benchmark conclusions must include task, sample size, inference settings, judge bias audit, failure types and non-extrapolatable scope |

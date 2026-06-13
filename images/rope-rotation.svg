@@ -18,11 +18,11 @@
   </defs>
   <rect class="bg" width="900" height="650"/>
 
-  <text class="t2" x="450" y="30" text-anchor="middle" style="font-size:18px">RoPE 旋转位置编码 — 工作原理</text>
+  <text class="t2" x="450" y="30" text-anchor="middle" style="font-size:18px">RoPE Rotary Position Encoding — How It Works</text>
 
   <!-- Left: 2D rotation visualization -->
   <rect class="box" x="30" y="50" width="410" height="270"/>
-  <text class="t2" x="235" y="75" text-anchor="middle">2D 旋转示意 (每对维度)</text>
+  <text class="t2" x="235" y="75" text-anchor="middle">2D Rotation Illustration (per pair of dimensions)</text>
 
   <!-- Coordinate axes -->
   <line x1="60" y1="230" x2="380" y2="230" stroke="#d4cec4" stroke-width="1"/>
@@ -34,10 +34,10 @@
   <path class="rot" d="M 300 195 A 80 80 0 0 0 350 165"/>
   <text class="t3" x="330" y="195" text-anchor="start">θ = pos × ω</text>
 
-  <text class="t1" x="235" y="110" text-anchor="middle">旋转角度 = 位置 m × 频率 θ_i</text>
+  <text class="t1" x="235" y="110" text-anchor="middle">Rotation Angle = Position m × Frequency θ_i</text>
   <text class="t3" x="235" y="130" text-anchor="middle">θ_i = 10000^(-2i/d)</text>
-  <text class="ts" x="235" y="148" text-anchor="middle">低频维度 (i 小): 慢旋转, 编码长程位置</text>
-  <text class="ts" x="235" y="163" text-anchor="middle">高频维度 (i 大): 快旋转, 编码短程位置</text>
+  <text class="ts" x="235" y="148" text-anchor="middle">Low-frequency dimensions (small i): slow rotation, encode long-range positions</text>
+  <text class="ts" x="235" y="163" text-anchor="middle">High-frequency dimensions (large i): fast rotation, encode short-range positions</text>
 
   <!-- Frequency spectrum -->
   <g transform="translate(70,265)">
@@ -46,56 +46,56 @@
     <text class="ts" x="140" y="0" text-anchor="middle">i=32</text>
     <text class="ts" x="210" y="0" text-anchor="middle">i=48</text>
     <text class="ts" x="280" y="0" text-anchor="middle">i=63</text>
-    <text class="ts" x="140" y="15" text-anchor="middle">← 低频 (慢旋转) —————————— 高频 (快旋转) →</text>
+    <text class="ts" x="140" y="15" text-anchor="middle">← Low frequency (slow rotation) —————————— High frequency (fast rotation) →</text>
   </g>
 
   <!-- Right: Key property -->
   <rect class="b2" x="460" y="50" width="410" height="270"/>
-  <text class="t2" x="665" y="75" text-anchor="middle">RoPE 的核心性质</text>
+  <text class="t2" x="665" y="75" text-anchor="middle">Core Properties of RoPE</text>
 
-  <text class="t1" x="480" y="105" text-anchor="start" style="font-weight:600">1. 相对位置编码</text>
-  <text class="t1" x="480" y="125" text-anchor="start" style="font-size:12px">旋转后的 Q 和 K 做点积:</text>
+  <text class="t1" x="480" y="105" text-anchor="start" style="font-weight:600">1. Relative Position Encoding</text>
+  <text class="t1" x="480" y="125" text-anchor="start" style="font-size:12px">Dot product of rotated Q and K:</text>
   <text class="t3" x="665" y="150" text-anchor="middle">(R_m · q)^T · (R_n · k) = q^T · R_{n-m} · k</text>
-  <text class="t1" x="480" y="175" text-anchor="start" style="font-size:12px">结果仅依赖相对位置 (m-n), 不依赖绝对位置</text>
+  <text class="t1" x="480" y="175" text-anchor="start" style="font-size:12px">The result depends only on the relative position (m-n), not the absolute position</text>
 
-  <text class="t1" x="480" y="205" text-anchor="start" style="font-weight:600">2. 范数保持</text>
-  <text class="t1" x="480" y="225" text-anchor="start" style="font-size:12px">旋转变换不改变向量长度: ||R·q|| = ||q||</text>
-  <text class="t1" x="480" y="245" text-anchor="start" style="font-size:12px">保证 TokenEmbedding 的语义信息不被位置编码破坏</text>
+  <text class="t1" x="480" y="205" text-anchor="start" style="font-weight:600">2. Norm Preservation</text>
+  <text class="t1" x="480" y="225" text-anchor="start" style="font-size:12px">Rotation does not change vector length: ||R·q|| = ||q||</text>
+  <text class="t1" x="480" y="245" text-anchor="start" style="font-size:12px">Ensures that the semantic information of Token Embedding is not corrupted by position encoding</text>
 
-  <text class="t1" x="480" y="275" text-anchor="start" style="font-weight:600">3. 长序列外推</text>
-  <text class="t1" x="480" y="295" text-anchor="start" style="font-size:12px">通过缩放频率 θ_i (NTK-aware), 可以将训练长度的</text>
-  <text class="t1" x="480" y="310" text-anchor="start" style="font-size:12px">模型扩展到 8× 甚至 32× 的上下文长度无需重训</text>
+  <text class="t1" x="480" y="275" text-anchor="start" style="font-weight:600">3. Long Sequence Extrapolation</text>
+  <text class="t1" x="480" y="295" text-anchor="start" style="font-size:12px">By scaling the frequency θ_i (NTK-aware), a model trained on a</text>
+  <text class="t1" x="480" y="310" text-anchor="start" style="font-size:12px">certain length can be extended to 8× or even 32× the context length without retraining</text>
 
   <!-- Bottom: Implementation -->
   <rect class="box" x="30" y="340" width="840" height="125"/>
-  <text class="t2" x="450" y="365" text-anchor="middle">实现要点</text>
+  <text class="t2" x="450" y="365" text-anchor="middle">Implementation Details</text>
 
   <g font-family="'JetBrains Mono','Fira Code',monospace" font-size="12">
     <text class="t3" x="50" y="390" text-anchor="start">def apply_rope(q, k, pos):</text>
-    <text class="t1" x="70" y="410" text-anchor="start">freqs = 1.0 / (10000 ** (torch.arange(0, d, 2) / d))   # 频率序列</text>
-    <text class="t1" x="70" y="428" text-anchor="start">angles = pos[:, None] * freqs[None, :]                 # 位置 × 频率 = 旋转角</text>
-    <text class="t1" x="70" y="446" text-anchor="start">q_rot = q * cos(angles) + rotate_half(q) * sin(angles) # 对每对维度施加旋转</text>
+    <text class="t1" x="70" y="410" text-anchor="start">freqs = 1.0 / (10000 ** (torch.arange(0, d, 2) / d))   # frequency sequence</text>
+    <text class="t1" x="70" y="428" text-anchor="start">angles = pos[:, None] * freqs[None, :]                 # position × frequency = rotation angle</text>
+    <text class="t1" x="70" y="446" text-anchor="start">q_rot = q * cos(angles) + rotate_half(q) * sin(angles) # apply rotation to each pair of dimensions</text>
     <text class="t1" x="70" y="456" text-anchor="start">k_rot = k * cos(angles) + rotate_half(k) * sin(angles)</text>
   </g>
 
   <!-- Bottom: comparison table -->
   <rect class="box" x="30" y="490" width="840" height="130"/>
-  <text class="t2" x="450" y="515" text-anchor="middle">位置编码方案对比</text>
+  <text class="t2" x="450" y="515" text-anchor="middle">Position Encoding Scheme Comparison</text>
   <g font-size="12">
     <text class="t1" x="50" y="540" text-anchor="start" style="font-weight:700">Sinusoidal</text>
-    <text class="t1" x="170" y="540" text-anchor="start">加法注入, 固定不可学</text>
-    <text class="ts" x="450" y="540" text-anchor="start">通常需要配合 Learned PE 使用</text>
+    <text class="t1" x="170" y="540" text-anchor="start">Additive injection, fixed and non-learnable</text>
+    <text class="ts" x="450" y="540" text-anchor="start">Usually requires combination with Learned PE</text>
 
     <text class="t1" x="50" y="560" text-anchor="start" style="font-weight:700">Learned PE</text>
-    <text class="t1" x="170" y="560" text-anchor="start">可学习绝对位置, GPT-2/3 使用</text>
-    <text class="ts" x="450" y="560" text-anchor="start">无法外推, 需要插值</text>
+    <text class="t1" x="170" y="560" text-anchor="start">Learnable absolute position, used by GPT-2/3</text>
+    <text class="ts" x="450" y="560" text-anchor="start">Cannot extrapolate, requires interpolation</text>
 
-    <text class="t1" x="50" y="580" text-anchor="start" style="font-weight:700;fill:#b35c22">RoPE (推荐)</text>
-    <text class="t1" x="170" y="580" text-anchor="start" style="fill:#b35c22">旋转编码, Llama/Qwen/DeepSeek 使用</text>
-    <text class="ts" x="450" y="580" text-anchor="start">天然支持外推, 相对位置, 范数保持</text>
+    <text class="t1" x="50" y="580" text-anchor="start" style="font-weight:700;fill:#b35c22">RoPE (Recommended)</text>
+    <text class="t1" x="170" y="580" text-anchor="start" style="fill:#b35c22">Rotary encoding, used by Llama/Qwen/DeepSeek</text>
+    <text class="ts" x="450" y="580" text-anchor="start">Naturally supports extrapolation, relative positions, norm preservation</text>
 
     <text class="t1" x="50" y="600" text-anchor="start" style="font-weight:700">ALiBi</text>
-    <text class="t1" x="170" y="600" text-anchor="start">线性偏置, BLOOM/MPT 使用</text>
-    <text class="ts" x="450" y="600" text-anchor="start">外推能力优秀, 但表达能力有限</text>
+    <text class="t1" x="170" y="600" text-anchor="start">Linear bias, used by BLOOM/MPT</text>
+    <text class="ts" x="450" y="600" text-anchor="start">Excellent extrapolation ability, but limited expressiveness</text>
   </g>
 </svg>

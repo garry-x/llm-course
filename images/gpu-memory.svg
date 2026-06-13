@@ -13,54 +13,54 @@
   </defs>
   <rect class="bg" width="860" height="520"/>
 
-  <text class="t2" x="430" y="28" text-anchor="middle" style="font-size:18px">GPU 内存层次 — A100 架构 (LLM 推理视角)</text>
+  <text class="t2" x="430" y="28" text-anchor="middle" style="font-size:18px">GPU Memory Hierarchy — A100 Architecture (LLM Inference Perspective)</text>
 
   <!-- Pyramid -->
   <!-- HBM (biggest/slowest) -->
   <rect x="30" y="55" width="800" height="55" rx="6" fill="#d4cec4" opacity="0.3"/>
-  <text class="t2" x="430" y="78" text-anchor="middle" style="font-size:16px">HBM (显存) — 40/80 GB · 2 TB/s · ~400 cycles</text>
-  <text class="t1" x="430" y="98" text-anchor="middle">模型参数 · KV Cache · 中间激活 · "数据仓库"——最大但最慢</text>
+  <text class="t2" x="430" y="78" text-anchor="middle" style="font-size:16px">HBM (VRAM) — 40/80 GB · 2 TB/s · ~400 cycles</text>
+  <text class="t1" x="430" y="98" text-anchor="middle">Model Parameters · KV Cache · Intermediate Activations · "Data Warehouse" — Largest but Slowest</text>
 
   <!-- Arrow up -->
   <line x1="430" y1="110" x2="430" y2="130" stroke="#b35c22" stroke-width="2"/>
-  <text class="t3" x="470" y="125" text-anchor="start">延迟: 400→</text>
+  <text class="t3" x="470" y="125" text-anchor="start">Latency: 400→</text>
 
   <!-- L2 -->
   <rect x="100" y="135" width="660" height="50" rx="6" fill="#81c995" opacity="0.2"/>
   <text class="t2" x="430" y="155" text-anchor="middle" style="font-size:15px">L2 Cache — 40 MB · 4 TB/s · ~200 cycles</text>
-  <text class="t1" x="430" y="176" text-anchor="middle">所有 SM 共享 · 自动管理 · "数据中转站"</text>
+  <text class="t1" x="430" y="176" text-anchor="middle">Shared by All SMs · Automatically Managed · "Data Transfer Station"</text>
 
   <!-- Arrow -->
   <line x1="430" y1="185" x2="430" y2="205" stroke="#b35c22" stroke-width="2"/>
-  <text class="t3" x="470" y="200" text-anchor="start">延迟: 200→</text>
+  <text class="t3" x="470" y="200" text-anchor="start">Latency: 200→</text>
 
   <!-- SRAM -->
   <rect x="170" y="210" width="520" height="65" rx="6" fill="#7baaf7" opacity="0.25"/>
   <text class="t2" x="430" y="232" text-anchor="middle" style="font-size:15px;fill:#7baaf7">SRAM / Shared Memory — 192 KB/SM · 19 TB/s · ~30 cycles</text>
-  <text class="t1" x="430" y="252" text-anchor="middle">单个 SM 内共享 · Triton/Fusion 关键 · Tiling 的目标存储</text>
-  <text class="t1" x="430" y="270" text-anchor="middle">FlashAttention 在这里存放 QKV 分块，避开 HBM 往返</text>
+  <text class="t1" x="430" y="252" text-anchor="middle">Shared Within a Single SM · Key for Triton/Fusion · Target Storage for Tiling</text>
+  <text class="t1" x="430" y="270" text-anchor="middle">FlashAttention stores QKV tiles here, avoiding HBM round trips</text>
 
   <!-- Arrow -->
   <line x1="430" y1="275" x2="430" y2="295" stroke="#b35c22" stroke-width="2"/>
-  <text class="t3" x="470" y="290" text-anchor="start">延迟: 30→</text>
+  <text class="t3" x="470" y="290" text-anchor="start">Latency: 30→</text>
 
   <!-- Register -->
   <rect x="240" y="300" width="380" height="50" rx="6" fill="#e08940" opacity="0.3"/>
   <text class="t2" x="430" y="320" text-anchor="middle" style="font-size:15px;fill:#e08940">Registers — 256 KB/SM · 50 TB/s · ~1 cycle</text>
-  <text class="t1" x="430" y="342" text-anchor="middle">单线程私有 · 最快 · 编译器自动分配</text>
+  <text class="t1" x="430" y="342" text-anchor="middle">Private to Single Thread · Fastest · Compiler Allocates Automatically</text>
 
   <!-- Key insight box -->
   <rect class="b2" x="30" y="380" width="800" height="65"/>
-  <text class="t2" x="430" y="405" text-anchor="middle">核心优化原则</text>
-  <text class="t1" x="430" y="425" text-anchor="middle">SRAM 带宽是 HBM 的 ~10×，但容量仅 ~1/400</text>
-  <text class="t1" x="430" y="443" text-anchor="middle">GPU 优化的本质：尽可能在 SRAM 中完成计算，减少 HBM↔SRAM 数据传输</text>
+  <text class="t2" x="430" y="405" text-anchor="middle">Core Optimization Principle</text>
+  <text class="t1" x="430" y="425" text-anchor="middle">SRAM bandwidth is ~10× that of HBM, but capacity is only ~1/400</text>
+  <text class="t1" x="430" y="443" text-anchor="middle">The essence of GPU optimization: complete computation in SRAM as much as possible, reduce HBM↔SRAM data transfers</text>
 
   <!-- FLOPs vs Bytes comparison -->
   <rect class="box" x="30" y="460" width="400" height="45"/>
-  <text class="t2" x="230" y="480" text-anchor="middle" style="font-size:14px">Memory-Bound 操作</text>
-  <text class="ts" x="230" y="498" text-anchor="middle">逐元素 / LayerNorm / small matmul → 优化 I/O</text>
+  <text class="t2" x="230" y="480" text-anchor="middle" style="font-size:14px">Memory-Bound Operations</text>
+  <text class="ts" x="230" y="498" text-anchor="middle">Element-wise / LayerNorm / small matmul → Optimize I/O</text>
 
   <rect class="box" x="445" y="460" width="385" height="45"/>
-  <text class="t2" x="637" y="480" text-anchor="middle" style="font-size:14px">Compute-Bound 操作</text>
-  <text class="ts" x="637" y="498" text-anchor="middle">大矩阵乘法 / GEMM → 已经接近硬件极限</text>
+  <text class="t2" x="637" y="480" text-anchor="middle" style="font-size:14px">Compute-Bound Operations</text>
+  <text class="ts" x="637" y="498" text-anchor="middle">Large Matrix Multiply / GEMM → Already Near Hardware Limit</text>
 </svg>

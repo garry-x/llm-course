@@ -86,27 +86,27 @@ def rewrite_internal_material_links(text: str) -> str:
         escaped_doc = re.escape(doc)
         text = re.sub(
             rf'<a href="(?:\.\./)?docs/{escaped_doc}"[^>]*>(.*?)</a>',
-            r"\1（教师内部材料）",
+            r"\1 (instructor-only material)",
             text,
             flags=re.S,
         )
         text = re.sub(
             rf'<a href="{escaped_doc}"[^>]*>(.*?)</a>',
-            r"\1（教师内部材料）",
+            r"\1 (instructor-only material)",
             text,
             flags=re.S,
         )
         text = re.sub(
             rf"\[([^\]]+)\]\((?:\.\./)?docs/{escaped_doc}(?:#[^)]+)?\)",
-            r"\1（教师内部材料）",
+            r"\1 (instructor-only material)",
             text,
         )
         text = re.sub(
             rf"\[([^\]]+)\]\({escaped_doc}(?:#[^)]+)?\)",
-            r"\1（教师内部材料）",
+            r"\1 (instructor-only material)",
             text,
         )
-        text = text.replace(f"`docs/{doc}`", "`教师内部材料`")
+        text = text.replace(f"`docs/{doc}`", "`instructor-only material`")
     return text
 
 
@@ -116,8 +116,7 @@ def copy_file(src: Path, dst: Path) -> None:
 
 
 def copy_tree(src: Path, dst: Path) -> None:
-    if dst.exists():
-        shutil.rmtree(dst)
+    if dst.exists():        shutil.rmtree(dst)
     shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
 

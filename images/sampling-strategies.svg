@@ -13,83 +13,83 @@
   </defs>
   <rect class="bg" width="940" height="560"/>
 
-  <text class="t2" x="470" y="28" text-anchor="middle" style="font-size:18px">文本生成采样策略对比</text>
+  <text class="t2" x="470" y="28" text-anchor="middle" style="font-size:18px">Comparison of Text Generation Sampling Strategies</text>
 
   <!-- Greedy -->
   <rect class="box" x="20" y="48" width="220" height="200"/>
-  <text class="t2" x="130" y="72" text-anchor="middle">贪心解码 (Greedy)</text>
+  <text class="t2" x="130" y="72" text-anchor="middle">Greedy Decoding</text>
   <text class="t3" x="130" y="90" text-anchor="middle">argmax logits → token</text>
-  <text class="t1" x="30" y="115" text-anchor="start">特点:</text>
-  <text class="ts" x="30" y="135" text-anchor="start">• 确定性输出 (相同输入→相同输出)</text>
-  <text class="ts" x="30" y="153" text-anchor="start">• 问题: 容易陷入重复循环</text>
-  <text class="ts" x="30" y="171" text-anchor="start">• "我今天很开心开心开心..."</text>
-  <text class="ts" x="30" y="195" text-anchor="start">适用: 事实提取 / 翻译</text>
+  <text class="t1" x="30" y="115" text-anchor="start">Features:</text>
+  <text class="ts" x="30" y="135" text-anchor="start">• Deterministic output (same input → same output)</text>
+  <text class="ts" x="30" y="153" text-anchor="start">• Problem: prone to repetitive loops</text>
+  <text class="ts" x="30" y="171" text-anchor="start">• "I am very happy happy happy..."</text>
+  <text class="ts" x="30" y="195" text-anchor="start">Use case: Fact extraction / Translation</text>
   <rect class="box" x="70" y="218" width="120" height="22"/>
-  <text class="ts" x="130" y="233" text-anchor="middle">T=0 (退化温度)</text>
+  <text class="ts" x="130" y="233" text-anchor="middle">T=0 (Degenerate temperature)</text>
 
   <!-- Temperature -->
   <rect class="b2" x="255" y="48" width="220" height="200"/>
-  <text class="t2" x="365" y="72" text-anchor="middle">温度采样 (Temperature)</text>
-  <text class="t3" x="365" y="90" text-anchor="middle">softmax(logits / T) → 采样</text>
-  <text class="t1" x="265" y="115" text-anchor="start">效果:</text>
-  <text class="ts" x="265" y="135" text-anchor="start">• T→0: 退化为贪心</text>
-  <text class="ts" x="265" y="153" text-anchor="start">• T=1: 原始分布</text>
-  <text class="ts" x="265" y="171" text-anchor="start">• T>1: 分布平滑, 更多样</text>
-  <text class="ts" x="265" y="195" text-anchor="start">适用: 创意写作 (T=0.8~1.0)</text>
+  <text class="t2" x="365" y="72" text-anchor="middle">Temperature Sampling</text>
+  <text class="t3" x="365" y="90" text-anchor="middle">softmax(logits / T) → sample</text>
+  <text class="t1" x="265" y="115" text-anchor="start">Effect:</text>
+  <text class="ts" x="265" y="135" text-anchor="start">• T→0: Degrades to greedy</text>
+  <text class="ts" x="265" y="153" text-anchor="start">• T=1: Original distribution</text>
+  <text class="ts" x="265" y="171" text-anchor="start">• T>1: Smoother distribution, more diverse</text>
+  <text class="ts" x="265" y="195" text-anchor="start">Use case: Creative writing (T=0.8~1.0)</text>
   <rect class="b2" x="305" y="218" width="120" height="22"/>
-  <text class="ts" x="365" y="233" text-anchor="middle">T=0.7~1.0 (可调)</text>
+  <text class="ts" x="365" y="233" text-anchor="middle">T=0.7~1.0 (Adjustable)</text>
 
   <!-- Top-K -->
   <rect class="box" x="490" y="48" width="220" height="200"/>
-  <text class="t2" x="600" y="72" text-anchor="middle">Top-K 采样</text>
-  <text class="t3" x="600" y="90" text-anchor="middle">保留 top K 个token → 采样</text>
-  <text class="t1" x="500" y="115" text-anchor="start">特点:</text>
-  <text class="ts" x="500" y="135" text-anchor="start">• 截断低概率tail</text>
-  <text class="ts" x="500" y="153" text-anchor="start">• K固定不变 (GPT-2: K=40)</text>
-  <text class="ts" x="500" y="171" text-anchor="start">• 问题: 固定K→尾部截断过猛</text>
-  <text class="ts" x="500" y="195" text-anchor="start">适用: 通用生成</text>
+  <text class="t2" x="600" y="72" text-anchor="middle">Top-K Sampling</text>
+  <text class="t3" x="600" y="90" text-anchor="middle">Keep top K tokens → sample</text>
+  <text class="t1" x="500" y="115" text-anchor="start">Features:</text>
+  <text class="ts" x="500" y="135" text-anchor="start">• Truncates low-probability tail</text>
+  <text class="ts" x="500" y="153" text-anchor="start">• K is fixed (GPT-2: K=40)</text>
+  <text class="ts" x="500" y="171" text-anchor="start">• Problem: Fixed K → overly aggressive tail truncation</text>
+  <text class="ts" x="500" y="195" text-anchor="start">Use case: General generation</text>
   <rect class="box" x="540" y="218" width="120" height="22"/>
   <text class="ts" x="600" y="233" text-anchor="middle">K=40~100</text>
 
   <!-- Top-P -->
   <rect class="b2" x="725" y="48" width="200" height="200"/>
   <text class="t2" x="825" y="72" text-anchor="middle">Top-P (Nucleus)</text>
-  <text class="t3" x="825" y="90" text-anchor="middle">累计概率≥P → 截断→采样</text>
-  <text class="t1" x="735" y="115" text-anchor="start">特点:</text>
-  <text class="ts" x="735" y="135" text-anchor="start">• 动态K, 自适应分布形状</text>
-  <text class="ts" x="735" y="153" text-anchor="start">• 当前最主流策略</text>
-  <text class="ts" x="735" y="171" text-anchor="start">• GPT/Claude 默认用此法</text>
-  <text class="ts" x="735" y="195" text-anchor="start">适用: 几乎所有场景</text>
+  <text class="t3" x="825" y="90" text-anchor="middle">Cumulative prob ≥ P → truncate → sample</text>
+  <text class="t1" x="735" y="115" text-anchor="start">Features:</text>
+  <text class="ts" x="735" y="135" text-anchor="start">• Dynamic K, adapts to distribution shape</text>
+  <text class="ts" x="735" y="153" text-anchor="start">• Currently the most mainstream strategy</text>
+  <text class="ts" x="735" y="171" text-anchor="start">• GPT/Claude default to this method</text>
+  <text class="ts" x="735" y="195" text-anchor="start">Use case: Almost all scenarios</text>
   <rect class="b2" x="775" y="218" width="100" height="22"/>
   <text class="ts" x="825" y="233" text-anchor="middle">P=0.9~0.95</text>
 
   <!-- Bottom: Comparison table -->
   <rect class="box" x="20" y="280" width="900" height="130"/>
-  <text class="t2" x="470" y="305" text-anchor="middle">采样效果对比 (同一 prompt: "人工智能的未来是")</text>
+  <text class="t2" x="470" y="305" text-anchor="middle">Sampling Effect Comparison (Same prompt: "The future of artificial intelligence is")</text>
   <g font-size="12">
-    <text class="ts" x="40" y="335" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Greedy (T=0):</tspan>  人工智能的未来是人工智能的未来是人工智能的未来是人工智能的未来是...  (死循环)</text>
-    <text class="ts" x="40" y="358" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Temp (T=1.5):</tspan>  人工智能的未来是无法预料的奇妙旅程，它将重新定义我们与机器之间的边界和伦理关系。</text>
-    <text class="ts" x="40" y="381" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-K (K=40):</tspan> 人工智能的未来是光明的。随着技术的发展，AI将在医疗、教育和交通等领域发挥越来越重要的作用。</text>
-    <text class="ts" x="40" y="404" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-P (P=0.9):</tspan>人工智能的未来是一个开放的问题。有人看好AGI的突破，有人担忧失控的风险，但大家都同意——变革已经开始。</text>
+    <text class="ts" x="40" y="335" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Greedy (T=0):</tspan>  The future of artificial intelligence is the future of artificial intelligence is the future of artificial intelligence is the future of artificial intelligence is... (Infinite loop)</text>
+    <text class="ts" x="40" y="358" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Temp (T=1.5):</tspan>  The future of artificial intelligence is an unpredictable and wonderful journey that will redefine the boundaries and ethical relationships between us and machines.</text>
+    <text class="ts" x="40" y="381" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-K (K=40):</tspan> The future of artificial intelligence is bright. With the development of technology, AI will play an increasingly important role in fields such as healthcare, education, and transportation.</text>
+    <text class="ts" x="40" y="404" text-anchor="start"><tspan font-weight="700" fill="#b35c22">Top-P (P=0.9):</tspan> The future of artificial intelligence is an open question. Some are optimistic about the breakthrough of AGI, others worry about the risk of losing control, but everyone agrees — change has begun.</text>
   </g>
 
   <!-- Bottom: Flow -->
   <rect class="box" x="20" y="425" width="900" height="115"/>
-  <text class="t2" x="470" y="450" text-anchor="middle">完整采样流程</text>
+  <text class="t2" x="470" y="450" text-anchor="middle">Complete Sampling Flow</text>
   <g font-size="13">
     <text class="t1" x="50" y="478" text-anchor="start">logits</text>
     <text class="t1" x="130" y="478" text-anchor="start">→</text>
-    <text class="t1" x="155" y="478" text-anchor="start">/T (温度)</text>
+    <text class="t1" x="155" y="478" text-anchor="start">/T (Temperature)</text>
     <text class="t1" x="260" y="478" text-anchor="start">→</text>
-    <text class="t1" x="285" y="478" text-anchor="start">Top-K截断</text>
+    <text class="t1" x="285" y="478" text-anchor="start">Top-K Truncation</text>
     <text class="t1" x="395" y="478" text-anchor="start">→</text>
-    <text class="t1" x="420" y="478" text-anchor="start">Top-P截断</text>
+    <text class="t1" x="420" y="478" text-anchor="start">Top-P Truncation</text>
     <text class="t1" x="530" y="478" text-anchor="start">→</text>
     <text class="t1" x="555" y="478" text-anchor="start">softmax</text>
     <text class="t1" x="650" y="478" text-anchor="start">→</text>
-    <text class="t1" x="675" y="478" text-anchor="start">multinomial采样</text>
+    <text class="t1" x="675" y="478" text-anchor="start">Multinomial Sampling</text>
     <text class="t1" x="820" y="478" text-anchor="start">→ token</text>
   </g>
-  <text class="ts" x="470" y="510" text-anchor="middle">推荐组合: T=0.7 ~ 1.0 + Top-P=0.9 ~ 0.95 (ChatGPT/Claude 默认)</text>
-  <text class="ts" x="470" y="528" text-anchor="middle">代码生成: T=0.1 ~ 0.3 + Top-P=0.9 · 事实问答: T=0 (贪心) · 创意写作: T=1.0 + Top-P=0.95</text>
+  <text class="ts" x="470" y="510" text-anchor="middle">Recommended combination: T=0.7 ~ 1.0 + Top-P=0.9 ~ 0.95 (ChatGPT/Claude default)</text>
+  <text class="ts" x="470" y="528" text-anchor="middle">Code generation: T=0.1 ~ 0.3 + Top-P=0.9 · Factual QA: T=0 (Greedy) · Creative writing: T=1.0 + Top-P=0.95</text>
 </svg>

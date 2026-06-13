@@ -19,7 +19,7 @@
   </defs>
   <rect class="bg" width="940" height="520"/>
 
-  <text class="t2" x="470" y="28" text-anchor="middle" style="font-size:18px">对齐方法对比: RLHF vs DPO vs GRPO</text>
+  <text class="t2" x="470" y="28" text-anchor="middle" style="font-size:18px">Alignment Method Comparison: RLHF vs DPO vs GRPO</text>
 
   <!-- RLHF -->
   <rect class="box" x="20" y="48" width="290" height="460"/>
@@ -27,88 +27,88 @@
   <text class="ts" x="165" y="88" text-anchor="middle">InstructGPT, ChatGPT</text>
 
   <g transform="translate(35,105)">
-    <text class="t1" x="120" y="0" text-anchor="middle" style="font-weight:700">步骤 1: 训练 Reward Model</text>
-    <text class="ts" x="120" y="18" text-anchor="middle">收集偏好数据 (y_w {"≻"} y_l)</text>
+    <text class="t1" x="120" y="0" text-anchor="middle" style="font-weight:700">Step 1: Train Reward Model</text>
+    <text class="ts" x="120" y="18" text-anchor="middle">Collect preference data (y_w {"≻"} y_l)</text>
     <text class="t3" x="120" y="36" text-anchor="middle">L_RM = -log σ(r_w - r_l)</text>
     <rect fill="#d4cec4" opacity="0.3" x="40" y="0" width="160" height="42" rx="4"/>
 
-    <text class="t1" x="120" y="65" text-anchor="middle" style="font-weight:700">步骤 2: PPO 优化策略</text>
-    <text class="ts" x="120" y="83" text-anchor="middle">最大化 RM 奖励</text>
-    <text class="ts" x="120" y="100" text-anchor="middle">KL 惩罚防止偏离 SFT 模型</text>
+    <text class="t1" x="120" y="65" text-anchor="middle" style="font-weight:700">Step 2: PPO Optimize Policy</text>
+    <text class="ts" x="120" y="83" text-anchor="middle">Maximize RM reward</text>
+    <text class="ts" x="120" y="100" text-anchor="middle">KL penalty prevents deviation from SFT model</text>
 
-    <text class="t1" x="120" y="130" text-anchor="middle" style="font-weight:700">步骤 3: 迭代</text>
-    <text class="ts" x="120" y="148" text-anchor="middle">收集新数据 → 重新训练 RM</text>
+    <text class="t1" x="120" y="130" text-anchor="middle" style="font-weight:700">Step 3: Iterate</text>
+    <text class="ts" x="120" y="148" text-anchor="middle">Collect new data → Retrain RM</text>
 
-    <text class="ts" x="120" y="180" text-anchor="middle" style="font-weight:700">优点:</text>
-    <text class="ts" x="120" y="198" text-anchor="middle">• 在线数据收集</text>
-    <text class="ts" x="120" y="213" text-anchor="middle">• 可迭代改进</text>
+    <text class="ts" x="120" y="180" text-anchor="middle" style="font-weight:700">Advantages:</text>
+    <text class="ts" x="120" y="198" text-anchor="middle">• Online data collection</text>
+    <text class="ts" x="120" y="213" text-anchor="middle">• Iterative improvement</text>
 
-    <text class="ts" x="120" y="240" text-anchor="middle" style="font-weight:700;fill:#b35c22">缺点:</text>
-    <text class="ts" x="120" y="258" text-anchor="middle" style="fill:#b35c22">• 需要训练 RM</text>
-    <text class="ts" x="120" y="273" text-anchor="middle" style="fill:#b35c22">• PPO 不稳定</text>
-    <text class="ts" x="120" y="288" text-anchor="middle" style="fill:#b35c22">• 3 个模型在线 (Policy+RM+Ref)</text>
+    <text class="ts" x="120" y="240" text-anchor="middle" style="font-weight:700;fill:#b35c22">Disadvantages:</text>
+    <text class="ts" x="120" y="258" text-anchor="middle" style="fill:#b35c22">• Requires training RM</text>
+    <text class="ts" x="120" y="273" text-anchor="middle" style="fill:#b35c22">• PPO is unstable</text>
+    <text class="ts" x="120" y="288" text-anchor="middle" style="fill:#b35c22">• 3 models online (Policy+RM+Ref)</text>
 
-    <text class="t3" x="120" y="320" text-anchor="middle">系统复杂度: 高</text>
+    <text class="t3" x="120" y="320" text-anchor="middle">System Complexity: High</text>
   </g>
 
   <!-- DPO -->
   <rect class="b2" x="325" y="48" width="290" height="460"/>
-  <text class="t2" x="470" y="72" text-anchor="middle">DPO (直接偏好优化)</text>
+  <text class="t2" x="470" y="72" text-anchor="middle">DPO (Direct Preference Optimization)</text>
   <text class="ts" x="470" y="88" text-anchor="middle">Llama 3, Qwen, Mistral</text>
 
   <g transform="translate(340,105)">
-    <text class="t1" x="120" y="0" text-anchor="middle" style="font-weight:700">一个损失函数搞定</text>
+    <text class="t1" x="120" y="0" text-anchor="middle" style="font-weight:700">One loss function does it all</text>
     <rect fill="#b35c22" opacity="0.1" x="20" y="5" width="200" height="80" rx="4"/>
 
     <text class="t3" x="120" y="32" text-anchor="middle">L_DPO = -log σ(</text>
     <text class="t3" x="120" y="52" text-anchor="middle">  β log(π_θ(y_w)/π_ref(y_w))</text>
     <text class="t3" x="120" y="72" text-anchor="middle">- β log(π_θ(y_l)/π_ref(y_l)))</text>
 
-    <text class="t1" x="120" y="105" text-anchor="middle" style="font-weight:700">关键: 隐式奖励 = β log(π/π_ref)</text>
-    <text class="ts" x="120" y="123" text-anchor="middle">不需要显式训练 Reward Model</text>
+    <text class="t1" x="120" y="105" text-anchor="middle" style="font-weight:700">Key: Implicit reward = β log(π/π_ref)</text>
+    <text class="ts" x="120" y="123" text-anchor="middle">No explicit Reward Model training needed</text>
 
-    <text class="ts" x="120" y="155" text-anchor="middle" style="font-weight:700">优点:</text>
-    <text class="ts" x="120" y="173" text-anchor="middle">• 只需 1 个模型</text>
-    <text class="ts" x="120" y="188" text-anchor="middle">• 标准分类损失, 稳定</text>
-    <text class="ts" x="120" y="203" text-anchor="middle">• 数学上等价 RLHF 最优解</text>
+    <text class="ts" x="120" y="155" text-anchor="middle" style="font-weight:700">Advantages:</text>
+    <text class="ts" x="120" y="173" text-anchor="middle">• Only 1 model needed</text>
+    <text class="ts" x="120" y="188" text-anchor="middle">• Standard classification loss, stable</text>
+    <text class="ts" x="120" y="203" text-anchor="middle">• Mathematically equivalent to RLHF optimal solution</text>
 
-    <text class="ts" x="120" y="235" text-anchor="middle" style="font-weight:700;fill:#b35c22">局限:</text>
-    <text class="ts" x="120" y="253" text-anchor="middle" style="fill:#b35c22">• 需要偏好对数据</text>
-    <text class="ts" x="120" y="268" text-anchor="middle" style="fill:#b35c22">• 离线训练 (无探索)</text>
+    <text class="ts" x="120" y="235" text-anchor="middle" style="font-weight:700;fill:#b35c22">Limitations:</text>
+    <text class="ts" x="120" y="253" text-anchor="middle" style="fill:#b35c22">• Requires preference pair data</text>
+    <text class="ts" x="120" y="268" text-anchor="middle" style="fill:#b35c22">• Offline training (no exploration)</text>
 
-    <text class="t3" x="120" y="300" text-anchor="middle">系统复杂度: 低</text>
+    <text class="t3" x="120" y="300" text-anchor="middle">System Complexity: Low</text>
   </g>
 
   <!-- GRPO -->
   <rect class="box" x="630" y="48" width="290" height="460"/>
-  <text class="t2" x="775" y="72" text-anchor="middle">GRPO (群组相对策略优化)</text>
+  <text class="t2" x="775" y="72" text-anchor="middle">GRPO (Group Relative Policy Optimization)</text>
   <text class="ts" x="775" y="88" text-anchor="middle">DeepSeek-R1, Math, V3</text>
 
   <g transform="translate(645,105)">
-    <text class="t1" x="120" y="0" text-anchor="middle" style="font-weight:700">核心: 组内白化优势</text>
+    <text class="t1" x="120" y="0" text-anchor="middle" style="font-weight:700">Core: Intra-group whitened advantage</text>
     <rect fill="#7baaf7" opacity="0.1" x="15" y="5" width="210" height="60" rx="4"/>
 
-    <text class="t3" x="120" y="30" text-anchor="middle">对每个 prompt 采样 G 个回答</text>
+    <text class="t3" x="120" y="30" text-anchor="middle">Sample G responses per prompt</text>
     <text class="t3" x="120" y="50" text-anchor="middle">Â_i = (r_i - mean(r)) / std(r)</text>
 
-    <text class="t1" x="120" y="85" text-anchor="middle" style="font-weight:700">无需 Critic / Reward Model!</text>
-    <text class="ts" x="120" y="103" text-anchor="middle">组内统计代替价值估计</text>
+    <text class="t1" x="120" y="85" text-anchor="middle" style="font-weight:700">No Critic / Reward Model needed!</text>
+    <text class="ts" x="120" y="103" text-anchor="middle">Intra-group statistics replace value estimation</text>
 
-    <text class="t1" x="120" y="130" text-anchor="middle" style="font-weight:700">R1-Zero: 只用对错信号</text>
-    <text class="ts" x="120" y="148" text-anchor="middle">数学: 答案正确 → 奖励 1</text>
-    <text class="ts" x="120" y="163" text-anchor="middle">代码: 通过测试 → 奖励 1</text>
-    <text class="ts" x="120" y="178" text-anchor="middle">模型自发学会: 自我反思、</text>
-    <text class="ts" x="120" y="193" text-anchor="middle">验证、多路径探索</text>
+    <text class="t1" x="120" y="130" text-anchor="middle" style="font-weight:700">R1-Zero: Only correct/incorrect signal</text>
+    <text class="ts" x="120" y="148" text-anchor="middle">Math: Answer correct → Reward 1</text>
+    <text class="ts" x="120" y="163" text-anchor="middle">Code: Passes tests → Reward 1</text>
+    <text class="ts" x="120" y="178" text-anchor="middle">Model spontaneously learns: self-reflection,</text>
+    <text class="ts" x="120" y="193" text-anchor="middle">verification, multi-path exploration</text>
 
-    <text class="ts" x="120" y="220" text-anchor="middle" style="font-weight:700">优点:</text>
-    <text class="ts" x="120" y="238" text-anchor="middle">• 无需 Critic (省一半显存)</text>
-    <text class="ts" x="120" y="253" text-anchor="middle">• 可用可验证奖励 (0/1)</text>
-    <text class="ts" x="120" y="268" text-anchor="middle">• 涌现推理能力</text>
+    <text class="ts" x="120" y="220" text-anchor="middle" style="font-weight:700">Advantages:</text>
+    <text class="ts" x="120" y="238" text-anchor="middle">• No Critic needed (saves half the memory)</text>
+    <text class="ts" x="120" y="253" text-anchor="middle">• Can use verifiable rewards (0/1)</text>
+    <text class="ts" x="120" y="268" text-anchor="middle">• Emergent reasoning ability</text>
 
-    <text class="ts" x="120" y="295" text-anchor="middle" style="font-weight:700;fill:#b35c22">挑战:</text>
-    <text class="ts" x="120" y="313" text-anchor="middle" style="fill:#b35c22">• 组内方差估计偏差</text>
-    <text class="ts" x="120" y="328" text-anchor="middle" style="fill:#b35c22">• 输出长度膨胀</text>
+    <text class="ts" x="120" y="295" text-anchor="middle" style="font-weight:700;fill:#b35c22">Challenges:</text>
+    <text class="ts" x="120" y="313" text-anchor="middle" style="fill:#b35c22">• Intra-group variance estimation bias</text>
+    <text class="ts" x="120" y="328" text-anchor="middle" style="fill:#b35c22">• Output length explosion</text>
 
-    <text class="t3" x="120" y="360" text-anchor="middle">系统复杂度: 中低</text>
+    <text class="t3" x="120" y="360" text-anchor="middle">System Complexity: Medium-Low</text>
   </g>
 </svg>

@@ -1,53 +1,53 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
   <link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第11章 经典神经 NLP 与评测 — RNN/Parsing/Seq2Seq/BERT — LLM 深度学习</title>
+<title>Chapter 11 Classic Neural NLP and Evaluation — RNN/Parsing/Seq2Seq/BERT — LLM Deep Learning</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-ch="11">
 
-<button class="menu-toggle" aria-label="菜单">☰</button>
+<button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
-  <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
-  <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-progress"><span>Learning Progress: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
+  <input type="search" id="search-box" class="search-box" placeholder="Search course..." aria-label="Search">
   <div id="search-results" class="search-results"></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
-  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
-  <h2>第11章 经典神经 NLP 与评测</h2>
-  <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT——把经典神经 NLP 接回现代 LLM</p>
-  <div class="reading-time">预计阅读: 135 分钟 · 14 小节 · 5 类可运行练习 · 5 道概念练习</div>
-  <div class="font-controls"><span>字号:</span>
-    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
-    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
-    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  <h2>Chapter 11 Classic Neural NLP and Evaluation</h2>
+  <p class="subtitle">RNN / Dependency Parsing / Seq2Seq / BERT — Connecting Classic Neural NLP Back to Modern LLMs</p>
+  <div class="reading-time">Estimated Reading: 135 minutes · 14 sections · 5 runnable exercises · 5 conceptual exercises</div>
+  <div class="font-controls"><span>Font Size:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
   </div>
 
 <section class="card">
-  <h3>本章怎么学：不是历史回顾，而是模型族边界</h3>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>现代 LLM 课程不能只讲 decoder-only GPT。真实 NLP 系统仍大量使用 encoder-only 表示、cross-encoder reranker、抽取式 QA、序列标注和结构化预测。本章补齐这些模型族的目标函数、可见性约束和评测指标。</div></div>
+  <h3>How to Learn This Chapter: Not a History Review, But Model Family Boundaries</h3>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> A modern LLM course cannot only cover decoder-only GPT. Real-world NLP systems still heavily use encoder-only representations, cross-encoder rerankers, extractive QA, sequence labeling, and structured prediction. This chapter fills in the objective functions, visibility constraints, and evaluation metrics for these model families.</div></div>
   <ul>
-    <li><strong>前置知识：</strong>Ch03 attention、Ch08 beam search、Ch10 RAG rerank 与检索评测。</li>
-    <li><strong>学习目标：</strong>区分 recurrent、structured prediction、encoder-decoder、encoder-only 和 decoder-only 的建模假设。</li>
-    <li><strong>本章产出：</strong>RNN 梯度路径、arc-standard parsing trace、seq2seq additive attention、MLM mask、BERT QA span、NER span F1 和 BLEU/ROUGE/UAS/LAS/EM/F1 指标。</li>
-    <li><strong>完成标准：</strong>你能为一个任务选择 BERT fine-tuning、seq2seq、decoder-only prompting 或结构化 parser，并解释选择依据。</li>
-    <li><strong>练习产出：</strong>配套作业见 <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>。</li>
+    <li><strong>Prerequisites:</strong> Ch03 attention, Ch08 beam search, Ch10 RAG rerank and retrieval evaluation.</li>
+    <li><strong>Learning Goals:</strong> Distinguish the modeling assumptions of recurrent, structured prediction, encoder-decoder, encoder-only, and decoder-only architectures.</li>
+    <li><strong>Chapter Outputs:</strong> RNN gradient paths, arc-standard parsing trace, seq2seq additive attention, MLM mask, BERT QA span, NER span F1, and BLEU/ROUGE/UAS/LAS/EM/F1 metrics.</li>
+    <li><strong>Completion Criteria:</strong> You can choose BERT fine-tuning, seq2seq, decoder-only prompting, or a structured parser for a given task and explain the rationale for your choice.</li>
+    <li><strong>Exercise Outputs:</strong> Accompanying assignments are available at <a href="../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>.</li>
   </ul>
-  <div class="dependency-note"><strong>先修能力：</strong>序列建模、teacher forcing、encoder/decoder 可见性、结构化预测、BLEU/ROUGE/EM/F1、LLM-as-judge 和置信区间。<br><strong>本章内化：</strong>RNN、seq2seq、BERT、CRF、span QA 和评测指标会作为工程选型工具嵌入本章，而不是独立怀旧专题：它们帮助判断任务该用开放生成、检索排序、抽取、分类还是结构化解码。<br><strong>验收信号：</strong>你能把一个 NLP/LLM 任务映射到合适模型族、解码方式和指标，并说明传统指标与现代 LLM 评测各自的适用边界。</div>
-  <p class="system-role"><strong>系统位置：</strong>本章不是历史补课，而是给现代 LLM 工程补齐任务边界和评测语言。很多生产问题并不适合自由生成；理解 encoder-only、结构化预测和传统指标，才能判断何时用 LLM、何时用更小更稳的模型族。</p>
+  <div class="dependency-note"><strong>Prerequisite Skills:</strong> Sequence modeling, teacher forcing, encoder/decoder visibility, structured prediction, BLEU/ROUGE/EM/F1, LLM-as-judge, and confidence intervals.<br><strong>Internalization for This Chapter:</strong> RNN, seq2seq, BERT, CRF, span QA, and evaluation metrics will be embedded as engineering selection tools within this chapter, not as standalone historical topics: they help determine whether a task should use open-ended generation, retrieval ranking, extraction, classification, or structured decoding.<br><strong>Validation Signal:</strong> You can map an NLP/LLM task to the appropriate model family, decoding method, and metrics, and explain the respective applicability boundaries of traditional metrics and modern LLM evaluation.</div>
+  <p class="system-role"><strong>System Position:</strong> This chapter is not a history lesson, but a way to fill in the task boundaries and evaluation language for modern LLM engineering. Many production problems are not suited for free-form generation; understanding encoder-only models, structured prediction, and traditional metrics is necessary to decide when to use an LLM and when to use a smaller, more stable model family.</p>
   <div class="foundation-map">
-    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
-    <div class="foundation-graph" role="img" aria-label="第11章知识脑图：学习本章前需要懂序列建模、可见性、结构化输出和指标，本章会学 NLP 任务边界与评测，学完后可以继续读 LLM-as-judge 和可靠评测">
+    <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
+    <div class="foundation-graph" role="img" aria-label="Chapter 11 knowledge mind map: Before learning this chapter, you need to understand sequence modeling, visibility, structured outputs, and metrics. This chapter teaches NLP task boundaries and evaluation. After learning, you can continue with LLM-as-judge and reliable evaluation.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-11" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -56,70 +56,69 @@
         <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
         <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
         <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
-        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第11章 NLP Tasks</tspan><tspan class="dep-sub" x="430" dy="22">任务边界与评测</tspan></text>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">Chapter 11 NLP Tasks</tspan><tspan class="dep-sub" x="430" dy="22">Task Boundaries & Evaluation</tspan></text>
         <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：模型可见性</tspan><tspan class="dep-sub" x="129" dy="18">encoder / decoder / MLM</tspan></text>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">Prerequisite: Model Visibility</tspan><tspan class="dep-sub" x="129" dy="18">encoder / decoder / MLM</tspan></text>
         <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：评测基础</tspan><tspan class="dep-sub" x="129" dy="18">F1 / EM / judge</tspan></text>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">Prerequisite: Evaluation Basics</tspan><tspan class="dep-sub" x="129" dy="18">F1 / EM / judge</tspan></text>
         <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：结构任务</tspan><tspan class="dep-sub" x="731" dy="18">CRF / span QA / rerank</tspan></text>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">Read Next: Structured Tasks</tspan><tspan class="dep-sub" x="731" dy="18">CRF / span QA / rerank</tspan></text>
         <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：可靠评测</tspan><tspan class="dep-sub" x="731" dy="18">LLM-as-judge / CI</tspan></text>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">Read Next: Reliable Evaluation</tspan><tspan class="dep-sub" x="731" dy="18">LLM-as-judge / CI</tspan></text>
         <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
-        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：task type -> model family -> output space -> metric</tspan></text>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">Chapter Main Thread: task type -> model family -> output space -> metric</tspan></text>
       </svg>
     </div>
     <div class="table-wrap foundation-table">
       <table>
-        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
-        <tr><td>可见性</td><td>比较 RNN、encoder、decoder、encoder-decoder、MLM 与 causal LM 的输入输出可见范围。</td><td><strong>材料：</strong>BERT、T5、encoder-only reranker、causal LM pipeline。<br><strong>知识点：</strong>任务选型、可见性约束、hybrid NLP pipeline。</td></tr>
-        <tr><td>结构化输出空间</td><td>把 tags、spans、arcs、JSON schema 和 constrained decoding 作为输出空间设计问题。</td><td><strong>材料：</strong>CRF、span QA、structured outputs、grammar decoding。<br><strong>知识点：</strong>schema-based evaluation、constrained decoding、结构化抽取。</td></tr>
-        <tr><td>指标定义</td><td>区分 BLEU、ROUGE、F1、EM、UAS/LAS、human eval 和 LLM-as-judge 的适用边界。</td><td><strong>材料：</strong>MT/Summarization/QA/NLI benchmark、LLM-as-judge 指南。<br><strong>知识点：</strong>rubric design、pairwise eval、judge calibration。</td></tr>
-        <tr><td>不确定性与污染</td><td>要求置信区间、bootstrap、prompt 设置、样本切片和 contamination 检查。</td><td><strong>材料：</strong>bootstrap CI、benchmark contamination 研究、eval harness。<br><strong>知识点：</strong>slice-based evaluation、置信区间、评测复现。</td></tr>
+        <tr><th>Need to Know Before Learning</th><th>This Chapter Will Clarify</th><th>Extended Reading Materials/Knowledge Points</th></tr>
+        <tr><td>Visibility</td><td>Compare the input/output visibility ranges of RNN, encoder, decoder, encoder-decoder, MLM, and causal LM.</td><td><strong>Materials:</strong> BERT, T5, encoder-only reranker, causal LM pipeline.<br><strong>Knowledge Points:</strong> Task selection, visibility constraints, hybrid NLP pipeline.</td></tr>
+        <tr><td>Structured Output Space</td><td>Treat tags, spans, arcs, JSON schema, and constrained decoding as output space design problems.</td><td><strong>Materials:</strong> CRF, span QA, structured outputs, grammar decoding.<br><strong>Knowledge Points:</strong> Schema-based evaluation, constrained decoding, structured extraction.</td></tr>
+        <tr><td>Metric Definitions</td><td>Distinguish the applicability boundaries of BLEU, ROUGE, F1, EM, UAS/LAS, human eval, and LLM-as-judge.</td><td><strong>Materials:</strong> MT/Summarization/QA/NLI benchmark, LLM-as-judge guide.<br><strong>Knowledge Points:</strong> Rubric design, pairwise eval, judge calibration.</td></tr>
+        <tr><td>Uncertainty and Contamination</td><td>Require confidence intervals, bootstrap, prompt settings, sample slices, and contamination checks.</td><td><strong>Materials:</strong> Bootstrap CI, benchmark contamination research, eval harness.<br><strong>Knowledge Points:</strong> Slice-based evaluation, confidence intervals, evaluation reproducibility.</td></tr>
       </table>
     </div>
-    <p><strong>本章覆盖情况：</strong>本章已经把传统 NLP 模型族、结构化预测和现代 LLM 评测放回工程选型语境；后续扩展应集中在 LLM-as-judge 校准、数据污染检测和面向业务切片的可靠评测，而不是增加历史模型清单。</p>
+    <p><strong>Chapter Coverage:</strong> This chapter has already placed traditional NLP model families, structured prediction, and modern LLM evaluation back into the engineering selection context; subsequent extensions should focus on LLM-as-judge calibration, data contamination detection, and reliable evaluation for business slices, rather than adding a list of historical models.</p>
   </div>
 </section>
 
 <section class="card" id="s11-1">
-  <h3>11.1 为什么 LLM 课程仍要学习 Classic NLP</h3>
-  <p>本课程的经典神经 NLP 专题从词向量、RNN、dependency parsing、seq2seq attention、Transformer、BERT 一路连接到大语言模型。跳过中间模型会带来一个常见误解：以为所有 NLP 问题都应被改写成 prompt-based generation。实际上，许多生产系统把不同模型族组合起来：BERT 或 DeBERTa 做 reranking，bi-encoder 做 retrieval embedding，encoder-only head 做抽取式 QA，decoder-only LLM 做答案生成。</p>
-  <p>本章的重点不是记住旧模型名字，而是掌握三类稳定概念：</p>
+  <h3>11.1 Why an LLM Course Still Needs to Study Classic NLP</h3>
+  <p>This course's classic neural NLP topic connects from word vectors, RNNs, dependency parsing, seq2seq attention, Transformers, and BERT all the way to large language models. Skipping the intermediate models leads to a common misconception: that all NLP problems should be rewritten as prompt-based generation. In reality, many production systems combine different model families: BERT or DeBERTa for reranking, bi-encoders for retrieval embeddings, encoder-only heads for extractive QA, and decoder-only LLMs for answer generation.</p>
+  <p>The focus of this chapter is not to memorize old model names, but to master three stable concepts:</p>
   <ul>
-    <li><strong>归纳偏置：</strong>RNN 按时间递归，parser 输出树，seq2seq 分离源序列和目标序列，BERT 双向读上下文。</li>
-    <li><strong>目标函数：</strong>causal LM 预测下一个 token，MLM 只在 mask 位置计算 loss，seq2seq 最大化条件生成概率，parser 最大化结构动作或 head/label 概率。</li>
-    <li><strong>评测指标：</strong>BLEU、ROUGE、EM/F1、UAS/LAS 和 retrieval metrics 各自回答不同问题，不能用一个总分替代。</li>
+    <li><strong>Inductive Bias:</strong> RNNs recurse over time, parsers output trees, seq2seq separates source and target sequences, BERT reads context bidirectionally.</li>
+    <li><strong>Objective Functions:</strong> Causal LM predicts the next token, MLM computes loss only at masked positions, seq2seq maximizes conditional generation probability, parsers maximize structural actions or head/label probabilities.</li>
+    <li><strong>Evaluation Metrics:</strong> BLEU, ROUGE, EM/F1, UAS/LAS, and retrieval metrics each answer different questions; they cannot be replaced by a single aggregate score.</li>
   </ul>
 </section>
 
 <section class="card" id="s11-2">
-  <h3>11.2 RNN 与梯度路径</h3>
-  <p>RNN 的隐藏状态递推为：</p>
-  <div class="math-box"><div class="label">公式 11.1 RNN recurrence</div>
+  <h3>11.2 RNN and Gradient Paths</h3>
+  <p>The hidden state recurrence of an RNN is:</p>
+  <div class="math-box"><div class="label">Equation 11.1 RNN recurrence</div>
     <div class="katex" data-expr="h_t = \tanh(W_x x_t + W_h h_{t-1} + b)" aria-label="h_t = \tanh(W_x x_t + W_h h_{t-1} + b)" role="img"></div>
   </div>
-  <p>它把任意长度序列压进一个状态向量。这个设计给了模型强顺序偏置，也造成长距离依赖困难。若损失在最后一步，早期输入的梯度要穿过许多局部 Jacobian：</p>
-  <div class="math-box"><div class="label">公式 11.2 反向传播路径</div>
+  <p>It compresses a sequence of arbitrary length into a single state vector. This design gives the model a strong sequential bias but also causes difficulty with long-range dependencies. If the loss is at the final step, the gradient for an early input must pass through many local Jacobians:</p>
+  <div class="math-box"><div class="label">Equation 11.2 Backpropagation Path</div>
     <div class="katex" data-expr="\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_T} \prod_{i=t+1}^{T} \frac{\partial h_i}{\partial h_{i-1}}" aria-label="\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_T} \prod_{i=t+1}^{T} \frac{\partial h_i}{\partial h_{i-1}}" role="img"></div>
   </div>
-  <p>如果这些因子的谱范数长期小于 1，梯度消失；长期大于 1，梯度爆炸。LSTM/GRU 用门控和近似线性记忆路径缓解这个问题。Transformer 自注意力把任意两个位置之间的路径缩短为一次 attention，但代价是二次注意力矩阵和显存/带宽压力。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div>Ch11 作业中的 <code>scalar_rnn_forward</code> 和 <code>recurrent_gradient_factors</code> 用一维 RNN 手算这个乘积，让“梯度消失”不只是口号。</div></div>
+  <p>If the spectral norm of these factors is consistently less than 1, gradients vanish; if consistently greater than 1, gradients explode. LSTMs/GRUs mitigate this with gating and approximately linear memory paths. Transformer self-attention shortens the path between any two positions to a single attention operation, but at the cost of a quadratic attention matrix and memory/bandwidth pressure.</p>
+  <div class="info-box tip"><span class="icon">💡</span><div>The <code>scalar_rnn_forward</code> and <code>recurrent_gradient_factors</code> in the Ch11 assignment manually compute this product using a 1D RNN, making "vanishing gradients" more than just a slogan.</div></div>
 </section>
 
 <section class="card" id="s11-3">
-  <h3>11.3 Dependency Parsing：结构化预测不是 attention heatmap</h3>
-  <p>Dependency parsing 为每个 token 预测一个 head 和一个 dependency label，输出是一棵有向树。它和 attention heatmap 的区别很重要：attention 是连续权重，可用于诊断；dependency tree 是离散结构，要满足单根、无环、每个词一个 head 等约束。</p>
-  <p>Arc-standard transition system 用 <code>stack</code>、<code>buffer</code> 和 <code>arcs</code> 构造树：</p>
+  <h3>11.3 Dependency Parsing: Structured Prediction is Not an Attention Heatmap</h3>
+  <p>Dependency parsing predicts a head and a dependency label for each token, outputting a directed tree. Its distinction from an attention heatmap is important: attention is a continuous weight, useful for diagnostics; a dependency tree is a discrete structure that must satisfy constraints like a single root, acyclicity, and one head per word.</p>  <p>The Arc-standard transition system constructs trees using <code>stack</code>, <code>buffer</code>, and <code>arcs</code>:</p>
   <table>
-    <tr><th>动作</th><th>前置条件</th><th>效果</th></tr>
-    <tr><td>SHIFT</td><td>buffer 非空</td><td>把 buffer 首 token 推入 stack</td></tr>
-    <tr><td>LEFT_ARC(label)</td><td>stack 至少两个元素</td><td>次栈顶依附于栈顶，然后移除次栈顶</td></tr>
-    <tr><td>RIGHT_ARC(label)</td><td>stack 至少两个元素</td><td>栈顶依附于次栈顶，然后移除栈顶</td></tr>
-    <tr><td>ROOT(label)</td><td>只剩一个根候选</td><td>把根候选连到 ROOT</td></tr>
+    <tr><th>Action</th><th>Precondition</th><th>Effect</th></tr>
+    <tr><td>SHIFT</td><td>buffer is non-empty</td><td>Push the first token of the buffer onto the stack</td></tr>
+    <tr><td>LEFT_ARC(label)</td><td>stack has at least two elements</td><td>Make the second-top element a dependent of the top element, then remove the second-top element</td></tr>
+    <tr><td>RIGHT_ARC(label)</td><td>stack has at least two elements</td><td>Make the top element a dependent of the second-top element, then remove the top element</td></tr>
+    <tr><td>ROOT(label)</td><td>Only one root candidate remains</td><td>Attach the root candidate to ROOT</td></tr>
   </table>
-  <h4>Worked Example：Arc-standard 解析 <code>I saw her</code></h4>
-  <p>目标依存树是 <code>saw -> I (nsubj)</code>、<code>saw -> her (obj)</code>，最后 <code>ROOT -> saw (root)</code>。用 arc-standard transition system 可以按下表构造：</p>
+  <h4>Worked Example：Arc-standard parsing of <code>I saw her</code></h4>
+  <p>The target dependency tree is <code>saw -> I (nsubj)</code>, <code>saw -> her (obj)</code>, and finally <code>ROOT -> saw (root)</code>. Using the arc-standard transition system, it can be constructed as follows:</p>
   <div class="table-wrap">
     <table>
       <tr><th>step</th><th>stack</th><th>buffer</th><th>action</th><th>new arc</th></tr>
@@ -131,86 +130,85 @@
       <tr><td>5</td><td><code>[saw]</code></td><td><code>[]</code></td><td><code>ROOT(root)</code></td><td><code>ROOT -> saw</code></td></tr>
     </table>
   </div>
-  <p>这个例子说明 parsing 不是给每个 token 独立分类：动作是否合法取决于当前 stack/buffer 状态，错误 action 会破坏最终树结构。Ch11 作业中的 <code>run_arc_standard_transitions</code> 正是让学生执行这张 transition table，并返回每个 token 的 head、label、arcs 和 trace。</p>
-  <p>评测通常使用 UAS 和 LAS：</p>
-  <div class="math-box"><div class="label">公式 11.3 Attachment scores</div>
+  <p>This example illustrates that parsing is not about independently classifying each token: the legality of an action depends on the current stack/buffer state, and an incorrect action will destroy the final tree structure. The <code>run_arc_standard_transitions</code> function in the Ch11 assignment is precisely for students to execute this transition table and return the head, label, arcs, and trace for each token.</p>
+  <p>Evaluation typically uses UAS and LAS:</p>
+  <div class="math-box"><div class="label">Formula 11.3 Attachment scores</div>
     <div class="katex" data-expr="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" aria-label="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" role="img"></div>
   </div>
-  <p>高 UAS 低 LAS 说明模型找到了正确 head，但关系类型错了；这在信息抽取、问答依据和语义角色分析里会改变结论。</p>
+  <p>High UAS but low LAS indicates the model found the correct head but got the relation type wrong; this can change conclusions in information extraction, question answering evidence, and semantic role analysis.</p>
 </section>
 
 <section class="card" id="s11-4">
-  <h3>11.4 Seq2Seq 与 Additive Attention</h3>
-  <p>Encoder-decoder 模型显式区分源序列 <span class="katex-inline" data-expr="x_{1:m}" aria-label="x_{1:m}" role="img"></span> 和目标序列 <span class="katex-inline" data-expr="y_{1:n}" aria-label="y_{1:n}" role="img"></span>。机器翻译、摘要和语音识别长期使用这种条件生成形式：</p>
-  <div class="math-box"><div class="label">公式 11.4 条件生成目标</div>
+  <h3>11.4 Seq2Seq and Additive Attention</h3>
+  <p>Encoder-decoder models explicitly distinguish the source sequence <span class="katex-inline" data-expr="x_{1:m}" aria-label="x_{1:m}" role="img"></span> and the target sequence <span class="katex-inline" data-expr="y_{1:n}" aria-label="y_{1:n}" role="img"></span>. Machine translation, summarization, and speech recognition have long used this form of conditional generation:</p>
+  <div class="math-box"><div class="label">Formula 11.4 Conditional generation objective</div>
     <div class="katex" data-expr="P(y_{1:n}\mid x_{1:m})=\prod_{t=1}^{n}P(y_t\mid y_{<t}, x_{1:m})" aria-label="P(y_{1:n}\mid x_{1:m})=\prod_{t=1}^{n}P(y_t\mid y_{<t}, x_{1:m})" role="img"></div>
   </div>
-  <p>Additive attention 为每个 decoder step 对源位置打分：</p>
-  <div class="math-box"><div class="label">公式 11.5 Bahdanau-style attention</div>
+  <p>Additive attention scores source positions for each decoder step:</p>
+  <div class="math-box"><div class="label">Formula 11.5 Bahdanau-style attention</div>
     <div class="katex" data-expr="e_{t,i}=v^\top \tanh(W_s s_t + W_h h_i), \quad \alpha_{t,i}=\text{softmax}(e_{t,i}), \quad c_t=\sum_i \alpha_{t,i}h_i" aria-label="e_{t,i}=v^\top \tanh(W_s s_t + W_h h_i), \quad \alpha_{t,i}=\text{softmax}(e_{t,i}), \quad c_t=\sum_i \alpha_{t,i}h_i" role="img"></div>
   </div>
-  <p>Teacher forcing 训练时把 gold 前缀喂给 decoder；推理时只能喂模型自己生成的前缀，因此会出现 exposure bias。Beam search 缓解搜索错误，但也引入 length bias，所以 Ch08 的 length-normalized score 与 Ch11 的 seq2seq 评测是同一条内容线。</p>
+  <p>During teacher forcing training, the gold prefix is fed to the decoder; during inference, only the prefix generated by the model itself can be fed, leading to exposure bias. Beam search alleviates search errors but also introduces length bias, so the length-normalized score from Ch08 and the seq2seq evaluation in Ch11 are on the same content line.</p>
 </section>
 
 <section class="card" id="s11-4a">
-  <h3>11.4A Worked Example：手算一次 additive attention</h3>
-  <p>设 decoder 当前状态 <span class="katex-inline" data-expr="s_t=[1,0]" aria-label="s_t=[1,0]" role="img"></span>，源序列有两个 encoder hidden states：<span class="katex-inline" data-expr="h_1=[1,1]" aria-label="h_1=[1,1]" role="img"></span>、<span class="katex-inline" data-expr="h_2=[0,2]" aria-label="h_2=[0,2]" role="img"></span>。取一个最小的 additive attention 参数：</p>
+  <h3>11.4A Worked Example：Manual calculation of additive attention</h3>
+  <p>Assume the current decoder state is <span class="katex-inline" data-expr="s_t=[1,0]" aria-label="s_t=[1,0]" role="img"></span>, and the source sequence has two encoder hidden states: <span class="katex-inline" data-expr="h_1=[1,1]" aria-label="h_1=[1,1]" role="img"></span>, <span class="katex-inline" data-expr="h_2=[0,2]" aria-label="h_2=[0,2]" role="img"></span>. Use a minimal set of additive attention parameters:</p>
   <div class="code-block" data-lang="text">
 W_s = [[1, 0]]
 W_h = [[0.5, 0.5]]
 v   = [1]</div>
-  <p>先把 decoder state 和每个 source state 投到同一个 attention hidden 维度，再过 <code>tanh</code> 打分：</p>
+  <p>First, project the decoder state and each source state into the same attention hidden dimension, then score with <code>tanh</code>:</p>
   <div class="math-box"><div class="label">Additive attention scores</div>
     <div class="katex" data-expr="e_{t,1}=\tanh(1+0.5+0.5)=\tanh(2)\approx0.964,\quad e_{t,2}=\tanh(1+0+1)=\tanh(2)\approx0.964" aria-label="e_t1=tanh(2), e_t2=tanh(2)" role="img"></div>
   </div>
-  <p>两个分数相同，所以 alignment weights 是 <code>[0.5, 0.5]</code>。context vector 是源端 hidden states 的加权和：</p>
+  <p>The two scores are identical, so the alignment weights are <code>[0.5, 0.5]</code>. The context vector is the weighted sum of the source hidden states:</p>
   <div class="math-box"><div class="label">Context vector</div>
     <div class="katex" data-expr="c_t=0.5[1,1]+0.5[0,2]=[0.5,1.5]" aria-label="c_t=0.5[1,1]+0.5[0,2]=[0.5,1.5]" role="img"></div>
   </div>
-  <p>这说明 cross-attention 的 K/V 来自源序列，而不是 decoder 已生成前缀。若把 <code>h_2</code> 改成与当前 decoder state 更匹配的表示，softmax 权重会偏向第二个源位置，<code>c_t</code> 也会随之改变；decoder 下一步预测依赖的是 <code>y_{<t}</code> 和这个源端 context 的组合。</p>
+  <p>This shows that the K/V of cross-attention comes from the source sequence, not from the decoder's already generated prefix. If <code>h_2</code> is changed to a representation that better matches the current decoder state, the softmax weights will favor the second source position, and <code>c_t</code> will change accordingly; the decoder's next step prediction depends on the combination of <code>y_{<t}</code> and this source-side context.</p>
 </section>
 
 <section class="card" id="s11-5">
-  <h3>11.5 BERT / Encoder-only：MLM、分类与抽取式 QA</h3>
-  <p>BERT-style encoder 可以双向看见输入中的左右上下文，不是自回归生成器。它的预训练目标之一是 Masked Language Modeling：只在被 mask 的位置计算 cross entropy，未 mask 的 token 使用 ignore index。课程作业中的 <code>masked_lm_loss_from_logits</code> 会显式返回 masked-token loss、accuracy 和参与 loss 的位置，帮助区分“输入中有哪些 token 可见”和“哪些位置贡献训练目标”。</p>
+  <h3>11.5 BERT / Encoder-only：MLM, Classification, and Extractive QA</h3>
+  <p>A BERT-style encoder can bidirectionally see the left and right context within the input; it is not an autoregressive generator. One of its pre-training objectives is Masked Language Modeling: cross-entropy is only computed at masked positions, while unmasked tokens use an ignore index. The <code>masked_lm_loss_from_logits</code> function in the course assignment explicitly returns the masked-token loss, accuracy, and the positions contributing to the loss, helping to distinguish between "which tokens in the input are visible" and "which positions contribute to the training objective".</p>
   <table>
-    <tr><th>维度</th><th>Encoder-only / BERT</th><th>Decoder-only / GPT</th></tr>
-    <tr><td>可见性</td><td>双向 self-attention</td><td>causal mask，只看左侧前缀</td></tr>
-    <tr><td>预训练目标</td><td>MLM：预测 mask 位置</td><td>next-token prediction</td></tr>
-    <tr><td>典型用途</td><td>分类、reranking、embedding、token classification、span QA</td><td>开放式生成、代码、对话、reasoning</td></tr>
-    <tr><td>输出约束</td><td>常有固定 label 或输入 span</td><td>生成新 token 序列</td></tr>
+    <tr><th>Dimension</th><th>Encoder-only / BERT</th><th>Decoder-only / GPT</th></tr>
+    <tr><td>Visibility</td><td>Bidirectional self-attention</td><td>Causal mask, only sees left prefix</td></tr>
+    <tr><td>Pre-training objective</td><td>MLM: predict masked positions</td><td>Next-token prediction</td></tr>
+    <tr><td>Typical uses</td><td>Classification, reranking, embedding, token classification, span QA</td><td>Open-ended generation, code, dialogue, reasoning</td></tr>
+    <tr><td>Output constraint</td><td>Often fixed labels or input spans</td><td>Generate new token sequences</td></tr>
   </table>
-  <p>抽取式 QA 常把输入组织为 <code>[CLS] question [SEP] passage [SEP]</code>，模型分别预测每个位置作为答案起点和终点的 logits。合法 span 的分数为：</p>
-  <div class="math-box"><div class="label">公式 11.6 Extractive QA span score</div>
+  <p>Extractive QA often organizes the input as <code>[CLS] question [SEP] passage [SEP]</code>, and the model predicts logits for each position as the answer start and end. The score for a valid span is:</p>
+  <div class="math-box"><div class="label">Formula 11.6 Extractive QA span score</div>
     <div class="katex" data-expr="\text{score}(i,j)=s_i+e_j,\quad 0\le i\le j,\quad j-i+1\le L_{\max}" aria-label="\text{score}(i,j)=s_i+e_j,\quad 0\le i\le j,\quad j-i+1\le L_{\max}" role="img"></div>
   </div>
-  <p>若 <code>[CLS]</code> 的 no-answer 分数最高，模型应返回空答案。这和 decoder-only LLM 生成“我不知道”不同：BERT QA 的答案必须绑定到输入 token span。</p>
+  <p>If the no-answer score for <code>[CLS]</code> is the highest, the model should return an empty answer. This differs from a decoder-only LLM generating "I don't know": BERT QA's answer must be bound to an input token span.</p>
   <h4>BIO sequence labeling</h4>
-  <p>NER、slot filling 和 token classification 常把每个 token 标成 <code>B-TYPE</code>、<code>I-TYPE</code> 或 <code>O</code>。<code>B-ORG I-ORG</code> 表示一个连续组织实体，<code>O</code> 表示实体外部。课程作业中的 <code>bio_tags_to_spans(tokens, tags)</code> 把 token-level 标签解码成 span-level 输出，例如 <code>["B-LOC", "I-LOC"]</code> 对应一个 LOC span。若一个序列以 <code>I-LOC</code> 开头，很多评测脚本会把它容错为新实体开始；严格系统也可以选择直接报错，但必须在数据协议中写清楚。</p>
-  <p>实体识别通常用 <strong>span-level F1</strong>，而不是只看 token accuracy。一个预测实体只有在 <code>type</code>、<code>start</code> 和 <code>end</code> 都和 gold 完全一致时才算 true positive；边界少一个 token 或类型错了都算 false positive，同时对应 gold span 仍是 false negative。Ch11 作业中的 <code>span_f1(gold_spans, pred_spans)</code> 把这个定义落到可计算的 TP/FP/FN、precision、recall 和 F1。</p>
+  <p>NER, slot filling, and token classification often label each token as <code>B-TYPE</code>, <code>I-TYPE</code>, or <code>O</code>. <code>B-ORG I-ORG</code> represents a continuous organization entity, and <code>O</code> represents outside an entity. The <code>bio_tags_to_spans(tokens, tags)</code> function in the course assignment decodes token-level tags into span-level output; for example, <code>["B-LOC", "I-LOC"]</code> corresponds to a LOC span. If a sequence starts with <code>I-LOC</code>, many evaluation scripts will tolerate it as the start of a new entity; a strict system could also choose to report an error directly, but this must be clearly stated in the data protocol.</p>
+  <p>Entity recognition typically uses <strong>span-level F1</strong>, rather than just token accuracy. A predicted entity is considered a true positive only if its <code>type</code>, <code>start</code>, and <code>end</code> all exactly match the gold span; a boundary off by one token or a wrong type counts as a false positive, while the corresponding gold span remains a false negative. The <code>span_f1(gold_spans, pred_spans)</code> function in the Ch11 assignment implements this definition into computable TP/FP/FN, precision, recall, and F1.</p>
   <h4>Viterbi structured decoding</h4>
-  <p>逐 token argmax 会忽略标签之间的约束：例如 <code>B-ORG</code> 后面接 <code>I-ORG</code> 通常比跳回 <code>O</code> 更合理，<code>O</code> 后面直接接 <code>I-PER</code> 往往应被惩罚。Linear-chain CRF 或类似结构化解码把路径分数写成 emission score 加 transition score：</p>
-  <div class="math-box"><div class="label">公式 11.7 Linear-chain path score</div>
+  <p>Per-token argmax ignores constraints between labels: for example, <code>B-ORG</code> followed by <code>I-ORG</code> is usually more reasonable than jumping back to <code>O</code>, and <code>O</code> directly followed by <code>I-PER</code> should often be penalized. Linear-chain CRFs or similar structured decoding methods formulate the path score as the sum of emission scores and transition scores:</p>
+  <div class="math-box"><div class="label">Formula 11.7 Linear-chain path score</div>
     <div class="katex" data-expr="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" aria-label="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" role="img"></div>
   </div>
-  <p>Viterbi 动态规划在第 <code>t</code> 步保存“以某个 tag 结尾的最佳路径分数”和 backpointer，复杂度为 <code>O(TK^2)</code>。Ch11 作业中的 <code>viterbi_decode</code> 让学生手写这个解码过程，理解结构化预测如何把局部分类器输出变成全局一致的标签序列。</p>
-  <p>训练 CRF 时还需要归一化所有可能路径，而不是只看最优路径。Forward algorithm 把 Viterbi 里的 <code>max</code> 换成 <code>logsumexp</code>，计算 log-partition：</p>
-  <div class="math-box"><div class="label">公式 11.8 CRF log-partition</div>
+  <p>Viterbi dynamic programming saves the "best path score ending with a certain tag" and a backpointer at each step <code>t</code>, with a complexity of <code>O(TK^2)</code>. The <code>viterbi_decode</code> function in the Ch11 assignment requires students to implement this decoding process by hand, understanding how structured prediction transforms the output of a local classifier into a globally consistent label sequence.</p>
+  <p>Training a CRF also requires normalizing over all possible paths, not just the optimal one. The Forward algorithm replaces the <code>max</code> in Viterbi with <code>logsumexp</code> to compute the log-partition:</p>
+  <div class="math-box"><div class="label">Formula 11.8 CRF log-partition</div>
     <div class="katex" data-expr="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" aria-label="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" role="img"></div>
   </div>
-  <p>Ch11 作业中的 <code>linear_chain_log_partition</code> 用 log-space forward DP 计算这个归一化项，<code>linear_chain_crf_nll</code> 再显式计算 gold path score，并返回 <code>log_partition - gold_score</code>。它们和 <code>viterbi_decode</code> 的状态形状相同，但语义不同：Viterbi 用于预测最优路径，CRF NLL 用于训练时比较 gold path 与所有竞争路径。</p>
+  <p>The <code>linear_chain_log_partition</code> function in the Ch11 assignment uses log-space forward DP to compute this normalization term, and <code>linear_chain_crf_nll</code> explicitly computes the gold path score and returns <code>log_partition - gold_score</code>. They have the same state shape as <code>viterbi_decode</code>, but different semantics: Viterbi is used to predict the optimal path, while CRF NLL is used during training to compare the gold path against all competing paths.</p>
 </section>
 
 <section class="card" id="s11-5a">
-  <h3>11.5A Worked Example：MLM loss、masked-token accuracy 与抽取式 QA span</h3>
-  <p>Encoder-only 模型的训练和预测常见错误，是把“输入中所有 token 都可见”和“所有位置都参与 loss”混为一谈。BERT 的 self-attention 可以双向看整句，但 MLM loss 只在被 mask 的位置计算。</p>
+  <h3>11.5A Worked Example：MLM loss, masked-token accuracy, and extractive QA span</h3>
+  <p>A common mistake in training and predicting with encoder-only models is conflating "all tokens in the input are visible" with "all positions contribute to the loss". BERT's self-attention can bidirectionally see the entire sentence, but the MLM loss is only computed at masked positions.</p>
 
-  <h4>MLM：只在 mask 位置求平均</h4>
-  <p>设输入 tokens 为 <code>[CLS] the cat sat [SEP]</code>，mask positions 为 <code>[2, 3]</code>，则模型输入和 labels 是：</p>
+  <h4>MLM：Averaging only over masked positions</h4>  <p>Let the input tokens be <code>[CLS] the cat sat [SEP]</code>, and the mask positions be <code>[2, 3]</code>. Then the model input and labels are:</p>
   <div class="code-block" data-lang="text">
 masked input: [CLS] the [MASK] [MASK] [SEP]
 labels:       None  None cat    sat    None</div>
-  <p>假设词表只有 <code>[cat, sat, dog]</code> 三个候选，mask 位置的 logits 为：</p>
+  <p>Assume the vocabulary only has three candidates: <code>[cat, sat, dog]</code>. The logits at the mask positions are:</p>
   <div class="table-wrap">
     <table>
       <tr><th>position</th><th>gold</th><th>logits for [cat, sat, dog]</th><th>argmax</th></tr>
@@ -218,14 +216,14 @@ labels:       None  None cat    sat    None</div>
       <tr><td>3</td><td>sat</td><td><code>[0.0, 1.0, 3.0]</code></td><td>dog</td></tr>
     </table>
   </div>
-  <p>该样本的 MLM loss 是两个 masked positions 的 cross entropy 平均：</p>
+  <p>The MLM loss for this sample is the average cross-entropy over the two masked positions:</p>
   <div class="math-box"><div class="label">MLM loss denominator</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{MLM}}=\frac{1}{2}\left[-\log p(\text{cat}\mid x_{\setminus 2,3})-\log p(\text{sat}\mid x_{\setminus 2,3})\right]" aria-label="\mathcal{L}_{\text{MLM}}=\frac{1}{2}[-\log p(cat)-\log p(sat)]" role="img"></div>
   </div>
-  <p>masked-token accuracy 是 <code>1/2</code>，因为位置 2 预测正确，位置 3 预测成 <code>dog</code>。未 mask 的 <code>[CLS]</code>、<code>the</code> 和 <code>[SEP]</code> 虽然参与上下文编码，但不进入 loss 分母，也不计入 MLM accuracy。这个定义对应作业函数 <code>masked_lm_loss_from_logits</code> 返回的 <code>num_masked</code>、<code>positions</code> 和 <code>accuracy</code>。</p>
+  <p>The masked-token accuracy is <code>1/2</code>, because position 2 is predicted correctly, while position 3 is predicted as <code>dog</code>. The unmasked tokens <code>[CLS]</code>, <code>the</code>, and <code>[SEP]</code> participate in context encoding but are not included in the loss denominator or the MLM accuracy. This definition corresponds to the <code>num_masked</code>, <code>positions</code>, and <code>accuracy</code> returned by the homework function <code>masked_lm_loss_from_logits</code>.</p>
 
-  <h4>抽取式 QA：从 start/end logits 选择合法 span</h4>
-  <p>BERT-style QA head 不生成自由文本，而是在输入 passage 中选择一个连续 span。设输入是 <code>[CLS] who founded OpenAI [SEP] Sam Altman founded OpenAI [SEP]</code>，候选答案必须来自 passage token 位置。start/end logits 最高的组合可能如下：</p>
+  <h4>Extractive QA: Selecting a valid span from start/end logits</h4>
+  <p>The BERT-style QA head does not generate free text; instead, it selects a continuous span from the input passage. Let the input be <code>[CLS] who founded OpenAI [SEP] Sam Altman founded OpenAI [SEP]</code>. The candidate answer must come from the passage token positions. The combination with the highest start/end logits might be as follows:</p>
   <div class="table-wrap">
     <table>
       <tr><th>token</th><th>position</th><th>start logit</th><th>end logit</th></tr>
@@ -235,13 +233,13 @@ labels:       None  None cat    sat    None</div>
       <tr><td><code>OpenAI</code></td><td>8</td><td>0.2</td><td>1.8</td></tr>
     </table>
   </div>
-  <p>合法 span 要满足 <code>start <= end</code> 且长度不超过 <code>max_answer_len</code>。若 <code>max_answer_len >= 2</code>，<code>Sam Altman</code> 的分数为 <code>4.0 + 3.5 = 7.5</code>，高于 no-answer 的 <code>[CLS]</code> 分数 <code>1.0 + 1.0 = 2.0</code>，所以返回该 span。若 <code>[CLS]</code> 分数最高，系统返回 no-answer；这与 decoder-only LLM 生成一段解释不同，是一个受输入 span 约束的预测问题。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>统一视角：</strong>MLM、token classification、CRF、extractive QA 都把 encoder 输出接到不同 prediction head 上。它们的共同优势是输出空间受控；共同边界是不能自然生成输入中不存在的新文本。</div></div>
+  <p>A valid span must satisfy <code>start <= end</code> and its length must not exceed <code>max_answer_len</code>. If <code>max_answer_len >= 2</code>, the score for <code>Sam Altman</code> is <code>4.0 + 3.5 = 7.5</code>, which is higher than the no-answer <code>[CLS]</code> score of <code>1.0 + 1.0 = 2.0</code>, so this span is returned. If the <code>[CLS]</code> score were the highest, the system would return no-answer. This is different from a decoder-only LLM generating an explanation; it is a prediction problem constrained by the input span.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Unified Perspective:</strong> MLM, token classification, CRF, and extractive QA all connect the encoder output to different prediction heads. Their common advantage is a controlled output space; their common limitation is the inability to naturally generate new text not present in the input.</div></div>
 </section>
 
 <section class="card" id="s11-5b">
-  <h3>11.5B Worked Example：Viterbi 解码与 CRF 训练不是一回事</h3>
-  <p>考虑一个长度为 2 的 toy NER 序列，标签集合为 <code>O</code> 和 <code>B-PER</code>。模型给出的 emission score 如下，transition score 只考虑从第 1 个 token 到第 2 个 token：</p>
+  <h3>11.5B Worked Example: Viterbi Decoding and CRF Training Are Not the Same Thing</h3>
+  <p>Consider a toy NER sequence of length 2, with the label set <code>O</code> and <code>B-PER</code>. The emission scores given by the model are as follows, and the transition scores only consider the transition from the 1st token to the 2nd token:</p>
   <div class="table-wrap">
     <table>
       <tr><th></th><th>token 1</th><th>token 2</th></tr>
@@ -257,81 +255,79 @@ labels:       None  None cat    sat    None</div>
     </table>
   </div>
 
-  <h4>Viterbi：找最高分路径</h4>
-  <p>第 1 步的最佳分数就是 emission：<code>O=1.2</code>，<code>B-PER=0.4</code>。第 2 步若以 <code>O</code> 结尾，比较两条来源：</p>
+  <h4>Viterbi: Finding the Highest Scoring Path</h4>
+  <p>The best score for step 1 is just the emission: <code>O=1.2</code>, <code>B-PER=0.4</code>. For step 2, if it ends with <code>O</code>, we compare the two possible sources:</p>
   <div class="math-box"><div class="label">Viterbi step to O</div>
     <div class="katex" data-expr="\max(1.2+0.2+0.3,\;0.4-0.1+0.3)=1.7" aria-label="\max(1.2+0.2+0.3,\;0.4-0.1+0.3)=1.7" role="img"></div>
   </div>
-  <p>若以 <code>B-PER</code> 结尾：</p>
+  <p>If it ends with <code>B-PER</code>:</p>
   <div class="math-box"><div class="label">Viterbi step to B-PER</div>
     <div class="katex" data-expr="\max(1.2+0.6+1.1,\;0.4+0.1+1.1)=2.9" aria-label="\max(1.2+0.6+1.1,\;0.4+0.1+1.1)=2.9" role="img"></div>
   </div>
-  <p>所以最优路径是 <code>O, B-PER</code>，分数为 2.9。注意这个结果不是逐 token argmax 的简单拼接；它利用了 transition score，偏好从 <code>O</code> 进入 <code>B-PER</code> 的路径。</p>
+  <p>Therefore, the optimal path is <code>O, B-PER</code> with a score of 2.9. Note that this result is not a simple concatenation of token-wise argmax; it utilizes the transition scores, favoring the path that goes from <code>O</code> to <code>B-PER</code>.</p>
 
-  <h4>CRF NLL：比较 gold path 与所有路径</h4>
-  <p>若 gold path 也是 <code>O, B-PER</code>，gold score 为 <code>1.2 + 0.6 + 1.1 = 2.9</code>。CRF 训练还要计算所有路径的 log-partition：</p>
-  <div class="math-box"><div class="label">四条路径的分数</div>
+  <h4>CRF NLL: Comparing the Gold Path to All Paths</h4>
+  <p>If the gold path is also <code>O, B-PER</code>, the gold score is <code>1.2 + 0.6 + 1.1 = 2.9</code>. CRF training also needs to compute the log-partition over all paths:</p>
+  <div class="math-box"><div class="label">Scores for the four paths</div>
     <div class="katex" data-expr="\begin{aligned}s(O,O)&=1.2+0.2+0.3=1.7\\s(O,B)&=1.2+0.6+1.1=2.9\\s(B,O)&=0.4-0.1+0.3=0.6\\s(B,B)&=0.4+0.1+1.1=1.6\end{aligned}" aria-label="s(O,O)=1.7, s(O,B)=2.9, s(B,O)=0.6, s(B,B)=1.6" role="img"></div>
   </div>
   <div class="math-box"><div class="label">CRF negative log-likelihood</div>
     <div class="katex" data-expr="\mathcal{L}=\log\left(e^{1.7}+e^{2.9}+e^{0.6}+e^{1.6}\right)-2.9" aria-label="\mathcal{L}=\log(e^{1.7}+e^{2.9}+e^{0.6}+e^{1.6})-2.9" role="img"></div>
   </div>
-  <p>这个 loss 会推动 gold path 的分数相对所有竞争路径上升，而不只是让当前 Viterbi 预测正确。若模型已经预测对但第二名路径分数很接近，CRF NLL 仍会给出非零梯度；这就是结构化训练比“解码后看是否正确”更细的地方。</p>
+  <p>This loss pushes the score of the gold path to increase relative to all competing paths, not just to make the current Viterbi prediction correct. If the model already predicts correctly but the score of the second-best path is very close, the CRF NLL will still give a non-zero gradient; this is where structured training is more granular than "checking if the decoding is correct."</p>
 </section>
 
 <section class="card" id="s11-6">
-  <h3>11.6 评测：BLEU、ROUGE、EM/F1 与结构指标</h3>
-  <p>评测指标必须匹配任务结构。翻译常用 BLEU，摘要常用 ROUGE，抽取式 QA 常用 Exact Match 和 token-level F1，dependency parsing 用 UAS/LAS。它们都不是“语言质量”的完整度量。</p>
+  <h3>11.6 Evaluation: BLEU, ROUGE, EM/F1, and Structural Metrics</h3>
+  <p>Evaluation metrics must match the task structure. BLEU is commonly used for translation, ROUGE for summarization, Exact Match and token-level F1 for extractive QA, and UAS/LAS for dependency parsing. None of them are a complete measure of "language quality."</p>
   <table>
-    <tr><th>指标</th><th>核心计算</th><th>适用任务</th><th>主要局限</th></tr>
-    <tr><td>BLEU</td><td>clipped n-gram precision + brevity penalty</td><td>机器翻译</td><td>对同义改写和语义等价不敏感</td></tr>
-    <tr><td>ROUGE-L</td><td>最长公共子序列的 precision/recall/F1</td><td>摘要、生成比较</td><td>偏向词面重合，不能保证事实一致</td></tr>
-    <tr><td>EM/F1</td><td>答案规范化后 exact match 或 token overlap</td><td>抽取式 QA、短答</td><td>多答案、别名和推理型答案需要额外处理</td></tr>
-    <tr><td>UAS/LAS</td><td>head 是否正确，label 是否也正确</td><td>依存句法分析</td><td>只评估句法结构，不等于下游任务成功</td></tr>
+    <tr><th>Metric</th><th>Core Calculation</th><th>Applicable Tasks</th><th>Main Limitation</th></tr>
+    <tr><td>BLEU</td><td>clipped n-gram precision + brevity penalty</td><td>Machine Translation</td><td>Insensitive to paraphrasing and semantic equivalence</td></tr>
+    <tr><td>ROUGE-L</td><td>Precision/Recall/F1 of the longest common subsequence</td><td>Summarization, Generation Comparison</td><td>Biased towards lexical overlap, does not guarantee factual consistency</td></tr>
+    <tr><td>EM/F1</td><td>Exact match or token overlap after answer normalization</td><td>Extractive QA, Short Answers</td><td>Requires extra handling for multiple answers, aliases, and reasoning-based answers</td></tr>
+    <tr><td>UAS/LAS</td><td>Whether the head is correct, and whether the label is also correct</td><td>Dependency Parsing</td><td>Only evaluates syntactic structure, not equivalent to downstream task success</td></tr>
   </table>
   <div class="worked-example">
-    <h4>Worked Example：BLEU clipping 与 ROUGE-L</h4>
-    <p>BLEU 不是简单数候选句里有多少词出现在参考句中。设 candidate 为 <code>the the the the</code>，reference 为 <code>the cat is here</code>。只看 unigram 时，candidate 中 <code>the</code> 出现 4 次，但 reference 中最多只出现 1 次，所以 clipped match 只能算 1 次：</p>
+    <h4>Worked Example: BLEU Clipping and ROUGE-L</h4>
+    <p>BLEU does not simply count how many words in the candidate sentence appear in the reference sentence. Let the candidate be <code>the the the the</code> and the reference be <code>the cat is here</code>. Looking only at unigrams, <code>the</code> appears 4 times in the candidate, but at most 1 time in the reference, so the clipped match can only count as 1:</p>
     <div class="math-box"><div class="label">BLEU-1 clipped precision</div>
       <div class="katex" data-expr="p_1=\frac{\min(4,1)}{4}=0.25" aria-label="p_1=\frac{\min(4,1)}{4}=0.25" role="img"></div>
     </div>
-    <p>这一步防止模型靠重复高频词刷高 precision。若 candidate 是 <code>cat sat</code>，reference 是 <code>cat sat on mat</code>，unigram precision 为 1，但候选句长度 2 小于参考句长度 4，需要 brevity penalty：</p>
+    <p>This step prevents the model from inflating precision by repeating high-frequency words. If the candidate is <code>cat sat</code> and the reference is <code>cat sat on mat</code>, the unigram precision is 1, but the candidate length (2) is less than the reference length (4), so a brevity penalty is needed:</p>
     <div class="math-box"><div class="label">Brevity penalty</div>
       <div class="katex" data-expr="\text{BP}=\exp(1-r/c)=\exp(1-4/2)=e^{-1}\approx 0.368" aria-label="\text{BP}=\exp(1-r/c)=\exp(1-4/2)=e^{-1}\approx 0.368" role="img"></div>
     </div>
-    <p>因此短句不能因为每个词都命中就得到满分。ROUGE-L 关注最长公共子序列。若 candidate 为 <code>a b c d</code>，reference 为 <code>a x b c</code>，最长公共子序列是 <code>a b c</code>，长度为 3；precision = 3/4，recall = 3/4，F1 = 0.75。Ch11 作业中的 <code>sentence_bleu</code> 与 <code>rouge_l_f1</code> 正是把这些定义写成可运行函数。</p>
+    <p>Therefore, a short sentence cannot get a perfect score just because every word matches. ROUGE-L focuses on the longest common subsequence. If the candidate is <code>a b c d</code> and the reference is <code>a x b c</code>, the longest common subsequence is <code>a b c</code> with length 3; precision = 3/4, recall = 3/4, F1 = 0.75. The <code>sentence_bleu</code> and <code>rouge_l_f1</code> functions in the Ch11 homework implement these definitions as runnable functions.</p>
   </div>
   <div class="worked-example">
-    <h4>Worked Example：QA 的 EM/F1 为什么要先规范化答案</h4>
-    <p>抽取式 QA 常有多个 gold answer，评测时先做规范化：小写、去标点、去冠词，再压缩空格。若预测为 <code>The quick brown fox</code>，gold answers 为 <code>quick brown fox</code> 和 <code>slow turtle</code>，规范化后预测与第一个 gold 完全一致，因此 <code>Exact Match = 1</code>，token F1 也是 1。</p>
-    <p>若预测为 <code>quick fox</code>，gold 为 <code>quick brown fox</code>，则 token overlap 是 <code>{quick, fox}</code>，precision = <code>2/2 = 1</code>，recall = <code>2/3</code>，所以：</p>
+    <h4>Worked Example: Why QA EM/F1 Requires Answer Normalization First</h4>
+    <p>Extractive QA often has multiple gold answers. During evaluation, normalization is performed first: lowercasing, removing punctuation, removing articles, and collapsing whitespace. If the prediction is <code>The quick brown fox</code> and the gold answers are <code>quick brown fox</code> and <code>slow turtle</code>, after normalization the prediction matches the first gold exactly, so <code>Exact Match = 1</code> and token F1 is also 1.</p>
+    <p>If the prediction is <code>quick fox</code> and the gold is <code>quick brown fox</code>, then the token overlap is <code>{quick, fox}</code>, precision = <code>2/2 = 1</code>, recall = <code>2/3</code>, so:</p>
     <div class="math-box"><div class="label">QA token F1</div>
       <div class="katex" data-expr="F_1=\frac{2PR}{P+R}=\frac{2\cdot1\cdot(2/3)}{1+2/3}=0.8" aria-label="F_1=\frac{2PR}{P+R}=\frac{2\cdot1\cdot(2/3)}{1+2/3}=0.8" role="img"></div>
     </div>
-    <p>这个例子解释了为什么 EM 和 F1 要同时报告：EM 严格要求字符串完全匹配，F1 允许部分重叠。对于开放式、推理式或有别名的答案，仅靠一个 gold string 会低估正确输出；因此 QA 数据集通常提供多个 reference，并取最高 EM/F1。</p>
+    <p>This example explains why EM and F1 are reported together: EM strictly requires an exact string match, while F1 allows partial overlap. For open-ended, reasoning-based, or aliased answers, relying on a single gold string can underestimate correct outputs; therefore, QA datasets typically provide multiple references and take the highest EM/F1.</p>
   </div>
-  <p>因此评测报告不能只写“BLEU 高”或“ROUGE 高”。必须说明任务结构、候选输出、参考答案集合和指标局限，否则一个分数很容易被误读成完整的语言质量判断。</p>
+  <p>Therefore, an evaluation report cannot just say "BLEU is high" or "ROUGE is high." It must specify the task structure, candidate outputs, reference answer set, and metric limitations; otherwise, a single score can easily be misinterpreted as a complete judgment of language quality.</p>
 </section>
 
 <section class="card" id="s11-6a">
-  <h3>11.6A 现代 LLM 评测协议：从单一分数到可复现结论</h3>
-  <p>BLEU、ROUGE、EM/F1 和 UAS/LAS 适合定义清楚的传统任务；现代 LLM 还要评估开放式回答、长上下文、工具调用、RAG、拒答、安全和多轮对话。这里最常见的错误，是把一个 benchmark 分数、一次 LLM-as-judge 胜率或一组人工偏好直接解释成“模型更好”。课程级评测应先定义任务、样本、推理设置和判定标准，再谈结论。</p>
+  <h3>11.6A Modern LLM Evaluation Protocols: From a Single Score to Reproducible Conclusions</h3>
+  <p>BLEU, ROUGE, EM/F1, and UAS/LAS are suitable for well-defined traditional tasks; modern LLMs also need to evaluate open-ended responses, long contexts, tool calls, RAG, refusal to answer, safety, and multi-turn dialogues. The most common mistake here is to directly interpret a single benchmark score, a single LLM-as-judge win rate, or a set of human preferences as "the model is better." Course-level evaluation should first define the task, samples, inference settings, and judgment criteria before discussing conclusions.</p>
 
-  <h4>评测协议的最小组成</h4>
+  <h4>Minimum Components of an Evaluation Protocol</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>组成</th><th>要写清楚的问题</th><th>常见失败模式</th></tr>
-      <tr><td>数据</td><td>样本来源、train/dev/test 划分、是否去重、是否可能出现在训练语料或 prompt 示例中</td><td>数据污染让分数虚高，dev set 被反复调参后不再代表泛化</td></tr>
-      <tr><td>推理设置</td><td>模型版本、prompt 模板、system prompt、temperature、top-p、max tokens、工具/RAG 配置</td><td>两个模型使用不同 prompt 或采样参数，比较不公平</td></tr>
-      <tr><td>指标</td><td>自动指标、人工评分、LLM-as-judge、系统指标和安全指标分别衡量什么</td><td>用一个平均分掩盖事实性、格式、延迟或拒答问题</td></tr>
-      <tr><td>统计</td><td>样本量、重复运行、置信区间、pairwise test、错误类别分布</td><td>小样本 win rate 波动大，却被当成稳定结论</td></tr>
-      <tr><td>边界</td><td>这组结果能推出什么，不能推出什么；是否只适用于某个领域、语言、长度或负载</td><td>把单一任务结果推广到通用能力或生产可靠性</td></tr>
+      <tr><th>Component</th><th>Questions to Clarify</th><th>Common Failure Modes</th></tr>
+      <tr><td>Data</td><td>Sample source, train/dev/test split, whether deduplicated, whether it might appear in the training corpus or prompt examples</td><td>Data contamination inflates scores; the dev set, after repeated tuning, no longer represents generalization</td></tr>
+      <tr><td>Inference Settings</td><td>Model version, prompt template, system prompt, temperature, top-p, max tokens, tool/RAG configuration</td><td>Comparing two models using different prompts or sampling parameters is unfair</td></tr>
+      <tr><td>Metrics</td><td>What do automatic metrics, human ratings, LLM-as-judge, system metrics, and safety metrics each measure?</td><td>Using a single average score masks issues with factuality, format, latency, or refusal to answer</td></tr>
+      <tr><td>Statistics</td><td>Sample size, repeated runs, confidence intervals, pairwise tests, distribution of error types</td><td>Small-sample win rates fluctuate greatly but are treated as stable conclusions</td></tr>
+      <tr><td>Boundaries</td><td>What can and cannot be inferred from this set of results? Is it only applicable to a specific domain, language, length, or load?</td><td>Generalizing results from a single task to general capability or production reliability</td></tr>
     </table>
-  </div>
-
-  <h4>LLM-as-judge 不是免费人工评审</h4>
-  <p>LLM-as-judge 可以降低开放式输出评测成本，但它有位置偏置、长度偏置、风格偏置和模型同源偏置。一个更稳妥的设置是 pairwise blind comparison：隐藏模型名，随机交换 A/B 顺序，让 judge 只根据 rubric 判断哪个回答更符合要求，并记录 tie。</p>
-  <p>工业评测还需要在使用 judge 分数前做可靠性审计。OpenAI 的 eval 建议把 model grader 与人工标签对齐后再用于优化；MT-Bench / Chatbot Arena 这类工作也提醒 pairwise judge 会受到位置、冗长和风格偏置影响。因此课程中不允许只报告一次 win rate。至少要回答四个问题：换 A/B 顺序后是否仍选择同一候选，judge 是否异常偏好第一位，是否异常偏好更长回答，以及与少量人工 gold label 的一致率是否足够。</p>
+  </div>  <h4>LLM-as-judge is not a free human evaluation</h4>
+  <p>LLM-as-judge can reduce the cost of evaluating open-ended outputs, but it suffers from position bias, length bias, style bias, and model homophily bias. A more robust setup is pairwise blind comparison: hide model names, randomly swap the A/B order, and let the judge decide which response better meets the rubric, recording ties.</p>
+  <p>Industrial evaluation also requires a reliability audit before using judge scores. OpenAI's eval guidelines suggest aligning the model grader with human labels before using it for optimization; works like MT-Bench / Chatbot Arena also caution that pairwise judges are affected by position, verbosity, and style biases. Therefore, this course does not permit reporting a single win rate. At least four questions must be answered: whether the same candidate is chosen after swapping the A/B order, whether the judge has an abnormal preference for the first position, whether it has an abnormal preference for longer responses, and whether the agreement rate with a small set of human gold labels is sufficient.</p>
   <div class="code-block" data-lang="python">
 audit = judge_reliability_audit(
     [
@@ -341,304 +337,301 @@ audit = judge_reliability_audit(
     thresholds={"min_swapped_consistency": 0.8, "max_position_bias": 0.1},
 )
 assert audit["overall_pass"]</div>
-  <p>这个 audit 不是为了否定 LLM-as-judge，而是防止把不稳定评测器当作上线依据。若 position bias 或 swapped consistency 不过，应先随机化/交换候选顺序、改 judge prompt 或更换 judge 模型；若 gold agreement 不过，应补人工标注和误差分析，而不是继续用该 judge 自动调参。</p>
+  <p>This audit is not meant to dismiss LLM-as-judge, but to prevent using an unstable evaluator as the basis for deployment. If position bias or swapped consistency fails, first randomize/swap candidate order, modify the judge prompt, or change the judge model; if gold agreement fails, supplement with human annotation and error analysis, rather than continuing to use that judge for automatic hyperparameter tuning.</p>
   <div class="math-box"><div class="label">Pairwise win rate with ties</div>
     <div class="katex" data-expr="\text{win rate}=\frac{W+0.5T}{W+L+T}" aria-label="\text{win rate}=\frac{W+0.5T}{W+L+T}" role="img"></div>
   </div>
-  <p>若模型 A 对模型 B 的结果是 <code>W=42</code>、<code>L=35</code>、<code>T=23</code>，win rate 是 <code>(42+11.5)/100=53.5%</code>。这个数字不能单独证明 A 在生产中更好；还要看样本量是否足够、题目分布是否代表目标场景、失败类别是什么、延迟和成本是否变差。</p>
+  <p>If the result of Model A vs. Model B is <code>W=42</code>, <code>L=35</code>, <code>T=23</code>, the win rate is <code>(42+11.5)/100=53.5%</code>. This number alone cannot prove that A is better in production; one must also check whether the sample size is sufficient, whether the question distribution represents the target scenario, what the failure categories are, and whether latency and cost have worsened.</p>
 
-  <h4>安全评测要区分拒答和过度拒答</h4>
-  <p>安全不是“拒答越多越好”。应至少把样本分成 harmful requests、benign sensitive requests 和普通任务，并分别统计：</p>
+  <h4>Safety evaluation must distinguish between refusal and over-refusal</h4>
+  <p>Safety is not about "the more refusals, the better." Samples should be categorized at least into harmful requests, benign sensitive requests, and ordinary tasks, with separate statistics for each:</p>
   <ul>
-    <li><strong>Attack success rate：</strong>有害请求中模型给出不安全帮助的比例，越低越好。</li>
-    <li><strong>Refusal rate：</strong>模型拒答的比例，需要按 harmful/benign 分开看。</li>
-    <li><strong>Over-refusal rate：</strong>本应帮助的 benign 请求被错误拒答的比例。</li>
-    <li><strong>Task utility：</strong>普通任务上的正确率、helpfulness 或 completion quality，防止安全优化牺牲可用性。</li>
+    <li><strong>Attack success rate:</strong> The proportion of harmful requests where the model provides unsafe assistance; lower is better.</li>
+    <li><strong>Refusal rate:</strong> The proportion of requests the model refuses; needs to be viewed separately for harmful/benign categories.</li>
+    <li><strong>Over-refusal rate:</strong> The proportion of benign requests that should have been helped but were incorrectly refused.</li>
+    <li><strong>Task utility:</strong> The accuracy, helpfulness, or completion quality on ordinary tasks, to prevent safety optimization from sacrificing usability.</li>
   </ul>
-  <p>例如模型 X 在 harmful set 上拒答率 95%，但在 benign medical-summary set 上也拒答 60%，这不是单纯“更安全”，而是出现了严重 over-refusal。Ch09 的对齐评估和 Ch10 的上线 SLO 应与这里合并解读：安全、质量、延迟和成本必须同时过关。</p>
+  <p>For example, Model X has a 95% refusal rate on the harmful set, but also a 60% refusal rate on the benign medical-summary set. This is not simply "safer," but a case of severe over-refusal. The alignment evaluation in Ch09 and the deployment SLO in Ch10 should be interpreted together with this section: safety, quality, latency, and cost must all pass muster simultaneously.</p>
 
-  <h4>把现代评测写成可运行函数</h4>
-  <p>Ch11 作业把这一节落到四类函数上。<code>summarize_pairwise_judgments</code> 接收 blind pairwise 记录，计算 raw win rate、tie-adjusted win rate 和按任务分组的胜率，帮助学生看到同一个模型可能在 QA 胜出、在 math 持平或落后。<code>judge_reliability_audit</code> 进一步检查样本量、位置偏置、长度偏置、换序一致性和人工标签一致性。<code>safety_evaluation_metrics</code> 要求把样本分成 harmful、benign sensitive 和 ordinary 三组，分别计算 attack success、harmful refusal、over-refusal 和 task utility。<code>benchmark_result_summary</code> 则把 task、sample size、metrics、model、prompt、temperature、失败类型和不可外推范围组织成结构化结论。</p>
-  <p>这三个函数的共同目的，是防止把“一个平均分”误读成完整工程结论。训练工程师需要用它判断对齐是否损害能力；推理工程师需要用它判断上线后质量、安全、延迟和成本是否同时满足要求。</p>
+  <h4>Write modern evaluations as runnable functions</h4>
+  <p>The Ch11 assignment puts this section into four types of functions. <code>summarize_pairwise_judgments</code> takes blind pairwise records, calculates raw win rate, tie-adjusted win rate, and win rate grouped by task, helping students see that the same model might win on QA, tie or lose on math. <code>judge_reliability_audit</code> further checks sample size, position bias, length bias, swap consistency, and human label agreement. <code>safety_evaluation_metrics</code> requires splitting samples into harmful, benign sensitive, and ordinary groups, calculating attack success, harmful refusal, over-refusal, and task utility respectively. <code>benchmark_result_summary</code> organizes task, sample size, metrics, model, prompt, temperature, failure types, and non-extrapolable scope into a structured conclusion.</p>
+  <p>The common purpose of these three functions is to prevent misinterpreting "a single average score" as a complete engineering conclusion. Training engineers need to use them to judge whether alignment has harmed capability; inference engineers need to use them to judge whether quality, safety, latency, and cost simultaneously meet requirements for deployment.</p>
 
-  <h4>Worked Example：同一个结果如何写成合格结论</h4>
-  <p>不严谨写法：<code>模型 A 比模型 B 好 8%。</code></p>
-  <p>更严谨写法：在 <code>n=300</code> 个中文客服问答样本上，固定 system prompt、temperature=0、max output=512，模型 A 相对模型 B 的 pairwise win rate 为 <code>58%</code>，主要提升来自格式遵循和引用完整性；事实错误率从 <code>11%</code> 降到 <code>8%</code>，但 P95 TTFT 从 <code>720ms</code> 升到 <code>980ms</code>，并且该结果没有覆盖英文、代码、多轮工具调用或高并发负载。因此它支持“在这个中文客服 RAG workload 下，A 值得进入灰度实验”，不支持“A 是通用更强模型”。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>课程标准：</strong>评测答案不是分数列表，而是一个受条件约束的工程结论。你必须说明任务、样本、推理设置、指标、失败类型、统计不确定性和不可外推范围。</div></div>
+  <h4>Worked Example: How to write a qualified conclusion from the same result</h4>
+  <p>Less rigorous writing: <code>Model A is 8% better than Model B.</code></p>
+  <p>More rigorous writing: On <code>n=300</code> Chinese customer service QA samples, with a fixed system prompt, temperature=0, max output=512, the pairwise win rate of Model A relative to Model B is <code>58%</code>. The main improvements come from format adherence and citation completeness; the factual error rate dropped from <code>11%</code> to <code>8%</code>, but the P95 TTFT increased from <code>720ms</code> to <code>980ms</code>. Furthermore, this result does not cover English, code, multi-turn tool calls, or high-concurrency load. Therefore, it supports "under this Chinese customer service RAG workload, A is worth entering a canary experiment," but does not support "A is a generally stronger model."</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Course Standard:</strong> An evaluation answer is not a list of scores, but an engineering conclusion constrained by conditions. You must specify the task, samples, inference settings, metrics, failure types, statistical uncertainty, and non-extrapolable scope.</div></div>
 </section>
 
 <section class="card" id="s11-6b">
-  <h3>11.6B Benchmark Validity：污染、置信区间与消融</h3>
-  <p>现代 LLM 评测的难点不只是“选哪个 benchmark”，而是判断这次分数能否支持工程决策。一个模型可能因为训练数据见过题目、prompt 更适配、输出更长、采样次数更多或 judge 偏好它的风格而获胜。课程级报告需要把这些因素拆开，否则 benchmark 会变成排行榜截图，而不是科学比较。</p>
+  <h3>11.6B Benchmark Validity: Contamination, Confidence Intervals, and Ablation</h3>
+  <p>The difficulty of modern LLM evaluation is not just "which benchmark to choose," but judging whether the score can support an engineering decision. A model might win because its training data has seen the questions, its prompt is more suitable, its output is longer, it uses more sampling iterations, or the judge prefers its style. Course-level reports need to disentangle these factors; otherwise, benchmarks become leaderboard screenshots rather than scientific comparisons.</p>
 
-  <h4>1. 数据污染和切分泄漏不是同一个问题</h4>
-  <p><strong>切分泄漏</strong>通常发生在自己的数据管线里：同一文档、同一用户会话、同一题库或近似改写同时进入 train/dev/test。它可以通过文档级切分、URL/题目 ID 去重、n-gram overlap、embedding 近邻检索和人工抽查降低风险。<strong>Benchmark contamination</strong>更广：公开测试题、答案解析、讨论帖或代码仓库可能已经进入预训练或 SFT 数据。它不一定能被完全排除，因此报告中要说明数据来源、公开时间、去重方法和高相似样本处理方式。</p>
+  <h4>1. Data contamination and split leakage are not the same problem</h4>
+  <p><strong>Split leakage</strong> usually occurs within one's own data pipeline: the same document, user session, question bank, or near-paraphrase enters train/dev/test simultaneously. It can be mitigated through document-level splitting, URL/question ID deduplication, n-gram overlap checks, embedding nearest-neighbor search, and manual spot checks. <strong>Benchmark contamination</strong> is broader: public test questions, answer explanations, discussion posts, or code repositories may have already entered pre-training or SFT data. It cannot always be completely eliminated, so the report must specify the data source, publication date, deduplication method, and handling of high-similarity samples.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>现象</th><th>可能原因</th><th>应做的检查</th><th>结论边界</th></tr>
-      <tr><td>测试集分数远高于新题集</td><td>benchmark 题目被训练见过，或 prompt 针对旧题优化</td><td>按发布日期切分，查 exact/near duplicate，构造 held-out 新题</td><td>旧 benchmark 只能作为回归测试，不能证明泛化</td></tr>
-      <tr><td>dev set 每次调参都提升，test 不升</td><td>dev 被反复优化，逐渐变成训练信号</td><td>冻结 final test，保留 shadow eval，只在里程碑运行</td><td>dev 分数只代表开发进度，不代表最终能力</td></tr>
-      <tr><td>RAG 问答引用正确但答案错误</td><td>检索命中不等于生成忠实，或 gold answer 过窄</td><td>分开统计 retrieval recall、citation precision 和 answer accuracy</td><td>不能用端到端 accuracy 直接定位瓶颈</td></tr>
-      <tr><td>LLM judge 偏好新模型但人工不认可</td><td>长度、语气、格式或同源模型偏置</td><td>随机 A/B 顺序，控制输出长度，抽样人工复核</td><td>judge 胜率只是辅助信号</td></tr>
+      <tr><th>Phenomenon</th><th>Possible Cause</th><th>Checks to Perform</th><th>Conclusion Boundary</th></tr>
+      <tr><td>Test set score much higher than new question set</td><td>Benchmark questions seen during training, or prompt optimized for old questions</td><td>Split by publication date, check exact/near duplicates, construct held-out new questions</td><td>Old benchmarks can only serve as regression tests, not proof of generalization</td></tr>
+      <tr><td>Dev set improves with each tuning, test does not</td><td>Dev set repeatedly optimized, gradually becoming a training signal</td><td>Freeze final test, maintain a shadow eval, run only at milestones</td><td>Dev scores only represent development progress, not final capability</td></tr>
+      <tr><td>RAG QA citation correct but answer wrong</td><td>Retrieval hit does not guarantee generation faithfulness, or gold answer is too narrow</td><td>Separately count retrieval recall, citation precision, and answer accuracy</td><td>Cannot use end-to-end accuracy to directly pinpoint the bottleneck</td></tr>
+      <tr><td>LLM judge prefers new model but humans disagree</td><td>Length, tone, format, or homophily model bias</td><td>Randomize A/B order, control output length, sample for human review</td><td>Judge win rate is only an auxiliary signal</td></tr>
     </table>
   </div>
 
-  <h4>2. 小样本提升要给不确定性</h4>
-  <p>如果模型 A 在 100 道题上答对 61 道，模型 B 答对 56 道，不能直接写“A 提升 5%”。这 5 个样本的差异可能来自题目抽样波动。最简单的近似是把 accuracy 当成二项比例，用标准误差估算置信区间：</p>
+  <h4>2. Small sample improvements must include uncertainty</h4>
+  <p>If Model A answers 61 out of 100 questions correctly, and Model B answers 56, one cannot simply write "A improves by 5%." The difference of 5 samples could be due to question sampling fluctuation. The simplest approximation is to treat accuracy as a binomial proportion and estimate the confidence interval using the standard error:</p>
   <div class="math-box"><div class="label">Accuracy standard error</div>
     <span class="katex-block" data-expr="\text{SE}(\hat p)=\sqrt{\frac{\hat p(1-\hat p)}{n}},\qquad \text{CI}_{95}\approx \hat p \pm 1.96\cdot \text{SE}" aria-label="SE(p hat)=sqrt(p hat(1-p hat)/n), CI95 approx p hat plus/minus 1.96 SE" role="img"></span>
   </div>
-  <p>当 <code>n=100</code>、<code>p=0.61</code> 时，标准误差约 <code>0.049</code>，95% 区间大约是 <code>61% ± 9.6%</code>。这说明 61% 和 56% 在这个样本量下很难支撑强结论。若同一批题目同时评测两个模型，还应优先看 paired comparison：哪些题 A 对 B 错，哪些题 B 对 A 错，因为题目难度是共享的。开放式生成或 RAG 任务常用 bootstrap 对样本重采样，估计 win rate、accuracy 或 error rate 的区间。</p>
+  <p>When <code>n=100</code>, <code>p=0.61</code>, the standard error is approximately <code>0.049</code>, and the 95% interval is roughly <code>61% ± 9.6%</code>. This shows that 61% and 56% can hardly support a strong conclusion with this sample size. If the same set of questions evaluates both models simultaneously, one should also prioritize paired comparisons: which questions A got right and B got wrong, and vice versa, because question difficulty is shared. For open-ended generation or RAG tasks, bootstrap resampling of samples is commonly used to estimate intervals for win rate, accuracy, or error rate.</p>
 
-  <h4>3. 消融实验一次只回答一个问题</h4>
-  <p>消融不是“多跑几个配置”。它要让一个设计变量的作用可解释。若同时把 base model、prompt、retriever、reranker、temperature 和 context length 都换掉，即使分数提升，也无法知道是谁贡献了提升。一个严谨的 LLM 系统消融通常按下面顺序组织：</p>
+  <h4>3. Ablation experiments answer one question at a time</h4>
+  <p>Ablation is not "running a few more configurations." It must make the effect of a single design variable interpretable. If you change the base model, prompt, retriever, reranker, temperature, and context length all at once, even if the score improves, you cannot know which change contributed. A rigorous LLM system ablation is usually organized in the following order:</p>
   <div class="table-wrap">
     <table>
-      <tr><th>问题</th><th>保留不变</th><th>只改变</th><th>要同时报告</th></tr>
-      <tr><td>RAG 是否有用</td><td>模型、prompt、解码参数、样本集</td><td>是否注入检索上下文</td><td>accuracy、citation precision、输入 token、P95 latency</td></tr>
-      <tr><td>reranker 是否有用</td><td>retriever 候选、LLM、context budget</td><td>候选排序策略</td><td>Recall@k、nDCG、最终答案正确率、rerank 延迟</td></tr>
-      <tr><td>DPO 是否改善对齐</td><td>SFT base、eval set、prompt、temperature</td><td>DPO checkpoint</td><td>helpfulness、安全拒答、长度分布、KL 或行为漂移</td></tr>
-      <tr><td>更长推理是否值得</td><td>模型、题目、评分规则</td><td>max tokens、采样次数或 reasoning budget</td><td>pass@k、平均输出 token、成本、TTFT/TPOT</td></tr>
+      <tr><th>Question</th><th>Keep Constant</th><th>Change Only</th><th>Report Simultaneously</th></tr>
+      <tr><td>Is RAG useful?</td><td>Model, prompt, decoding parameters, sample set</td><td>Whether to inject retrieval context</td><td>accuracy, citation precision, input tokens, P95 latency</td></tr>
+      <tr><td>Is reranker useful?</td><td>Retriever candidates, LLM, context budget</td><td>Candidate ranking strategy</td><td>Recall@k, nDCG, final answer accuracy, rerank latency</td></tr>
+      <tr><td>Does DPO improve alignment?</td><td>SFT base, eval set, prompt, temperature</td><td>DPO checkpoint</td><td>helpfulness, safety refusal, length distribution, KL or behavioral drift</td></tr>
+      <tr><td>Is longer reasoning worth it?</td><td>Model, questions, scoring rules</td><td>max tokens, sampling count, or reasoning budget</td><td>pass@k, average output tokens, cost, TTFT/TPOT</td></tr>
     </table>
   </div>
 
-  <h4>Worked Example：把 3% 提升改写成可判断结论</h4>
-  <p>不充分写法：<code>加入 reranker 后 benchmark 从 72% 提升到 75%，效果更好。</code></p>
-  <p>更严谨写法：在同一组 <code>n=500</code> 中文法规 QA 样本上，固定生成模型、prompt、temperature=0、max output=384 和 context budget=1800 tokens，只把 top-8 dense retrieval 改为 dense retrieval + cross-encoder rerank。端到端 accuracy 从 <code>72.0%</code> 到 <code>75.0%</code>，bootstrap 95% CI 的差值约为 <code>[0.4%, 5.8%]</code>；retrieval Recall@8 不变，但 citation precision 从 <code>68%</code> 到 <code>79%</code>；P95 latency 增加 <code>140ms</code>，平均输入 token 不变。这个结论支持“reranker 改善了该法规 QA workload 的上下文排序，值得灰度”，不支持“所有 RAG 任务都应加入 reranker”。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>可信 benchmark 结论至少要同时经受四个问题：数据是否干净，比较是否公平，差异是否稳定，消融是否能解释提升来源。少一个环节，分数都只能作为线索。</div></div>
+  <h4>Worked Example: Rewriting a 3% improvement into a judgeable conclusion</h4>
+  <p>Insufficient writing: <code>Adding a reranker improved the benchmark from 72% to 75%, the effect is better.</code></p>
+  <p>More rigorous writing: On the same set of <code>n=500</code> Chinese regulatory QA samples, with a fixed generation model, prompt, temperature=0, max output=384, and context budget=1800 tokens, only the top-8 dense retrieval was changed to dense retrieval + cross-encoder rerank. End-to-end accuracy went from <code>72.0%</code> to <code>75.0%</code>, with a bootstrap 95% CI for the difference of approximately <code>[0.4%, 5.8%]</code>; retrieval Recall@8 remained unchanged, but citation precision improved from <code>68%</code> to <code>79%</code>; P95 latency increased by <code>140ms</code>, average input tokens unchanged. This conclusion supports "the reranker improved context ranking for this regulatory QA workload, worth a canary test," but does not support "all RAG tasks should include a reranker."</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> A credible benchmark conclusion must withstand at least four questions: Is the data clean? Is the comparison fair? Is the difference stable? Can the ablation explain the source of improvement? Missing one link, the score can only serve as a clue.</div></div>
 </section>
 
 <section class="card" id="s11-6c">
-  <h3>11.6C Safety &amp; Social Impact：风险分类、触发条件与工程缓解</h3>
-  <p>NLP/LLM 工程课程不能把 safety 当成上线前的附录。模型风险来自数据、训练目标、推理接口、应用场景和用户群体的组合；同一个模型在闲聊、医疗摘要、金融建议、教育辅导和代码执行中的错误成本完全不同。工程师需要能把“模型可能有害”拆成可讨论、可测量、可缓解的风险类别。</p>
+  <h3>11.6C Safety &amp; Social Impact: Risk Classification, Trigger Conditions, and Engineering Mitigations</h3>
+  <p>An NLP/LLM engineering course cannot treat safety as an appendix before deployment. Model risk arises from the combination of data, training objectives, inference interfaces, application scenarios, and user groups; the same model has vastly different error costs in casual conversation, medical summaries, financial advice, educational tutoring, and code execution. Engineers need to be able to break down "the model might be harmful" into risk categories that are discussable, measurable, and mitigable.</p>
 
-  <h4>1. 风险不是一个维度</h4>
+  <h4>1. Risk is not a single dimension</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>风险类别</th><th>典型触发条件</th><th>工程上先看什么</th><th>常见缓解</th></tr>
-      <tr><td>幻觉与误导</td><td>开放式问答、RAG 召回不足、模型被要求给确定答案</td><td>事实错误率、引用覆盖、无法回答时的表达</td><td>检索引用、答案不确定性、抽取式约束、高风险场景人工复核</td></tr>
-      <tr><td>隐私与个人信息</td><td>训练数据含 PII、日志保存用户输入、RAG 索引含敏感文档</td><td>数据来源、日志保留、访问权限、输出是否泄露个人信息</td><td>PII 过滤、最小化日志、租户隔离、权限感知检索</td></tr>
-      <tr><td>偏见与代表性不足</td><td>语料语言/地区/群体不均衡，标注者偏好单一</td><td>按语言、地区、群体和任务切片的错误率</td><td>数据再平衡、切片评测、标注指南多样化、失败案例分析</td></tr>
-      <tr><td>滥用与越狱</td><td>危险操作请求、多轮绕过、工具调用或代码执行权限</td><td>有害完成率、越狱成功率、工具权限边界</td><td>能力分级、工具沙箱、拒答策略、敏感操作二次确认</td></tr>
-      <tr><td>过度拒答</td><td>安全数据比例过高，策略把良性敏感请求当危险请求</td><td>benign sensitive set 上的错误拒答率</td><td>加入安全但应回答的样本，分开训练拒答和帮助性</td></tr>
-      <tr><td>版权与来源</td><td>训练语料或 RAG 语料来源不清，输出长段近似复述</td><td>数据许可、引用链路、输出相似度和来源标注</td><td>授权数据、引用来源、避免长段复述、保留可追踪文档 id</td></tr>
-      <tr><td>自动化依赖</td><td>用户把模型输出直接用于决策，系统没有人类确认环节</td><td>错误成本、用户是否知道模型限制、是否有申诉或回退路径</td><td>明确适用范围、人机协作、保守默认值、关键决策人工确认</td></tr>
+      <tr><th>Risk Category</th><th>Typical Trigger Conditions</th><th>What to Check First in Engineering</th><th>Common Mitigations</th></tr>
+      <tr><td>Hallucination &amp; Misinformation</td><td>Open-ended QA, insufficient RAG recall, model asked for a definitive answer</td><td>Factual error rate, citation coverage, expression when unable to answer</td><td>Retrieval with citations, answer uncertainty, extractive constraints, human review for high-risk scenarios</td></tr>
+      <tr><td>Privacy &amp; Personal Information</td><td>Training data contains PII, logs store user input, RAG index contains sensitive documents</td><td>Data source, log retention, access permissions, whether output leaks personal information</td><td>PII filtering, minimal logging, tenant isolation, permission-aware retrieval</td></tr>
+      <tr><td>Bias &amp; Underrepresentation</td><td>Imbalanced corpus by language/region/demographic, annotator preference for a single group</td><td>Error rates sliced by language, region, demographic, and task</td><td>Data rebalancing, sliced evaluation, diverse annotation guidelines, failure case analysis</td></tr>
+      <tr><td>Misuse &amp; Jailbreaking</td><td>Requests for dangerous operations, multi-turn bypass, tool calling or code execution permissions</td><td>Harmful completion rate, jailbreak success rate, tool permission boundaries</td><td>Capability tiering, tool sandboxing, refusal strategies, secondary confirmation for sensitive operations</td></tr>
+      <tr><td>Over-refusal</td><td>Excessively high proportion of safety data, strategy treats benign sensitive requests as dangerous</td><td>False refusal rate on the benign sensitive set</td><td>Include safe but answerable samples, train refusal and helpfulness separately</td></tr>
+      <tr><td>Copyright &amp; Attribution</td><td>Unclear source of training or RAG corpus, output contains long near-verbatim passages</td><td>Data licensing, citation chain, output similarity, source attribution</td><td>Licensed data, cite sources, avoid long verbatim passages, retain traceable document IDs</td></tr>
+      <tr><td>Automation Dependency</td><td>Users directly use model output for decisions, system lacks human confirmation step</td><td>Error cost, whether users know model limitations, whether there is an appeal or fallback path</td><td>Clearly define scope of use, human-in-the-loop, conservative defaults, human confirmation for critical decisions</td></tr>
     </table>
   </div>
 
-  <h4>2. 安全评估要按场景写，而不是按口号写</h4>
-  <p>“模型安全”不能脱离应用场景。医疗问答的核心风险是误导性建议、隐私和不确定性表达；代码 Agent 的核心风险是执行权限、供应链和数据外传；教育辅导的核心风险是错误反馈、过度代写和学习依赖。课程项目中应先写清目标场景、用户、模型权限和错误成本，再选择样本和指标。</p>
+  <h4>2. Safety evaluation must be written for the scenario, not as a slogan</h4>
+  <p>"Model safety" cannot be separated from the application scenario. The core risks for medical Q&A are misleading advice, privacy, and expression of uncertainty; for a code agent, they are execution permissions, supply chain, and data exfiltration; for educational tutoring, they are incorrect feedback, over-reliance on writing, and learning dependency. In course projects, first clearly describe the target scenario, users, model permissions, and error costs, then select samples and metrics.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>场景</th><th>必须覆盖的样本切片</th><th>不充分的评估方式</th></tr>
-      <tr><td>医疗科普问答</td><td>普通科普、紧急症状、用药、隐私信息、应建议就医的问题</td><td>只看回答是否流畅或是否拒答</td></tr>
-      <tr><td>企业 RAG</td><td>权限内文档、权限外文档、过期文档、冲突文档、引用缺失</td><td>只看最终答案正确率，不看权限和引用</td></tr>
-      <tr><td>代码 Agent</td><td>只读任务、写文件任务、联网任务、危险命令、依赖安装</td><td>只看 pass rate，不看工具调用边界</td></tr>
-      <tr><td>多模态文档理解</td><td>小字、表格、签名、人脸、身份证件、图表数值</td><td>用普通 VQA 分数代表文档安全性</td></tr>
+      <tr><th>Scenario</th><th>Sample Slices That Must Be Covered</th><th>Insufficient Evaluation Method</th></tr>
+      <tr><td>Medical education Q&A</td><td>General educational questions, emergency symptoms, medication, private information, questions that should advise seeing a doctor</td><td>Only checking if the answer is fluent or if it refuses</td></tr>
+      <tr><td>Enterprise RAG</td><td>Documents within permissions, documents outside permissions, outdated documents, conflicting documents, missing citations</td><td>Only looking at final answer accuracy, ignoring permissions and citations</td></tr>      <tr><td>Code Agent</td><td>Read-only tasks, file writing tasks, internet tasks, dangerous commands, dependency installation</td><td>Only looks at pass rate, ignores tool call boundaries</td></tr>
+      <tr><td>Multimodal Document Understanding</td><td>Small text, tables, signatures, faces, ID documents, chart values</td><td>Uses generic VQA scores to represent document safety</td></tr>
     </table>
   </div>
 
-  <h4>Worked Example：RAG 医疗问答的风险分解</h4>
-  <p>假设团队要上线一个面向患者的医疗科普 RAG。一个不充分的方案是只测“回答是否看起来专业”。更合理的工程分解是：</p>
+  <h4>Worked Example: Risk Decomposition for RAG Medical Q&A</h4>
+  <p>Suppose a team wants to launch a patient-facing medical education RAG system. An insufficient approach is to only test whether "the answer looks professional." A more reasonable engineering decomposition is:</p>
   <ol>
-    <li><strong>检索风险：</strong>相关指南是否被召回，过期文档是否进入 context，引用是否指向正确段落。</li>
-    <li><strong>生成风险：</strong>模型是否把检索内容外推成诊断结论，是否编造药量，是否在缺少信息时给确定建议。</li>
-    <li><strong>隐私风险：</strong>用户输入和日志是否包含姓名、电话、病历号或可识别信息。</li>
-    <li><strong>拒答边界：</strong>普通科普应回答，急症、自我伤害、处方调整等请求应转向专业帮助。</li>
-    <li><strong>可用性：</strong>安全策略不能把所有医学问题都拒掉，否则系统在真实用户任务中不可用。</li>
+    <li><strong>Retrieval Risk:</strong> Whether relevant guidelines are recalled, whether outdated documents enter the context, and whether citations point to the correct paragraphs.</li>
+    <li><strong>Generation Risk:</strong> Whether the model extrapolates retrieved content into diagnostic conclusions, fabricates medication dosages, or gives definitive advice when information is lacking.</li>
+    <li><strong>Privacy Risk:</strong> Whether user input and logs contain names, phone numbers, medical record numbers, or other identifiable information.</li>
+    <li><strong>Refusal Boundary:</strong> General educational questions should be answered, while requests regarding emergencies, self-harm, or prescription adjustments should be redirected to professional help.</li>
+    <li><strong>Usability:</strong> Safety policies cannot refuse all medical questions; otherwise, the system becomes unusable for real user tasks.</li>
   </ol>
-  <p>因此该系统至少应报告 retrieval recall、引用准确率、事实错误率、有害建议率、普通医学科普完成率、急症转介率、PII 日志处理方式和用户界面中的限制说明。这里的重点不是制造更多表格，而是让模型行为、数据来源、用户风险和部署边界能被同一套工程语言描述。</p>
+  <p>Therefore, this system should at least report retrieval recall, citation accuracy, factual error rate, harmful advice rate, general medical education completion rate, emergency referral rate, PII log handling method, and limitation descriptions in the user interface. The key here is not to create more tables, but to enable model behavior, data sources, user risks, and deployment boundaries to be described using the same engineering language.</p>
 
-  <h4>3. Safety 与 alignment、evaluation、serving 是同一条链路</h4>
-  <p>第 9 章讨论的是如何用 SFT/DPO/GRPO 改变模型行为，第 10 章讨论的是如何把模型变成可服务系统，本节讨论的是这些行为在真实场景中的风险边界。一个模型可以在 harmlessness 上提升，同时在良性敏感问题上过度拒答；也可以在离线 safety set 上表现好，却因为工具权限过大而在 Agent 场景中失败。课程项目应把安全切片放进与质量、延迟、成本并列的结果表，而不是在结论里只写一句“已考虑安全”。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>社会影响不是抽象道德讨论，也不是单一安全分数。LLM 工程师要能把风险映射到数据、目标函数、接口权限、用户场景和评测切片，并说明每个缓解动作会牺牲什么能力、延迟或成本。</div></div>
+  <h4>3. Safety, Alignment, Evaluation, and Serving Are the Same Pipeline</h4>
+  <p>Chapter 9 discusses how to use SFT/DPO/GRPO to change model behavior, Chapter 10 discusses how to turn a model into a serviceable system, and this section discusses the risk boundaries of these behaviors in real-world scenarios. A model can improve in harmlessness while over-refusing on benign sensitive questions; it can also perform well on an offline safety set but fail in an Agent scenario due to excessive tool permissions. Course projects should include safety slices in the results table alongside quality, latency, and cost, rather than just writing "safety has been considered" in the conclusion.</p>  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Social impact is not an abstract moral discussion, nor is it a single safety score. LLM engineers must be able to map risks to data, objective functions, interface permissions, user scenarios, and evaluation slices, and explain what capabilities, latency, or cost each mitigation action will sacrifice.</div></div>
 </section>
 
 <section class="card" id="s11-7">
-  <h3>11.7 任务选型：什么时候不用 Decoder-only LLM</h3>
-  <p>选择模型族时先看输出空间和错误成本：</p>
+  <h3>11.7 Task Selection: When Not to Use a Decoder-only LLM</h3>
+  <p>When choosing a model family, first consider the output space and error cost:</p>
   <ul>
-    <li><strong>固定标签分类：</strong>encoder-only fine-tuning 或小模型分类器通常更便宜、更稳定。</li>
-    <li><strong>RAG reranking：</strong>cross-encoder 可以同时看 query 和 document，给候选排序；decoder-only LLM rerank 成本高且格式不稳定。</li>
-    <li><strong>抽取式答案：</strong>若答案必须来自文档原文，span QA 比自由生成更可控。</li>
-    <li><strong>结构输出：</strong>dependency parser、NER、slot filling 等任务可用结构化 head 或 constrained decoding，不应默认开放式生成。</li>
-    <li><strong>开放式生成与推理：</strong>当输出需要新文本、代码、解释或多步 reasoning，decoder-only LLM 更自然。</li>
+    <li><strong>Fixed-label Classification:</strong> Encoder-only fine-tuning or small model classifiers are usually cheaper and more stable.</li>
+    <li><strong>RAG Reranking:</strong> Cross-encoders can look at the query and document simultaneously to rank candidates; decoder-only LLM reranking is costly and format-unstable.</li>
+    <li><strong>Extractive Answers:</strong> If the answer must come from the original document, span QA is more controllable than free generation.</li>
+    <li><strong>Structured Output:</strong> Tasks like dependency parsing, NER, and slot filling can use structured heads or constrained decoding, and should not default to open-ended generation.</li>
+    <li><strong>Open-ended Generation and Reasoning:</strong> When the output requires new text, code, explanations, or multi-step reasoning, decoder-only LLMs are more natural.</li>
   </ul>
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>常见错误：</strong>把 BERT 和 GPT 说成“只是 mask 不同”。它们的 attention 可见性、训练目标、fine-tuning head、输出空间和服务成本都不同。</div></div>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>Common Mistake:</strong> Describing BERT and GPT as "just different masks." Their attention visibility, training objectives, fine-tuning heads, output spaces, and serving costs are all different.</div></div>
 </section>
 
 <section class="card" id="s11-7a">
-  <h3>11.7A 工程选型案例：把任务拆成训练目标、输出空间和服务成本</h3>
-  <p>LLM 工程师经常面对的问题不是“哪个模型最大”，而是“这个任务应该被建模成分类、抽取、排序、结构化预测还是开放式生成”。同一个业务目标可以有多种建模方式，训练数据、推理路径、评测指标和上线成本都会随之变化。</p>
+  <h3>11.7A Engineering Selection Case Study: Decomposing Tasks into Training Objectives, Output Spaces, and Serving Costs</h3>
+  <p>The question LLM engineers often face is not "which model is the largest," but "should this task be modeled as classification, extraction, ranking, structured prediction, or open-ended generation?" The same business goal can have multiple modeling approaches, and the training data, inference path, evaluation metrics, and deployment costs will all change accordingly.</p>
 
   <div class="table-wrap">
     <table>
-      <tr><th>任务</th><th>优先模型族</th><th>训练信号</th><th>推理形态</th><th>主要风险</th></tr>
-      <tr><td>文档是否相关</td><td>bi-encoder / cross-encoder reranker</td><td>query-document 正负样本、点击或人工相关性</td><td>向量召回后重排</td><td>召回漏掉答案、reranker 过慢</td></tr>
-      <tr><td>答案必须来自原文</td><td>encoder-only extractive QA</td><td>start/end span label 或 no-answer label</td><td>选输入中的合法 span</td><td>无法生成归纳总结，span 边界错</td></tr>
-      <tr><td>实体、槽位、字段抽取</td><td>BIO tagger / CRF / constrained decoding</td><td>token-level BIO 或 span label</td><td>输出结构化 span</td><td>token accuracy 高但实体边界错</td></tr>
-      <tr><td>客服回答、解释、代码</td><td>decoder-only LLM / RAG + LLM</td><td>SFT、偏好数据、检索上下文和任务反馈</td><td>自回归生成</td><td>幻觉、格式漂移、延迟和成本</td></tr>
-      <tr><td>翻译、摘要</td><td>encoder-decoder 或 decoder-only instruction model</td><td>source-target paired data</td><td>条件生成，可用 beam 或 sampling</td><td>长度偏置、事实遗漏、指标与人工偏好不一致</td></tr>
+      <tr><th>Task</th><th>Preferred Model Family</th><th>Training Signal</th><th>Inference Form</th><th>Primary Risk</th></tr>
+      <tr><td>Document Relevance</td><td>Bi-encoder / Cross-encoder Reranker</td><td>Query-document positive/negative samples, clicks, or human relevance</td><td>Reranking after vector recall</td><td>Recall misses the answer, reranker is too slow</td></tr>
+      <tr><td>Answer Must Come from Source</td><td>Encoder-only Extractive QA</td><td>Start/end span labels or no-answer labels</td><td>Select a valid span from the input</td><td>Cannot generate summaries, span boundary errors</td></tr>
+      <tr><td>Entity, Slot, Field Extraction</td><td>BIO Tagger / CRF / Constrained Decoding</td><td>Token-level BIO or span labels</td><td>Output structured spans</td><td>High token accuracy but wrong entity boundaries</td></tr>
+      <tr><td>Customer Service Answers, Explanations, Code</td><td>Decoder-only LLM / RAG + LLM</td><td>SFT, preference data, retrieval context, and task feedback</td><td>Autoregressive generation</td><td>Hallucination, format drift, latency and cost</td></tr>
+      <tr><td>Translation, Summarization</td><td>Encoder-decoder or Decoder-only Instruction Model</td><td>Source-target paired data</td><td>Conditional generation, can use beam or sampling</td><td>Length bias, factual omission, metric-human preference mismatch</td></tr>
     </table>
   </div>
 
-  <h4>案例 1：客服知识库问答</h4>
-  <p>如果业务要求“答案必须引用知识库原文”，直接让 decoder-only LLM 自由回答风险较高。更稳的方案通常是三段式：bi-encoder 召回候选文档，cross-encoder reranker 精排，extractive QA 或受约束生成给出答案 span 与引用。只有当问题需要跨段综合、改写或解释时，再让 decoder-only LLM 基于检索上下文生成自然语言回答。</p>
-  <p>这类系统的训练目标也分层：retriever 用对比学习或点击数据，reranker 用相关性排序标签，QA head 用 span label，生成器用 SFT/偏好优化。把所有错误都归因于“LLM 不够强”会掩盖真正瓶颈：可能是召回没命中、重排错序、chunk 切分破坏答案、prompt 没约束引用，或生成阶段没有忠实使用上下文。</p>
+  <h4>Case 1: Customer Service Knowledge Base Q&A</h4>
+  <p>If the business requires "the answer must cite the original knowledge base text," directly letting a decoder-only LLM answer freely carries high risk. A more stable approach is usually a three-stage pipeline: bi-encoder for candidate document recall, cross-encoder reranker for fine ranking, and extractive QA or constrained generation for the answer span and citation. Only when the question requires cross-paragraph synthesis, rewriting, or explanation should a decoder-only LLM generate natural language answers based on the retrieval context.</p>
+  <p>The training objectives for such a system are also layered: the retriever uses contrastive learning or click data, the reranker uses relevance ranking labels, the QA head uses span labels, and the generator uses SFT/preference optimization. Attributing all errors to "the LLM is not strong enough" will obscure the real bottlenecks: it could be a recall miss, a reranking error, chunking that destroys the answer, a prompt that doesn't constrain citation, or the generation phase not faithfully using the context.</p>
 
-  <h4>案例 2：合同字段抽取</h4>
-  <p>合同中抽取甲方、乙方、金额、日期等字段，输出空间是有限结构。若用开放式生成，模型可能改写金额格式、补全不存在字段或把多个日期混在一起。更合适的 baseline 是 encoder-only token classification 或 span classification，再用规则校验金额、日期和实体类型。</p>
-  <p>训练工程上要关注 span-level F1，而不是 token accuracy。一个日期实体 <code>2026 年 6 月 8 日</code> 少预测一天，token accuracy 可能仍然很高，但字段抽取是错的。推理工程上要关注批量吞吐和长文档切片：如果每份合同几十页，cross-encoder 全文处理成本可能不可接受，需要先分块召回候选段落，再做精抽取。</p>
+  <h4>Case 2: Contract Field Extraction</h4>
+  <p>Extracting fields like Party A, Party B, amount, and date from contracts has a limited output space. If open-ended generation is used, the model might rewrite the amount format, complete non-existent fields, or mix up multiple dates. A more suitable baseline is encoder-only token classification or span classification, followed by rule-based validation for amounts, dates, and entity types.</p>
+  <p>In training engineering, focus on span-level F1, not token accuracy. If a date entity <code>June 8, 2026</code> is missing one day, token accuracy might still be high, but the field extraction is wrong. In inference engineering, focus on batch throughput and long document chunking: if each contract is dozens of pages, the cost of processing the full text with a cross-encoder might be unacceptable, requiring chunking to recall candidate paragraphs first, followed by fine-grained extraction.</p>
 
-  <h4>案例 3：开放式推理回答</h4>
-  <p>数学题、代码修复和复杂规划通常不能被固定标签或 span 覆盖，需要 decoder-only LLM 生成中间推理和最终答案。此时 Classic NLP 指标不再充分，BLEU/ROUGE 可能惩罚合理改写，也可能奖励错误但词面相似的答案。更合适的是任务成功率、unit test/pass@k、self-consistency、人工或 LLM-as-judge 分层评测，以及第 10 章的延迟/成本指标。</p>
+  <h4>Case 3: Open-ended Reasoning Answers</h4>
+  <p>Math problems, code fixes, and complex planning are often not covered by fixed labels or spans, requiring a decoder-only LLM to generate intermediate reasoning and the final answer. At this point, classic NLP metrics are no longer sufficient; BLEU/ROUGE might penalize reasonable rewrites or reward wrong but lexically similar answers. More suitable metrics are task success rate, unit test/pass@k, self-consistency, human or LLM-as-judge hierarchical evaluation, and the latency/cost metrics from Chapter 10.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>模型族选择要从输出约束倒推。固定标签优先分类，输入原文答案优先抽取，结构化字段优先 span/CRF/约束解码，开放式解释和推理才优先 decoder-only 生成。这样训练目标、评测指标和推理成本才能彼此一致。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> Model family selection should be deduced from output constraints. Prioritize classification for fixed labels, extraction for answers from the source text, span/CRF/constrained decoding for structured fields, and decoder-only generation for open-ended explanations and reasoning. This ensures that training objectives, evaluation metrics, and inference costs are aligned.</div></div>
 </section>
 
 <section class="card" id="s11-8">
-  <h3>11.8 实验结论：从指标到可判定判断</h3>
-  <p>本节训练学生把代码输出、书面推导、阅读材料和实验指标整理成可判定结论。核心不是“跑通了一个 demo”，而是回答一个明确技术问题，并让读者能判断这个结论在什么条件下成立。</p>
+  <h3>11.8 Experimental Conclusions: From Metrics to Decidable Judgments</h3>
+  <p>This section trains students to organize code outputs, written derivations, reading materials, and experimental metrics into decidable conclusions. The core is not "running a demo successfully," but answering a clear technical question and allowing the reader to judge under what conditions the conclusion holds.</p>
 
-  <h4>1. 把问题写成可检验命题</h4>
-  <p>好的技术问题应该能被数据和实验反驳。例如：</p>
+  <h4>1. Formulate the Question as a Testable Proposition</h4>
+  <p>A good technical question should be falsifiable by data and experiments. For example:</p>
   <ul>
-    <li><strong>训练工程：</strong>在固定 token budget 下，<code>seq_len=128</code> 是否比 <code>seq_len=64</code> 降低 validation PPL？代价是多少 tokens/s 和 step time？</li>
-    <li><strong>对齐工程：</strong>DPO 是否提高偏好胜率，同时保持基础任务正确率和拒答边界？KL、输出长度和失败类型如何变化？</li>
-    <li><strong>推理工程：</strong>RAG top-k 从 3 增到 8 是否提高 pass rate？它对 P95 TTFT、prompt tokens、context packing miss 和成本有什么影响？</li>
-    <li><strong>服务工程：</strong>concurrency 从 1 到 8 时，P95/P99 是否仍满足 SLO？瓶颈是排队、prefill、decode、检索还是后处理？</li>
+    <li><strong>Training Engineering:</strong> Under a fixed token budget, does <code>seq_len=128</code> reduce validation PPL compared to <code>seq_len=64</code>? What is the cost in tokens/s and step time?</li>
+    <li><strong>Alignment Engineering:</strong> Does DPO improve preference win rate while maintaining base task accuracy and refusal boundaries? How do KL, output length, and failure types change?</li>
+    <li><strong>Inference Engineering:</strong> Does increasing RAG top-k from 3 to 8 improve pass rate? What is its impact on P95 TTFT, prompt tokens, context packing misses, and cost?</li>
+    <li><strong>Serving Engineering:</strong> When concurrency increases from 1 to 8, do P95/P99 latencies still meet the SLO? Is the bottleneck queuing, prefill, decode, retrieval, or post-processing?</li>
   </ul>
-  <p>这些问题都有 baseline、改动项、指标和结论边界。相比之下，“做一个聊天机器人”或“训练一个小模型”不是合格的技术命题，因为它无法说明什么改变带来了什么效果。</p>
+  <p>These questions all have baselines, change items, metrics, and conclusion boundaries. In contrast, "building a chatbot" or "training a small model" is not a qualified technical proposition because it cannot explain what change led to what effect.</p>
 
-  <h4>2. 结论结构应覆盖建模、系统和评测</h4>
+  <h4>2. The Conclusion Structure Should Cover Modeling, System, and Evaluation</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>部分</th><th>训练/对齐结论应回答</th><th>推理/服务结论应回答</th></tr>
-      <tr><td>Problem</td><td>训练或对齐改动想改善什么现象</td><td>服务想满足什么 workload 和 SLO</td></tr>
-      <tr><td>Baseline</td><td>默认数据、模型、lr、batch tokens、seed</td><td>默认 API、no-RAG 或默认 concurrency</td></tr>
-      <tr><td>Method</td><td>数据处理、optimizer、scheduler、checkpoint 策略</td><td>RAG/tool/JSON、batching、capacity、降级策略</td></tr>
-      <tr><td>Metrics</td><td>train/val loss、PPL、grad_norm、tokens/s、resume parity</td><td>pass rate、P50/P95/P99、TTFT、TPOT、error rate、成本</td></tr>
-      <tr><td>Ablation</td><td>一次只改 lr、seq_len、batch、dropout 或数据源</td><td>一次只改 top-k、concurrency、context、JSON/retry 或容量假设</td></tr>
-      <tr><td>Failure analysis</td><td>loss spike、NaN、train/val 分叉、吞吐下降、resume 不连续</td><td>retrieval miss、format/tool error、安全拒答、尾延迟、429/5xx</td></tr>
-      <tr><td>Decision</td><td>是否继续训练、回退、扩容、换数据或调整目标</td><td>是否上线、灰度、降级、限流或继续优化</td></tr>
+      <tr><th>Part</th><th>Training/Alignment Conclusion Should Answer</th><th>Inference/Serving Conclusion Should Answer</th></tr>
+      <tr><td>Problem</td><td>What phenomenon the training or alignment change aims to improve</td><td>What workload and SLO the service aims to satisfy</td></tr>
+      <tr><td>Baseline</td><td>Default data, model, lr, batch tokens, seed</td><td>Default API, no-RAG, or default concurrency</td></tr>
+      <tr><td>Method</td><td>Data processing, optimizer, scheduler, checkpoint strategy</td><td>RAG/tool/JSON, batching, capacity, degradation strategy</td></tr>
+      <tr><td>Metrics</td><td>Train/val loss, PPL, grad_norm, tokens/s, resume parity</td><td>Pass rate, P50/P95/P99, TTFT, TPOT, error rate, cost</td></tr>
+      <tr><td>Ablation</td><td>Change only lr, seq_len, batch, dropout, or data source at a time</td><td>Change only top-k, concurrency, context, JSON/retry, or capacity assumption at a time</td></tr>
+      <tr><td>Failure analysis</td><td>Loss spike, NaN, train/val divergence, throughput drop, resume discontinuity</td><td>Retrieval miss, format/tool error, safety refusal, tail latency, 429/5xx</td></tr>
+      <tr><td>Decision</td><td>Whether to continue training, roll back, scale up, change data, or adjust objectives</td><td>Whether to deploy, canary, degrade, rate-limit, or continue optimization</td></tr>
     </table>
   </div>
 
-  <h4>3. 负结果也可以是强结论</h4>
-  <p>实验不要求每个方法都“提升”。如果一个 ablation 没有带来显著改善，只要实验设计清楚，它仍然是有价值的结论。例如：<code>seq_len=128</code> 的 validation PPL 只降低 <code>0.03</code>，但 tokens/s 下降 <code>35%</code>，且三次 seed 波动约 <code>0.05</code>，那么合理结论是“当前设置不足以支持更长序列值得采用”。这比只挑一个最好数字更严谨。</p>
+  <h4>3. Negative Results Can Also Be Strong Conclusions</h4>
+  <p>Experiments do not require every method to "improve" something. If an ablation does not bring significant improvement, as long as the experimental design is clear, it is still a valuable conclusion. For example: <code>seq_len=128</code> only reduces validation PPL by <code>0.03</code>, but tokens/s drops by <code>35%</code>, and the fluctuation across three seeds is about <code>0.05</code>. Then a reasonable conclusion is "the current setup does not justify adopting longer sequences." This is more rigorous than only picking the best number.</p>
 
-  <h4>4. 把结论绑定到复现命令和限制条件</h4>
-  <p>结论必须说明复现路径：数据版本、commit、运行命令、seed、硬件、模型配置、checkpoint 或服务配置、评测集和压测参数。也必须说明不能外推的地方：tiny corpus 不能代表万亿 token 训练，本地 MockEngine 不能代表真实 GPU serving，小知识库 RAG 不能代表企业知识库，单一安全集合不能代表所有用户风险。</p>
+  <h4>4. Bind Conclusions to Reproduction Commands and Limitations</h4>
+  <p>Conclusions must specify the reproduction path: data version, commit, run command, seed, hardware, model configuration, checkpoint or service configuration, evaluation set, and stress test parameters. They must also specify where extrapolation is not valid: a tiny corpus cannot represent trillion-token training, a local MockEngine cannot represent real GPU serving, a small knowledge base RAG cannot represent an enterprise knowledge base, and a single safety set cannot represent all user risks.</p>
 
-  <p>读者应该能回答三件事：第一，问题是否清楚；第二，实验是否足以支持结论；第三，如果把系统推向更大模型、更大数据或真实服务，哪些假设会最先失效。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>训练方向要证明过程可复现、可恢复、可解释；推理方向要证明服务质量、延迟、成本和风险在目标 workload 下可判断。没有 baseline、ablation、失败分析和结论边界的实验，不能支撑工程决策。</div></div>
+  <p>The reader should be able to answer three things: First, is the question clear? Second, is the experiment sufficient to support the conclusion? Third, if the system is scaled to a larger model, larger data, or a real service, which assumptions will break first?</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Training directions must prove the process is reproducible, recoverable, and interpretable; inference directions must prove that service quality, latency, cost, and risk are decidable under the target workload. Experiments without baselines, ablations, failure analysis, and conclusion boundaries cannot support engineering decisions.</div></div>
 </section>
 
 <section class="card" id="s11-9">
-  <h3>11.9 编程作业对应关系</h3>
-  <p>Ch11 作业把本章概念落实到可运行函数：</p>
+  <h3>11.9 Programming Assignment Correspondence</h3>
+  <p>Ch11 assignments translate the concepts of this chapter into runnable functions:</p>
   <table>
-    <tr><th>函数</th><th>对应概念</th><th>应能解释的问题</th></tr>
-    <tr><td><code>scalar_rnn_forward</code>, <code>recurrent_gradient_factors</code></td><td>RNN recurrence 与 BPTT</td><td>为什么长距离梯度会消失或爆炸</td></tr>
-    <tr><td><code>run_arc_standard_transitions</code>, <code>attachment_scores</code></td><td>Dependency parsing 与 UAS/LAS</td><td>结构化预测和 attention 诊断有什么区别</td></tr>
-    <tr><td><code>additive_attention_context</code></td><td>Seq2Seq alignment</td><td>decoder step 如何读取源序列</td></tr>
-    <tr><td><code>build_mlm_example</code>, <code>masked_lm_loss_from_logits</code></td><td>BERT MLM label mask 与 loss</td><td>为什么未 mask 位置不进入 loss 分母</td></tr>
-    <tr><td><code>bio_tags_to_spans</code> / <code>span_f1</code></td><td>BIO sequence labeling</td><td>如何把 token classification 输出变成实体 span，并按实体级边界评测</td></tr>
-    <tr><td><code>viterbi_decode</code></td><td>Linear-chain structured decoding</td><td>为什么最优 tag path 不等于逐 token argmax</td></tr>
-    <tr><td><code>linear_chain_log_partition</code></td><td>CRF forward algorithm</td><td>如何对所有 tag paths 做 logsumexp 归一化</td></tr>
-    <tr><td><code>linear_chain_crf_nll</code></td><td>CRF training objective</td><td>为什么结构化训练目标是 logZ 减 gold path score</td></tr>
-    <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>如何选择合法 answer span 与 no-answer</td></tr>
-    <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>为什么指标选择会改变结论</td></tr>
-    <tr><td><code>summarize_pairwise_judgments</code></td><td>LLM-as-judge</td><td>如何计算 tie-adjusted win rate，并按任务拆解胜负</td></tr>
-    <tr><td><code>judge_reliability_audit</code></td><td>Judge reliability gate</td><td>如何检查位置偏置、长度偏置、换序一致性和人工标签一致率</td></tr>
-    <tr><td><code>safety_evaluation_metrics</code></td><td>Safety evaluation</td><td>为什么 attack success、拒答、过度拒答和 task utility 必须同时报告</td></tr>
-    <tr><td><code>benchmark_result_summary</code></td><td>Benchmark reporting</td><td>如何把指标写成包含样本、推理设置、失败类型和边界的工程结论</td></tr>
+    <tr><th>Function</th><th>Corresponding Concept</th><th>Question It Should Explain</th></tr>
+    <tr><td><code>scalar_rnn_forward</code>, <code>recurrent_gradient_factors</code></td><td>RNN recurrence and BPTT</td><td>Why long-distance gradients vanish or explode</td></tr>
+    <tr><td><code>run_arc_standard_transitions</code>, <code>attachment_scores</code></td><td>Dependency parsing and UAS/LAS</td><td>How structured prediction differs from attention diagnostics</td></tr>
+    <tr><td><code>additive_attention_context</code></td><td>Seq2Seq alignment</td><td>How the decoder step reads the source sequence</td></tr>
+    <tr><td><code>build_mlm_example</code>, <code>masked_lm_loss_from_logits</code></td><td>BERT MLM label mask and loss</td><td>Why unmasked positions are not included in the loss denominator</td></tr>
+    <tr><td><code>bio_tags_to_spans</code> / <code>span_f1</code></td><td>BIO sequence labeling</td><td>How to convert token classification output into entity spans and evaluate at the entity level</td></tr>
+    <tr><td><code>viterbi_decode</code></td><td>Linear-chain structured decoding</td><td>Why the optimal tag path is not equal to the per-token argmax</td></tr>
+    <tr><td><code>linear_chain_log_partition</code></td><td>CRF forward algorithm</td><td>How to perform logsumexp normalization over all tag paths</td></tr>
+    <tr><td><code>linear_chain_crf_nll</code></td><td>CRF training objective</td><td>Why the structured training objective is logZ minus the gold path score</td></tr>
+    <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>How to select a valid answer span and handle no-answer</td></tr>
+    <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP evaluation</td><td>Why metric choice can change the conclusion</td></tr>
+    <tr><td><code>summarize_pairwise_judgments</code></td><td>LLM-as-judge</td><td>How to calculate tie-adjusted win rate and decompose wins/losses by task</td></tr>
+    <tr><td><code>judge_reliability_audit</code></td><td>Judge reliability gate</td><td>How to check for position bias, length bias, swap consistency, and human label agreement rate</td></tr>
+    <tr><td><code>safety_evaluation_metrics</code></td><td>Safety evaluation</td><td>Why attack success, refusal, over-refusal, and task utility must be reported simultaneously</td></tr>    <tr><td><code>benchmark_result_summary</code></td><td>Benchmark reporting</td><td>How to turn metrics into engineering conclusions that include samples, inference settings, failure types, and boundaries</td></tr>
   </table>
 </section>
 
 <section class="card" id="s11-10">
-  <h3>11.10 小结</h3>
+  <h3>11.10 Summary</h3>
   <ul>
-    <li>RNN/LSTM 解释了顺序递归、BPTT 和长距离依赖问题。</li>
-    <li>Dependency parsing 是离散结构预测，不等于 attention heatmap。</li>
-    <li>Seq2Seq attention 把源序列和目标前缀分开建模，是 encoder-decoder 的基本形式。</li>
-    <li>BERT/encoder-only 适合分类、reranking、embedding、token classification 和抽取式 QA。</li>
-    <li>BLEU、ROUGE、EM/F1、span F1、UAS/LAS 各自衡量不同任务结构；现代 LLM 评测还要说明数据、推理设置、judge 偏置、安全拒答、统计不确定性和结论边界。</li>
+    <li>RNN/LSTM explained sequential recurrence, BPTT, and the long-range dependency problem.</li>
+    <li>Dependency parsing is discrete structure prediction, not equivalent to an attention heatmap.</li>
+    <li>Seq2Seq attention models the source sequence and target prefix separately, forming the basic encoder-decoder structure.</li>
+    <li>BERT/encoder-only models are suitable for classification, reranking, embedding, token classification, and extractive QA.</li>
+    <li>BLEU, ROUGE, EM/F1, span F1, UAS/LAS each measure different task structures; modern LLM evaluation must also describe data, inference settings, judge bias, safety refusals, statistical uncertainty, and conclusion boundaries.</li>
   </ul>
 </section>
 
 <section class="card" id="s11-11">
-  <h3>11.11 概念检查</h3>
-  <div class="exercise" data-answer="2" data-explain="Dependency parsing 输出满足树约束的离散 head/label 结构；attention heatmap 是模型内部的连续权重，不能自动解释为句法树。">
-    <h4>练习 1：为什么不能把 attention heatmap 直接当作 dependency tree？</h4>
+  <h3>11.11 Concept Check</h3>
+  <div class="exercise" data-answer="2" data-explain="Dependency parsing outputs a discrete head/label structure that satisfies tree constraints; an attention heatmap is a continuous weight inside the model and cannot be automatically interpreted as a syntactic tree.">
+    <h4>Exercise 1: Why can't an attention heatmap be directly treated as a dependency tree?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q1" value="0"> A. 因为 attention 只能用于 decoder-only 模型</label>
-      <label><input type="radio" name="q1" value="1"> B. 因为 dependency parsing 不需要输入 token</label>
-      <label><input type="radio" name="q1" value="2"> C. 因为 parsing 输出离散树结构，而 attention 是连续权重诊断</label>
-      <label><input type="radio" name="q1" value="3"> D. 因为 attention 没有任何数学定义</label>
+      <label><input type="radio" name="q1" value="0"> A. Because attention can only be used in decoder-only models</label>
+      <label><input type="radio" name="q1" value="1"> B. Because dependency parsing does not require input tokens</label>
+      <label><input type="radio" name="q1" value="2"> C. Because parsing outputs a discrete tree structure, while attention is a continuous weight diagnostic</label>
+      <label><input type="radio" name="q1" value="3"> D. Because attention has no mathematical definition</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="MLM 只在被 mask 的位置计算 loss；未 mask 的位置通常设置为 ignore_index。Causal LM 则用每个位置预测下一个 token。">
-    <h4>练习 2：BERT-style MLM 与 causal LM 的 label 主要区别是什么？</h4>
+  <div class="exercise" data-answer="1" data-explain="MLM only computes loss at masked positions; unmasked positions are typically set to ignore_index. Causal LM predicts the next token at every position.">
+    <h4>Exercise 2: What is the main difference in labels between BERT-style MLM and causal LM?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q2" value="0"> A. MLM 不需要 token embedding</label>
-      <label><input type="radio" name="q2" value="1"> B. MLM 只在 mask 位置计算 loss，causal LM 预测下一个 token</label>
-      <label><input type="radio" name="q2" value="2"> C. MLM 只能用于机器翻译</label>
-      <label><input type="radio" name="q2" value="3"> D. Causal LM 可以同时看左右上下文</label>
+      <label><input type="radio" name="q2" value="0"> A. MLM does not require token embedding</label>
+      <label><input type="radio" name="q2" value="1"> B. MLM only computes loss at masked positions, while causal LM predicts the next token</label>
+      <label><input type="radio" name="q2" value="2"> C. MLM can only be used for machine translation</label>
+      <label><input type="radio" name="q2" value="3"> D. Causal LM can see both left and right context</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="LAS 同时要求 head 和 dependency label 正确；UAS 只要求 head 正确。一个系统可能 head 判断对但关系类型错。">
-    <h4>练习 3：为什么 LAS 通常不高于 UAS？</h4>
+  <div class="exercise" data-answer="0" data-explain="LAS requires both the head and the dependency label to be correct; UAS only requires the head to be correct. A system might get the head right but the relation type wrong.">
+    <h4>Exercise 3: Why is LAS usually not higher than UAS?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q3" value="0"> A. LAS 要求 head 和 label 都正确，条件更严格</label>
-      <label><input type="radio" name="q3" value="1"> B. LAS 不使用 gold tree</label>
-      <label><input type="radio" name="q3" value="2"> C. UAS 只用于英文</label>
-      <label><input type="radio" name="q3" value="3"> D. LAS 是生成任务指标</label>
+      <label><input type="radio" name="q3" value="0"> A. LAS requires both the head and label to be correct, which is a stricter condition</label>
+      <label><input type="radio" name="q3" value="1"> B. LAS does not use the gold tree</label>
+      <label><input type="radio" name="q3" value="2"> C. UAS is only used for English</label>
+      <label><input type="radio" name="q3" value="3"> D. LAS is a generation task metric</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="3" data-explain="若答案必须来自原文 token span，encoder-only span extraction 通常更可控；decoder-only 生成可能改写、补充或编造。">
-    <h4>练习 4：若客服系统要求答案必须是文档原文中的一个 span，优先考虑哪类方法？</h4>
+  <div class="exercise" data-answer="3" data-explain="If the answer must come from a token span in the original document, encoder-only span extraction is usually more controllable; decoder-only generation may paraphrase, supplement, or fabricate.">
+    <h4>Exercise 4: If a customer service system requires the answer to be a span from the original document, which type of method should be prioritized?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q4" value="0"> A. 开放式高温采样生成</label>
-      <label><input type="radio" name="q4" value="1"> B. 只看 perplexity 的 decoder-only LM</label>
-      <label><input type="radio" name="q4" value="2"> C. 无约束多轮对话 prompt</label>
-      <label><input type="radio" name="q4" value="3"> D. Encoder-only extractive QA 或受约束抽取系统</label>
+      <label><input type="radio" name="q4" value="0"> A. Open-ended high-temperature sampling generation</label>
+      <label><input type="radio" name="q4" value="1"> B. A decoder-only LM that only looks at perplexity</label>
+      <label><input type="radio" name="q4" value="2"> C. Unconstrained multi-turn dialogue prompts</label>
+      <label><input type="radio" name="q4" value="3"> D. Encoder-only extractive QA or a constrained extraction system</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="LLM-as-judge 和 benchmark 分数必须和任务、样本量、prompt、采样参数、judge 规则、失败类型和统计不确定性一起报告。单一 win rate 可能受位置偏置、长度偏置、样本分布和小样本波动影响，也不能自动推出生产延迟、成本或安全性达标。">
-    <h4>练习 5：为什么不能只用一次 LLM-as-judge win rate 宣称模型全面更好？</h4>
+  <div class="exercise" data-answer="1" data-explain="LLM-as-judge and benchmark scores must be reported together with the task, sample size, prompt, sampling parameters, judge rules, failure types, and statistical uncertainty. A single win rate can be affected by position bias, length bias, sample distribution, and small-sample fluctuations, and cannot automatically imply production latency, cost, or safety compliance.">
+    <h4>Exercise 5: Why can't a single LLM-as-judge win rate be used to claim a model is comprehensively better?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q5" value="0"> A. 因为 LLM-as-judge 永远不能使用</label>
-      <label><input type="radio" name="q5" value="1"> B. 因为 win rate 受样本、prompt、judge 偏置和统计波动影响，还不能覆盖延迟、成本和安全</label>
-      <label><input type="radio" name="q5" value="2"> C. 因为 win rate 只能用于 dependency parsing</label>
-      <label><input type="radio" name="q5" value="3"> D. 因为只要样本量超过 10，win rate 就没有不确定性</label>
+      <label><input type="radio" name="q5" value="0"> A. Because LLM-as-judge can never be used</label>
+      <label><input type="radio" name="q5" value="1"> B. Because win rate is affected by samples, prompts, judge bias, and statistical fluctuations, and cannot cover latency, cost, and safety</label>
+      <label><input type="radio" name="q5" value="2"> C. Because win rate can only be used for dependency parsing</label>
+      <label><input type="radio" name="q5" value="3"> D. Because as long as the sample size exceeds 10, win rate has no uncertainty</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 </section>
 </article>
 
 <nav class="chapter-nav">
-  <a href="ch10.html" class="btn btn-outline" rel="prev">← 上一章</a>
-  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
+  <a href="ch10.html" class="btn btn-outline" rel="prev">← Previous Chapter</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ Mark Complete</button>
   <span></span>
 </nav>
 </main>

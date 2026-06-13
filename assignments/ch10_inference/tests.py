@@ -736,7 +736,7 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
         self.assertGreaterEqual(results[0][1], results[1][1])
         self.assertIn("apple banana fruit", results[0][0])
         answer = rag.query("apple fruit")
-        self.assertIn("文档内容", answer)
+        self.assertIn("document content", answer)
         self.assertIn("apple", answer)
 
     def test_rag_rejects_invalid_overlap(self):
@@ -758,8 +758,7 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
             baseline="bm25-only",
             sample_size=25,
             risks=["retrieval_contamination", "judge_bias"],
-            uncertainty="bootstrap_ci_or_repeated_runs_needed",
-            conclusion="hybrid improves this fixed dev set only",
+            uncertainty="bootstrap_ci_or_repeated_runs_needed",            conclusion="hybrid improves this fixed dev set only",
         )
         self.assertEqual(summary["task"], "rag qa")
         self.assertEqual(summary["sample_size"], 25)
@@ -813,8 +812,7 @@ class TestRAGBenchmarkLSH(unittest.TestCase):
                 "max_error_rate": 0.01,
                 "max_cost_per_1k_requests_usd": 1.5,
                 "max_cost_regression_pct": 0.1,
-                "min_canary_sample_size": 1000,
-                "max_canary_traffic_pct": 10.0,
+                "min_canary_sample_size": 1000,                "max_canary_traffic_pct": 10.0,
             },
         )
         self.assertTrue(report["overall_pass"])

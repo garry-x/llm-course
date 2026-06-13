@@ -1,39 +1,39 @@
-# Ch02 Embedding 与位置编码作业测试
+# Ch02 Embedding and Position Encoding Assignment Tests
 
-本目录把第 2 章的编程练习整理成可自动验收的作业入口，覆盖 TokenEmbedding、one-hot 矩阵乘法形式的 embedding lookup、word vector 共现统计、skip-gram negative sampling、SGNS 中心向量梯度、shifted PMI、GloVe 加权最小二乘目标、cosine similarity、3CosAdd 类比、SinusoidalEncoding、RoPE 以及 RoPE 相对位置性质验证。
+This directory organizes the programming exercises from Chapter 2 into automatically verifiable assignment entry points, covering TokenEmbedding, one-hot matrix multiplication form of embedding lookup, word vector co-occurrence statistics, skip-gram negative sampling, SGNS center vector gradient, shifted PMI, GloVe weighted least squares objective, cosine similarity, 3CosAdd analogy, SinusoidalEncoding, RoPE, and verification of RoPE relative position properties.
 
-## 文件说明
+## File Description
 
-| 文件 | 用途 |
-|------|------|
-| `starter.py` | 学生起始代码，包含需要实现的 TODO |
-| `reference_solution.py` | 教师参考实现，用于验证测试本身 |
-| `tests.py` | `unittest` 测试，覆盖 shape、one-hot lookup 等价性、共现计数、SGNS loss、SGNS center gradient、shifted PMI、GloVe loss、cosine similarity、3CosAdd、buffer、范数保持和相对位置性质 |
+| File | Purpose |
+|------|---------|
+| `starter.py` | Student starter code, containing TODOs that need implementation |
+| `reference_solution.py` | Instructor reference implementation, used to verify the tests themselves |
+| `tests.py` | `unittest` tests, covering shape, one-hot lookup equivalence, co-occurrence counts, SGNS loss, SGNS center gradient, shifted PMI, GloVe loss, cosine similarity, 3CosAdd, buffer, norm preservation, and relative position properties |
 
-## 学生运行方式
+## Student Run Method
 
 ```bash
 cp assignments/ch02_embeddings/starter.py assignments/ch02_embeddings/student_solution.py
-# 编辑 student_solution.py 完成 TODO
+# Edit student_solution.py to complete TODOs
 STUDENT_MODULE=student_solution .venv/bin/python assignments/ch02_embeddings/tests.py
 ```
 
-也可以直接让测试加载 `starter.py`：
+You can also directly load `starter.py` for testing:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch02_embeddings/tests.py
 ```
 
-也可以直接验证课程内置参考实现：
+You can also directly verify the course's built-in reference implementation:
 
 ```bash
 .venv/bin/python assignments/ch02_embeddings/tests.py
 ```
 
-## 评分 Rubric
+## Grading Rubric
 
-| 项目 | 分值 | 标准 |
-|------|:--:|------|
-| Written questions | 35 | 推导 embedding 参数量，解释 one-hot 与 lookup 等价性，比较 word2vec/GloVe 的统计目标，推导 SGNS 正负样本对中心向量的梯度、PMI/shifted PMI，计算 cosine similarity 与 3CosAdd 类比，区分输入 embedding、上下文化 hidden state 与 output logits，证明 self-attention 的置换等变性，推导 RoPE 点积依赖相对位置 |
-| Programming parts | 55 | 实现 `TokenEmbedding`、`embedding_lookup_as_matmul`、共现矩阵、SGNS loss、SGNS center gradient、shifted PMI、GloVe weighted loss、cosine similarity、3CosAdd、`SinusoidalEncoding`、`RoPE` 和相对位置数值验证 |
-| Analysis / style | 10 | 说明输入 embedding 最近邻的解释边界、RoPE 外推失败模式、odd head dimension 拒绝策略和 dtype/device 迁移 |
+| Item | Points | Criteria |
+|------|:--:|---------|
+| Written questions | 35 | Derive embedding parameter count, explain one-hot and lookup equivalence, compare word2vec/GloVe statistical objectives, derive SGNS positive/negative sample pair gradients with respect to center vector, PMI/shifted PMI, compute cosine similarity and 3CosAdd analogy, distinguish input embedding, contextualized hidden state, and output logits, prove self-attention permutation equivariance, derive RoPE dot product dependence on relative position |
+| Programming parts | 55 | Implement `TokenEmbedding`, `embedding_lookup_as_matmul`, co-occurrence matrix, SGNS loss, SGNS center gradient, shifted PMI, GloVe weighted loss, cosine similarity, 3CosAdd, `SinusoidalEncoding`, `RoPE`, and relative position numerical verification |
+| Analysis / style | 10 | Explain the interpretation boundary of input embedding nearest neighbors, RoPE extrapolation failure modes, odd head dimension rejection strategy, and dtype/device migration |

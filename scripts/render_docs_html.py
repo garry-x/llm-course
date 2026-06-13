@@ -106,7 +106,7 @@ def render_markdown(markdown: str) -> tuple[str, list[tuple[int, str, str]], str
     out: list[str] = []
     toc: list[tuple[int, str, str]] = []
     used_slugs: set[str] = set()
-    title = "课程材料"
+    title = "Course Materials"
     index = 0
     open_list: str | None = None
     open_code = False
@@ -199,39 +199,40 @@ def render_page(markdown: str, source_name: str) -> str:
         for level, slug, text in toc
         if level <= 3
     )
-    toc_html = f'<nav class="toc"><h4>目录</h4><ol>{toc_items}</ol></nav>' if toc_items else ""
+    toc_html = f'<nav class="toc"><h4>Contents</h4><ol>{toc_items}</ol></nav>' if toc_items else ""
     return f"""<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
-<link rel="apple-touch-icon" href="../images/favicon.png">
+
+	<link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>{html.escape(title)} — LLM 深度学习</title>
+	<title>{html.escape(title)} - LLM Deep Learning</title>
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-doc="{html.escape(page_name)}">
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <h1>LLM 深度学习</h1>
-    <p>课程材料</p>
+    <h1>LLM Deep Learning</h1>
+    <p>Course Materials</p>
   </div>
   <nav class="sidebar-nav">
-    <a href="../index.html"><span class="ch-num">⌂</span>课程首页</a>
+    <a href="../index.html"><span class="ch-num">⌂</span>Course Home</a>
     <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
-    <a href="written-problem-set.html"><span class="ch-num">W</span>书面题库</a>
+    <a href="written-problem-set.html"><span class="ch-num">W</span>Written Problem Set</a>
     <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
   </nav>
   <div class="sidebar-footer">
-    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
-      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="Toggle theme">
+      <span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span>
     </button>
   </div>
 </aside>
 <main class="main doc-main">
   <article class="chapter doc-article">
-    <div class="reading-time"><a href="../index.html">课程首页</a> / {html.escape(page_name)}</div>
+    <div class="reading-time"><a href="../index.html">Course Home</a> / {html.escape(page_name)}</div>
     <h2>{html.escape(title)}</h2>
     {toc_html}
     <section class="card doc-content">

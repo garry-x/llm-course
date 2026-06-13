@@ -1,28 +1,28 @@
-# 经典 NLP 专题 Handout
+# Classic NLP Topics Handout
 
-本 handout 用于把经典神经 NLP 中常见但现代 LLM 主线容易压缩的内容接回课程章节。授课时建议安排 1-2 次讨论课，或把它作为 Ch11 与期末项目的背景阅读。
+This handout is used to connect common topics in classic neural NLP that are easily compressed in the main LLM storyline back to the course chapters. It is recommended to schedule 1-2 discussion sessions during lectures, or use it as background reading for Ch11 and the final project.
 
 ## 1. Dependency Parsing
 
-Dependency parsing 的目标是为句子中的词建立有向依存边。例如 `I saw her` 中，`saw` 是谓词中心，`I` 依赖于 `saw` 作为主语，`her` 依赖于 `saw` 作为宾语。
+The goal of dependency parsing is to establish directed dependency edges between words in a sentence. For example, in `I saw her`, `saw` is the predicate head, `I` depends on `saw` as the subject, and `her` depends on `saw` as the object.
 
 ### Arc-Standard Transition System
 
-状态包含：
+The state consists of:
 
-- Stack：已经部分处理的词。
-- Buffer：尚未处理的词。
-- Arcs：已建立的依存边。
+- **Stack**: Words that have been partially processed.
+- **Buffer**: Words that have not yet been processed.
+- **Arcs**: Dependency edges that have been established.
 
-操作：
+Operations:
 
-- `SHIFT`：把 buffer 第一个词移到 stack。
-- `LEFT-ARC(label)`：把 stack 顶部词作为 head，连接到次顶部 dependent，并弹出 dependent。
-- `RIGHT-ARC(label)`：把次顶部词作为 head，连接到顶部 dependent，并弹出 dependent。
+- `SHIFT`: Move the first word from the buffer to the stack.
+- `LEFT-ARC(label)`: Make the top word on the stack the head, connect it to the second-top dependent, and pop the dependent.
+- `RIGHT-ARC(label)`: Make the second-top word on the stack the head, connect it to the top dependent, and pop the dependent.
 
 ### Worked Example: `I saw her`
 
-设 token 编号为 `0=I, 1=saw, 2=her`，gold arcs 为 `saw -> I (nsubj)`、`saw -> her (obj)`，`saw` 是 root。一个合法 arc-standard transition 序列如下：
+Let the token IDs be `0=I, 1=saw, 2=her`, and the gold arcs be `saw -> I (nsubj)`, `saw -> her (obj)`, with `saw` as the root. A valid arc-standard transition sequence is as follows:
 
 | Step | Stack | Buffer | Action | New arc |
 |------|-------|--------|--------|---------|
@@ -31,53 +31,53 @@ Dependency parsing 的目标是为句子中的词建立有向依存边。例如 
 | 2 | `[I, saw]` | `[her]` | `LEFT-ARC(nsubj)` | `saw -> I` |
 | 3 | `[saw]` | `[her]` | `SHIFT` | - |
 | 4 | `[saw, her]` | `[]` | `RIGHT-ARC(obj)` | `saw -> her` |
-| 5 | `[saw]` | `[]` | `ROOT` 或结束 | `ROOT -> saw` |
+| 5 | `[saw]` | `[]` | `ROOT` or end | `ROOT -> saw` |
 
-课堂检查：
+Classroom Check:
 
-- `LEFT-ARC` 和 `RIGHT-ARC` 的 head/dependent 方向不能靠“左/右”字面猜，要看系统定义。
-- Ch11 的 `run_arc_standard_transitions` 会执行这张表中的 action，并返回 heads、labels、arcs 和 stack/buffer trace；学生需要用代码检查每一步 action 是否满足系统约束。
-- 若预测 heads 为 `[1, -1, 1]`，labels 为 `["nsubj", "root", "obj"]`，UAS/LAS 都是 1.0。
-- 若 `her` 的 head 预测为 `I`，但 label 仍是 `obj`，UAS 和 LAS 都会下降；LAS 只有在 head 与 label 同时正确时才计入。
+- The head/dependent direction for `LEFT-ARC` and `RIGHT-ARC` cannot be guessed by the literal meaning of "left/right"; it depends on the system definition.
+- The `run_arc_standard_transitions` function in Ch11 executes the actions from this table and returns heads, labels, arcs, and the stack/buffer trace; students need to use code to check if each action satisfies the system constraints.
+- If the predicted heads are `[1, -1, 1]` and labels are `["nsubj", "root", "obj"]`, both UAS and LAS are 1.0.
+- If the head of `her` is predicted to be `I`, but the label is still `obj`, both UAS and LAS will decrease; LAS is only counted when both the head and the label are correct.
 
-### 指标
+### Metrics
 
-- UAS：Unlabeled Attachment Score，只看 head 是否正确。
-- LAS：Labeled Attachment Score，同时要求 head 和 dependency label 正确。
+- **UAS**: Unlabeled Attachment Score, only checks if the head is correct.
+- **LAS**: Labeled Attachment Score, requires both the head and the dependency label to be correct.
 
-课程用途：训练学生把结构预测问题拆成状态、动作、损失和评测，而不只看生成式 LLM。
+Course Purpose: Train students to decompose a structure prediction problem into states, actions, loss, and evaluation, rather than only looking at generative LLMs.
 
-## 2. RNN / LSTM：从循环语言模型到注意力
+## 2. RNN / LSTM: From Recurrent Language Models to Attention
 
-在 Transformer 之前，神经语言模型和序列标注常用 RNN、GRU 或 LSTM。RNN 的核心思想是用一个 hidden state 汇总已经读过的前缀：
+Before Transformers, neural language models and sequence labeling commonly used RNNs, GRUs, or LSTMs. The core idea of an RNN is to use a hidden state to summarize the prefix that has been read:
 
 ```text
 h_t = tanh(W_x x_t + W_h h_{t-1} + b)
 p(x_{t+1} | x_{\le t}) = softmax(W_o h_t)
 ```
 
-这个公式和 decoder-only LM 一样在建模“给定前缀预测下一个 token”，但信息路径完全不同。RNN 中，位置 1 的信息要影响位置 100，需要穿过 99 次状态更新；Transformer 中，位置 100 可以通过 self-attention 直接读取位置 1 的表示。
+This formula models "predicting the next token given the prefix" just like a decoder-only LM, but the information path is completely different. In an RNN, for information at position 1 to influence position 100, it must pass through 99 state updates; in a Transformer, position 100 can directly read the representation of position 1 via self-attention.
 
-### BPTT 与梯度消失
+### BPTT and Vanishing Gradients
 
-Backpropagation Through Time (BPTT) 把同一个 RNN cell 在时间上展开。对标量 RNN：
+Backpropagation Through Time (BPTT) unrolls the same RNN cell over time. For a scalar RNN:
 
 ```text
 h_t = tanh(w_x x_t + w_h h_{t-1})
 dh_t / dh_{t-1} = w_h * (1 - h_t^2)
 ```
 
-因此从较晚 loss 传回早期状态时，会出现连乘：
+Therefore, when propagating a loss from a later time step back to an earlier state, a product chain appears:
 
 ```text
 dL / dh_1 = dL / dh_T * product_{t=2..T} w_h * (1 - h_t^2)
 ```
 
-如果这些因子的绝对值长期小于 1，梯度会快速变小；如果长期大于 1，梯度会爆炸。LSTM 通过 input/forget/output gates 和 cell state 缓解这个问题，但仍然保留顺序计算路径。
+If the absolute values of these factors are consistently less than 1, the gradient will shrink rapidly; if they are consistently greater than 1, the gradient will explode. LSTMs mitigate this problem through input/forget/output gates and a cell state, but they still retain a sequential computation path.
 
-### LSTM 门控直觉
+### LSTM Gating Intuition
 
-简化写法：
+Simplified notation:
 
 ```text
 f_t = sigmoid(W_f [h_{t-1}; x_t])
@@ -88,43 +88,43 @@ c_t = f_t * c_{t-1} + i_t * \tilde{c}_t
 h_t = o_t * tanh(c_t)
 ```
 
-`f_t` 控制保留旧记忆，`i_t` 控制写入新信息，`o_t` 控制暴露多少状态给输出。LSTM 的关键不是“更复杂所以更强”，而是 cell state 提供了更稳定的梯度通路。
+`f_t` controls the retention of old memory, `i_t` controls the writing of new information, and `o_t` controls how much of the state is exposed to the output. The key to LSTMs is not that they are "more complex and therefore stronger", but that the cell state provides a more stable gradient pathway.
 
-### 与 Transformer 的系统差异
+### Systematic Differences from Transformers
 
-| 维度 | RNN / LSTM | Transformer self-attention |
+| Dimension | RNN / LSTM | Transformer self-attention |
 |------|------------|----------------------------|
-| 训练并行性 | 时间步顺序依赖，难完全并行 | 同一层内所有位置可并行计算 |
-| 长程路径 | 路径长度随距离线性增长 | 单层可直接连接任意位置 |
-| 状态瓶颈 | 前缀压缩进固定维 hidden state | 每个 token 保留自己的表示 |
-| 推理 cache | hidden state 或 cell state | 每层 K/V cache |
-| 典型强项 | 小模型、流式序列、低资源场景 | 大规模预训练、长上下文、并行训练 |
+| Training Parallelism | Sequential dependency on time steps, difficult to fully parallelize | All positions within the same layer can be computed in parallel |
+| Long-range Path | Path length grows linearly with distance | A single layer can directly connect any two positions |
+| State Bottleneck | Prefix compressed into a fixed-dimension hidden state | Each token retains its own representation |
+| Inference Cache | Hidden state or cell state | K/V cache for each layer |
+| Typical Strengths | Small models, streaming sequences, low-resource scenarios | Large-scale pre-training, long contexts, parallel training |
 
-课程用途：RNN 不是过时名词，而是理解 teacher forcing、BPTT、长程依赖和注意力动机的基础。现代 LLM 不再以 RNN 为主干，但许多训练概念仍来自这条历史路径。
+Course Purpose: RNNs are not an outdated term, but a foundation for understanding teacher forcing, BPTT, long-range dependencies, and the motivation for attention. Modern LLMs no longer use RNNs as their backbone, but many training concepts still originate from this historical path.
 
 ## 3. Seq2Seq / Neural Machine Translation
 
-Seq2Seq 模型把输入序列编码成上下文表示，再由 decoder 自回归生成目标序列。Attention 让 decoder 每一步根据当前状态对源端 token 加权，而不是只依赖一个固定向量。
+Seq2Seq models encode an input sequence into a context representation, and then a decoder autoregressively generates the target sequence. Attention allows the decoder to weight source tokens based on its current state at each step, rather than relying on a single fixed vector.
 
-### 条件概率分解
+### Conditional Probability Decomposition
 
-给定源句 `x = (x_1, ..., x_m)` 和目标句 `y = (y_1, ..., y_n)`，encoder-decoder 模型学习的是条件分布：
+Given a source sentence `x = (x_1, ..., x_m)` and a target sentence `y = (y_1, ..., y_n)`, an encoder-decoder model learns the conditional distribution:
 
 ```text
 p(y | x) = product_t p(y_t | y_<t, x)
 ```
 
-训练时常用 teacher forcing，即 decoder 在第 `t` 步看到 gold prefix `y_<t^gold`：
+During training, teacher forcing is commonly used, meaning the decoder sees the gold prefix `y_<t^gold` at step `t`:
 
 ```text
 loss = - sum_t log p(y_t^gold | y_<t^gold, x)
 ```
 
-推理时模型只能看到自己已经生成的 prefix `y_<t^model`。训练条件和推理条件不完全一致，这就是 exposure bias 的来源之一。
+During inference, the model can only see the prefix `y_<t^model` it has generated itself. The training condition and the inference condition are not exactly the same; this is one source of exposure bias.
 
-### Cross-Attention 信息流
+### Cross-Attention Information Flow
 
-设 encoder 输出源端表示 `H = [h_1, ..., h_m]`，decoder 第 `t` 步隐状态为 `s_t`。一个简化的 additive attention 写作：
+Let the encoder output source representations `H = [h_1, ..., h_m]`, and the decoder hidden state at step `t` be `s_t`. A simplified additive attention is written as:
 
 ```text
 score_{t,i} = v^T tanh(W_s s_t + W_h h_i)
@@ -133,102 +133,102 @@ c_t = sum_i alpha_{t,i} h_i
 p(y_t | y_<t, x) = softmax(W_o [s_t; c_t])
 ```
 
-这里 `alpha_{t,i}` 是 decoder 第 `t` 步对源端第 `i` 个 token 的注意力权重。它可以帮助诊断漏译、重译或错译，但不能直接当成严格的因果解释。
+Here, `alpha_{t,i}` is the attention weight of the decoder at step `t` on the `i`-th token of the source. It can help diagnose omissions, repetitions, or mistranslations, but it cannot be directly treated as a strict causal explanation.
 
-Ch11 的 `additive_attention_context` 把这组公式做成纯 Python 练习：学生需要先算每个源位置的 score，再做 softmax 归一化，最后用 `alpha` 对 encoder states 加权求和得到 `c_t`。这个练习的重点不是训练一个翻译系统，而是把 encoder-decoder attention 的信息流从图示落实到可复算的数值。
+The `additive_attention_context` function in Ch11 turns this set of formulas into a pure Python exercise: students need to first calculate the score for each source position, then perform softmax normalization, and finally use `alpha` to compute a weighted sum of the encoder states to get `c_t`. The focus of this exercise is not to train a translation system, but to translate the information flow of encoder-decoder attention from a diagram into a numerically reproducible calculation.
 
-### 核心问题
+### Core Issues
 
-- Exposure bias：训练时 decoder 看到 gold prefix，推理时看到自己生成的 prefix。
-- Beam search：保留多个候选序列，但容易偏向短句，因此常加 length penalty。
-- Alignment：attention 权重可以粗略解释源词与目标词的对应关系，但不是严格因果解释。
+- **Exposure bias**: During training, the decoder sees the gold prefix; during inference, it sees the prefix it generated itself.
+- **Beam search**: Keeps multiple candidate sequences, but tends to favor short sentences, so a length penalty is often added.
+- **Alignment**: Attention weights can roughly explain the correspondence between source and target words, but they are not a strict causal explanation.
 
 ### BLEU
 
-BLEU 基于 n-gram precision 和 brevity penalty，适合机器翻译系统级比较，但对单句质量、语义等价改写和开放式生成不稳定。
+BLEU is based on n-gram precision and a brevity penalty. It is suitable for system-level comparison of machine translation, but it is unstable for single-sentence quality, semantically equivalent paraphrasing, and open-ended generation.
 
 ### Worked Example: Beam Search Length Bias
 
-假设 decoder 在某一步给出两个候选：
+Assume the decoder gives two candidates at a certain step:
 
 | Candidate | token log probs | sum log prob | length | normalized score `sum / length` |
 |-----------|-----------------|--------------|--------|---------------------------------|
 | `a` | `[-0.20]` | `-0.20` | 1 | `-0.20` |
 | `a b c` | `[-0.20, -0.30, -0.30]` | `-0.80` | 3 | `-0.27` |
 
-若只比较 log prob sum，短候选 `a` 更容易胜出，因为每多生成一个 token 都会乘上小于 1 的概率。长度归一化或 length penalty 不保证长句一定更好，但能减少“过短翻译”偏差。开放式生成中，beam search 还可能导致低多样性；sampling 则更适合探索多样输出，但需要温度、top-k/top-p 和安全过滤。
+If only comparing the sum of log probabilities, the short candidate `a` is more likely to win because each additional generated token multiplies by a probability less than 1. Length normalization or a length penalty does not guarantee that a longer sentence is always better, but it can reduce the "too-short translation" bias. In open-ended generation, beam search can also lead to low diversity; sampling is more suitable for exploring diverse outputs, but requires temperature, top-k/top-p, and safety filtering.
 
-课堂检查：
+Classroom Check:
 
-- beam search 是搜索策略，不是训练目标。
-- attention alignment 可作为翻译诊断，但不能自动证明模型因果解释。
-- BLEU 的 brevity penalty 只能缓解过短输出，不解决语义等价改写、事实性或指代错误。
+- Beam search is a search strategy, not a training objective.
+- Attention alignment can be used as a translation diagnostic, but it cannot automatically prove a model's causal explanation.
+- BLEU's brevity penalty can only mitigate overly short outputs; it does not solve issues of semantically equivalent paraphrasing, factuality, or coreference errors.
 
-课程用途：帮助学生理解 decoder-only LLM 之前的 encoder-decoder 传统，以及为什么现代 instruction model 仍会用 beam/search/rerank 思路。
+Course Purpose: Help students understand the encoder-decoder tradition before decoder-only LLMs, and why modern instruction models still use beam/search/rerank ideas.
 
 ## 4. Encoder-only / BERT
 
-BERT 使用双向 Transformer encoder，通过 Masked Language Modeling (MLM) 和 Next Sentence Prediction 预训练。与 causal LM 不同，MLM 可以同时看左右上下文，只预测被 mask 的位置。
+BERT uses a bidirectional Transformer encoder and is pre-trained using Masked Language Modeling (MLM) and Next Sentence Prediction. Unlike a causal LM, MLM can look at both left and right contexts, only predicting the masked positions.
 
-### 与 Causal LM 的区别
+### Differences from Causal LM
 
-| 维度 | BERT / Encoder-only | GPT / Decoder-only |
+| Dimension | BERT / Encoder-only | GPT / Decoder-only |
 |------|---------------------|--------------------|
-| 注意力 | 双向可见 | causal mask |
-| 预训练 | MLM | next-token prediction |
-| 输出 | token/CLS 表示 | 下一个 token logits |
-| 典型任务 | 分类、抽取、序列标注 | 生成、对话、代码 |
+| Attention | Bidirectional visibility | causal mask |
+| Pre-training | MLM | next-token prediction |
+| Output | token/CLS representation | next token logits |
+| Typical Tasks | Classification, extraction, sequence labeling | Generation, dialogue, code |
 
-课程用途：把表示学习和判别式 NLP 的经典方法接入 Ch11 任务建模，让学生理解并非所有 NLP 任务都天然需要自回归生成。
+Course Purpose: Connect the classic methods of representation learning and discriminative NLP to the task modeling in Ch11, allowing students to understand that not all NLP tasks are inherently suited for autoregressive generation.
 
 ### Worked Example: BERT-style MLM Tensor
 
-输入 tokens：
+Input tokens:
 
 ```text
 [CLS] the cat sat [SEP]
 ```
 
-若 mask positions 为 `[2, 3]`，则：
+If the mask positions are `[2, 3]`, then:
 
 | Field | Value |
 |-------|-------|
 | masked input | `[CLS] the [MASK] [MASK] [SEP]` |
 | labels | `None, None, cat, sat, None` |
-| attention | 双向 self-attention，可看左右上下文 |
-| loss positions | 只在 mask positions 计算 loss |
+| attention | Bidirectional self-attention, can see left and right context |
+| loss positions | Loss is only calculated at mask positions |
 
-与 causal LM 对比：
+Comparison with causal LM:
 
-- causal LM 训练 `the -> cat -> sat` 的 next-token prediction，只能看左侧上下文。
-- MLM 可以同时利用 `the` 和 `[SEP]` 附近上下文预测 `cat/sat`，但不直接训练自回归生成。
-- BERT fine-tuning 常用 `[CLS]` 表示做分类，也可做 token classification 或 span extraction；它不是默认的 decoder-only 生成模型。
+- A causal LM trains on `the -> cat -> sat` for next-token prediction, only seeing the left context.
+- MLM can simultaneously use the context around `the` and `[SEP]` to predict `cat/sat`, but it does not directly train for autoregressive generation.
+- BERT fine-tuning commonly uses the `[CLS]` representation for classification, or can be used for token classification or span extraction; it is not a default decoder-only generative model.
 
 ### Worked Example: Extractive QA Span
 
-抽取式 QA 给每个 token 两个分数：`start_logit_i` 和 `end_logit_i`。模型选择满足 `start <= end` 且长度不超过上限的 span，使 `start_logit_start + end_logit_end` 最大。SQuAD 2.0 风格的 no-answer 通常用 `[CLS]` 的 start/end 分数表示。
+Extractive QA assigns two scores to each token: `start_logit_i` and `end_logit_i`. The model selects a span that satisfies `start <= end` and does not exceed a maximum length, maximizing `start_logit_start + end_logit_end`. A no-answer option, like in SQuAD 2.0, is usually represented by the `[CLS]` start/end scores.
 
-Ch11 的 `select_extractive_qa_span` 让学生实现这一步：枚举合法 span、比较分数，并在 `[CLS]` 分数更高时返回空答案。它强调 encoder-only 模型可以做判别式抽取，而不是生成一段新文本。
+The `select_extractive_qa_span` function in Ch11 lets students implement this step: enumerate valid spans, compare scores, and return an empty answer when the `[CLS]` score is higher. It emphasizes that encoder-only models can perform discriminative extraction, rather than generating a new piece of text.
 
 ## 4. Evaluation
 
-高校 NLP 课程必须让学生区分“优化目标”和“评测指标”。
+University-level NLP courses must enable students to distinguish between "optimization objectives" and "evaluation metrics".
 
-| 指标 | 适用任务 | 局限 |
+| Metric | Applicable Task | Limitation |
 |------|----------|------|
-| Perplexity | 语言模型拟合 | 不直接等于事实正确或有用 |
-| Accuracy / F1 | 分类、抽取 | 标签定义和类别不平衡会影响解释 |
-| Exact Match | QA、代码、数学 | 对等价表达过于严格 |
-| BLEU | 机器翻译 | 对语义改写和单句评价不稳定 |
-| ROUGE | 摘要 | 偏向词面重合 |
-| Human Eval | 开放式任务 | 成本高，一致性难保证 |
-| LLM-as-judge | 大规模偏好评测 | 可能有位置偏置、模型偏置和污染风险 |
+| Perplexity | Language model fit | Not directly equivalent to factual correctness or usefulness |
+| Accuracy / F1 | Classification, extraction | Label definitions and class imbalance can affect interpretation |
+| Exact Match | QA, code, math | Too strict for equivalent expressions |
+| BLEU | Machine translation | Unstable for semantic paraphrasing and single-sentence evaluation |
+| ROUGE | Summarization | Biased towards lexical overlap |
+| Human Eval | Open-ended tasks | High cost, difficult to ensure consistency |
+| LLM-as-judge | Large-scale preference evaluation | Potential position bias, model bias, and contamination risk |
 
-项目报告不能只给一个平均分。至少应包含分任务结果、失败案例、错误类型和指标局限。
+Project reports should not only provide a single average score. They should at least include per-task results, failure cases, error types, and metric limitations.
 
-### 常见指标的可计算定义
+### Computable Definitions of Common Metrics
 
-**BLEU** 使用 clipped n-gram precision 和 brevity penalty：
+**BLEU** uses clipped n-gram precision and a brevity penalty:
 
 ```text
 BLEU = BP * exp(sum_n w_n log p_n)
@@ -236,9 +236,9 @@ BP = 1                  if candidate_len > reference_len
 BP = exp(1 - reference_len / candidate_len) otherwise
 ```
 
-其中 `p_n` 是候选译文中 n-gram 命中参考译文的裁剪精度。BLEU 适合系统级机器翻译比较，但不适合单句语义判断。
+Where `p_n` is the clipped precision of n-grams in the candidate translation that match the reference translation. BLEU is suitable for system-level machine translation comparison, but not for single-sentence semantic judgment.
 
-**ROUGE-L** 基于最长公共子序列 `LCS(candidate, reference)`：
+**ROUGE-L** is based on the longest common subsequence `LCS(candidate, reference)`:
 
 ```text
 precision = LCS / candidate_len
@@ -246,76 +246,75 @@ recall = LCS / reference_len
 F1 = 2 * precision * recall / (precision + recall)
 ```
 
-它常用于摘要任务，因为摘要可能不要求逐词完全相同；但高 ROUGE 仍可能只是复制了相似文本，不代表事实正确。
+It is commonly used for summarization tasks because summaries may not require word-for-word exactness; however, a high ROUGE score might still only mean copying similar text, not factual correctness.
 
-**Exact Match / token F1** 常用于抽取式 QA。Exact Match 要求标准化后字符串完全一致；token F1 先计算预测答案与 gold answer 的 token overlap，再取 precision/recall 的调和平均。它们对开放式回答、同义改写和多答案问题都不稳定。
+**Exact Match / token F1** is commonly used for extractive QA. Exact Match requires the normalized strings to be exactly identical; token F1 first calculates the token overlap between the predicted answer and the gold answer, then takes the harmonic mean of precision/recall. They are unstable for open-ended answers, synonymous paraphrasing, and multi-answer questions.
 
 ### Metric Failure Cases
 
 | Case | Metric looks good | Human issue | Lesson |
 |------|-------------------|-------------|--------|
-| Translation synonym | BLEU 低，因为 n-gram 不重合 | 语义可能正确 | BLEU 不能单句决定质量 |
-| Extractive QA punctuation | EM 低，因为格式不同 | 答案实体相同 | EM 过严，需配合 normalized F1 |
-| RAG copy overlap | ROUGE 高，因为复制检索片段 | 片段可能不回答问题 | 词面重合不等于事实正确 |
-| Long answer latency | quality score 高 | P95 latency 超 SLO | 质量指标必须配合系统指标 |
-| LLM judge preference | judge 偏好更长回答 | 可能冗余或幻觉 | 需要 blind pairwise、position swap 和人工抽查 |
+| Translation synonym | BLEU low, because n-grams don't overlap | Semantics may be correct | BLEU cannot determine quality for a single sentence |
+| Extractive QA punctuation | EM low, because of format difference | Answer entity is the same | EM is too strict, needs to be combined with normalized F1 |
+| RAG copy overlap | ROUGE high, because it copies the retrieved snippet | The snippet may not answer the question | Lexical overlap does not equal factual correctness |
+| Long answer latency | quality score high | P95 latency exceeds SLO | Quality metrics must be combined with system metrics |
+| LLM judge preference | judge prefers longer answers | May be verbose or hallucinated | Requires blind pairwise, position swap, and manual spot-checking |
 
 ### Agent / Workflow Evaluation
 
-面向训练和推理工程师的 LLM 课程不能只评测“最终文本答案”。一旦系统包含工具、RAG、代码执行、浏览器、数据库写入或多轮用户交互，评测对象就变成有状态 workflow：模型不仅要答对，还要在正确时间调用正确工具、遵守策略、控制成本，并避免不可逆副作用。
+An LLM course for training and inference engineers cannot only evaluate the "final text answer". Once the system includes tools, RAG, code execution, a browser, database writes, or multi-turn user interaction, the object of evaluation becomes a stateful workflow: the model must not only answer correctly, but also call the correct tool at the right time, adhere to policies, control costs, and avoid irreversible side effects.
 
-典型 benchmark 反映的是不同 workflow 能力：
+Typical benchmarks reflect different workflow capabilities:
 
-| Benchmark 类型 | 评测对象 | 课程中应抽象出的协议 |
+| Benchmark Type | Evaluation Object | Protocol to Abstract in the Course |
 |----------------|----------|----------------------|
-| SWE-bench 类代码修复 | 给定真实 issue 和代码库，生成 patch 并通过测试 | 任务成功率必须由隐藏测试或回归测试判定，同时记录 repo 版本、工具环境、patch diff 和失败类型 |
-| tau-bench 类工具-用户交互 | 多轮用户、领域 policy、API tool 和最终数据库状态 | 不能只看回复文本，要检查 action correctness、policy compliance、state delta、重复 trial 的一致性和越权动作 |
-| BrowseComp 类浏览 agent | 在网页中寻找难找但可验证的短答案 | 需要记录搜索策略、引用证据、浏览深度、时间/调用预算和答案可验证性；短答案高分不等于开放式研究可靠 |
+| SWE-bench-like code repair | Given a real issue and codebase, generate a patch and pass tests | Task success rate must be determined by hidden tests or regression tests, while recording repo version, tool environment, patch diff, and failure type |
+| tau-bench-like tool-user interaction | Multi-turn user, domain policy, API tool, and final database state | Cannot only look at the reply text; must check action correctness, policy compliance, state delta, consistency across repeated trials, and unauthorized actions |
+| BrowseComp-like browsing agent | Find a hard-to-find but verifiable short answer on a webpage | Need to record search strategy, cited evidence, browsing depth, time/call budget, and answer verifiability; a high score on a short answer does not mean the open-ended research is reliable |
 
-课程评测协议应至少分四层：
+The course evaluation protocol should be divided into at least four layers:
 
-1. **Task success.** 是否解决用户任务：测试通过、目标状态达到、答案可验证或人工验收通过。
-2. **Trajectory quality.** 工具选择、参数、顺序、重试、循环、handoff、检索和引用是否合理。
-3. **Safety and side effects.** 是否违反权限、泄漏数据、执行不可逆动作、污染状态或绕过 policy。
-4. **System cost.** wall time、LLM calls、tool calls、prompt/completion tokens、P95 latency、外部 API 成本和失败重试成本。
+1. **Task success.** Whether the user's task is solved: tests passed, target state achieved, answer verifiable, or human acceptance passed.2. **Trajectory quality.** Whether tool selection, parameters, order, retries, loops, handoffs, retrieval, and citations are reasonable.
+3. **Safety and side effects.** Whether it violates permissions, leaks data, executes irreversible actions, pollutes state, or bypasses policy.
+4. **System cost.** wall time, LLM calls, tool calls, prompt/completion tokens, P95 latency, external API costs, and failure retry costs.
 
-发布前的 agent eval gate 应固定环境和任务版本：tool registry、API schema、数据库 snapshot、检索库、浏览器/网络条件、hidden tests、judge rubric、随机 seed 和 temperature。公开 benchmark 只能作为回归信号，不能替代私有任务集、生产 canary 和 trace replay；否则模型可能只是适配了题库、工具环境或评分器。
+The pre-release agent eval gate should fix the environment and task version: tool registry, API schema, database snapshot, retrieval library, browser/network conditions, hidden tests, judge rubric, random seed, and temperature. Public benchmarks can only serve as regression signals and cannot replace private task sets, production canaries, and trace replay; otherwise, the model may simply adapt to the question bank, tool environment, or scorer.
 
-课堂检查：
+Classroom check:
 
-- 指标是任务假设的压缩，不是“真实质量”的同义词。
-- 报告平均值时必须说明样本数、split、置信区间或 single_seed_limit。
-- 对开放式 LLM 任务，自动指标、人工错误分析和资源指标应同时出现。
-- 对 agent/workflow 任务，最终答案、轨迹、状态变更、安全副作用和系统成本必须分开报告。
+- Metrics are a compression of task assumptions, not a synonym for "true quality."
+- When reporting averages, the sample size, split, confidence interval, or single_seed_limit must be stated.
+- For open-ended LLM tasks, automatic metrics, human error analysis, and resource metrics should appear simultaneously.
+- For agent/workflow tasks, final answer, trajectory, state changes, safety side effects, and system cost must be reported separately.
 
 ## 5. Ethics / Safety
 
-LLM 课程的工程项目必须覆盖以下风险：
+LLM course engineering projects must cover the following risks:
 
-- 数据隐私：训练或 RAG 语料是否包含敏感信息。
-- 偏见与代表性：数据是否系统性忽略某些语言、地区或群体。
-- 幻觉：模型生成无法由检索产出支持的内容。
-- 评测污染：benchmark 或答案是否出现在训练/调参数据中。
-- 安全拒答：模型是否在高风险请求中给出不当操作建议。
-- 版权与引用：生成内容或训练数据是否需要来源说明。
+- Data privacy: Whether the training or RAG corpus contains sensitive information.
+- Bias and representation: Whether the data systematically ignores certain languages, regions, or groups.
+- Hallucination: The model generates content unsupported by retrieval output.
+- Evaluation contamination: Whether the benchmark or answers appear in the training/tuning data.
+- Safety refusal: Whether the model gives inappropriate operational advice for high-risk requests.
+- Copyright and citation: Whether generated content or training data requires source attribution.
 
-建议项目报告固定加入 “Safety and Limitations” 小节，至少列出 3 个风险、触发样例和缓解策略。
+It is recommended that project reports include a "Safety and Limitations" section, listing at least 3 risks, trigger examples, and mitigation strategies.
 
-## 课堂活动建议
+## Suggested Classroom Activities
 
-1. 用 10 分钟手算一个 dependency parsing transition 序列。
-2. 用 15 分钟比较同一句翻译的 BLEU 与人工偏好差异。
-3. 用 15 分钟把一个文本分类任务分别设计成 BERT fine-tuning 和 GPT prompting。
-4. 用 20 分钟分析一个 RAG 失败案例，标出 retrieval、generation 和 evaluation 的责任边界。
-5. 用 20 分钟分析一条 agent trace，标出 tool schema、policy、state delta、side effect、latency 和最终 task success 的责任边界。
+1. Spend 10 minutes manually computing a dependency parsing transition sequence.
+2. Spend 15 minutes comparing BLEU scores and human preference differences for the same translated sentence.
+3. Spend 15 minutes designing a text classification task as both BERT fine-tuning and GPT prompting.
+4. Spend 20 minutes analyzing a RAG failure case, identifying the responsibility boundaries of retrieval, generation, and evaluation.
+5. Spend 20 minutes analyzing an agent trace, identifying the responsibility boundaries of tool schema, policy, state delta, side effect, latency, and final task success.
 
 ## Mini-Recitation Activities
 
 | Topic | Board artifact | Student action |
 |-------|----------------|----------------|
-| Dependency parsing | stack / buffer / arcs transition table | 写出合法 action 序列并计算 UAS/LAS |
-| Seq2Seq / NMT | beam table with sum and normalized score | 解释 length bias 和 length penalty |
-| BERT / MLM | masked input + labels table | 区分 MLM loss positions 与 causal LM labels |
-| Evaluation | metric failure-case table | 判断哪个指标支持结论、哪个指标失效 |
-| Agent evaluation | trace + state delta + tool call table | 判断最终成功、轨迹质量、安全副作用和成本是否同时过 gate |
-| Ethics / Safety | risk / trigger / mitigation table | 把 failure case 连接到数据、模型、系统或评测原因 |
+| Dependency parsing | stack / buffer / arcs transition table | Write a valid action sequence and calculate UAS/LAS |
+| Seq2Seq / NMT | beam table with sum and normalized score | Explain length bias and length penalty |
+| BERT / MLM | masked input + labels table | Distinguish MLM loss positions from causal LM labels |
+| Evaluation | metric failure-case table | Determine which metric supports the conclusion and which metric fails |
+| Agent evaluation | trace + state delta + tool call table | Determine if final success, trajectory quality, safety side effects, and cost all pass the gate simultaneously |
+| Ethics / Safety | risk / trigger / mitigation table | Connect the failure case to data, model, system, or evaluation causes |

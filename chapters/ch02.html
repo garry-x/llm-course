@@ -1,53 +1,53 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
   <link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第2章 嵌入层与位置编码 — LLM 深度学习</title>
+<title>Chapter 2: Embedding Layer and Positional Encoding — LLM Deep Learning</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-ch="2">
 
-<button class="menu-toggle" aria-label="菜单">☰</button>
+<button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
-  <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
-  <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-progress"><span>Learning Progress: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
+  <input type="search" id="search-box" class="search-box" placeholder="Search course..." aria-label="Search">
   <div id="search-results" class="search-results"></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
-  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
-  <h2>第2章 嵌入层与位置编码</h2>
-  <p class="subtitle">实现 TokenEmbedding + Sinusoidal + RoPE——让模型理解语义与顺序</p>
-  <div class="reading-time">⏱ 预计阅读: 120 分钟 · 19 小节 · 4 道编程练习 · 6 道概念练习</div>
-  <div class="font-controls"><span>字号:</span>
-    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
-    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
-    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  <h2>Chapter 2: Embedding Layer and Positional Encoding</h2>
+  <p class="subtitle">Implement TokenEmbedding + Sinusoidal + RoPE — Enabling the Model to Understand Semantics and Order</p>
+  <div class="reading-time">⏱ Estimated reading: 120 minutes · 19 sections · 4 programming exercises · 6 concept exercises</div>
+  <div class="font-controls"><span>Font Size:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
   </div>
 
 <section class="card">
-  <h3>本章怎么学：关注“查表”和“位置信息”</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先把 <code>nn.Embedding</code> 理解成“用 token id 查一行向量”，再理解为什么 Transformer 不知道顺序，所以必须加入位置编码。RoPE 的矩阵推导可以第二遍再细看。</div></div>
+  <h3>How to Learn This Chapter: Focus on "Lookup Table" and "Position Information"</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Key for Beginners:</strong> First understand <code>nn.Embedding</code> as "looking up a row vector by token id", then understand why Transformers don't know order, so positional encoding must be added. The matrix derivation for RoPE can be reviewed in detail on a second pass.</div></div>
   <ul>
-    <li><strong>前置知识：</strong>张量形状、矩阵查表、sin/cos 的基本概念。</li>
-    <li><strong>学习目标：</strong>从 One-Hot 推导到可训练嵌入，解释分布假说、静态词向量与上下文化表示的区别、位置编码必要性，并证明 RoPE 点积只依赖相对位置。</li>
-    <li><strong>本章产出：</strong>TokenEmbedding、Sinusoidal 位置编码和 RoPE。</li>
-    <li><strong>完成标准：</strong>你能跟踪形状从 <code>[batch, seq]</code> 变成 <code>[batch, seq, d_model]</code>。</li>
-    <li><strong>练习产出：</strong>提交嵌入/位置编码实现、RoPE 相对位置数值验证图，以及一页关于外推失败模式的短报告；可用 <a href="../assignments/ch02_embeddings/" target="_blank">Ch02 位置编码作业测试</a> 检查核心实现。</li>
+    <li><strong>Prerequisites:</strong> Tensor shapes, matrix lookup, basic concepts of sin/cos.</li>
+    <li><strong>Learning Goals:</strong> Derive from One-Hot to trainable embeddings, explain the distributional hypothesis, the difference between static word vectors and contextualized representations, the necessity of positional encoding, and prove that the RoPE dot product depends only on relative position.</li>
+    <li><strong>Chapter Output:</strong> TokenEmbedding, Sinusoidal positional encoding, and RoPE.</li>
+    <li><strong>Completion Criteria:</strong> You can trace the shape transformation from <code>[batch, seq]</code> to <code>[batch, seq, d_model]</code>.</li>
+    <li><strong>Exercise Output:</strong> Submit embedding/positional encoding implementation, RoPE relative position numerical validation plot, and a one-page short report on extrapolation failure modes; use <a href="../assignments/ch02_embeddings/" target="_blank">Ch02 Positional Encoding Assignment Test</a> to check core implementation.</li>
   </ul>
-  <div class="dependency-note"><strong>先修能力：</strong>矩阵查表、向量点积、sin/cos 周期、二维旋转和张量 shape 追踪。<br><strong>本章内化：</strong>one-hot 乘 embedding 矩阵会在 2.1 被改写成查表；点积和旋转矩阵会在 RoPE 推导里证明“注意力分数只依赖相对位置”；shape 纪律会贯穿 token embedding、position ids、batch/seq 维度和外推实验。<br><strong>验收信号：</strong>你能从 <code>[B,T]</code> 追到 <code>[B,T,D]</code>，并解释位置编码 bug 为什么会影响 Ch03 attention score 和 Ch10 prefix cache。</div>
-  <p class="system-role"><strong>系统位置：</strong>本章把离散 token 接到连续向量空间，并给每个位置可计算的几何语义。它承接 Ch01 的 token ID，向后决定 Ch03 attention 的相似度计算、Ch08 长上下文生成和 Ch10 prefix cache 的位置一致性。</p>
+  <div class="dependency-note"><strong>Required Skills:</strong> Matrix lookup, vector dot product, sin/cos periodicity, 2D rotation, and tensor shape tracking.<br><strong>Internalization for this Chapter:</strong> One-hot multiplied by the embedding matrix will be rewritten as a lookup table in 2.1; dot product and rotation matrix will prove in the RoPE derivation that "attention scores depend only on relative position"; shape discipline will run through token embedding, position ids, batch/seq dimensions, and extrapolation experiments.<br><strong>Validation Signal:</strong> You can trace from <code>[B,T]</code> to <code>[B,T,D]</code> and explain why a positional encoding bug affects Ch03 attention scores and Ch10 prefix cache.</div>
+  <p class="system-role"><strong>System Position:</strong> This chapter connects discrete tokens to a continuous vector space and gives each position a computable geometric semantics. It builds upon Ch01's token IDs and determines, going forward, Ch03's attention similarity computation, Ch08's long-context generation, and Ch10's prefix cache positional consistency.</p>
   <div class="foundation-map">
-    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
-    <div class="foundation-graph" role="img" aria-label="第2章知识脑图：学习本章前需要懂查表、点积和旋转，本章会学 embedding 与位置编码，学完后可以继续读 RoPE scaling 和长上下文">
+    <h4>Learner Mind Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
+    <div class="foundation-graph" role="img" aria-label="Chapter 2 Knowledge Map: Before learning this chapter, you need to understand lookup tables, dot products, and rotation. This chapter teaches embeddings and positional encoding. After learning, you can continue to read about RoPE scaling and long contexts.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-02" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -56,163 +56,161 @@
         <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
         <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
         <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
-        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第2章 Embedding</tspan><tspan class="dep-sub" x="430" dy="22">token id -> vector</tspan></text>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">Chapter 2 Embedding</tspan><tspan class="dep-sub" x="430" dy="22">token id -> vector</tspan></text>
         <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：向量基础</tspan><tspan class="dep-sub" x="129" dy="18">one-hot / dot product</tspan></text>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">Prerequisite: Vector Basics</tspan><tspan class="dep-sub" x="129" dy="18">one-hot / dot product</tspan></text>
         <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：位置几何</tspan><tspan class="dep-sub" x="129" dy="18">sin/cos / rotation / shape</tspan></text>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">Prerequisite: Position Geometry</tspan><tspan class="dep-sub" x="129" dy="18">sin/cos / rotation / shape</tspan></text>
         <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：位置编码</tspan><tspan class="dep-sub" x="731" dy="18">RoPE / ALiBi</tspan></text>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">Read Next: Positional Encoding</tspan><tspan class="dep-sub" x="731" dy="18">RoPE / ALiBi</tspan></text>
         <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：长上下文</tspan><tspan class="dep-sub" x="731" dy="18">YARN / LongRoPE</tspan></text>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">Read Next: Long Context</tspan><tspan class="dep-sub" x="731" dy="18">YARN / LongRoPE</tspan></text>
         <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
-        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：[B,T] -> [B,T,D] -> position-aware representation</tspan></text>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">Chapter Main Line: [B,T] -> [B,T,D] -> position-aware representation</tspan></text>
       </svg>
     </div>
     <div class="table-wrap foundation-table">
       <table>
-        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
-        <tr><td>one-hot 与查表</td><td>把 <code>input_ids [B,T]</code> 解释成从 <code>E [V,D]</code> 中选择行，而不是把 one-hot 真正 materialize。</td><td><strong>材料：</strong>Hugging Face token embedding resize、GPT weight tying。<br><strong>知识点：</strong>embedding tying、新增 token 初始化、vocab resize。</td></tr>
-        <tr><td>向量点积与相似度</td><td>用点积、范数和角度解释相似 token 表示为什么会在注意力与 LM head 中复用。</td><td><strong>材料：</strong>logit lens、representation probing 文章。<br><strong>知识点：</strong>embedding geometry、cosine/dot-product 差异、表示可解释性。</td></tr>
-        <tr><td>位置函数</td><td>用 sinusoidal 和 RoPE 说明“顺序”如何进入向量空间，同时不改变 token identity。</td><td><strong>材料：</strong>RoPE、ALiBi、YARN、LongRoPE。<br><strong>知识点：</strong>位置外推、RoPE scaling、long-context benchmark。</td></tr>
-        <tr><td>shape 纪律</td><td>贯穿 <code>[B,T,D]</code>、position ids、RoPE 成对通道和 batch broadcasting。</td><td><strong>材料：</strong>tensor parallel embedding、prefix cache 实现说明。<br><strong>知识点：</strong>embedding shard、position ids 重建、cache 位置一致性。</td></tr>
+        <tr><th>Need to Know Before Learning</th><th>This Chapter Will Clarify</th><th>Extended Reading Materials/Knowledge Points</th></tr>
+        <tr><td>One-hot and lookup tables</td><td>Interpret <code>input_ids [B,T]</code> as selecting rows from <code>E [V,D]</code>, rather than actually materializing one-hot vectors.</td><td><strong>Materials:</strong> Hugging Face token embedding resize, GPT weight tying.<br><strong>Knowledge Points:</strong> embedding tying, new token initialization, vocab resize.</td></tr>
+        <tr><td>Vector dot product and similarity</td><td>Use dot product, norm, and angle to explain why similar token representations are reused in attention and the LM head.</td><td><strong>Materials:</strong> Logit lens, representation probing articles.<br><strong>Knowledge Points:</strong> embedding geometry, cosine/dot-product differences, representation interpretability.</td></tr>
+        <tr><td>Position functions</td><td>Use sinusoidal and RoPE to show how "order" enters the vector space without changing token identity.</td><td><strong>Materials:</strong> RoPE, ALiBi, YARN, LongRoPE.<br><strong>Knowledge Points:</strong> positional extrapolation, RoPE scaling, long-context benchmark.</td></tr>
+        <tr><td>Shape discipline</td><td>Run through <code>[B,T,D]</code>, position ids, RoPE paired channels, and batch broadcasting.</td><td><strong>Materials:</strong> Tensor parallel embedding, prefix cache implementation notes.<br><strong>Knowledge Points:</strong> embedding shard, position id reconstruction, cache positional consistency.</td></tr>
       </table>
     </div>
-    <p><strong>本章覆盖情况：</strong>本章已经覆盖 one-hot 查表、位置函数、RoPE 几何和 shape 追踪；为支撑长上下文工程，后续可扩展阅读 NTK/YARN/LongRoPE 等位置外推方法，但核心先修已在本章内完成。</p>
+    <p><strong>Chapter Coverage:</strong> This chapter already covers one-hot lookup tables, position functions, RoPE geometry, and shape tracking; to support long-context engineering, subsequent reading can extend to positional extrapolation methods like NTK/YARN/LongRoPE, but the core prerequisites are already completed within this chapter.</p>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 2.1 One-Hot vs 稠密嵌入 -->
+<!-- 2.1 One-Hot vs Dense Embeddings -->
 <section class="card">
 <div class="svg-diagram" style="max-width:900px">
-  <img src="../images/rope-rotation.svg" alt="RoPE旋转位置编码原理" style="width:100%">
+  <img src="../images/rope-rotation.svg" alt="RoPE Rotary Position Encoding Principle" style="width:100%">
 </div>
-<p class="diagram-caption">图 2-1: RoPE 旋转位置编码——工作原理、核心性质与实现</p>
+<p class="diagram-caption">Figure 2-1: RoPE Rotary Position Encoding — Working Principle, Core Properties, and Implementation</p>
 </section>
 
 <!-- ================================================================ -->
 <section class="card" id="s2-1">
-  <h3>2.1 从 One-Hot 到稠密嵌入——为什么需要分布式表示</h3>
-  <p>第 1 章将文本转化为 token 序列 <span class="katex-inline" data-expr="[t_1, t_2, ..., t_n]" aria-label="[t_1, t_2, ..., t_n]" role="img"></span>，其中每个 <span class="katex-inline" data-expr="t_i \in \{0,1,...,V-1\}" aria-label="t_i \in \{0,1,...,V-1\}" role="img"></span>。现在的问题是：如何将这个整数转化为神经网络可以处理的向量？</p>
+  <h3>2.1 From One-Hot to Dense Embeddings — Why Distributed Representations Are Needed</h3>
+  <p>Chapter 1 converted text into a token sequence <span class="katex-inline" data-expr="[t_1, t_2, ..., t_n]" aria-label="[t_1, t_2, ..., t_n]" role="img"></span>, where each <span class="katex-inline" data-expr="t_i \in \{0,1,...,V-1\}" aria-label="t_i \in \{0,1,...,V-1\}" role="img"></span>. The question now is: how to convert this integer into a vector that a neural network can process?</p>
 
-  <h4>One-Hot 编码及其问题</h4>
-  <p>最直接的想法是 One-Hot 编码：将 token <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 映射为一个长度为 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的向量，第 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 位为 1，其余为 0。例如词表大小 5 时，"apple"（token 3）编码为 <span class="katex-inline" data-expr="[0,0,0,1,0]" aria-label="[0,0,0,1,0]" role="img"></span>。</p>
-  <p>但 One-Hot 有三个根本性问题：</p>
-  <p><strong>1. 维度灾难（Curse of Dimensionality）。</strong>典型词表 <span class="katex-inline" data-expr="V = 50000" aria-label="V = 50000" role="img"></span>，每个 token 就是一个 50000 维的向量。存储一个 batch（32 x 1024）的 One-Hot 需要 <span class="katex-inline" data-expr="32 \times 1024 \times 50000 \approx 1.6\text{B}" aria-label="32 \times 1024 \times 50000 \approx 1.6\text{B}" role="img"></span> 个 float——约 6.4 GB，完全不可接受。这不仅仅是存储问题：在高维空间中，所有点之间的距离趋于相等，"远近"概念消失（这是维度灾难在距离度量上的体现）。</p>
-  <p><strong>2. 语义"零亲"（Semantic Flatness）。</strong>任意两个不同的 One-Hot 向量之间余弦相似度为 0。"king"和"queen"与"king"和"apple"在 One-Hot 空间中一样"不相似"——模型无法从表示中提取任何语义关系。</p>
-  <p><strong>3. 参数效率极低。</strong>将 One-Hot 乘以一个 <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span> 的权重矩阵等价于查表选择第 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 行。那为什么不直接查表呢？</p>
+  <h4>One-Hot Encoding and Its Problems</h4>
+  <p>The most straightforward idea is One-Hot encoding: map token <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> to a vector of length <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span>, where the <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>-th bit is 1 and the rest are 0. For example, with a vocabulary size of 5, "apple" (token 3) is encoded as <span class="katex-inline" data-expr="[0,0,0,1,0]" aria-label="[0,0,0,1,0]" role="img"></span>.</p>
+  <p>But One-Hot has three fundamental problems:</p>
+  <p><strong>1. Curse of Dimensionality.</strong> With a typical vocabulary <span class="katex-inline" data-expr="V = 50000" aria-label="V = 50000" role="img"></span>, each token becomes a 50000-dimensional vector. Storing a batch (32 x 1024) of One-Hot vectors requires <span class="katex-inline" data-expr="32 \times 1024 \times 50000 \approx 1.6\text{B}" aria-label="32 \times 1024 \times 50000 \approx 1.6\text{B}" role="img"></span> floats — about 6.4 GB, completely unacceptable. This is not just a storage problem: in high-dimensional space, distances between all points tend to become equal, and the concept of "near" and "far" disappears (this is a manifestation of the curse of dimensionality in distance metrics).</p>
+  <p><strong>2. Semantic Flatness.</strong> The cosine similarity between any two different One-Hot vectors is 0. "king" and "queen" are as "dissimilar" in One-Hot space as "king" and "apple" — the model cannot extract any semantic relationships from the representation.</p>
+  <p><strong>3. Extremely Low Parameter Efficiency.</strong> Multiplying a One-Hot vector by a <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span> weight matrix is equivalent to looking up the <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>-th row. So why not just use a lookup table directly?</p>
 
-  <h4>分布式表示：核心突破</h4>
-  <p>解决方案是<strong>可学习的稠密嵌入</strong>：用一个矩阵 <span class="katex-inline" data-expr="\mathbf{E} \in \mathbb{R}^{V \times d}" aria-label="\mathbf{E} \in \mathbb{R}^{V \times d}" role="img"></span>（其中 <span class="katex-inline" data-expr="d \ll V" aria-label="d \ll V" role="img"></span>）将 token 映射到低维连续空间：</p>
+  <h4>Distributed Representations: The Core Breakthrough</h4>  <p>The solution is <strong>learnable dense embeddings</strong>: a matrix <span class="katex-inline" data-expr="\mathbf{E} \in \mathbb{R}^{V \times d}" aria-label="\mathbf{E} \in \mathbb{R}^{V \times d}" role="img"></span> (where <span class="katex-inline" data-expr="d \ll V" aria-label="d \ll V" role="img"></span>) maps tokens to a low-dimensional continuous space:</p>
   <div class="katex" data-expr="\mathbf{e}_t = \mathbf{E}[t, :] \in \mathbb{R}^{d}" aria-label="\mathbf{e}_t = \mathbf{E}[t, :] \in \mathbb{R}^{d}" role="img"></div>
-  <p>这就是 <strong>Token Embedding</strong>——等价于查表取第 <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span> 行。关键区别在于：<strong>嵌入向量是可训练的</strong>。通过语言模型训练，语义相近的 token 会获得相近的向量。</p>
+  <p>This is <strong>Token Embedding</strong>—equivalent to looking up the <span class="katex-inline" data-expr="t" aria-label="t" role="img"></span>-th row in a table. The key difference is: <strong>embedding vectors are trainable</strong>. Through language model training, semantically similar tokens will obtain similar vectors.</p>
 
-  <h4>分布假说（Distributional Hypothesis）</h4>
-  <p>这是分布式表示的理论基础——<strong>"You shall know a word by the company it keeps"</strong>（Firth, 1957）。语义相近的词出现在相似的上下文中，因此它们应该具有相似的向量表示。在嵌入空间中：</p>
+  <h4>Distributional Hypothesis</h4>
+  <p>This is the theoretical foundation of distributed representations—<strong>"You shall know a word by the company it keeps"</strong> (Firth, 1957). Words with similar meanings appear in similar contexts, so they should have similar vector representations. In the embedding space:</p>
   <ul>
-    <li>"king" 和 "queen" 出现的位置（上下文）有大量重叠 → 向量距离近</li>
-    <li>"king" 和 "apple" 的上下文基本不重叠 → 向量距离远</li>
-    <li><strong>类比推理：</strong> <span class="katex-inline" data-expr="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" aria-label="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" role="img"></span>——在 word2vec/GloVe 等静态词向量中常见，但它是语料、训练目标和评价方式共同形成的经验现象，不是嵌入层自动保证的数学性质</li>
+    <li>"king" and "queen" appear in positions (contexts) with significant overlap → vectors are close</li>
+    <li>"king" and "apple" have contexts that barely overlap → vectors are far apart</li>
+    <li><strong>Analogical reasoning:</strong> <span class="katex-inline" data-expr="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" aria-label="\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}" role="img"></span>—common in static word vectors like word2vec/GloVe, but it is an empirical phenomenon formed by the corpus, training objective, and evaluation method, not a mathematical property automatically guaranteed by the embedding layer</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>参数量：</strong>嵌入矩阵 <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span>。GPT-2 124M 中 <span class="katex-inline" data-expr="V=50257, d=768" aria-label="V=50257, d=768" role="img"></span>，嵌入层约 3860 万参数——占模型总参数的 31%！嵌入矩阵通常与 LM Head（输出投影）共享权重（weight tying），进一步复用参数。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Parameter Count:</strong> Embedding matrix <span class="katex-inline" data-expr="V \times d" aria-label="V \times d" role="img"></span>. In GPT-2 124M, <span class="katex-inline" data-expr="V=50257, d=768" aria-label="V=50257, d=768" role="img"></span>, the embedding layer has approximately 38.6 million parameters—31% of the total model parameters! The embedding matrix is often shared with the LM Head (output projection) via weight tying to further reuse parameters.</div></div>
 </section>
 
 <!-- ================================================================ -->
 <!-- 2.1A Word vectors -->
 <!-- ================================================================ -->
 <section class="card" id="s2-1a">
-  <h3>2.1A 从 word2vec/GloVe 到 LLM Token Embedding</h3>
-  <p>本课程从 word vectors 切入，是因为它们展示了一个核心思想：语义不是手写规则，而是可以从上下文统计中学习出来。现代 LLM 的 <code>nn.Embedding</code> 不再单独训练成静态词向量，但它仍继承了同一个表示学习问题：如何把离散 token 映射到可微、可比较、可组合的连续空间。</p>
+  <h3>2.1A From word2vec/GloVe to LLM Token Embedding</h3>
+  <p>This course starts with word vectors because they demonstrate a core idea: semantics are not hand-written rules but can be learned from contextual statistics. The <code>nn.Embedding</code> in modern LLMs is no longer trained independently as static word vectors, but it still inherits the same representation learning problem: how to map discrete tokens to a differentiable, comparable, and composable continuous space.</p>
 
   <h4>Skip-gram with Negative Sampling</h4>
-  <p>word2vec 的 skip-gram 目标是：给定中心词 <span class="katex-inline" data-expr="w_t" aria-label="w_t" role="img"></span>，预测窗口内上下文词 <span class="katex-inline" data-expr="w_{t+j}" aria-label="w_{t+j}" role="img"></span>。负采样版本把“真实上下文词”与“随机噪声词”区分开：</p>
+  <p>The goal of word2vec's skip-gram is: given a center word <span class="katex-inline" data-expr="w_t" aria-label="w_t" role="img"></span>, predict the context words <span class="katex-inline" data-expr="w_{t+j}" aria-label="w_{t+j}" role="img"></span> within the window. The negative sampling version distinguishes "real context words" from "random noise words":</p>
   <div class="math-box"><div class="label">Skip-gram Negative Sampling</div>
     <div class="katex" data-expr="\log \sigma(\mathbf{u}_o^\top \mathbf{v}_c) + \sum_{k=1}^{K} \mathbb{E}_{w_k \sim P_n(w)}\left[\log \sigma(-\mathbf{u}_{w_k}^\top \mathbf{v}_c)\right]" aria-label="\log \sigma(\mathbf{u}_o^\top \mathbf{v}_c) + \sum_{k=1}^{K} \mathbb{E}_{w_k \sim P_n(w)}\left[\log \sigma(-\mathbf{u}_{w_k}^\top \mathbf{v}_c)\right]" role="img"></div>
   </div>
-  <p>这里 <span class="katex-inline" data-expr="\mathbf{v}_c" aria-label="\mathbf{v}_c" role="img"></span> 是中心词向量，<span class="katex-inline" data-expr="\mathbf{u}_o" aria-label="\mathbf{u}_o" role="img"></span> 是真实上下文词的输出向量，负样本来自噪声分布 <span class="katex-inline" data-expr="P_n(w)" aria-label="P_n(w)" role="img"></span>。如果两个词经常共享上下文，它们会在训练中获得相似的向量方向。</p>
+  <p>Here <span class="katex-inline" data-expr="\mathbf{v}_c" aria-label="\mathbf{v}_c" role="img"></span> is the center word vector, <span class="katex-inline" data-expr="\mathbf{u}_o" aria-label="\mathbf{u}_o" role="img"></span> is the output vector of the real context word, and negative samples come from the noise distribution <span class="katex-inline" data-expr="P_n(w)" aria-label="P_n(w)" role="img"></span>. If two words frequently share contexts, they will obtain similar vector directions during training.</p>
 
-  <h4>从窗口共现到 loss：为什么这是可计算作业</h4>
-  <p>skip-gram 的训练样本来自滑动窗口。给定 token 序列 <code>[0, 1, 2, 1]</code> 和窗口大小 1，中心词 1 会把左右相邻 token 0、2、2 计作上下文；这会形成一个 directed co-occurrence matrix <span class="katex-inline" data-expr="C_{center,context}" aria-label="C_{center,context}" role="img"></span>。Ch02 作业中的 <code>build_cooccurrence_matrix</code> 就让学生把这个统计过程写成代码。</p>
-  <p>SGNS loss 则把每个真实 <code>(center, context)</code> 对当作正例，把从噪声分布采样的 token 当作负例。对一个 batch：</p>
+  <h4>From Window Co-occurrence to Loss: Why This is a Computable Exercise</h4>
+  <p>Training samples for skip-gram come from a sliding window. Given the token sequence <code>[0, 1, 2, 1]</code> and a window size of 1, the center word 1 counts the adjacent tokens 0, 2, and 2 as context; this forms a directed co-occurrence matrix <span class="katex-inline" data-expr="C_{center,context}" aria-label="C_{center,context}" role="img"></span>. The <code>build_cooccurrence_matrix</code> function in the Ch02 exercise asks students to write this statistical process as code.</p>
+  <p>The SGNS loss treats each real <code>(center, context)</code> pair as a positive example and tokens sampled from the noise distribution as negative examples. For one batch:</p>
   <div class="math-box"><div class="label">SGNS Batch Loss</div>
     <div class="katex" data-expr="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" aria-label="\mathcal{L}= -\frac{1}{B}\sum_b \left[\log\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b}) + \sum_{k=1}^{K}\log\sigma(-\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\right]" role="img"></div>
   </div>
-  <p>作业函数 <code>skipgram_negative_sampling_loss</code> 的输入形状是 <code>center_vectors [B,D]</code>、<code>positive_vectors [B,D]</code> 和 <code>negative_vectors [B,K,D]</code>。这让学生看到：word vectors 不是抽象概念，而是由 dot product、sigmoid 和二分类 loss 训练出来的。</p>
-  <div class="math-box"><div class="label">SGNS 对中心向量的梯度</div>
+  <p>The input shapes for the exercise function <code>skipgram_negative_sampling_loss</code> are <code>center_vectors [B,D]</code>, <code>positive_vectors [B,D]</code>, and <code>negative_vectors [B,K,D]</code>. This lets students see that word vectors are not an abstract concept but are trained via dot products, sigmoid, and binary classification loss.</p>
+  <div class="math-box"><div class="label">Gradient of SGNS with respect to the center vector</div>
     <div class="katex" data-expr="\frac{\partial L_b}{\partial \mathbf{v}_{c_b}}=(\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b})-1)\mathbf{u}_{o_b}+\sum_k \sigma(\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\mathbf{u}_{n_{b,k}}" aria-label="\frac{\partial L_b}{\partial \mathbf{v}_{c_b}}=(\sigma(\mathbf{u}_{o_b}^{\top}\mathbf{v}_{c_b})-1)\mathbf{u}_{o_b}+\sum_k \sigma(\mathbf{u}_{n_{b,k}}^{\top}\mathbf{v}_{c_b})\mathbf{u}_{n_{b,k}}" role="img"></div>
   </div>
-  <p>在 mean reduction 下还要除以 batch size。梯度下降会沿着负梯度更新：正例项把中心向量拉向真实上下文，负样本项把中心向量推离噪声上下文。Ch02 作业中的 <code>sgns_center_gradient</code> 要求学生把这个符号方向写成张量计算，并与 autograd 对齐。</p>
-  <p>SGNS 也可以从矩阵分解角度理解。给定 directed co-occurrence count <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span>、中心词边际计数 <span class="katex-inline" data-expr="X_{i*}" aria-label="X_{i*}" role="img"></span>、上下文词边际计数 <span class="katex-inline" data-expr="X_{*j}" aria-label="X_{*j}" role="img"></span> 和总共现数 <span class="katex-inline" data-expr="X_{**}" aria-label="X_{**}" role="img"></span>，PMI 写作：</p>
-  <div class="math-box"><div class="label">PMI 与 shifted PMI</div>
+  <p>Under mean reduction, this is also divided by the batch size. Gradient descent updates along the negative gradient: the positive example term pulls the center vector towards the real context, and the negative sample term pushes the center vector away from the noise context. The <code>sgns_center_gradient</code> function in the Ch02 exercise asks students to write this symbolic direction as tensor computation and align it with autograd.</p>
+  <p>SGNS can also be understood from a matrix factorization perspective. Given the directed co-occurrence count <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span>, the center word marginal count <span class="katex-inline" data-expr="X_{i*}" aria-label="X_{i*}" role="img"></span>, the context word marginal count <span class="katex-inline" data-expr="X_{*j}" aria-label="X_{*j}" role="img"></span>, and the total co-occurrence count <span class="katex-inline" data-expr="X_{**}" aria-label="X_{**}" role="img"></span>, PMI is written as:</p>
+  <div class="math-box"><div class="label">PMI and shifted PMI</div>
     <div class="katex" data-expr="\text{PMI}(i,j)=\log\frac{X_{ij}X_{**}}{X_{i*}X_{*j}},\qquad \text{SPMI}(i,j)=\text{PMI}(i,j)-\log K" aria-label="\text{PMI}(i,j)=\log\frac{X_{ij}X_{**}}{X_{i*}X_{*j}},\qquad \text{SPMI}(i,j)=\text{PMI}(i,j)-\log K" role="img"></div>
   </div>
-  <p>在常见假设下，SGNS 学到的 dot product 与 shifted PMI 有紧密关系：负样本数 <span class="katex-inline" data-expr="K" aria-label="K" role="img"></span> 越大，目标 dot product 会整体向下平移 <span class="katex-inline" data-expr="\log K" aria-label="\log K" role="img"></span>。Ch02 作业中的 <code>shifted_pmi_matrix(cooccurrence, negative_samples)</code> 让学生从共现矩阵显式计算这个统计量；未出现的 <span class="katex-inline" data-expr="X_{ij}=0" aria-label="X_{ij}=0" role="img"></span> 共现对 PMI 未定义，函数返回 <code>-inf</code>，如果要做 PPMI 才进一步裁剪到非负。</p>
-  <p>为了把“相似”和“类比”也落到可计算层面，Ch02 作业还加入 <code>cosine_similarity_matrix</code> 与 <code>analogy_3cosadd</code>。前者把 embedding 行向量归一化后计算两两余弦相似度；后者用 <span class="katex-inline" data-expr="\mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c" aria-label="\mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c" role="img"></span> 作为查询向量，并排除输入词后返回最相近词。学生应把它理解为静态词向量空间结构的诊断方法，而不是证明模型“理解”语义关系。</p>
+  <p>Under common assumptions, the dot product learned by SGNS is closely related to shifted PMI: the larger the number of negative samples <span class="katex-inline" data-expr="K" aria-label="K" role="img"></span>, the more the target dot product is shifted downward by <span class="katex-inline" data-expr="\log K" aria-label="\log K" role="img"></span>. The <code>shifted_pmi_matrix(cooccurrence, negative_samples)</code> function in the Ch02 exercise asks students to explicitly compute this statistic from the co-occurrence matrix; for non-occurring pairs where <span class="katex-inline" data-expr="X_{ij}=0" aria-label="X_{ij}=0" role="img"></span>, PMI is undefined, and the function returns <code>-inf</code>. Only if doing PPMI is it further clipped to non-negative values.</p>
+  <p>To make "similarity" and "analogy" computable, the Ch02 exercise also includes <code>cosine_similarity_matrix</code> and <code>analogy_3cosadd</code>. The former normalizes the embedding row vectors and computes pairwise cosine similarity; the latter uses <span class="katex-inline" data-expr="\mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c" aria-label="\mathbf{v}_b-\mathbf{v}_a+\mathbf{v}_c" role="img"></span> as the query vector and, after excluding the input words, returns the most similar word. Students should understand this as a diagnostic method for the structure of the static word vector space, not as proof that the model "understands" semantic relationships.</p>
 
-  <h4>GloVe：从全局共现矩阵学习</h4>
-  <p>GloVe 从全局词-词共现矩阵 <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span> 出发，用加权最小二乘拟合共现对数：</p>
+  <h4>GloVe: Learning from the Global Co-occurrence Matrix</h4>
+  <p>GloVe starts from the global word-word co-occurrence matrix <span class="katex-inline" data-expr="X_{ij}" aria-label="X_{ij}" role="img"></span> and uses weighted least squares to fit the co-occurrence logarithm:</p>
   <div class="math-box"><div class="label">GloVe Objective</div>
     <div class="katex" data-expr="J = \sum_{i,j} f(X_{ij})\left(\mathbf{w}_i^\top \tilde{\mathbf{w}}_j + b_i + \tilde{b}_j - \log X_{ij}\right)^2" aria-label="J = \sum_{i,j} f(X_{ij})\left(\mathbf{w}_i^\top \tilde{\mathbf{w}}_j + b_i + \tilde{b}_j - \log X_{ij}\right)^2" role="img"></div>
   </div>
-  <p>与 skip-gram 主要利用局部窗口样本不同，GloVe 显式建模全局共现统计。Ch02 作业中的 <code>glove_weighted_loss</code> 要求学生只在非零共现项上计算加权残差，并使用 <code>min((X_ij / x_max)^alpha, 1)</code> 降低极低频或极高频共现对目标的支配。两者都说明：向量空间中的相似性来自训练目标和语料统计，而不是 one-hot ID 本身。</p>
+  <p>Unlike skip-gram, which primarily uses local window samples, GloVe explicitly models global co-occurrence statistics. The <code>glove_weighted_loss</code> function in the Ch02 exercise asks students to compute the weighted residual only on non-zero co-occurrence entries and to use <code>min((X_ij / x_max)^alpha, 1)</code> to reduce the dominance of very low-frequency or very high-frequency co-occurrence pairs on the objective. Both demonstrate that similarity in the vector space comes from the training objective and corpus statistics, not from the one-hot ID itself.</p>
 
-  <h4>静态词向量与 LLM 嵌入的区别</h4>
+  <h4>Differences Between Static Word Vectors and LLM Embeddings</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>维度</th><th>word2vec/GloVe</th><th>LLM Token Embedding</th></tr>
-      <tr><td>训练方式</td><td>通常先在语料上独立训练，再用于下游任务</td><td>与 Transformer、LM head 和 loss 端到端共同训练</td></tr>
-      <tr><td>表示对象</td><td>多为 word 或 subword 的静态向量</td><td>token 的输入向量，后续层会生成上下文化表示</td></tr>
-      <tr><td>同一词多义</td><td>一个词通常只有一个向量，难区分语境</td><td>同一 token 的初始向量相同，但经过 attention 后上下文表示不同</td></tr>
-      <tr><td>类比现象</td><td>常用于观察线性结构，如 gender/country-capital</td><td>不是主要评价方式，LLM 能力更多来自多层上下文计算</td></tr>
+      <tr><th>Dimension</th><th>word2vec/GloVe</th><th>LLM Token Embedding</th></tr>
+      <tr><td>Training Method</td><td>Typically trained independently on a corpus first, then used for downstream tasks</td><td>End-to-end co-trained with the Transformer, LM head, and loss</td></tr>
+      <tr><td>Representation Object</td><td>Mostly static vectors for words or subwords</td><td>Input vector for a token; subsequent layers generate contextualized representations</td></tr>
+      <tr><td>Polysemy</td><td>A word usually has only one vector, making it difficult to distinguish context</td><td>The initial vector for the same token is identical, but after attention, the contextual representation differs</td></tr>
+      <tr><td>Analogy Phenomenon</td><td>Commonly used to observe linear structures, e.g., gender/country-capital</td><td>Not the primary evaluation method; LLM capabilities come more from multi-layer contextual computation</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>连接到下一节：</strong><code>nn.Embedding</code> 只负责把 token id 查成初始向量；真正的上下文语义要经过位置编码、注意力和多层 Transformer 才逐步形成。不要把“embedding 相似”误解为模型最终理解的全部。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Connection to the next section:</strong> <code>nn.Embedding</code> is only responsible for looking up the initial vector from the token id; true contextual semantics are gradually formed through positional encoding, attention, and multi-layer Transformers. Do not mistake "embedding similarity" for the entirety of the model's final understanding.</div></div>
 </section>
 
 <section class="card" id="s2-1b">
-  <h3>2.1B Worked Example：从共现计数到 PMI、SGNS 和类比</h3>
-  <p>为了把 word vectors 从口号变成可计算对象，考虑一个只有三个词的 toy 词表：<code>king</code>、<code>queen</code>、<code>apple</code>。滑动窗口统计得到如下 directed co-occurrence matrix，行是 center word，列是 context word：</p>
+  <h3>2.1B Worked Example: From Co-occurrence Counts to PMI, SGNS, and Analogies</h3>
+  <p>To turn word vectors from a slogan into a computable object, consider a toy vocabulary with only three words: <code>king</code>, <code>queen</code>, <code>apple</code>. Sliding window statistics yield the following directed co-occurrence matrix, where rows are center words and columns are context words:</p>
   <div class="table-wrap">
     <table>
       <tr><th><code>C_{center,context}</code></th><th>king</th><th>queen</th><th>apple</th><th>row sum</th></tr>
       <tr><td>king</td><td>0</td><td>8</td><td>1</td><td>9</td></tr>
       <tr><td>queen</td><td>6</td><td>0</td><td>1</td><td>7</td></tr>
-      <tr><td>apple</td><td>1</td><td>1</td><td>0</td><td>2</td></tr>
-      <tr><td>column sum</td><td>7</td><td>9</td><td>2</td><td>18</td></tr>
+      <tr><td>apple</td><td>1</td><td>1</td><td>0</td><td>2</td></tr>      <tr><td>column sum</td><td>7</td><td>9</td><td>2</td><td>18</td></tr>
     </table>
   </div>
 
-  <h4>PMI 衡量“比随机独立更常共同出现多少”</h4>
-  <p>对 <code>king</code> 作为 center、<code>queen</code> 作为 context 的共现对：</p>
+  <h4>PMI measures "how much more often co-occurring than random independence"</h4>
+  <p>For the co-occurrence pair with <code>king</code> as center and <code>queen</code> as context:</p>
   <div class="math-box"><div class="label">PMI(king, queen)</div>
     <div class="katex" data-expr="\text{PMI}=\log\frac{C_{\text{king},\text{queen}}\cdot C_{**}}{C_{\text{king},*}\cdot C_{*,\text{queen}}}=\log\frac{8\cdot18}{9\cdot9}\approx0.575" aria-label="\text{PMI}=\log\frac{C_{\text{king},\text{queen}}\cdot C_{**}}{C_{\text{king},*}\cdot C_{*,\text{queen}}}=\log\frac{8\cdot18}{9\cdot9}\approx0.575" role="img"></div>
   </div>
-  <p>对 <code>king</code> 和 <code>apple</code>：</p>
+  <p>For <code>king</code> and <code>apple</code>:</p>
   <div class="math-box"><div class="label">PMI(king, apple)</div>
     <div class="katex" data-expr="\text{PMI}=\log\frac{1\cdot18}{9\cdot2}=\log1=0" aria-label="\text{PMI}=\log\frac{1\cdot18}{9\cdot2}=\log1=0" role="img"></div>
   </div>
-  <p>这说明 <code>king</code> 与 <code>queen</code> 的共现频率高于独立假设下的期望，而 <code>king</code> 与 <code>apple</code> 在这个 toy 语料里接近独立。若 SGNS 使用 <span class="katex-inline" data-expr="K=5" aria-label="K=5" role="img"></span> 个负样本，shifted PMI 会整体减去 <span class="katex-inline" data-expr="\log5" aria-label="\log5" role="img"></span>；这不是说语义变差了，而是负采样目标改变了 dot product 的零点。</p>
+  <p>This indicates that the co-occurrence frequency of <code>king</code> and <code>queen</code> is higher than expected under the independence assumption, while <code>king</code> and <code>apple</code> are nearly independent in this toy corpus. If SGNS uses <span class="katex-inline" data-expr="K=5" aria-label="K=5" role="img"></span> negative samples, the shifted PMI will subtract <span class="katex-inline" data-expr="\log5" aria-label="\log5" role="img"></span> overall; this does not mean the semantics have worsened, but rather that the negative sampling objective changes the zero point of the dot product.</p>
 
-  <h4>SGNS 把共现变成二分类训练信号</h4>
-  <p>假设某个 batch 中正例 <code>(center=king, context=queen)</code> 的 dot product 为 1.5，两个负样本 <code>apple</code> 和另一个随机词的 dot product 分别为 -0.4 和 0.2。该样本的负对数似然为：</p>
-  <div class="math-box"><div class="label">SGNS 单样本 loss</div>
+  <h4>SGNS turns co-occurrence into a binary classification training signal</h4>
+  <p>Assume in a certain batch, the dot product of the positive example <code>(center=king, context=queen)</code> is 1.5, and the dot products of two negative samples <code>apple</code> and another random word are -0.4 and 0.2 respectively. The negative log-likelihood for this sample is:</p>
+  <div class="math-box"><div class="label">SGNS single sample loss</div>
     <div class="katex" data-expr="-\left[\log\sigma(1.5)+\log\sigma(0.4)+\log\sigma(-0.2)\right]" aria-label="-[\log sigma(1.5)+log sigma(0.4)+log sigma(-0.2)]" role="img"></div>
   </div>
-  <p>正例 dot product 越大，第一项 loss 越小；负样本 dot product 越小，后两项 loss 越小。训练不是直接给“king 和 queen 很像”这个标签，而是通过许多局部上下文二分类样本，让经常出现在相似上下文中的词获得相似向量。</p>
+  <p>The larger the positive example dot product, the smaller the first term loss; the smaller the negative sample dot product, the smaller the latter two terms loss. Training does not directly provide the label "king and queen are very similar," but through many local context binary classification samples, words that frequently appear in similar contexts obtain similar vectors.</p>
 
-  <h4>类比推理是空间结构的诊断，不是目标函数保证</h4>
-  <p>3CosAdd 查询 <span class="katex-inline" data-expr="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" aria-label="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" role="img"></span> 的含义是：从 <code>king</code> 的向量中减去与 <code>man</code> 相关的方向，再加上与 <code>woman</code> 相关的方向，然后找余弦相似度最高的候选。这个过程通常还要排除输入词 <code>king</code>、<code>man</code>、<code>woman</code>，否则最近邻可能只是原词本身。</p>
-  <p>类比成功依赖很多条件：语料中相关关系足够系统，向量经过合适训练，频率和多义性没有主导距离，评价集也接受单一词答案。因此本课程把类比题作为“向量空间是否学到某类线性规律”的检查，而不是把它作为语义理解的充分证明。</p>
+  <h4>Analogy reasoning is a diagnosis of spatial structure, not a guarantee from the objective function</h4>
+  <p>The meaning of the 3CosAdd query <span class="katex-inline" data-expr="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" aria-label="\mathbf{v}_{king}-\mathbf{v}_{man}+\mathbf{v}_{woman}" role="img"></span> is: subtract the direction related to <code>man</code> from the vector of <code>king</code>, then add the direction related to <code>woman</code>, and finally find the candidate with the highest cosine similarity. This process usually also excludes the input words <code>king</code>, <code>man</code>, <code>woman</code>; otherwise, the nearest neighbor might just be the original word itself.</p>
+  <p>Successful analogy depends on many conditions: the relevant relationships in the corpus are sufficiently systematic, the vectors are appropriately trained, frequency and polysemy do not dominate the distance, and the evaluation set accepts a single word answer. Therefore, this course treats analogy tasks as a check for "whether the vector space has learned a certain type of linear regularity," rather than as sufficient proof of semantic understanding.</p>
 </section>
 
 <section class="card" id="s2-1c">
-  <h3>2.1C Embedding 空间诊断：相似、各向异性与频率效应</h3>
-  <p>训练出一个 embedding 矩阵之后，不能只看 loss 下降就认为表示已经“学好”。本课程会反复强调：向量空间的几何结构来自训练目标和数据分布，也会带来偏差与失败模式。对 LLM 工程师来说，embedding 诊断是发现 tokenizer、数据配比、初始化和 weight tying 问题的早期信号。</p>
+  <h3>2.1C Embedding Space Diagnostics: Similarity, Anisotropy, and Frequency Effects</h3>
+  <p>After training an embedding matrix, one should not assume the representation is "well-learned" just because the loss has decreased. This course will repeatedly emphasize: the geometric structure of the vector space arises from the training objective and data distribution, and it also brings biases and failure modes. For LLM engineers, embedding diagnostics are early signals for discovering issues with the tokenizer, data mix, initialization, and weight tying.</p>
 
-  <h4>1. 行范数不是语义强度</h4>
-  <p>embedding 矩阵 <code>E[V, d]</code> 中每一行对应一个 token。训练后常见现象是高频 token 的行范数更大，因为它们被更新次数更多；特殊 token、空格、标点和常见子词也可能形成明显簇。范数大不等于语义更重要，它往往混合了频率、优化历史和输出层梯度。</p>
+  <h4>1. Row norm is not semantic strength</h4>
+  <p>Each row in the embedding matrix <code>E[V, d]</code> corresponds to a token. A common phenomenon after training is that high-frequency tokens have larger row norms because they are updated more often; special tokens, spaces, punctuation, and common subwords may also form distinct clusters. A large norm does not mean greater semantic importance; it often mixes frequency, optimization history, and output layer gradients.</p>
   <div class="code-block" data-lang="text">
 diagnostics:
   row_norm_mean / row_norm_p95
@@ -220,115 +218,114 @@ diagnostics:
   low_norm_tokens
   norm_by_frequency_bucket
   special_token_norms</div>
-  <p>如果新加的特殊 token 范数远低于普通 token，可能是它们初始化后训练不足；如果 padding token 范数被大量更新，通常说明 loss mask 或 attention mask 有问题。</p>
+  <p>If the norms of newly added special tokens are significantly lower than those of common tokens, it may indicate insufficient training after initialization; if the norm of the padding token is heavily updated, it usually suggests a problem with the loss mask or attention mask.</p>
 
-  <h4>2. Cosine similarity 要先处理尺度</h4>
-  <p>余弦相似度把向量方向和长度分开，是观察语义邻居、类比和聚类的常用工具。Ch02 作业中的 <code>cosine_similarity_matrix</code> 先把每行归一化，再计算 <code>normalized @ normalized.T</code>。这一步很重要：若直接用 dot product，高范数高频 token 会主导最近邻结果。</p>
-  <p>但 cosine 也不是万能解释。LLM 的输入 embedding 只是第一层表示，同一个 token 在不同上下文中的最终 hidden state 可以完全不同。因此“embedding 中相近”只说明初始 token 表示相近，不等于模型最终会把两个词当成同义词处理。</p>
+  <h4>2. Cosine similarity must first handle scale</h4>
+  <p>Cosine similarity separates vector direction and magnitude, making it a common tool for observing semantic neighbors, analogies, and clusters. In the Ch02 assignment, <code>cosine_similarity_matrix</code> first normalizes each row, then computes <code>normalized @ normalized.T</code>. This step is important: if dot product is used directly, high-norm, high-frequency tokens will dominate the nearest neighbor results.</p>
+  <p>However, cosine is not a universal explanation. The input embedding of an LLM is only the first layer representation; the final hidden state of the same token in different contexts can be completely different. Therefore, "close in embedding space" only indicates that the initial token representations are similar, not that the model will ultimately treat the two words as synonyms.</p>
 
-  <h4>3. 各向异性会让最近邻退化</h4>
-  <p>高维 embedding 空间常出现<strong>各向异性</strong>：大量向量朝向某些共同方向，导致任意两个 token 的 cosine 都偏高，最近邻被频率、格式或公共方向支配。一个简单诊断是统计 off-diagonal cosine 的分布：</p>
+  <h4>3. Anisotropy can degrade nearest neighbors</h4>
+  <p>High-dimensional embedding spaces often exhibit <strong>anisotropy</strong>: many vectors point towards certain common directions, causing the cosine similarity between any two tokens to be artificially high, and nearest neighbors to be dominated by frequency, format, or common directions. A simple diagnostic is to analyze the distribution of off-diagonal cosine values:</p>
   <div class="code-block" data-lang="text">
 cosine matrix excluding diagonal:
-  mean close to 0      -> 空间较均衡
-  mean high positive   -> 可能存在公共方向或频率主导
-  p95 very high        -> 局部簇或重复 token 过强</div>
-  <p>研究中常用去均值、去主成分或 whitening 来分析静态词向量，但工程上不要随意把这些变换应用到正在训练的 LLM embedding。诊断的目标是理解问题来源，而不是在没有验证的情况下修改模型参数。</p>
+  mean close to 0      -> space is relatively balanced
+  mean high positive   -> possible common direction or frequency dominance
+  p95 very high        -> local clusters or repeated tokens too strong</div>
+  <p>Research often uses mean-centering, principal component removal, or whitening to analyze static word vectors, but in engineering, do not arbitrarily apply these transformations to a training LLM's embedding. The goal of diagnostics is to understand the source of the problem, not to modify model parameters without validation.</p>
 
-  <h4>4. 类比成功需要系统关系，而不是单个例子</h4>
-  <p>3CosAdd 的形式 <code>v_b - v_a + v_c</code> 假设某种关系可以近似表示为线性方向。例如 gender、capital-country 或词形变化在某些语料中可能形成方向。但一个成功例子不说明模型理解了关系；一个失败例子也不说明 embedding 毫无语义。严谨做法是按关系类型构造一组 query，报告 top-k accuracy，并检查错误是否来自频率、子词切分、多义词或评价集歧义。</p>
+  <h4>4. Analogy success requires systematic relationships, not individual examples</h4>
+  <p>The form of 3CosAdd, <code>v_b - v_a + v_c</code>, assumes that a certain relationship can be approximately represented as a linear direction. For example, gender, capital-country, or morphological changes may form directions in some corpora. However, one successful example does not prove the model understands the relationship; one failed example does not prove the embedding is devoid of semantics. A rigorous approach is to construct a set of queries by relationship type, report top-k accuracy, and check if errors stem from frequency, subword segmentation, polysemy, or evaluation set ambiguity.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>诊断项</th><th>能说明什么</th><th>不能说明什么</th></tr>
-      <tr><td>最近邻</td><td>局部方向是否聚出相关 token</td><td>不能证明上下文语义等价</td></tr>
-      <tr><td>类比 top-k</td><td>某类线性关系是否系统存在</td><td>不能覆盖推理、事实性或多义性</td></tr>
-      <tr><td>范数分布</td><td>频率、mask、特殊 token 更新是否异常</td><td>不能单独解释 token 重要性</td></tr>
-      <tr><td>off-diagonal cosine</td><td>空间是否被公共方向主导</td><td>不能直接给出修复方案</td></tr>
+      <tr><th>Diagnostic Item</th><th>What it can indicate</th><th>What it cannot indicate</th></tr>
+      <tr><td>Nearest Neighbors</td><td>Whether local directions cluster related tokens</td><td>Cannot prove contextual semantic equivalence</td></tr>
+      <tr><td>Analogy top-k</td><td>Whether a certain linear relationship exists systematically</td><td>Cannot cover reasoning, factuality, or polysemy</td></tr>
+      <tr><td>Norm Distribution</td><td>Whether updates for frequency, mask, special tokens are abnormal</td><td>Cannot explain token importance alone</td></tr>
+      <tr><td>Off-diagonal Cosine</td><td>Whether the space is dominated by a common direction</td><td>Cannot directly provide a fix</td></tr>
     </table>
   </div>
 
-  <h4>5. LLM embedding 的工程检查点</h4>
-  <p>在训练或微调模型时，建议至少在以下时刻看一次 embedding 诊断：tokenizer 变更后、添加特殊 token 后、weight tying 打开/关闭后、SFT 开始前后、训练 loss 异常时。特别关注：</p>
+  <h4>5. Engineering checkpoints for LLM embeddings</h4>
+  <p>When training or fine-tuning a model, it is recommended to run embedding diagnostics at least at the following times: after a tokenizer change, after adding special tokens, after enabling/disabling weight tying, before and after SFT starts, and when training loss is abnormal. Pay special attention to:</p>
   <ul>
-    <li><strong>新增 token 是否被训练：</strong>特殊 token 和领域术语是否有非零梯度和合理范数。</li>
-    <li><strong>padding 是否泄漏：</strong>PAD 行是否被 loss 更新，attention mask 是否让模型关注 padding。</li>
-    <li><strong>语言/领域是否失衡：</strong>少数语言或代码 token 是否长期被切碎且范数偏低。</li>
-    <li><strong>weight tying 是否一致：</strong>输入 embedding 和 LM head 共享时，输出端梯度会更新所有 softmax 行；未共享时两套空间可能逐渐分离。</li>
+    <li><strong>Whether new tokens are being trained:</strong> Do special tokens and domain terms have non-zero gradients and reasonable norms?</li>
+    <li><strong>Whether padding leaks:</strong> Is the PAD row updated by the loss? Does the attention mask cause the model to attend to padding?</li>
+    <li><strong>Whether language/domain is imbalanced:</strong> Are tokens for minority languages or code frequently fragmented and have low norms?</li>
+    <li><strong>Whether weight tying is consistent:</strong> When input embedding and LM head are shared, the output gradient updates all softmax rows; when not shared, the two spaces may gradually diverge.</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>Embedding 不是静态语义词典，而是训练目标、tokenizer、频率和输出层共同塑造的参数矩阵。诊断 embedding 空间的价值在于发现系统性问题，而不是用单个最近邻或类比例子证明模型“理解语言”。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> Embeddings are not static semantic dictionaries, but parameter matrices shaped jointly by the training objective, tokenizer, frequency, and output layer. The value of diagnosing the embedding space lies in discovering systemic issues, not in using a single nearest neighbor or analogy example to prove the model "understands language."</div></div>
 </section>
 
 <section class="card" id="s2-1d">
-  <h3>2.1D 静态词向量到上下文化表示：同一个 token 为什么会有不同语义</h3>
-  <p>word2vec 和 GloVe 学到的是静态向量：词表中每个词或子词通常对应一个固定向量。现代 Transformer 的输入 embedding 也是一个固定查表矩阵，但模型真正用于预测、分类或生成的不是这行初始向量，而是经过多层 attention 和 FFN 后的 hidden state。这个区别是理解 BERT、GPT、RAG reranker 和上下文学习的关键。</p>
+  <h3>2.1D From Static Word Vectors to Contextualized Representations: Why the Same Token Can Have Different Semantics</h3>
+  <p>Word2vec and GloVe learn static vectors: each word or subword in the vocabulary typically corresponds to a fixed vector. The input embedding of a modern Transformer is also a fixed lookup table matrix, but the representation the model actually uses for prediction, classification, or generation is not this initial row vector; it is the hidden state after multiple layers of attention and FFN. This distinction is key to understanding BERT, GPT, RAG rerankers, and in-context learning.</p>
 
-  <h4>1. 输入 embedding 只是第 0 层表示</h4>
-  <p>给定 token 序列 <code>x_1,...,x_T</code>，第 0 层表示通常写成：</p>
+  <h4>1. Input embedding is just the layer-0 representation</h4>
+  <p>Given a token sequence <code>x_1,...,x_T</code>, the layer-0 representation is usually written as:</p>
   <div class="math-box"><div class="label">Layer-0 representation</div>
     <div class="katex" data-expr="h_i^{(0)} = E[x_i] + p_i" aria-label="h_i^0 = E[x_i] + p_i" role="img"></div>
   </div>
-  <p>其中 <code>E[x_i]</code> 是 token embedding，<code>p_i</code> 是位置表示或位置机制带来的信息。经过第 <code>l</code> 层 Transformer 后：</p>
+  <p>where <code>E[x_i]</code> is the token embedding and <code>p_i</code> is the position representation or information from the positional mechanism. After the <code>l</code>-th Transformer layer:</p>
   <div class="math-box"><div class="label">Contextual representation</div>
     <div class="katex" data-expr="h_i^{(l)} = \mathrm{TransformerBlock}^{(l)}(h_1^{(l-1)},\ldots,h_T^{(l-1)})_i" aria-label="h_i^l = TransformerBlock(h_1 ... h_T)_i" role="img"></div>
   </div>
-  <p>因此同一个 token 的 <code>E[token]</code> 在所有上下文中相同，但 <code>h_i^{(l)}</code> 会随着左右上下文、位置、attention pattern 和前面层的计算而变化。静态 embedding 负责给模型一个可训练起点；上下文化表示才是模型在当前句子里对这个位置的解释。</p>
+  <p>Therefore, <code>E[token]</code> for the same token is identical across all contexts, but <code>h_i^{(l)}</code> changes with the surrounding context, position, attention pattern, and computations from previous layers. The static embedding provides a trainable starting point for the model; the contextualized representation is the model's interpretation of that position within the current sentence.</p>
 
-  <h4>2. Worked Example：bank 的两种语境</h4>
-  <p>考虑两个句子：</p>
+  <h4>2. Worked Example: Two Contexts for "bank"</h4>
+  <p>Consider two sentences:</p>
   <div class="code-block" data-lang="text">
 S1: I deposited money at the bank.
 S2: I sat near the river bank.</div>
-  <p>如果 tokenizer 都把 <code>bank</code> 映射为同一个 token id，那么输入查表得到的 <code>E[bank]</code> 完全相同。差异来自上下文：S1 中 <code>money</code>、<code>deposited</code> 等 token 会通过 attention 把金融语义写入 <code>bank</code> 位置的 hidden state；S2 中 <code>river</code>、<code>near</code> 会把地理/河岸语义写入同一位置。到高层后，两个 <code>bank</code> 的 hidden state 可能相距很远，即使它们的输入 embedding 是同一行。</p>
+  <p>If the tokenizer maps both instances of <code>bank</code> to the same token id, then the lookup table yields the exact same <code>E[bank]</code>. The difference comes from the context: in S1, tokens like <code>money</code> and <code>deposited</code> will write financial semantics into the hidden state at the <code>bank</code> position via attention; in S2, tokens like <code>river</code> and <code>near</code> will write geographical/riverbank semantics into the same position. At higher layers, the hidden states of the two <code>bank</code> instances may be far apart, even though their input embeddings are the same row.</p>
 
-  <h4>3. 为什么这会改变评测方式</h4>
-  <p>静态词向量常用最近邻、类比和词相似度数据集评测，因为模型输出就是一个词向量空间。上下文化模型则要按任务和层来评测：分类看 <code>[CLS]</code> 或 pooled representation，抽取式 QA 看 span logits，decoder-only LM 看每个位置 hidden state 经过 LM head 后的 next-token distribution。不能只拿输入 embedding 的最近邻来判断整个 LLM 是否理解多义词、指代或推理关系。</p>
+  <h4>3. Why This Changes Evaluation Methods</h4>
+  <p>Static word vectors are commonly evaluated using nearest neighbors, analogies, and word similarity datasets because the model's output is a single word vector space. Contextualized models must be evaluated by task and layer: classification uses the <code>[CLS]</code> or pooled representation, extractive QA uses span logits, and decoder-only LMs use the next-token distribution from the hidden state at each position passed through the LM head. One cannot judge whether the entire LLM understands polysemy, anaphora, or reasoning relationships solely by looking at the nearest neighbors of the input embedding.</p>
 
   <div class="table-wrap">
     <table>
-      <tr><th>对象</th><th>计算位置</th><th>适合回答的问题</th><th>不适合回答的问题</th></tr>
-      <tr><td>Input embedding row</td><td><code>E[token]</code></td><td>token 初始化、频率、特殊 token、词表几何</td><td>当前句子中的实际语义</td></tr>
-      <tr><td>Layer hidden state</td><td><code>h_i^{(l)}</code></td><td>上下文语义、句法角色、任务相关特征</td><td>不能脱离层和任务直接解释模型能力</td></tr>
-      <tr><td>Output logits</td><td><code>h_i W_{out}</code></td><td>下一 token 分布、生成行为、CE loss</td><td>不能单独说明中间机制因果</td></tr>
-      <tr><td>Attention weights</td><td><code>softmax(QK^T)</code></td><td>信息路由诊断、长程依赖候选路径</td><td>不能单独证明解释或因果贡献</td></tr>
+      <tr><th>Object</th><th>Computation Location</th><th>Suitable Questions</th><th>Unsuitable Questions</th></tr>
+      <tr><td>Input embedding row</td><td><code>E[token]</code></td><td>Token initialization, frequency, special tokens, vocabulary geometry</td><td>Actual semantics in the current sentence</td></tr>
+      <tr><td>Layer hidden state</td><td><code>h_i^{(l)}</code></td><td>Contextual semantics, syntactic role, task-relevant features</td><td>Cannot interpret model capability independent of layer and task</td></tr>
+      <tr><td>Output logits</td><td><code>h_i W_{out}</code></td><td>Next token distribution, generation behavior, CE loss</td><td>Cannot alone explain intermediate mechanisms causally</td></tr>
+      <tr><td>Attention weights</td><td><code>softmax(QK^T)</code></td><td>Information routing diagnostics, candidate paths for long-range dependencies</td><td>Cannot alone prove explanation or causal contribution</td></tr>
     </table>
   </div>
 
-  <h4>4. 工程含义：不要把 embedding 相似当成最终语义</h4>
-  <p>在微调、RAG reranking 或安全评估中，如果某个 token 的输入 embedding 最近邻看起来合理，只能说明初始表示没有明显异常。真正要看模型行为，必须检查上下文 hidden state、logits、任务输出和失败样例。例如领域术语可能在 embedding 空间里离通用词很近，但经过上下文后仍能正确抽取；也可能新增特殊 token 的 embedding 范数正常，却因为 chat template 或 loss mask 错误导致模型完全不会按预期使用它。</p>
+  <h4>4. Engineering Implication: Don't Mistake Embedding Similarity for Final Semantics</h4>
+  <p>In fine-tuning, RAG reranking, or safety evaluation, if the nearest neighbors of a token's input embedding seem reasonable, it only indicates that the initial representation has no obvious anomaly. To truly understand model behavior, one must examine contextual hidden states, logits, task outputs, and failure examples. For instance, a domain term might be close to general words in embedding space but still be correctly extracted after contextualization; conversely, a newly added special token might have a normal embedding norm, yet the model may fail to use it as intended due to errors in the chat template or loss mask.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>静态词向量回答“这个词在语料统计中像谁”；上下文化表示回答“这个位置在当前上下文中扮演什么角色”。LLM 工程师需要同时理解两者，否则很容易把 embedding 诊断、attention 诊断和最终任务质量混为一谈。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Static word vectors answer "who this word resembles in corpus statistics"; contextualized representations answer "what role this position plays in the current context." LLM engineers need to understand both; otherwise, they can easily conflate embedding diagnostics, attention diagnostics, and final task quality.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 1: TokenEmbedding -->
+<!-- Programming Exercise 1: TokenEmbedding -->
 <!-- ================================================================ -->
 <section class="card" id="s2-2">
-  <h3>2.2 编程练习 1：实现 TokenEmbedding</h3>
-  <p>PyTorch 的 <code>nn.Embedding(V, d)</code> 本质上就是一个可训练的查表操作。若嵌入矩阵 <span class="katex-inline" data-expr="E\in\mathbb{R}^{V\times d}" aria-label="E in R V by d" role="img"></span>，token id 的 one-hot 行向量 <span class="katex-inline" data-expr="e_i" aria-label="e_i" role="img"></span> 满足 <span class="katex-inline" data-expr="e_iE=E_i" aria-label="e_i E equals E_i" role="img"></span>。实际工程直接索引 <code>E[token_id]</code>，避免显式构造巨大 one-hot 张量；Ch02 作业中的 <code>embedding_lookup_as_matmul</code> 让学生写出这个等价关系。</p>
+  <h3>2.2 Programming Exercise 1: Implementing TokenEmbedding</h3>  <p>PyTorch's <code>nn.Embedding(V, d)</code> is essentially a trainable lookup table operation. If the embedding matrix is <span class="katex-inline" data-expr="E\in\mathbb{R}^{V\times d}" aria-label="E in R V by d" role="img"></span>, the one-hot row vector <span class="katex-inline" data-expr="e_i" aria-label="e_i" role="img"></span> for token id satisfies <span class="katex-inline" data-expr="e_iE=E_i" aria-label="e_i E equals E_i" role="img"></span>. In practice, engineering directly indexes <code>E[token_id]</code>, avoiding the explicit construction of a large one-hot tensor; the <code>embedding_lookup_as_matmul</code> in the Ch02 assignment lets students write out this equivalence.</p>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 1：TokenEmbedding 模块</h4>
+    <h4>🖥️ Exercise 1: TokenEmbedding Module</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>TokenEmbedding</code> 模块，并实现 <code>embedding_lookup_as_matmul(token_ids, embedding_weight)</code>，用显式 one-hot 矩阵乘法复现 <code>embedding_weight[token_ids]</code>。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement the <code>TokenEmbedding</code> module, and implement <code>embedding_lookup_as_matmul(token_ids, embedding_weight)</code>, reproducing <code>embedding_weight[token_ids]</code> using explicit one-hot matrix multiplication.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>继承 <code>nn.Module</code></li>
-        <li>使用 <code>nn.Embedding(vocab_size, d_model)</code> 作为内部查表</li>
-        <li><code>forward(x)</code> 输入形状 <code>(batch, seq_len)</code>，输出形状 <code>(batch, seq_len, d_model)</code></li>
-        <li><code>one_hot(token_ids)</code> 的形状应为 <code>(batch, seq_len, vocab_size)</code>，与 <code>embedding_weight</code> 相乘后得到 <code>(batch, seq_len, d_model)</code></li>
-        <li>输出乘以 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span>（本章实现采用的 embedding 尺度约定）</li>
-        <li>让 <code>forward</code> 返回的输出的 L2 范数大约为 <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span></li>
+        <li>Inherit from <code>nn.Module</code></li>
+        <li>Use <code>nn.Embedding(vocab_size, d_model)</code> as the internal lookup table</li>
+        <li><code>forward(x)</code> input shape <code>(batch, seq_len)</code>, output shape <code>(batch, seq_len, d_model)</code></li>
+        <li>The shape of <code>one_hot(token_ids)</code> should be <code>(batch, seq_len, vocab_size)</code>, and after multiplying with <code>embedding_weight</code>, it should yield <code>(batch, seq_len, d_model)</code></li>
+        <li>Multiply the output by <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span> (the embedding scale convention adopted in this chapter's implementation)</li>
+        <li>Make the L2 norm of the output returned by <code>forward</code> approximately <span class="katex-inline" data-expr="\sqrt{d_{\text{model}}}" aria-label="\sqrt{d_{\text{model}}}" role="img"></span></li>
       </ul>
-      <pre># 预期用法
+      <pre># Expected usage
 emb = TokenEmbedding(vocab_size=50000, d_model=768)
 x = torch.randint(0, 50000, (2, 16))  # (batch=2, seq_len=16)
 out = emb(x)
 assert out.shape == (2, 16, 768)
-print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
-# 应输出: 38,400,000</pre>
+print(f"Parameters: {sum(p.numel() for p in emb.parameters()):,}")
+# Should output: 38,400,000</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 import torch
 import torch.nn as nn
@@ -336,7 +333,7 @@ import torch.nn.functional as F
 import math
 
 class TokenEmbedding(nn.Module):
-    """将 token ID 映射为稠密向量。"""
+    """Maps token IDs to dense vectors."""
     def __init__(self, vocab_size, d_model):
         super().__init__()
         self.embed = nn.Embedding(vocab_size, d_model)
@@ -355,73 +352,73 @@ def embedding_lookup_as_matmul(token_ids, embedding_weight):
 emb = TokenEmbedding(50000, 768)
 x = torch.randint(0, 50000, (2, 16))
 out = emb(x)
-print(f"输入: {x.shape} → 输出: {out.shape}")
-print(f"参数: {sum(p.numel() for p in emb.parameters()):,}")
-# 输出形状: (2, 16, 768)
-# 参数: 38,400,000</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么乘以 √d_model？</strong>本章作业采用这个缩放，是为了让学生显式观察 embedding 数值尺度如何进入后续层。它不是所有 decoder-only 模型都必须采用的结构规则；真实实现会把初始化、残差尺度、LayerNorm 和训练稳定性一起设计。查看 <code>nn.Embedding</code> 的权重形状：<code>emb.embed.weight.shape</code> 返回 <code>[50000, 768]</code>。</p>
+print(f"Input: {x.shape} → Output: {out.shape}")
+print(f"Parameters: {sum(p.numel() for p in emb.parameters()):,}")
+# Output shape: (2, 16, 768)
+# Parameters: 38,400,000</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why multiply by √d_model?</strong> The assignment in this chapter adopts this scaling to allow students to explicitly observe how the numerical scale of embeddings enters subsequent layers. It is not a structural rule that all decoder-only models must follow; real implementations design initialization, residual scaling, LayerNorm, and training stability together. Check the weight shape of <code>nn.Embedding</code>: <code>emb.embed.weight.shape</code> returns <code>[50000, 768]</code>.</p>
     </div>
   </div>
 </section>
 
 <section class="card" id="s2-2a">
-  <h3>2.2A Worked Example：embedding lookup、缩放与 tied LM head</h3>
-  <p>设词表大小 <code>V=3</code>、嵌入维度 <code>d=2</code>，embedding 矩阵为：</p>
+  <h3>2.2A Worked Example: embedding lookup, scaling, and tied LM head</h3>
+  <p>Let vocabulary size <code>V=3</code>, embedding dimension <code>d=2</code>, the embedding matrix is:</p>
   <div class="code-block" data-lang="text">
 E = [[1, 0],
      [0, 2],
      [3, 4]]</div>
-  <p>输入 token ids 为 <code>[[0, 2], [1, 0]]</code>，直接查表得到形状 <code>[B=2, T=2, d=2]</code> 的张量：</p>
+  <p>Input token ids are <code>[[0, 2], [1, 0]]</code>, direct lookup yields a tensor of shape <code>[B=2, T=2, d=2]</code>:</p>
   <div class="code-block" data-lang="text">
 E[token_ids] =
 [[[1, 0], [3, 4]],
  [[0, 2], [1, 0]]]</div>
-  <p>显式 one-hot 乘法完全等价：<code>one_hot(token_ids)</code> 的形状是 <code>[2,2,3]</code>，与 <code>E[3,2]</code> 相乘后得到 <code>[2,2,2]</code>。实际模型不会构造这个巨大 one-hot 张量，因为查表更省内存和带宽。</p>
-  <p>若采用本章作业的 embedding 缩放约定，输出还要乘以 <code>sqrt(d)=sqrt(2)</code>。例如 token 2 的原始向量是 <code>[3,4]</code>，缩放后为 <code>[3sqrt(2),4sqrt(2)]</code>。缩放改变数值尺度，不改变参数个数；参数仍是 <code>V*d=6</code>。</p>
-  <p>如果把同一个矩阵用于输出层的 LM head（weight tying），某个隐藏状态 <code>h=[1,1]</code> 对三个 token 的 logits 是：</p>
+  <p>Explicit one-hot multiplication is completely equivalent: the shape of <code>one_hot(token_ids)</code> is <code>[2,2,3]</code>, and after multiplying with <code>E[3,2]</code>, it yields <code>[2,2,2]</code>. Actual models do not construct this large one-hot tensor because lookup is more memory and bandwidth efficient.</p>
+  <p>If adopting the embedding scaling convention from this chapter's assignment, the output is also multiplied by <code>sqrt(d)=sqrt(2)</code>. For example, the original vector for token 2 is <code>[3,4]</code>, after scaling it becomes <code>[3sqrt(2),4sqrt(2)]</code>. Scaling changes the numerical scale but does not change the number of parameters; the parameters are still <code>V*d=6</code>.</p>
+  <p>If the same matrix is used for the output layer's LM head (weight tying), the logits for a hidden state <code>h=[1,1]</code> for the three tokens are:</p>
   <div class="math-box"><div class="label">Tied output projection</div>
     <div class="katex" data-expr="\text{logits}=hE^\top=[1,\;2,\;7]" aria-label="logits = h E^T = [1,2,7]" role="img"></div>
   </div>
-  <p>这意味着输入 token embedding 和输出分类器共享同一组 token 向量。若不用 weight tying，输入 embedding 需要 <code>V*d</code> 参数，输出投影还要另一个 <code>d*V</code> 参数；在大词表模型中这会显著增加参数量。后续 Ch06 的 causal LM loss 正是用每个位置的 hidden state 经过 LM head 产生 <code>[B,T,V]</code> logits，再与 shifted labels 计算交叉熵。</p>
+  <p>This means the input token embedding and the output classifier share the same set of token vectors. Without weight tying, the input embedding requires <code>V*d</code> parameters, and the output projection requires another <code>d*V</code> parameters; in models with large vocabularies, this significantly increases the parameter count. The causal LM loss in subsequent Ch06 uses the hidden state at each position, passes it through the LM head to produce <code>[B,T,V]</code> logits, and then computes cross-entropy with the shifted labels.</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 2.3 为什么需要位置信息 -->
+<!-- 2.3 Why Positional Information is Needed -->
 <!-- ================================================================ -->
 <section class="card" id="s2-3">
-  <h3>2.3 置换等变性——为什么位置编码不可或缺</h3>
-  <p>嵌入层将每个 token 映射为一个固定的向量。如果没有位置编码，"dog bite" 和 "bite dog" 使用的是同一组 token 向量，只是排列顺序不同；模型没有额外信号说明哪个 token 在前、哪个 token 在后。</p>
-  <p>这源于 Self-Attention 的<strong>置换等变性（Permutation Equivariance）</strong>。更精确地说，Self-Attention 的输出满足：</p>
-  <div class="math-box"><div class="label">置换等变性</div>
+  <h3>2.3 Permutation Equivariance—Why Positional Encoding is Indispensable</h3>
+  <p>The embedding layer maps each token to a fixed vector. Without positional encoding, "dog bite" and "bite dog" use the same set of token vectors, only arranged in a different order; the model has no additional signal to indicate which token comes first and which comes last.</p>
+  <p>This stems from the <strong>Permutation Equivariance</strong> of Self-Attention. More precisely, the output of Self-Attention satisfies:</p>
+  <div class="math-box"><div class="label">Permutation Equivariance</div>
     <div class="katex" data-expr="\text{Attention}(\mathbf{X}P) = \text{Attention}(\mathbf{X})P" aria-label="\text{Attention}(\mathbf{X}P) = \text{Attention}(\mathbf{X})P" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span> 是一个置换矩阵。交换输入 token 的顺序，输出也会以同样方式交换——这是<strong>等变</strong>而不是不变。没有位置编码时，注意力层可以根据 token 内容建模相互作用，但无法知道这些 token 的绝对位置或相对顺序。</p>
+  <p>Where <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span> is a permutation matrix. Swapping the order of input tokens will also swap the output in the same way—this is <strong>equivariant</strong>, not invariant. Without positional encoding, the attention layer can model interactions based on token content, but it cannot know the absolute positions or relative order of these tokens.</p>
 
-  <h4>为什么 Self-Attention 是置换等变的？</h4>
-  <p>从公式看，注意力分数的计算 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> 涉及所有 token 对之间的点积。如果置换输入行（token 顺序），Q 和 K 的行也相应置换，但 <span class="katex-inline" data-expr="Q_i^\top K_j" aria-label="Q_i^\top K_j" role="img"></span> 的值只取决于 token <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 和 <span class="katex-inline" data-expr="j" aria-label="j" role="img"></span> 的<strong>内容</strong>，不取决于它们的<strong>位置</strong>。因此输出行也被置换——每个 token 的输出不变，只换位置。</p>
-  <p>这意味着没有位置编码时：</p>
+  <h4>Why is Self-Attention Permutation Equivariant?</h4>
+  <p>From the formula, the computation of attention scores <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> involves dot products between all pairs of tokens. If the input rows (token order) are permuted, the rows of Q and K are permuted accordingly, but the value of <span class="katex-inline" data-expr="Q_i^\top K_j" aria-label="Q_i^\top K_j" role="img"></span> depends only on the <strong>content</strong> of token <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> and token <span class="katex-inline" data-expr="j" aria-label="j" role="img"></span>, not on their <strong>positions</strong>. Therefore, the output rows are also permuted—the output for each token remains the same, only its position changes.</p>
+  <p>This means that without positional encoding:</p>
   <ul>
-    <li>"我打你"和"你打我"包含相同 token 集合，若缺少位置信号，模型只能看到内容重排，无法可靠利用主谓宾顺序</li>
-    <li>"第 1 个 token"和"第 1000 个 token"会得到相同处理——没有位置衰减</li>
-    <li>模型无法利用词序这一最基本的语法信号</li>
+    <li>"I hit you" and "You hit me" contain the same set of tokens; without positional signals, the model can only see a rearrangement of content and cannot reliably use subject-verb-object order</li>
+    <li>"The 1st token" and "The 1000th token" would be treated identically—no positional decay</li>
+    <li>The model cannot leverage word order, a fundamental syntactic signal</li>
   </ul>
-  <p><strong>解决方案：</strong>向每个 token 的表示中加入位置信号，打破置换对称性。主流的方案分为两类：</p>
+  <p><strong>Solution:</strong> Add positional signals to the representation of each token to break permutation symmetry. Mainstream approaches fall into two categories:</p>
   <ul>
-    <li><strong>加性编码</strong>：在嵌入向量上加位置向量，如 Sinusoidal、Learned PE</li>
-    <li><strong>旋转编码</strong>：修改注意力计算，在 Q/K 中编码位置，如 RoPE</li>
+    <li><strong>Additive Encoding:</strong> Add a position vector to the embedding vector, e.g., Sinusoidal, Learned PE</li>
+    <li><strong>Rotary Encoding:</strong> Modify the attention computation to encode position in Q/K, e.g., RoPE</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>直觉：</strong>嵌入层给了每个 token 一个"身份证"（语义身份），位置编码给了每个 token 一个"座位号"（它在序列中的位置）。两者相加才是完整的输入表示。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Intuition:</strong> The embedding layer gives each token an "ID card" (semantic identity), and positional encoding gives each token a "seat number" (its position in the sequence). Adding them together forms the complete input representation.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 2.4 理论：Sinusoidal 编码 -->
+<!-- 2.4 Theory: Sinusoidal Encoding -->
 <!-- ================================================================ -->
 <section class="card" id="s2-4">
-  <h3>2.4 正弦位置编码——多尺度频率的直觉</h3>
-  <p>Sinusoidal Positional Encoding（Vaswani et al., 2017）是 Transformer 原始论文中的位置编码方案。它用不同频率的正弦和余弦函数为每个位置生成固定的编码向量。</p>
+  <h3>2.4 Sinusoidal Positional Encoding—Intuition of Multi-Scale Frequencies</h3>
+  <p>Sinusoidal Positional Encoding (Vaswani et al., 2017) is the positional encoding scheme from the original Transformer paper. It uses sine and cosine functions of different frequencies to generate fixed encoding vectors for each position.</p>
 
-  <h4>定义</h4>
-  <div class="math-box"><div class="label">Sinusoidal 编码</div>
+  <h4>Definition</h4>
+  <div class="math-box"><div class="label">Sinusoidal Encoding</div>
     <div class="katex" data-expr="\begin{aligned}
     \mathbf{p}_{pos, 2i} &= \sin\left(\frac{pos}{10000^{2i/d}}\right) \\
     \mathbf{p}_{pos, 2i+1} &= \cos\left(\frac{pos}{10000^{2i/d}}\right)
@@ -430,14 +427,14 @@ E[token_ids] =
     \mathbf{p}_{pos, 2i+1} &= \cos\left(\frac{pos}{10000^{2i/d}}\right)
     \end{aligned}" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span> 是位置索引，<span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> 是维度索引，<span class="katex-inline" data-expr="d" aria-label="d" role="img"></span> 是嵌入维度。</p>
+  <p>Where <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span> is the position index, <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span> is the dimension index, and <span class="katex-inline" data-expr="d" aria-label="d" role="img"></span> is the embedding dimension.</p>
 
   <div class="worked-example">
-    <h4>Worked Example：<code>d_model=4</code> 时的正弦编码</h4>
-    <p>当 <code>d=4</code> 时有两组 sin/cos 频率：第 0/1 维使用分母 <code>10000^{0/4}=1</code>，第 2/3 维使用分母 <code>10000^{2/4}=100</code>。因此低维变化更快，高维变化更慢：</p>
+    <h4>Worked Example: Sinusoidal Encoding with <code>d_model=4</code></h4>
+    <p>When <code>d=4</code>, there are two sets of sin/cos frequencies: dimensions 0/1 use denominator <code>10000^{0/4}=1</code>, dimensions 2/3 use denominator <code>10000^{2/4}=100</code>. Therefore, lower dimensions change faster, and higher dimensions change slower:</p>
     <table class="metrics-table">
       <thead>
-        <tr><th>位置</th><th>第 0 维 <code>sin(pos)</code></th><th>第 1 维 <code>cos(pos)</code></th><th>第 2 维 <code>sin(pos/100)</code></th><th>第 3 维 <code>cos(pos/100)</code></th></tr>
+        <tr><th>Position</th><th>Dimension 0 <code>sin(pos)</code></th><th>Dimension 1 <code>cos(pos)</code></th><th>Dimension 2 <code>sin(pos/100)</code></th><th>Dimension 3 <code>cos(pos/100)</code></th></tr>
       </thead>
       <tbody>
         <tr><td>0</td><td>0.000</td><td>1.000</td><td>0.000</td><td>1.000</td></tr>
@@ -445,66 +442,65 @@ E[token_ids] =
         <tr><td>2</td><td>0.909</td><td>-0.416</td><td>0.020</td><td>1.000</td></tr>
       </tbody>
     </table>
-    <p>位置 0 的所有偶数维为 0、奇数维为 1，这正对应作业测试中的 <code>row0[0::2] == 0</code> 与 <code>row0[1::2] == 1</code>。更高频维度快速区分相邻位置；更低频维度在短距离内变化很小，用来承载更长尺度的位置变化。</p>
+    <p>For position 0, all even dimensions are 0 and all odd dimensions are 1, which corresponds exactly to <code>row0[0::2] == 0</code> and <code>row0[1::2] == 1</code> in the assignment tests. Higher-frequency dimensions quickly distinguish adjacent positions; lower-frequency dimensions change very little over short distances and are used to carry longer-range positional changes.</p>
   </div>
 
-  <h4>为什么这样设计？</h4>
-  <p><strong>多尺度频率：</strong>低维度（小 <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>）使用高频率——sin/cos 波形变化快，相邻位置的编码差异大，适合编码<strong>局部位置信息</strong>。高维度（大 <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>）使用低频率——变化缓慢，适合编码<strong>全局位置信息</strong>。这种设计模仿了傅里叶特征：将位置编码在不同频率的基函数上，模型可以学习选择性地关注高频或低频维度。</p>
+  <h4>Why is it designed this way?</h4>  <p><strong>Multi-scale frequency:</strong> Low dimensions (small <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use high frequencies—sin/cos waveforms change quickly, encoding large differences between adjacent positions, suitable for encoding <strong>local positional information</strong>. High dimensions (large <span class="katex-inline" data-expr="i" aria-label="i" role="img"></span>) use low frequencies—change slowly, suitable for encoding <strong>global positional information</strong>. This design mimics Fourier features: by encoding positions onto basis functions of different frequencies, the model can learn to selectively attend to high-frequency or low-frequency dimensions.</p>
 
-  <p><strong>相对位置的线性表示：</strong>对于任意偏移 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>，位置 <span class="katex-inline" data-expr="pos + k" aria-label="pos + k" role="img"></span> 的编码可以表示为位置 <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span> 编码的<strong>线性变换</strong>：</p>
-  <div class="math-box"><div class="label">相对位置的线性性质</div>
+  <p><strong>Linear representation of relative positions:</strong> For any offset <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>, the encoding at position <span class="katex-inline" data-expr="pos + k" aria-label="pos + k" role="img"></span> can be expressed as a <strong>linear transformation</strong> of the encoding at position <span class="katex-inline" data-expr="pos" aria-label="pos" role="img"></span>:</p>
+  <div class="math-box"><div class="label">Linearity property of relative positions</div>
     <div class="katex" data-expr="\mathbf{p}_{pos+k} = \mathbf{T}_k \cdot \mathbf{p}_{pos}" aria-label="\mathbf{p}_{pos+k} = \mathbf{T}_k \cdot \mathbf{p}_{pos}" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="\mathbf{T}_k" aria-label="\mathbf{T}_k" role="img"></span> 是一个旋转矩阵（由 sin/cos 的和角公式推导）。这意味着模型可以通过学习线性变换来捕捉相对位置关系——这是 Sinusoidal 编码最重要但也最常被忽视的性质。</p>
+  <p>where <span class="katex-inline" data-expr="\mathbf{T}_k" aria-label="\mathbf{T}_k" role="img"></span> is a rotation matrix (derived from the angle addition formulas for sin/cos). This means the model can capture relative positional relationships by learning linear transformations—this is the most important yet often overlooked property of Sinusoidal encoding.</p>
 
-  <p><strong>无训练参数 + 可外推：</strong>Sinusoidal 是固定函数，不需要学习，且对任意长度（包括训练时未见过的）都有定义。</p>
+  <p><strong>No trainable parameters + Extrapolatable:</strong> Sinusoidal is a fixed function, requires no learning, and is defined for any length (including those unseen during training).</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 2: Sinusoidal Encoding -->
+<!-- Programming Exercise 2: Sinusoidal Encoding -->
 <!-- ================================================================ -->
 <section class="card" id="s2-5">
-  <h3>2.5 编程练习 2：实现 Sinusoidal Positional Encoding</h3>
+  <h3>2.5 Programming Exercise 2: Implementing Sinusoidal Positional Encoding</h3>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 2：SinusoidalEncoding 模块</h4>
+    <h4>🖥️ Exercise 2: SinusoidalEncoding Module</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>SinusoidalEncoding</code> 模块，为输入序列生成固定频率的正弦位置编码。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement the <code>SinusoidalEncoding</code> module to generate fixed-frequency sinusoidal positional encodings for an input sequence.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>继承 <code>nn.Module</code>，内部无可训练参数</li>
-        <li>创建形状为 <code>(max_len, d_model)</code> 的编码矩阵，用 <code>register_buffer</code> 持久化</li>
-        <li><code>forward(x)</code> 返回 <code>x + pe[:, :seq_len, :]</code>（广播到 batch 维度）</li>
-        <li>频率计算：<code>div_term = exp(-(2i) * log(10000) / d_model)</code> 用于数值稳定性</li>
-        <li>偶数列用 <code>sin</code>，奇数列用 <code>cos</code></li>
+        <li>Inherit from <code>nn.Module</code>, with no trainable parameters internally</li>
+        <li>Create an encoding matrix of shape <code>(max_len, d_model)</code>, persist it using <code>register_buffer</code></li>
+        <li><code>forward(x)</code> returns <code>x + pe[:, :seq_len, :]</code> (broadcast over the batch dimension)</li>
+        <li>Frequency calculation: <code>div_term = exp(-(2i) * log(10000) / d_model)</code> for numerical stability</li>
+        <li>Use <code>sin</code> for even columns and <code>cos</code> for odd columns</li>
       </ul>
-      <pre># 预期用法
+      <pre># Expected usage
 pe = SinusoidalEncoding(d_model=512, max_len=8192)
 x = torch.randn(2, 128, 512)
 out = pe(x)
 assert out.shape == (2, 128, 512)
-# 验证：位置 0 和位置 1 的编码不同
+# Verify: encodings at position 0 and position 1 are different
 assert not torch.allclose(out[0, 0], out[0, 1])</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 import torch
 import torch.nn as nn
 import math
 
 class SinusoidalEncoding(nn.Module):
-    """正弦位置编码——固定函数，无需训练参数。"""
+    """Sinusoidal Positional Encoding — fixed function, no trainable parameters."""
     def __init__(self, d_model, max_len=8192):
         super().__init__()
         pe = torch.zeros(max_len, d_model)
         pos = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
 
-        # 计算频率: 1 / (10000^(2i/d))
+        # Calculate frequencies: 1 / (10000^(2i/d))
         i = torch.arange(0, d_model, 2).float()
         div_term = torch.exp(i * (-math.log(10000.0) / d_model))
 
-        pe[:, 0::2] = torch.sin(pos * div_term)   # 偶数列
-        pe[:, 1::2] = torch.cos(pos * div_term)   # 奇数列
+        pe[:, 0::2] = torch.sin(pos * div_term)   # Even columns
+        pe[:, 1::2] = torch.cos(pos * div_term)   # Odd columns
         self.register_buffer("pe", pe.unsqueeze(0))
 
     def forward(self, x):
@@ -513,47 +509,47 @@ class SinusoidalEncoding(nn.Module):
 pe = SinusoidalEncoding(512)
 x = torch.randn(2, 128, 512)
 out = pe(x)
-print(f"输出形状: {out.shape}")
-print(f"训练参数: {sum(p.numel() for p in pe.parameters())}")
-# 输出: (2, 128, 512), 训练参数: 0</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>register_buffer 的作用：</strong>将 pe 注册为持久化缓冲区——它会随模型一起保存到 checkpoint 中（.state_dict()），且被 .to(device) 自动移动，但在训练中不更新梯度。这使得编码表随模型"带"着但不会影响反向传播。</p>
+print(f"Output shape: {out.shape}")
+print(f"Trainable parameters: {sum(p.numel() for p in pe.parameters())}")
+# Output: (2, 128, 512), Trainable parameters: 0</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Purpose of register_buffer:</strong> Registers pe as a persistent buffer—it will be saved with the model in the checkpoint (.state_dict()), and automatically moved by .to(device), but does not update gradients during training. This allows the encoding table to be "carried" with the model without affecting backpropagation.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 2.6 RoPE 理论 -->
+<!-- 2.6 RoPE Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s2-6">
-  <h3>2.6 RoPE 深度理论——旋转中编码相对位置</h3>
-  <p><strong>旋转位置编码（RoPE）</strong>由 Su et al.（2021）提出，是 Llama 2/3、Mistral、DeepSeek 等模型中常见的位置编码方案。它的核心创新在于：<strong>不再将位置信息加到嵌入向量上，而是修改 Q 和 K 的表示，使点积自动编码相对位置</strong>。</p>
+  <h3>2.6 Deep Dive into RoPE Theory—Encoding Relative Positions through Rotation</h3>
+  <p><strong>Rotary Position Embedding (RoPE)</strong> was proposed by Su et al. (2021) and is a common positional encoding scheme in models like Llama 2/3, Mistral, and DeepSeek. Its core innovation is: <strong>instead of adding positional information to the embedding vectors, it modifies the representations of Q and K so that the dot product automatically encodes relative positions</strong>.</p>
 
-  <h4>问题设定</h4>
-  <p>设位置 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 的查询向量为 <span class="katex-inline" data-expr="\mathbf{q}_m \in \mathbb{R}^d" aria-label="\mathbf{q}_m \in \mathbb{R}^d" role="img"></span>，位置 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 的键向量为 <span class="katex-inline" data-expr="\mathbf{k}_n \in \mathbb{R}^d" aria-label="\mathbf{k}_n \in \mathbb{R}^d" role="img"></span>。我们希望注意力分数 <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n" aria-label="\mathbf{q}_m^\top \mathbf{k}_n" role="img"></span> 只依赖于 <span class="katex-inline" data-expr="m - n" aria-label="m - n" role="img"></span>（相对位置），而不依赖于 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 和 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 的绝对值。</p>
+  <h4>Problem Setup</h4>
+  <p>Let the query vector at position <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> be <span class="katex-inline" data-expr="\mathbf{q}_m \in \mathbb{R}^d" aria-label="\mathbf{q}_m \in \mathbb{R}^d" role="img"></span>, and the key vector at position <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> be <span class="katex-inline" data-expr="\mathbf{k}_n \in \mathbb{R}^d" aria-label="\mathbf{k}_n \in \mathbb{R}^d" role="img"></span>. We want the attention score <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n" aria-label="\mathbf{q}_m^\top \mathbf{k}_n" role="img"></span> to depend only on <span class="katex-inline" data-expr="m - n" aria-label="m - n" role="img"></span> (the relative position), and not on the absolute values of <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> and <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span>.</p>
 
-  <h4>核心思想：旋转矩阵</h4>
-  <p>对每个位置 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span>，用一个<strong>旋转矩阵</strong> <span class="katex-inline" data-expr="R_{\Theta, m}" aria-label="R_{\Theta, m}" role="img"></span> 作用在 <span class="katex-inline" data-expr="\mathbf{q}_m" aria-label="\mathbf{q}_m" role="img"></span> 和 <span class="katex-inline" data-expr="\mathbf{k}_n" aria-label="\mathbf{k}_n" role="img"></span> 上：</p>
+  <h4>Core Idea: Rotation Matrix</h4>
+  <p>For each position <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span>, apply a <strong>rotation matrix</strong> <span class="katex-inline" data-expr="R_{\Theta, m}" aria-label="R_{\Theta, m}" role="img"></span> to <span class="katex-inline" data-expr="\mathbf{q}_m" aria-label="\mathbf{q}_m" role="img"></span> and <span class="katex-inline" data-expr="\mathbf{k}_n" aria-label="\mathbf{k}_n" role="img"></span>:</p>
   <div class="katex" data-expr="\mathbf{q}'_m = R_{\Theta,m} \mathbf{q}_m, \quad \mathbf{k}'_n = R_{\Theta,n} \mathbf{k}_n" aria-label="\mathbf{q}'_m = R_{\Theta,m} \mathbf{q}_m, \quad \mathbf{k}'_n = R_{\Theta,n} \mathbf{k}_n" role="img"></div>
-  <p><span class="katex-inline" data-expr="R_{\Theta,m}" aria-label="R_{\Theta,m}" role="img"></span> 是一个<strong>块对角正交矩阵</strong>，由 <span class="katex-inline" data-expr="d/2" aria-label="d/2" role="img"></span> 个 2x2 旋转子矩阵组成：</p>
-  <div class="math-box"><div class="label">旋转矩阵结构</div>
+  <p><span class="katex-inline" data-expr="R_{\Theta,m}" aria-label="R_{\Theta,m}" role="img"></span> is a <strong>block-diagonal orthogonal matrix</strong>, composed of <span class="katex-inline" data-expr="d/2" aria-label="d/2" role="img"></span> 2x2 rotation sub-matrices:</p>
+  <div class="math-box"><div class="label">Rotation Matrix Structure</div>
     <div class="katex" data-expr="R_{\Theta,m} = \begin{pmatrix}
     \cos m\theta_0 &amp; -\sin m\theta_0 &amp; 0 &amp; 0 &amp; \cdots \\
     \sin m\theta_0 &amp; \cos m\theta_0 &amp; 0 &amp; 0 &amp; \cdots \\
     0 &amp; 0 &amp; \cos m\theta_1 &amp; -\sin m\theta_1 &amp; \cdots \\
     0 &amp; 0 &amp; \sin m\theta_1 &amp; \cos m\theta_1 &amp; \cdots \\
     \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \ddots
-    \end{pmatrix} \quad \text{其中 } \theta_i = 10000^{-2i/d}" aria-label="R_{\Theta,m} = \begin{pmatrix}
+    \end{pmatrix} \quad \text{where } \theta_i = 10000^{-2i/d}" aria-label="R_{\Theta,m} = \begin{pmatrix}
     \cos m\theta_0 &amp; -\sin m\theta_0 &amp; 0 &amp; 0 &amp; \cdots \\
     \sin m\theta_0 &amp; \cos m\theta_0 &amp; 0 &amp; 0 &amp; \cdots \\
     0 &amp; 0 &amp; \cos m\theta_1 &amp; -\sin m\theta_1 &amp; \cdots \\
     0 &amp; 0 &amp; \sin m\theta_1 &amp; \cos m\theta_1 &amp; \cdots \\
     \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \ddots
-    \end{pmatrix} \quad \text{其中 } \theta_i = 10000^{-2i/d}" role="img"></div>
+    \end{pmatrix} \quad \text{where } \theta_i = 10000^{-2i/d}" role="img"></div>
   </div>
 
-  <h4>为什么旋转矩阵能让点积只依赖于相对位置？</h4>
-  <p>关键在于 <span class="katex-inline" data-expr="R_{\Theta,m}" aria-label="R_{\Theta,m}" role="img"></span> 的性质：</p>
-  <div class="math-box"><div class="label">相对位置依赖性的推导</div>
+  <h4>Why does the rotation matrix make the dot product depend only on relative positions?</h4>
+  <p>The key lies in the property of <span class="katex-inline" data-expr="R_{\Theta,m}" aria-label="R_{\Theta,m}" role="img"></span>:</p>
+  <div class="math-box"><div class="label">Derivation of Relative Position Dependency</div>
     <div class="katex" data-expr="\begin{aligned}
     (\mathbf{q}'_m)^\top \mathbf{k}'_n &= (R_{\Theta,m}\mathbf{q}_m)^\top (R_{\Theta,n}\mathbf{k}_n) \\
     &= \mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n \\
@@ -564,57 +560,56 @@ print(f"训练参数: {sum(p.numel() for p in pe.parameters())}")
     &= \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n
     \end{aligned}" role="img"></div>
   </div>
-  <p>推导中的关键步骤：<span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span>。这是因为旋转矩阵的群性质——先旋转 <span class="katex-inline" data-expr="-m" aria-label="-m" role="img"></span>（转置 = 逆旋转）再旋转 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 等价于直接旋转 <span class="katex-inline" data-expr="n-m" aria-label="n-m" role="img"></span>。<strong>注意力分数只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></strong>，绝对位置被完全消去。</p>
+  <p>The key step in the derivation: <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span>. This is due to the group property of rotation matrices—rotating by <span class="katex-inline" data-expr="-m" aria-label="-m" role="img"></span> (transpose = inverse rotation) and then by <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> is equivalent to rotating directly by <span class="katex-inline" data-expr="n-m" aria-label="n-m" role="img"></span>. <strong>The attention score depends only on <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></strong>, and absolute positions are completely eliminated.</p>
 
-  <h4>RoPE 的优良性质</h4>
+  <h4>Favorable Properties of RoPE</h4>
   <ul>
-    <li><strong>相对位置：</strong>推导证明点积只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></li>
-    <li><strong>范数保持：</strong><span class="katex-inline" data-expr="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" aria-label="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" role="img"></span>，因为旋转矩阵是正交的（<span class="katex-inline" data-expr="R^\top R = I" aria-label="R^\top R = I" role="img"></span>）</li>
-    <li><strong>相对相位：</strong>当 <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> 增大时，不同频率维度上的相位差会改变注意力打分模式。RoPE 给模型提供距离相关的归纳偏置，但不保证任意向量对的点积分数随距离单调下降，也不等于无限长上下文自动外推。</li>
-    <li><strong>不影响 V：</strong>RoPE 只修改 Q 和 K，不影响 V。因为位置信息只影响"谁关注谁"，不影响"关注到什么内容"</li>
-  </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>与 Sinusoidal 的本质区别：</strong>Sinusoidal 在<strong>嵌入层</strong>加位置信息（破坏置换等变性），RoPE 在<strong>注意力层</strong>的 Q/K 上编码位置（利用置换等变性中的点积）。RoPE 的数学基础是旋转矩阵的群性质，不是简单的"加一个向量"。</div></div>
+    <li><strong>Relative Position:</strong> The derivation proves the dot product depends only on <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></li>
+    <li><strong>Norm Preservation:</strong> <span class="katex-inline" data-expr="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" aria-label="\|R_{\Theta,m} \mathbf{q}\| = \|\mathbf{q}\|" role="img"></span>, because the rotation matrix is orthogonal (<span class="katex-inline" data-expr="R^\top R = I" aria-label="R^\top R = I" role="img"></span>)</li>
+    <li><strong>Relative Phase:</strong> When <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> increases, the phase differences across different frequency dimensions change the attention scoring pattern. RoPE provides the model with a distance-related inductive bias, but does not guarantee that the dot product score for any arbitrary pair of vectors decreases monotonically with distance, nor does it equate to automatic extrapolation to infinite context lengths.</li>
+    <li><strong>Does not affect V:</strong> RoPE only modifies Q and K, not V. This is because positional information only affects "who attends to whom," not "what content is attended to."</li>
+  </ul>  <div class="info-box key"><span class="icon">🔑</span><div><strong>Essential difference from Sinusoidal:</strong> Sinusoidal adds position information at the <strong>embedding layer</strong> (breaking permutation equivariance), while RoPE encodes position on Q/K at the <strong>attention layer</strong> (exploiting permutation equivariance in the dot product). RoPE's mathematical foundation is the group property of rotation matrices, not simply "adding a vector".</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 3: RoPE 实现 -->
+<!-- Programming Exercise 3: RoPE Implementation -->
 <!-- ================================================================ -->
 <section class="card" id="s2-7">
-  <h3>2.7 编程练习 3：实现 RoPE</h3>
+  <h3>2.7 Programming Exercise 3: Implementing RoPE</h3>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 3：RoPE 模块</h4>
+    <h4>🖥️ Exercise 3: RoPE Module</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 RoPE 的旋转操作。给定 Q 和 K 张量，对每个位置施加对应角度的旋转。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement the rotation operation of RoPE. Given Q and K tensors, apply the corresponding angle rotation to each position.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>输入 Q, K 形状 <code>(batch, n_heads, seq_len, d_head)</code></li>
-        <li>预计算 <code>cos</code> 和 <code>sin</code> 表，形状可广播到 <code>(batch, n_heads, seq_len, d_head//2)</code></li>
-        <li>实现 <code>_rotate_half(x)</code>：将 <code>x[..., d_head/2:]</code> 取反后与 <code>x[..., :d_head/2]</code> 交换</li>
-        <li>应用公式：<code>[x1*cos - x2*sin, x1*sin + x2*cos]</code></li>
-        <li>返回 <code>(q_out, k_out)</code>，形状不变</li>
+        <li>Input Q, K shape <code>(batch, n_heads, seq_len, d_head)</code></li>
+        <li>Precompute <code>cos</code> and <code>sin</code> tables, shape broadcastable to <code>(batch, n_heads, seq_len, d_head//2)</code></li>
+        <li>Implement <code>_rotate_half(x)</code>: negate <code>x[..., d_head/2:]</code> and swap with <code>x[..., :d_head/2]</code></li>
+        <li>Apply formula: <code>[x1*cos - x2*sin, x1*sin + x2*cos]</code></li>
+        <li>Return <code>(q_out, k_out)</code>, shape unchanged</li>
       </ul>
-      <pre># 预期用法
+      <pre># Expected usage
 rope = RoPE(d_model=64, max_len=128)
 q = torch.randn(2, 8, 10, 64)   # (batch, n_heads, seq_len, d_head)
 k = torch.randn(2, 8, 10, 64)
 q_rot, k_rot = rope(q, k)
 assert q_rot.shape == q.shape
 assert k_rot.shape == k.shape
-# 验证：旋转不改变范数
+# Verification: rotation does not change the norm
 assert torch.allclose(q.norm(dim=-1), q_rot.norm(dim=-1), atol=1e-5)</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 import torch
 import torch.nn as nn
 import math
 
 class RoPE(nn.Module):
-    """旋转位置编码 (Rotary Position Embedding)。"""
+    """Rotary Position Embedding."""
     def __init__(self, d_model, max_len=8192, base=10000.0):
         super().__init__()
-        # 计算频率 theta_i
+        # Compute frequencies theta_i
         theta = torch.pow(base, -torch.arange(0, d_model, 2).float() / d_model)
         pos = torch.arange(max_len).float().unsqueeze(1)  # (max_len, 1)
         angles = pos * theta.unsqueeze(0)  # (max_len, d_model/2)
@@ -623,7 +618,7 @@ class RoPE(nn.Module):
         self.register_buffer("sin", torch.sin(angles).unsqueeze(0).unsqueeze(0))
 
     def _rotate_half(self, x):
-        """将 x 的后半部分取反并与前半部分交换位置。"""
+        """Negate the second half of x and swap with the first half."""
         x1, x2 = x.chunk(2, dim=-1)
         return torch.cat((-x2, x1), dim=-1)
 
@@ -633,76 +628,76 @@ class RoPE(nn.Module):
 
     def forward(self, q, k, pos_ids=None):
         batch, n_heads, seq_len, d_head = q.shape
-        # 取对应位置的 cos/sin；pos_ids 用于 packed sequence 或增量解码
+        # Get cos/sin for the corresponding positions; pos_ids used for packed sequences or incremental decoding
         if pos_ids is None:
             cos = self.cos[:, :, :seq_len, :d_head//2]
             sin = self.sin[:, :, :seq_len, :d_head//2]
         else:
             cos = self.cos[:, :, pos_ids, :d_head//2]
             sin = self.sin[:, :, pos_ids, :d_head//2]
-        # 应用旋转
+        # Apply rotation
         q_out = self._apply_rotary(q, cos, sin)
         k_out = self._apply_rotary(k, cos, sin)
         return q_out, k_out
 
-# 验证范数保持
+# Verify norm preservation
 rope = RoPE(d_model=64)
 q = torch.randn(2, 8, 10, 64)
 q_rot, _ = rope(q, q)
 assert torch.allclose(q.norm(dim=-1), q_rot.norm(dim=-1), atol=1e-5)
-print("范数保持 ✅")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>_rotate_half 的数学等价性：</strong>将 <span class="katex-inline" data-expr="d" aria-label="d" role="img"></span> 维向量视为 <span class="katex-inline" data-expr="d/2" aria-label="d/2" role="img"></span> 个复数 <span class="katex-inline" data-expr="(x_1 + ix_2, x_3 + ix_4, ...)" aria-label="(x_1 + ix_2, x_3 + ix_4, ...)" role="img"></span>。乘以 <span class="katex-inline" data-expr="e^{i\theta}" aria-label="e^{i\theta}" role="img"></span> 等价于 <span class="katex-inline" data-expr="x_1' = x_1\cos\theta - x_2\sin\theta, x_2' = x_1\sin\theta + x_2\cos\theta" aria-label="x_1' = x_1\cos\theta - x_2\sin\theta, x_2' = x_1\sin\theta + x_2\cos\theta" role="img"></span>。代码中的 <code>_apply_rotary</code> 正是这个操作的实数实现。</p>
+print("Norm preserved ✅")</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Mathematical equivalence of _rotate_half:</strong> Treat the <span class="katex-inline" data-expr="d" aria-label="d" role="img"></span>-dimensional vector as <span class="katex-inline" data-expr="d/2" aria-label="d/2" role="img"></span> complex numbers <span class="katex-inline" data-expr="(x_1 + ix_2, x_3 + ix_4, ...)" aria-label="(x_1 + ix_2, x_3 + ix_4, ...)" role="img"></span>. Multiplying by <span class="katex-inline" data-expr="e^{i\theta}" aria-label="e^{i\theta}" role="img"></span> is equivalent to <span class="katex-inline" data-expr="x_1' = x_1\cos\theta - x_2\sin\theta, x_2' = x_1\sin\theta + x_2\cos\theta" aria-label="x_1' = x_1\cos\theta - x_2\sin\theta, x_2' = x_1\sin\theta + x_2\cos\theta" role="img"></span>. The <code>_apply_rotary</code> in the code is the real-valued implementation of this operation.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 2.8 相对位置性质验证 -->
+<!-- 2.8 Verification of Relative Position Property -->
 <!-- ================================================================ -->
 <section class="card" id="s2-8">
-  <h3>2.8 深入验证：RoPE 的相对位置性质</h3>
-  <p>在上一节实现了 RoPE 之后，让我们通过数值实验来<strong>验证</strong>它的核心声称：<span class="katex-inline" data-expr="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" aria-label="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" role="img"></span> 只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>。</p>
+  <h3>2.8 In-depth Verification: RoPE's Relative Position Property</h3>
+  <p>After implementing RoPE in the previous section, let's use numerical experiments to <strong>verify</strong> its core claim: <span class="katex-inline" data-expr="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" aria-label="\mathbf{q}^{\prime}_m{}^\top \mathbf{k}^{\prime}_n" role="img"></span> depends only on <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>.</p>
 
-  <h4>理论推导回顾</h4>
-  <p>从旋转矩阵的性质出发：</p>
-  <div class="math-box"><div class="label">核心等式</div>
+  <h4>Theoretical Derivation Review</h4>
+  <p>Starting from the properties of rotation matrices:</p>
+  <div class="math-box"><div class="label">Core Identity</div>
     <div class="katex" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></div>
   </div>
-  <p>因为每个 2x2 子矩阵满足：</p>
+  <p>Because each 2x2 submatrix satisfies:</p>
   <div class="katex" data-expr="\begin{pmatrix} \cos m\theta & \sin m\theta \\ -\sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} \cos n\theta & -\sin n\theta \\ \sin n\theta & \cos n\theta \end{pmatrix} = \begin{pmatrix} \cos (n-m)\theta & -\sin (n-m)\theta \\ \sin (n-m)\theta & \cos (n-m)\theta \end{pmatrix}" aria-label="\begin{pmatrix} \cos m\theta & \sin m\theta \\ -\sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} \cos n\theta & -\sin n\theta \\ \sin n\theta & \cos n\theta \end{pmatrix} = \begin{pmatrix} \cos (n-m)\theta & -\sin (n-m)\theta \\ \sin (n-m)\theta & \cos (n-m)\theta \end{pmatrix}" role="img"></div>
-  <p>因此 <span class="katex-inline" data-expr="\mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n = \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n" aria-label="\mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n = \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n" role="img"></span>——值只取决于 <span class="katex-inline" data-expr="n-m" aria-label="n-m" role="img"></span> 而不是 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 或 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 的绝对值。</p>
+  <p>Therefore <span class="katex-inline" data-expr="\mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n = \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n" aria-label="\mathbf{q}_m^\top R_{\Theta,m}^\top R_{\Theta,n} \mathbf{k}_n = \mathbf{q}_m^\top R_{\Theta, n-m} \mathbf{k}_n" role="img"></span> — the value depends only on <span class="katex-inline" data-expr="n-m" aria-label="n-m" role="img"></span> and not on the absolute values of <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> or <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span>.</p>
 
-  <h4>实验设计</h4>
-  <p>我们将取固定的 <span class="katex-inline" data-expr="\mathbf{q}" aria-label="\mathbf{q}" role="img"></span> 和 <span class="katex-inline" data-expr="\mathbf{k}" aria-label="\mathbf{k}" role="img"></span>（不含位置信息，纯随机），然后对它们施加不同位置的 RoPE 旋转。如果性质成立，那么：</p>
+  <h4>Experimental Design</h4>
+  <p>We will take fixed <span class="katex-inline" data-expr="\mathbf{q}" aria-label="\mathbf{q}" role="img"></span> and <span class="katex-inline" data-expr="\mathbf{k}" aria-label="\mathbf{k}" role="img"></span> (without position information, purely random), then apply RoPE rotations at different positions to them. If the property holds, then:</p>
   <ul>
-    <li>当 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span> 固定时，无论 <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> 和 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 取何值，点积结果应相同</li>
-    <li>例如，(m=5, n=3) 和 (m=10, n=8) 的点积应相同（因为 <span class="katex-inline" data-expr="m-n=2" aria-label="m-n=2" role="img"></span>）</li>
-    <li>不同 offset 的得分由 <span class="katex-inline" data-expr="q^\top R_{\Theta,n-m} k" aria-label="q^\top R_{\Theta,n-m} k" role="img"></span> 决定；它会随相对相位变化，但不应被要求关于 <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> 单调衰减</li>
+    <li>When <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span> is fixed, regardless of the values of <span class="katex-inline" data-expr="m" aria-label="m" role="img"></span> and <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span>, the dot product result should be the same</li>
+    <li>For example, (m=5, n=3) and (m=10, n=8) should have the same dot product (because <span class="katex-inline" data-expr="m-n=2" aria-label="m-n=2" role="img"></span>)</li>
+    <li>The score for different offsets is determined by <span class="katex-inline" data-expr="q^\top R_{\Theta,n-m} k" aria-label="q^\top R_{\Theta,n-m} k" role="img"></span>; it will vary with the relative phase, but should not be required to decay monotonically with <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span></li>
   </ul>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 4: 验证相对位置 -->
+<!-- Programming Exercise 4: Verifying Relative Position -->
 <!-- ================================================================ -->
 <section class="card" id="s2-9">
-  <h3>2.9 编程练习 4：验证 RoPE 的相对位置性质</h3>
+  <h3>2.9 Programming Exercise 4: Verifying RoPE's Relative Position Property</h3>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 4：验证 <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n" aria-label="\mathbf{q}_m^\top \mathbf{k}_n" role="img"></span> 只依赖于 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></h4>
+    <h4>🖥️ Exercise 4: Verify that <span class="katex-inline" data-expr="\mathbf{q}_m^\top \mathbf{k}_n" aria-label="\mathbf{q}_m^\top \mathbf{k}_n" role="img"></span> depends only on <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span></h4>
     <div class="task">
-      <p><strong>任务：</strong>编写验证代码，证明 <code>RoPE</code> 旋转后的 <code>q_m</code> 和 <code>k_n</code> 的点积只与 <code>m-n</code> 有关。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Write verification code to prove that the dot product of <code>q_m</code> and <code>k_n</code> after <code>RoPE</code> rotation depends only on <code>m-n</code>.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>构造单个固定的 q 和 k 向量（没有位置信息，形状 <code>(1, 1, 1, d)</code>）</li>
-        <li>将它们复制到不同的位置 m 和 n，施加 RoPE 旋转</li>
-        <li>计算所有 (m, n) 配对的中点积得分，存储为 <code>(seq_len, seq_len)</code> 矩阵</li>
-        <li>验证：对角线偏移相同的元素值相等——即 <code>S[m][n]</code> 只取决于 <code>m-n</code></li>
-        <li>验证：每条固定 offset 的对角线内部数值相同；不要假设主对角线最大或正负 offset 对称</li>
-        <li><strong>核心判断使用张量切片完成；可以额外循环打印 offset 便于观察</strong></li>
+        <li>Construct a single fixed q and k vector (without position information, shape <code>(1, 1, 1, d)</code>)</li>
+        <li>Copy them to different positions m and n, apply RoPE rotation</li>
+        <li>Compute the dot product scores for all (m, n) pairs, store as a <code>(seq_len, seq_len)</code> matrix</li>
+        <li>Verify: elements with the same diagonal offset have equal values — i.e., <code>S[m][n]</code> depends only on <code>m-n</code></li>
+        <li>Verify: values within each fixed-offset diagonal are the same; do not assume the main diagonal is the largest or that positive and negative offsets are symmetric</li>
+        <li><strong>Core judgment should be done using tensor slicing; you may additionally loop to print offsets for observation</strong></li>
       </ul>
-      <pre># 预期结果: 打印出 8x8 的注意力分数矩阵
-# 应观察到: 所有主对角线 (m=n) 值相等, 所有次对角线 (m=n+1) 值相等, ...
-# 形成一个 Toeplitz 矩阵（Toeplitz matrix = 每条对角线上的元素都相同）
+      <pre># Expected result: Print an 8x8 attention score matrix
+# Should observe: All main diagonal (m=n) values are equal, all first sub-diagonal (m=n+1) values are equal, ...
+# Forming a Toeplitz matrix (Toeplitz matrix = elements on each diagonal are the same)
 # ┌─────────────────────────────────────────────┐
 # │ a     b     c     d     ...                │
 # │ e     a     b     c     ...                │
@@ -710,255 +705,255 @@ print("范数保持 ✅")</div>
 # │ g     f     e     a     ...                │
 # │ ...                                         │
 # └─────────────────────────────────────────────┘
-# 每一条固定 offset 的对角线内部值应相等；不同 offset 的大小不必单调。</pre>
+# Values on each fixed-offset diagonal should be equal; magnitudes for different offsets need not be monotonic.</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 import torch
 import torch.nn as nn
 import math
 
-def verify_rope_relative_property(d_model=64, seq_len=8):
-    """验证 RoPE 的点积只依赖于相对位置。"""
+
+</div></div></section>def verify_rope_relative_property(d_model=64, seq_len=8):
+    """Verify that the dot product of RoPE depends only on relative position."""
     rope = RoPE(d_model=d_model)
 
-    # 构造单个固定的 q 和 k (无位置信息)
+    # Construct a single fixed q and k (without position information)
     q = torch.randn(1, 1, 1, d_model)  # (1, 1, 1, d)
     k = torch.randn(1, 1, 1, d_model)
 
-    # 扩展到 seq_len 个位置: 每个位置的 q/k 向量相同
+    # Expand to seq_len positions: the q/k vector is the same at each position
     q_expanded = q.expand(1, 1, seq_len, -1)  # (1, 1, seq_len, d)
     k_expanded = k.expand(1, 1, seq_len, -1)
 
-    # 施加 RoPE: 不同位置的相同向量被旋转不同角度
+    # Apply RoPE: the same vector at different positions is rotated by different angles
     q_rot, k_rot = rope(q_expanded, k_expanded)
 
-    # 计算所有 (m, n) 对的点积
+    # Compute dot products for all (m, n) pairs
     scores = torch.matmul(q_rot, k_rot.transpose(-2, -1))  # (1, 1, seq_len, seq_len)
     scores = scores.squeeze()  # (seq_len, seq_len)
 
-    print(f"注意力分数矩阵 ({seq_len}x{seq_len}):")
-    # 显示到 4 位小数
+    print(f"Attention score matrix ({seq_len}x{seq_len}):")
+    # Display to 4 decimal places
     for row in scores:
         print("  " + "  ".join(f"{v:.4f}" for v in row))
 
-    # 验证 Toeplitz 性质: 向右下平移一格后，重叠区域应完全相等。
+    # Verify Toeplitz property: after shifting one step down-right, the overlapping region should be exactly equal.
     toeplitz_ok = torch.allclose(scores[1:, 1:], scores[:-1, :-1], atol=1e-5)
     if toeplitz_ok:
-        print("\n✅ 相对位置性质成立: Q_m^T K_n 只依赖于 (m-n)!")
-        print("分数矩阵是一个 Toeplitz 矩阵。")
+        print("\n✅ Relative position property holds: Q_m^T K_n depends only on (m-n)!")
+        print("The score matrix is a Toeplitz matrix.")
     else:
-        print("\n❌ Toeplitz 验证失败: 同一 offset 的对角线内部数值不一致。")
+        print("\n❌ Toeplitz verification failed: values on the same offset diagonal are inconsistent.")
 
-    # 不检查距离单调衰减：对固定 q/k，offset 得分由相对旋转相位决定。
-    print("\n不同 offset 的得分可以非单调；这里验证的是 Toeplitz 性质。")
+    # Do not check monotonic decay with distance: for fixed q/k, offset scores are determined by relative rotation phase.
+    print("\nScores for different offsets can be non-monotonic; what is verified here is the Toeplitz property.")
 
     return scores
 
 scores = verify_rope_relative_property(d_model=64, seq_len=8)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>实验结论：</strong>旋转后的 Q 和 K 点积构成一个<strong>Toeplitz 矩阵</strong>——每条固定 offset 的对角线内部值都相等。这意味着注意力分数只取决于 token 之间的<strong>相对位移</strong>。不同距离会对应不同相位组合，但对任意固定 q/k，分数不必随 <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span> 单调下降；长上下文表现仍取决于训练分布、频率设计和缩放策略。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Experimental conclusion:</strong> The dot product of rotated Q and K forms a <strong>Toeplitz matrix</strong>—values on each fixed-offset diagonal are all equal. This means the attention score depends only on the <strong>relative displacement</strong> between tokens. Different distances correspond to different phase combinations, but for any fixed q/k, the scores do not need to decrease monotonically with <span class="katex-inline" data-expr="|m-n|" aria-label="|m-n|" role="img"></span>; long-context performance still depends on the training distribution, frequency design, and scaling strategy.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 2.9A 位置编码工程选型 -->
+<!-- 2.9A Position Encoding Engineering Selection -->
 <!-- ================================================================ -->
 <section class="card" id="s2-9a">
-  <h3>2.9A 位置编码工程选型：训练长度、外推和服务成本</h3>
-  <p>学会实现 Sinusoidal 和 RoPE 之后，还需要回答一个工程问题：给定一个模型、训练长度和服务场景，应该如何选择位置机制？位置编码不是装饰项。它决定模型如何区分顺序、如何处理超出训练长度的 token、KV cache 中的位置编号如何延续，以及长上下文服务的质量和成本边界。</p>
+  <h3>2.9A Position Encoding Engineering Selection: Training Length, Extrapolation, and Serving Cost</h3>
+  <p>After learning to implement Sinusoidal and RoPE, an engineering question remains: given a model, training length, and serving scenario, how should one choose the position mechanism? Position encoding is not a decorative item. It determines how the model distinguishes order, how it handles tokens beyond the training length, how position indices continue in the KV cache, and the quality and cost boundaries of long-context serving.</p>
 
-  <h4>位置机制比较</h4>
+  <h4>Position Mechanism Comparison</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>方法</th><th>进入模型的位置</th><th>优点</th><th>主要边界</th></tr>
-      <tr><td>Learned absolute PE</td><td>输入 embedding 相加</td><td>实现简单，训练长度内表达力强</td><td>位置表只学到固定长度，外推到更长位置通常不可靠</td></tr>
-      <tr><td>Sinusoidal PE</td><td>输入 embedding 相加</td><td>无训练参数，任意位置都有定义，频率结构清晰</td><td>“可定义”不等于模型训练后一定能稳定外推</td></tr>
-      <tr><td>RoPE</td><td>Attention 的 Q/K 旋转</td><td>点积天然携带相对位移，已被大量 decoder-only LLM 采用</td><td>长上下文需要处理频率外推、base/scale 和训练分布差异</td></tr>
-      <tr><td>ALiBi</td><td>Attention logits 加距离 bias</td><td>显式鼓励近距离，长序列外推直觉强，缓存简单</td><td>表达形式较受限，和 RoPE/现有 checkpoint 不一定可互换</td></tr>
-      <tr><td>YaRN / NTK-aware scaling</td><td>调整 RoPE 频率或位置尺度</td><td>常用于扩展 RoPE 模型上下文窗口</td><td>需要重新评估质量，不能只改配置就宣称长上下文能力成立</td></tr>
+      <tr><th>Method</th><th>How Position Enters the Model</th><th>Advantages</th><th>Main Limitations</th></tr>
+      <tr><td>Learned absolute PE</td><td>Added to input embedding</td><td>Simple to implement, strong expressiveness within training length</td><td>Position table only learns a fixed length; extrapolation to longer positions is usually unreliable</td></tr>
+      <tr><td>Sinusoidal PE</td><td>Added to input embedding</td><td>No trainable parameters, defined for any position, clear frequency structure</td><td>"Definable" does not guarantee the model can stably extrapolate after training</td></tr>
+      <tr><td>RoPE</td><td>Rotation of Q/K in Attention</td><td>Dot product naturally carries relative displacement, widely adopted by decoder-only LLMs</td><td>Long context requires handling frequency extrapolation, base/scale, and training distribution differences</td></tr>
+      <tr><td>ALiBi</td><td>Distance bias added to Attention logits</td><td>Explicitly encourages nearby positions, strong intuition for long sequence extrapolation, simple caching</td><td>Expression form is relatively limited; may not be interchangeable with RoPE/existing checkpoints</td></tr>
+      <tr><td>YaRN / NTK-aware scaling</td><td>Adjusts RoPE frequency or position scale</td><td>Commonly used to extend the context window of RoPE models</td><td>Requires re-evaluation of quality; claiming long-context capability just by changing config is not valid</td></tr>
     </table>
   </div>
 
-  <h4>长上下文外推的三个层次</h4>
-  <p>很多模型配置里写着 <code>max_position_embeddings=32768</code> 或更大，但工程师需要区分三个层次：</p>
+  <h4>Three Levels of Long-Context Extrapolation</h4>
+  <p>Many model configurations specify <code>max_position_embeddings=32768</code> or larger, but engineers need to distinguish three levels:</p>
   <ol>
-    <li><strong>数学可计算：</strong>位置函数可以生成更长位置的 sin/cos 或 bias，forward 不报错。</li>
-    <li><strong>数值稳定：</strong>角度、dtype、cache、softmax 和 attention kernel 在长序列下仍稳定。</li>
-    <li><strong>任务有效：</strong>模型能在长文档、跨段引用、needle retrieval、长代码或多轮对话中真正使用远处信息。</li>
+    <li><strong>Mathematically computable:</strong> The position function can generate sin/cos or bias for longer positions; forward pass does not error.</li>
+    <li><strong>Numerically stable:</strong> Angles, dtype, cache, softmax, and attention kernel remain stable under long sequences.</li>
+    <li><strong>Task-effective:</strong> The model can actually use distant information in long documents, cross-section references, needle retrieval, long code, or multi-turn dialogues.</li>
   </ol>
-  <p>第一层最容易满足，第三层最难。Sinusoidal 与 RoPE 都能为更长位置生成数值，但模型是否会正确利用这些位置，取决于预训练长度分布、数据中远距离依赖的密度、attention 训练信号、后训练数据和推理时 prompt 组织。</p>
+  <p>The first level is easiest to satisfy; the third is the hardest. Both Sinusoidal and RoPE can generate values for longer positions, but whether the model correctly utilizes these positions depends on the pre-training length distribution, the density of long-range dependencies in the data, the attention training signal, post-training data, and prompt organization during inference.</p>
 
-  <h4>RoPE 工程账本</h4>
-  <p>使用 RoPE 时，至少要记录以下配置，否则不同实现很难复现同一个 checkpoint 的行为：</p>
+  <h4>RoPE Engineering Ledger</h4>
+  <p>When using RoPE, at least the following configurations must be recorded; otherwise, different implementations may find it difficult to reproduce the behavior of the same checkpoint:</p>
   <div class="table-wrap">
     <table>
-      <tr><th>配置项</th><th>含义</th><th>为什么影响结果</th></tr>
-      <tr><td><code>head_dim</code></td><td>每个 attention head 的旋转维度</td><td>必须成对旋转；奇数维或 partial rotary 会改变实现约定</td></tr>
-      <tr><td><code>base / theta</code></td><td>频率基底，例如 10000 或模型特定值</td><td>决定不同维度的相位变化速度</td></tr>
-      <tr><td><code>max_position</code></td><td>预计算 cos/sin cache 长度</td><td>服务时超出 cache 需要扩展或重新生成</td></tr>
-      <tr><td><code>position_ids</code></td><td>实际传入每个 token 的位置编号</td><td>packed sequence、prefix cache 和增量解码都依赖它正确连续</td></tr>
-      <tr><td><code>scaling</code></td><td>线性、dynamic NTK、YaRN 等缩放策略</td><td>改变长距离相位，可能改善长上下文，也可能损伤短上下文</td></tr>
-      <tr><td><code>dtype/device</code></td><td>cos/sin cache 的精度和设备</td><td>低精度下长位置三角函数误差、CPU/GPU 搬运都会影响速度和稳定性</td></tr>
+      <tr><th>Configuration Item</th><th>Meaning</th><th>Why It Affects Results</th></tr>
+      <tr><td><code>head_dim</code></td><td>Rotation dimension for each attention head</td><td>Must rotate in pairs; odd dimensions or partial rotary changes implementation conventions</td></tr>
+      <tr><td><code>base / theta</code></td><td>Frequency base, e.g., 10000 or model-specific value</td><td>Determines the phase change speed for different dimensions</td></tr>
+      <tr><td><code>max_position</code></td><td>Pre-computed cos/sin cache length</td><td>Exceeding cache during serving requires extension or regeneration</td></tr>
+      <tr><td><code>position_ids</code></td><td>Actual position indices passed for each token</td><td>Packed sequences, prefix cache, and incremental decoding all depend on it being correctly continuous</td></tr>
+      <tr><td><code>scaling</code></td><td>Scaling strategies like linear, dynamic NTK, YaRN</td><td>Changes long-range phase; may improve long context but may also harm short context</td></tr>
+      <tr><td><code>dtype/device</code></td><td>Precision and device of the cos/sin cache</td><td>Low precision leads to trigonometric function errors at long positions; CPU/GPU transfers affect speed and stability</td></tr>
     </table>
   </div>
 
-  <h4>Worked Example：RoPE cache 与增量解码位置</h4>
-  <p>假设 prompt 长度为 5，prefill 阶段对 token 位置 <code>0..4</code> 计算并缓存 K/V。生成第一个新 token 时，它的位置应为 <code>5</code>，第二个新 token 是 <code>6</code>。如果增量解码时错误地每一步都把新 token 的 <code>position_id</code> 设为 0，那么 Q/K 旋转会把所有生成 token 当成同一个位置，attention score 的相对位移结构被破坏；模型看似仍能运行，但长生成质量和重复行为会明显异常。</p>
-  <p>这也是 prefix cache 必须同时管理“内容前缀”和“位置前缀”的原因。复用同一段 system prompt 的 KV cache 时，新请求后续 token 的位置编号要接在共享前缀之后；如果插入了不同长度的检索片段或工具结果，就不能盲目复用旧位置。</p>
+  <h4>Worked Example: RoPE Cache and Incremental Decoding Positions</h4>
+  <p>Assume a prompt length of 5. During the prefill phase, K/V is computed and cached for token positions <code>0..4</code>. When generating the first new token, its position should be <code>5</code>; the second new token is <code>6</code>. If, during incremental decoding, the <code>position_id</code> for the new token is incorrectly set to 0 at each step, then the Q/K rotation treats all generated tokens as the same position, destroying the relative displacement structure of the attention scores. The model may still appear to run, but long-generation quality and repetition behavior will be significantly abnormal.</p>
+  <p>This is also why prefix cache must manage both the "content prefix" and the "position prefix." When reusing the KV cache of the same system prompt, the position indices of subsequent tokens in a new request must follow the shared prefix. If retrieval segments or tool results of different lengths are inserted, old positions cannot be blindly reused.</p>
 
-  <h4>位置机制怎么评估</h4>
-  <p>位置编码改动不能只看一个短文本 PPL。建议至少分三组评估：</p>
+  <h4>How to Evaluate Position Mechanisms</h4>
+  <p>Changes to position encoding should not be evaluated based on a single short-text PPL. It is recommended to evaluate at least three groups:</p>
   <ul>
-    <li><strong>短上下文保留：</strong>训练长度内的 PPL、常规 QA/代码/数学指标是否退化。</li>
-    <li><strong>长上下文检索：</strong>needle-in-a-haystack、跨段引用、长文档问答，按答案位置分桶报告。</li>
-    <li><strong>服务指标：</strong>长 prompt 的 TTFT、KV cache 显存、cos/sin cache 大小、batching 下的吞吐变化。</li>
+    <li><strong>Short-context retention:</strong> Whether PPL within training length, and regular QA/code/math metrics degrade.</li>
+    <li><strong>Long-context retrieval:</strong> Needle-in-a-haystack, cross-section references, long-document QA, reported by answer position bucket.</li>
+    <li><strong>Serving metrics:</strong> TTFT for long prompts, KV cache memory, cos/sin cache size, throughput changes under batching.</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>位置编码的学习目标不是“让模型知道第几个 token”，而是让 attention 在训练和推理中稳定区分顺序与距离。长上下文能力必须由位置机制、训练分布、attention 实现和任务评估共同证明。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core judgment:</strong> The learning objective of position encoding is not "to let the model know which token number it is," but to allow attention to stably distinguish order and distance during training and inference. Long-context capability must be jointly demonstrated by the position mechanism, training distribution, attention implementation, and task evaluation.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 2.10 总结 -->
+<!-- 2.10 Summary -->
 <!-- ================================================================ -->
 <section class="card" id="s2-10">
-  <h3>2.10 本章总结</h3>
+  <h3>2.10 Chapter Summary</h3>
   <ul>
-    <li>✅ <strong>TokenEmbedding</strong> —— 从 token ID 到稠密向量的可训练查表</li>
-    <li>✅ 理解了 One-Hot 的<strong>维度灾难</strong>和<strong>分布式表示</strong>的语义优势</li>
-    <li>✅ 区分了 <strong>word2vec/GloVe 静态词向量</strong>与 LLM 的端到端 token embedding</li>
-    <li>✅ 理解了<strong>静态 embedding 行向量</strong>与多层 Transformer <strong>上下文化 hidden state</strong> 的区别</li>
-    <li>✅ 掌握了<strong>置换等变性</strong>——为什么位置编码是必需的</li>
-    <li>✅ <strong>SinusoidalEncoding</strong> —— 多尺度频率的固定位置编码</li>
-    <li>✅ <strong>RoPE</strong> —— 旋转位置编码，点积仅依赖相对位置</li>
-    <li>✅ 从<strong>数学推导和数值实验</strong>验证了 RoPE 的相对位置性质</li>
+    <li>✅ <strong>TokenEmbedding</strong> — A trainable lookup table from token ID to dense vector</li>
+    <li>✅ Understood the <strong>curse of dimensionality</strong> of One-Hot and the semantic advantages of <strong>distributed representations</strong></li>
+    <li>✅ Distinguished between <strong>static word vectors like word2vec/GloVe</strong> and the end-to-end token embedding of LLMs</li>
+    <li>✅ Understood the difference between <strong>static embedding row vectors</strong> and the <strong>contextualized hidden states</strong> of multi-layer Transformers</li>
+    <li>✅ Mastered <strong>permutation equivariance</strong> — why position encoding is necessary</li>
+    <li>✅ <strong>SinusoidalEncoding</strong> — Fixed position encoding with multi-scale frequencies</li>
+    <li>✅ <strong>RoPE</strong> — Rotary Position Embedding, where the dot product depends only on relative position</li>
+    <li>✅ Verified the relative position property of RoPE through <strong>mathematical derivation and numerical experiments</strong></li>
   </ul>
-  <p>从第 3 章开始，我们将进入 LLM 最核心的部分——注意力机制。你将亲手实现 Scaled Dot-Product Attention、Causal Mask，并最终理解单头注意力的完整工作原理。</p>
-  <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
+  <p>Starting from Chapter 3, we will enter the core part of the LLM—the attention mechanism. You will implement Scaled Dot-Product Attention, Causal Mask, and finally understand the complete working principle of single-head attention.</p>
+  <div class="info-box key"><span class="icon">📚</span><div><strong>Further Reading:</strong>
     <a href="https://arxiv.org/abs/1706.03762" target="_blank">Vaswani et al. (2017) — Attention Is All You Need (§3.5)</a> ·
     <a href="https://arxiv.org/abs/2104.09864" target="_blank">Su et al. (2021) — RoFormer: Enhanced Transformer with Rotary Position Embedding</a> ·
     <a href="https://arxiv.org/abs/2108.12409" target="_blank">Press et al. (2021) — ALiBi: Train Short, Test Long</a> ·
-    <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 技术报告 (§3.2.1 YaRN 配置)</a>
+    <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 Technical Report (§3.2.1 YaRN Configuration)</a>
   </div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 概念练习 -->
+<!-- Concept Exercises -->
 <!-- ================================================================ -->
 <!-- ================================================================ -->
-<!-- 2.11 上下文学习导论 -->
+<!-- 2.11 Introduction to In-Context Learning -->
 <!-- ================================================================ -->
 <section class="card" id="s2-11">
-  <h3>2.11 上下文学习导论：prompt 为什么会影响生成</h3>
-  <p>完成 Embedding 与 RoPE 后，我们可以从模型内部重新理解 prompt：它不是一个独立于模型之外的"话术"，而是一段已经被分词、嵌入、加上位置信息的<strong>条件序列</strong>。自回归语言模型在每一步都学习条件分布 \(p(x_t \mid x_{&lt;t})\)，所以前文 token 的内容、顺序和相对位置都会改变下一个 token 的概率分布。</p>
+  <h3>2.11 Introduction to In-Context Learning: Why Prompts Affect Generation</h3>
+  <p>Having completed Embedding and RoPE, we can re-understand the prompt from inside the model: it is not a "script" independent of the model, but a <strong>conditional sequence</strong> that has already been tokenized, embedded, and augmented with position information. An autoregressive language model learns the conditional distribution \(p(x_t \mid x_{&lt;t})\) at each step, so the content, order, and relative positions of preceding tokens all change the probability distribution of the next token.</p>
 
-  <h4>从 token 序列到条件分布</h4>
-  <p>设输入序列为 \(x_1,\ldots,x_n\)。经过嵌入层后，每个 token 得到语义向量；经过位置编码后，模型还能区分"示例在前、问题在后"与"问题在前、示例在后"。因此，同样的任务描述如果改变示例顺序、标签格式或边界符号，模型看到的条件序列就不同，最终生成分布也会不同。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键连接：</strong>prompt 的效果首先来自表示层：token embedding 提供内容语义，位置编码提供顺序结构；第 3 章的注意力机制会进一步说明模型如何在生成时选择性读取这些上下文信息。</div></div>
+  <h4>From Token Sequence to Conditional Distribution</h4>
+  <p>Let the input sequence be \(x_1,\ldots,x_n\). After the embedding layer, each token obtains a semantic vector; after position encoding, the model can also distinguish "examples first, question later" from "question first, examples later." Therefore, if the same task description changes the example order, label format, or boundary symbols, the conditional sequence the model sees is different, and the final generation distribution will also differ.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key connection:</strong> The effect of a prompt first comes from the representation layer: token embedding provides content semantics, position encoding provides sequential structure; the attention mechanism in Chapter 3 will further explain how the model selectively reads this contextual information during generation.</div></div>
 
-  <h4>Zero-shot、few-shot 与上下文学习</h4>
-  <p><strong>Zero-shot</strong> 只给任务指令，不给输入输出示例；模型依靠预训练中学到的语言模式和任务描述完成预测。<strong>Few-shot</strong> 在上下文中放入若干示例，模型参数没有更新，但示例的格式、标签空间和推理模式会进入条件序列，影响后续 token 的生成。</p>
-  <p>这类能力通常称为<strong>上下文学习</strong>。它与微调的区别很重要：微调通过梯度更新参数，把任务信息写入权重；上下文学习只在当前序列内提供条件信息，离开这段上下文后不会保留为新的模型参数。</p>
+  <h4>Zero-shot, Few-shot, and In-Context Learning</h4>
+  <p><strong>Zero-shot</strong> provides only the task instruction, without input-output examples; the model relies on language patterns and task descriptions learned during pre-training to make predictions. <strong>Few-shot</strong> places several examples in the context; the model parameters are not updated, but the example format, label space, and reasoning pattern enter the conditional sequence, influencing the generation of subsequent tokens.</p>
+  <p>This type of capability is often called <strong>in-context learning</strong>. Its distinction from fine-tuning is important: fine-tuning updates parameters via gradients, writing task information into the weights; in-context learning only provides conditional information within the current sequence and does not persist as new model parameters after leaving this context.</p>
 
-  <h4>长上下文中的位置问题</h4>
-  <p>长上下文模型并不只是"把窗口变大"。当序列长度扩展时，模型需要稳定处理更远距离的相对位置，避免重要信息因为位置外推、注意力稀释或上下文组织混乱而失效。RoPE、ALiBi、YaRN 等方法都围绕一个核心问题展开：如何让模型在较长序列中仍能可靠地区分 token 之间的相对距离与顺序关系。</p>
+  <h4>Position Issues in Long Contexts</h4>
+  <p>A long-context model is not simply about "making the window larger." When the sequence length expands, the model needs to stably handle relative positions over longer distances, preventing important information from failing due to position extrapolation, attention dilution, or disorganized context. Methods like RoPE, ALiBi, and YaRN all revolve around a core issue: how to enable the model to reliably distinguish the relative distance and order relationship between tokens in longer sequences.</p>
 
-  <h4>本章应掌握的建模视角</h4>
+  <h4>Modeling Perspectives to Master in This Chapter</h4>
   <div class="info-box tip"><span class="icon">💡</span><div>
-    <strong>1. Prompt 是条件序列</strong> —— 它首先会被 tokenizer、embedding 和位置编码处理<br>
-    <strong>2. Few-shot 是上下文学习</strong> —— 示例改变当前条件分布，但不更新参数<br>
-    <strong>3. 顺序和边界很重要</strong> —— 相同 token 的不同排列会形成不同的模型输入<br>
-    <strong>4. 长上下文依赖位置外推</strong> —— 位置编码决定模型能否稳定理解远距离关系<br>
-    <strong>5. 注意力是下一章的核心</strong> —— 它解释模型如何读取、比较和聚合上下文 token
+    <strong>1. Prompt is a conditional sequence</strong> — It is first processed by the tokenizer, embedding, and position encoding<br>
+    <strong>2. Few-shot is in-context learning</strong> — Examples change the current conditional distribution but do not update parameters<br>
+    <strong>3. Order and boundaries matter</strong> — Different permutations of the same tokens form different model inputs<br>
+    <strong>4. Long context depends on position extrapolation</strong> — Position encoding determines whether the model can stably understand long-distance relationships<br>
+    <strong>5. Attention is the core of the next chapter</strong> — It explains how the model reads, compares, and aggregates context tokens
   </div></div>
 </section>
 
 
 <section class="card">
-  <h3>📝 概念练习巩固</h3>
+  <h3>📝 Concept Practice Exercises</h3>
 
-  <div class="exercise" data-answer="1" data-explain="嵌入矩阵 W_e 的形状是 V × d，其中 V 是词表大小，d 是嵌入维度。nn.Embedding(V, d) 实际存储的是一个形状为 [V, d] 的权重矩阵，查表操作就是取第 t 行。">
-    <h4>练习 1：nn.Embedding(V, d) 创建的嵌入矩阵形状是？</h4>
-    <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q1" value="0"> A. d × V</label>
+  <div class="exercise" data-answer="1" data-explain="The shape of the embedding matrix W_e is V × d, where V is the vocabulary size and d is the embedding dimension. nn.Embedding(V, d) actually stores a weight matrix of shape [V, d]; the lookup operation retrieves the t-th row.">
+    <h4>Exercise 1: What is the shape of the embedding matrix created by nn.Embedding(V, d)?</h4>
+    <div class="opts" role="radiogroup">      <label><input type="radio" name="q1" value="0"> A. d × V</label>
       <label><input type="radio" name="q1" value="1"> B. V × d</label>
       <label><input type="radio" name="q1" value="2"> C. V × V</label>
       <label><input type="radio" name="q1" value="3"> D. d × d</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="Self-Attention 是置换等变的——交换输入 token 的顺序，输出也对应交换（每个位置的表示不变）。没有位置编码时，“我打你”和“你打我”会得到相同的表示序列，只是排列不同。">
-    <h4>练习 2：没有位置编码时，为什么 Transformer 无法区分"我打你"和"你打我"？</h4>
+  <div class="exercise" data-answer="2" data-explain="Self-Attention is permutation equivariant—swapping the order of input tokens correspondingly swaps the output (the representation of each position remains unchanged). Without positional encoding, 'I hit you' and 'you hit me' would yield the same sequence of representations, just in a different order.">
+    <h4>Exercise 2: Without positional encoding, why can't a Transformer distinguish between "I hit you" and "you hit me"?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q2" value="0"> A. 因为嵌入层输出与 token 顺序无关</label>
-      <label><input type="radio" name="q2" value="1"> B. 因为 Self-Attention 的 softmax 会抹掉顺序信息</label>
-      <label><input type="radio" name="q2" value="2"> C. 因为 Self-Attention 是置换等变的，每个位置的输出只取决于内容不取决于位置</label>
-      <label><input type="radio" name="q2" value="3"> D. 因为 Self-Attention 使用了因果掩码</label>
+      <label><input type="radio" name="q2" value="0"> A. Because the embedding layer output is independent of token order</label>
+      <label><input type="radio" name="q2" value="1"> B. Because the softmax in Self-Attention erases order information</label>
+      <label><input type="radio" name="q2" value="2"> C. Because Self-Attention is permutation equivariant; the output at each position depends only on content, not position</label>
+      <label><input type="radio" name="q2" value="3"> D. Because Self-Attention uses a causal mask</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="RoPE 的核心创新是修改注意力计算（Q/K 的旋转），而不是在嵌入向量上加位置编码。Sinusoidal 和 Learned PE 都是加性方案——在嵌入层加入位置向量。RoPE 的数学基础是旋转矩阵的群性质。">
-    <h4>练习 3：RoPE 与 Sinusoidal 编码的最根本区别是什么？</h4>
+  <div class="exercise" data-answer="0" data-explain="The core innovation of RoPE is modifying the attention computation (rotation of Q/K), rather than adding positional encoding to the embedding vector. Sinusoidal and Learned PE are both additive schemes—adding a position vector to the embedding layer. The mathematical foundation of RoPE is the group property of rotation matrices.">
+    <h4>Exercise 3: What is the most fundamental difference between RoPE and Sinusoidal encoding?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q3" value="0"> A. RoPE 修改 Q 和 K 的表示（旋转），Sinusoidal 在嵌入层加位置向量</label>
-      <label><input type="radio" name="q3" value="1"> B. RoPE 使用三角函数而 Sinusoidal 不使用</label>
-      <label><input type="radio" name="q3" value="2"> C. RoPE 需要训练参数而 Sinusoidal 不需要</label>
-      <label><input type="radio" name="q3" value="3"> D. RoPE 只用于解码器而 Sinusoidal 只用于编码器</label>
+      <label><input type="radio" name="q3" value="0"> A. RoPE modifies the representations of Q and K (rotation), while Sinusoidal adds a position vector to the embedding layer</label>
+      <label><input type="radio" name="q3" value="1"> B. RoPE uses trigonometric functions while Sinusoidal does not</label>
+      <label><input type="radio" name="q3" value="2"> C. RoPE requires training parameters while Sinusoidal does not</label>
+      <label><input type="radio" name="q3" value="3"> D. RoPE is only used for decoders while Sinusoidal is only used for encoders</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="因为 R_{Θ,m} 是正交矩阵，R^T R = I。旋转不改变向量的 L2 范数，只改变方向。它保留向量长度，但语义解释仍取决于后续注意力、训练数据和模型参数。">
-    <h4>练习 4：RoPE 旋转后，为什么向量 q 的 L2 范数不变？</h4>
+  <div class="exercise" data-answer="2" data-explain="Because R_{Θ,m} is an orthogonal matrix, R^T R = I. Rotation does not change the L2 norm of a vector, only its direction. It preserves the vector's length, but the semantic interpretation still depends on subsequent attention, training data, and model parameters.">
+    <h4>Exercise 4: After RoPE rotation, why does the L2 norm of vector q remain unchanged?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q4" value="0"> A. 因为 q 是单位向量</label>
-      <label><input type="radio" name="q4" value="1"> B. 因为 RoPE 只改变 q 的符号不改变它的值</label>
-      <label><input type="radio" name="q4" value="2"> C. 因为旋转矩阵 R 是正交矩阵，满足 R^T R = I，所以 ‖Rq‖ = ‖q‖</label>
-      <label><input type="radio" name="q4" value="3"> D. 因为 q 经过 LayerNorm 后范数已经固定</label>
+      <label><input type="radio" name="q4" value="0"> A. Because q is a unit vector</label>
+      <label><input type="radio" name="q4" value="1"> B. Because RoPE only changes the sign of q, not its value</label>
+      <label><input type="radio" name="q4" value="2"> C. Because the rotation matrix R is an orthogonal matrix, satisfying R^T R = I, so ‖Rq‖ = ‖q‖</label>
+      <label><input type="radio" name="q4" value="3"> D. Because the norm of q is already fixed after LayerNorm</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="同一个 token 的输入 embedding 行向量是固定的；经过 attention 和 FFN 后得到的 hidden state 会随上下文和层数改变。多义词、指代和任务语义主要体现在上下文化表示和最终 logits 中，而不是只体现在输入 embedding 最近邻中。">
-    <h4>练习 5：为什么不能只看输入 embedding 最近邻来判断 LLM 是否理解一词多义？</h4>
+  <div class="exercise" data-answer="1" data-explain="The input embedding row vector for the same token is fixed; the hidden state obtained after attention and FFN changes with context and layer depth. Polysemy, anaphora, and task semantics are mainly reflected in contextualized representations and final logits, not just in the nearest neighbors of the input embedding.">
+    <h4>Exercise 5: Why can't we judge whether an LLM understands polysemy just by looking at the nearest neighbors of the input embedding?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q5" value="0"> A. 因为输入 embedding 没有任何训练参数</label>
-      <label><input type="radio" name="q5" value="1"> B. 因为同一 token 的输入向量固定，但高层 hidden state 会随上下文改变</label>
-      <label><input type="radio" name="q5" value="2"> C. 因为 RoPE 会删除所有语义信息</label>
-      <label><input type="radio" name="q5" value="3"> D. 因为 cosine similarity 只能用于图像模型</label>
+      <label><input type="radio" name="q5" value="0"> A. Because the input embedding has no training parameters</label>
+      <label><input type="radio" name="q5" value="1"> B. Because the input vector for the same token is fixed, but the higher-layer hidden state changes with context</label>
+      <label><input type="radio" name="q5" value="2"> C. Because RoPE deletes all semantic information</label>
+      <label><input type="radio" name="q5" value="3"> D. Because cosine similarity can only be used for image models</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="从推导看：q'_m^T k'_n = (R_m q)^T (R_n k) = q^T R_m^T R_n k = q^T R_{n-m} k。其中 R_m^T R_n = R_{n-m} 利用了旋转矩阵的群性质（先逆旋转 m，再正旋转 n，等于旋转 n-m）。结果只与 n-m 有关。">
-    <h4>练习 6：从数学上证明 RoPE 的点积只依赖于相对位置 <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>，关键步骤是什么？</h4>
+  <div class="exercise" data-answer="0" data-explain="From the derivation: q'_m^T k'_n = (R_m q)^T (R_n k) = q^T R_m^T R_n k = q^T R_{n-m} k. Here, R_m^T R_n = R_{n-m} leverages the group property of rotation matrices (first rotate inversely by m, then rotate forward by n, equals rotating by n-m). The result depends only on n-m.">
+    <h4>Exercise 6: Mathematically prove that the dot product in RoPE depends only on the relative position <span class="katex-inline" data-expr="m-n" aria-label="m-n" role="img"></span>. What is the key step?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q6" value="0"> A. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, n-m}" role="img"></span></label>
       <label><input type="radio" name="q6" value="1"> B. <span class="katex-inline" data-expr="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" aria-label="R_{\Theta,m}^\top R_{\Theta,n} = R_{\Theta, m+n}" role="img"></span></label>
       <label><input type="radio" name="q6" value="2"> C. <span class="katex-inline" data-expr="R_{\Theta,m} R_{\Theta,n}^\top = I" aria-label="R_{\Theta,m} R_{\Theta,n}^\top = I" role="img"></span></label>
       <label><input type="radio" name="q6" value="3"> D. <span class="katex-inline" data-expr="\cos(m-n) = \cos m \cos n + \sin m \sin n" aria-label="\cos(m-n) = \cos m \cos n + \sin m \sin n" role="img"></span></label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 </section></article>
 
 <nav class="chapter-nav">
-  <a href="ch01.html" class="btn btn-outline" rel="prev">← 上一章</a>
-  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
-  <a href="ch03.html" class="btn btn-outline" rel="next">下一章 →</a>
+  <a href="ch01.html" class="btn btn-outline" rel="prev">← Previous Chapter</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ Mark Complete</button>
+  <a href="ch03.html" class="btn btn-outline" rel="next">Next Chapter →</a>
 </nav>
 </main>
 

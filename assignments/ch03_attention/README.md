@@ -1,39 +1,39 @@
-# Ch03 Scaled Dot-Product Attention 作业测试
+# Ch03 Scaled Dot-Product Attention Homework Tests
 
-本目录把第 3 章的编程练习整理成可自动验收的作业入口，覆盖 QKV 投影、Scaled Dot-Product Attention、self-attention permutation equivariance、softmax/attention 反向传播、Q/K/V 手写梯度、attention entropy、attention score 显存估算、Causal Mask、causal+padding mask 合成、因果注意力和注意力热力图函数。
+This directory organizes the programming exercises from Chapter 3 into automatically verifiable homework entry points, covering QKV projection, Scaled Dot-Product Attention, self-attention permutation equivariance, softmax/attention backpropagation, Q/K/V hand-written gradients, attention entropy, attention score memory estimation, Causal Mask, causal+padding mask composition, causal attention, and attention heatmap functions.
 
-## 文件说明
+## File Description
 
-| 文件 | 用途 |
-|------|------|
-| `starter.py` | 学生起始代码，包含需要实现的 TODO |
-| `reference_solution.py` | 教师参考实现，用于验证测试本身 |
-| `tests.py` | `unittest` 测试，覆盖 shape、缩放、mask、置换等变性、softmax Jacobian、attention logits gradient、Q/K/V gradients、attention entropy、attention score 显存、因果约束、padding key 屏蔽和可视化返回值 |
+| File | Purpose |
+|------|---------|
+| `starter.py` | Student starter code, containing TODOs to be implemented |
+| `reference_solution.py` | Instructor reference implementation, used to verify the tests themselves |
+| `tests.py` | `unittest` tests, covering shape, scaling, mask, permutation equivariance, softmax Jacobian, attention logits gradient, Q/K/V gradients, attention entropy, attention score memory, causal constraints, padding key masking, and visualization return values |
 
-## 学生运行方式
+## Student Run Method
 
 ```bash
 cp assignments/ch03_attention/starter.py assignments/ch03_attention/student_solution.py
-# 编辑 student_solution.py 完成 TODO
+# Edit student_solution.py to complete TODOs
 STUDENT_MODULE=student_solution .venv/bin/python assignments/ch03_attention/tests.py
 ```
 
-也可以直接让测试加载 `starter.py`：
+You can also directly have the tests load `starter.py`:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch03_attention/tests.py
 ```
 
-也可以直接验证课程内置参考实现：
+You can also directly verify the course's built-in reference implementation:
 
 ```bash
 .venv/bin/python assignments/ch03_attention/tests.py
 ```
 
-## 评分 Rubric
+## Grading Rubric
 
-| 项目 | 分值 | 标准 |
-|------|:--:|------|
-| Written questions | 35 | 推导 `1/sqrt(d_k)` scaling、self-attention 置换等变性、softmax Jacobian、attention logits 到 Q/K/V 的链式法则、attention entropy、mask 加在 softmax 前的原因、causal mask 与 padding mask 的形状广播、all-masked row 的 NaN 风险、复杂度和 heatmap 解释边界 |
-| Programming parts | 55 | 实现 QKV projection、scaled dot-product attention、置换等变性数值验证、softmax/attention backward helpers、Q/K/V gradient helper、attention entropy、attention score 显存估算、causal mask、causal+padding mask 合成和 attention visualization |
-| Analysis / style | 10 | 解释 mask 数值稳定性、padding key 与 padding query 的区别、attention heatmap 的适用范围和常见 shape bug |
+| Item | Points | Criteria |
+|------|:--:|---------|
+| Written questions | 35 | Derivation of `1/sqrt(d_k)` scaling, self-attention permutation equivariance, softmax Jacobian, chain rule from attention logits to Q/K/V, attention entropy, reason for adding mask before softmax, shape broadcasting of causal mask and padding mask, NaN risk of all-masked rows, complexity, and heatmap interpretation boundaries |
+| Programming parts | 55 | Implementation of QKV projection, scaled dot-product attention, numerical verification of permutation equivariance, softmax/attention backward helpers, Q/K/V gradient helper, attention entropy, attention score memory estimation, causal mask, causal+padding mask composition, and attention visualization |
+| Analysis / style | 10 | Explanation of mask numerical stability, difference between padding key and padding query, applicable scope of attention heatmap, and common shape bugs |

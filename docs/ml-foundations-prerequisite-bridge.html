@@ -1,92 +1,93 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
-<link rel="apple-touch-icon" href="../images/favicon.png">
+
+	<link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ML Foundations Prerequisite Bridge — LLM 深度学习</title>
+	<title>ML Foundations Prerequisite Bridge - LLM Deep Learning</title>
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-doc="ml-foundations-prerequisite-bridge.html">
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <h1>LLM 深度学习</h1>
-    <p>课程材料</p>
+    <h1>LLM Deep Learning</h1>
+    <p>Course Materials</p>
   </div>
   <nav class="sidebar-nav">
-    <a href="../index.html"><span class="ch-num">⌂</span>课程首页</a>
+    <a href="../index.html"><span class="ch-num">⌂</span>Course Home</a>
     <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
-    <a href="written-problem-set.html"><span class="ch-num">W</span>书面题库</a>
+    <a href="written-problem-set.html"><span class="ch-num">W</span>Written Problem Set</a>
     <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
   </nav>
   <div class="sidebar-footer">
-    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
-      <span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span>
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="Toggle theme">
+      <span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span>
     </button>
   </div>
 </aside>
 <main class="main doc-main">
   <article class="chapter doc-article">
-    <div class="reading-time"><a href="../index.html">课程首页</a> / ml-foundations-prerequisite-bridge.html</div>
+    <div class="reading-time"><a href="../index.html">Course Home</a> / ml-foundations-prerequisite-bridge.html</div>
     <h2>ML Foundations Prerequisite Bridge</h2>
-    <nav class="toc"><h4>目录</h4><ol><li class="doc-toc-level-1"><a href="#ml-foundations-prerequisite-bridge">ML Foundations Prerequisite Bridge</a></li>
-<li class="doc-toc-level-2"><a href="#覆盖范围">覆盖范围</a></li>
+    <nav class="toc"><h4>Contents</h4><ol><li class="doc-toc-level-1"><a href="#ml-foundations-prerequisite-bridge">ML Foundations Prerequisite Bridge</a></li>
+<li class="doc-toc-level-2"><a href="#coverage">Coverage</a></li>
 <li class="doc-toc-level-2"><a href="#diagnostic-add-on">Diagnostic Add-on</a></li>
 <li class="doc-toc-level-2"><a href="#mini-lecture-calculus-to-backprop">Mini-Lecture: Calculus to Backprop</a></li>
 <li class="doc-toc-level-2"><a href="#mini-lecture-probability-and-language-models">Mini-Lecture: Probability and Language Models</a></li>
 <li class="doc-toc-level-2"><a href="#mini-lecture-statistics-for-experiments">Mini-Lecture: Statistics for Experiments</a></li>
 <li class="doc-toc-level-2"><a href="#mini-lecture-ml-objectives-and-generalization">Mini-Lecture: ML Objectives and Generalization</a></li>
 <li class="doc-toc-level-2"><a href="#project-learning-outputs">Project Learning Outputs</a></li>
-<li class="doc-toc-level-2"><a href="#补救任务">补救任务</a></li></ol></nav>
+<li class="doc-toc-level-2"><a href="#remedial-tasks">Remedial Tasks</a></li></ol></nav>
     <section class="card doc-content">
 <h2 id="ml-foundations-prerequisite-bridge">ML Foundations Prerequisite Bridge</h2>
-<p>本 handout 汇总本课程会反复用到的 college calculus、probability/statistics 和 foundations of machine learning。它不是独立机器学习课程，而是把学生需要带入本课程的最小概念映射到 LLM 章节、作业和书面题。相关复习材料见 <a href="math-prerequisites.html">数学与 PyTorch 先修复习</a>、<a href="python-pytorch-review-session.html">Python and PyTorch Review Session</a> 和 <a href="reading-list.html">逐周阅读材料 Handout</a>。</p>
-<h3 id="覆盖范围">覆盖范围</h3>
-<div class="table-wrap"><table><thead><tr><th>先修主题</th><th>本课程用途</th><th>最低掌握产出</th></tr></thead><tbody><tr><td>Calculus / gradients</td><td>loss、backprop、optimizer、LayerNorm、DPO/GRPO</td><td>能解释 chain rule、partial derivative、gradient direction 和局部线性近似</td></tr><tr><td>Probability</td><td>language model likelihood、softmax、sampling、perplexity、preference data</td><td>能写出条件概率、联合分解、期望、方差和 log probability</td></tr><tr><td>Statistics</td><td>train/validation split、confidence、benchmark variance、error analysis</td><td>能区分样本均值、方差、置信区间、随机 seed 和分布偏移</td></tr><tr><td>ML objectives</td><td>maximum likelihood、cross entropy、regularization、preference loss</td><td>能把公式连接到 Ch07/Ch09 的实现和测试</td></tr><tr><td>Generalization</td><td>overfitting、data leakage、contamination、held-out evaluation</td><td>能解释 val loss、test set、hidden tests 和项目评测集的边界</td></tr><tr><td>Optimization</td><td>gradient descent、learning rate、weight decay、scheduler、early stopping</td><td>能读训练曲线并提出可复现实验</td></tr><tr><td>Evaluation</td><td>metric design、baseline、ablation、statistical uncertainty</td><td>能说明一个指标支持什么结论、不支持什么结论</td></tr></tbody></table></div>
+<p>This handout summarizes the college calculus, probability/statistics, and foundations of machine learning that will be used repeatedly throughout this course. It is not a standalone machine learning course, but rather maps the minimum concepts students need to bring into this course to LLM chapters, assignments, and written problems. Related review materials can be found in <a href="math-prerequisites.html">Math and PyTorch Prerequisite Review</a>, <a href="python-pytorch-review-session.html">Python and PyTorch Review Session</a>, and the <a href="reading-list.html">Weekly Reading List Handout</a>.</p>
+<h3 id="coverage">Coverage</h3>
+<div class="table-wrap"><table><thead><tr><th>Prerequisite Topic</th><th>Use in This Course</th><th>Minimum Mastery Output</th></tr></thead><tbody><tr><td>Calculus / gradients</td><td>loss, backprop, optimizer, LayerNorm, DPO/GRPO</td><td>Can explain chain rule, partial derivative, gradient direction, and local linear approximation</td></tr><tr><td>Probability</td><td>language model likelihood, softmax, sampling, perplexity, preference data</td><td>Can write conditional probability, joint decomposition, expectation, variance, and log probability</td></tr><tr><td>Statistics</td><td>train/validation split, confidence, benchmark variance, error analysis</td><td>Can distinguish sample mean, variance, confidence interval, random seed, and distribution shift</td></tr><tr><td>ML objectives</td><td>maximum likelihood, cross entropy, regularization, preference loss</td><td>Can connect formulas to implementations and tests in Ch07/Ch09</td></tr><tr><td>Generalization</td><td>overfitting, data leakage, contamination, held-out evaluation</td><td>Can explain val loss, test set, hidden tests, and the boundaries of the project evaluation set</td></tr><tr><td>Optimization</td><td>gradient descent, learning rate, weight decay, scheduler, early stopping</td><td>Can read training curves and propose reproducible experiments</td></tr><tr><td>Evaluation</td><td>metric design, baseline, ablation, statistical uncertainty</td><td>Can state what conclusions a metric supports and does not support</td></tr></tbody></table></div>
 <h3 id="diagnostic-add-on">Diagnostic Add-on</h3>
-<p>若学生未修过系统 ML 课程，应在 Week 0 / Week 1 完成以下短诊断。它可作为 Prerequisite Diagnostic 的补充分项。</p>
-<div class="table-wrap"><table><thead><tr><th>模块</th><th>题目</th><th>通过标准</th></tr></thead><tbody><tr><td>calculus</td><td>对 <code>loss = (wx - y)^2</code> 写出 <code>d loss / d w</code>，并解释梯度下降更新方向</td><td>不只套公式，能说明 update 如何改变 prediction</td></tr><tr><td>probability</td><td>把 <code>P(x_1, x_2, x_3)</code> 写成自回归条件概率乘积</td><td>条件对象和顺序正确</td></tr><tr><td>statistics</td><td>给定两个 benchmark run 的 P95 latency，说明为什么单次 run 不足以证明系统更快</td><td>提到方差、样本量、随机性或负载条件</td></tr><tr><td>ML objective</td><td>解释 cross entropy 为什么对应 maximum likelihood</td><td>能连接 <code>-log p_y</code> 与提高正确 token 概率</td></tr><tr><td>generalization</td><td>train loss 下降、val loss 上升时列出 3 个排查方向</td><td>提到 overfitting、data leakage、split、regularization 或 early stopping</td></tr><tr><td>evaluation</td><td>为 RAG QA 项目选择至少 3 个指标，并说明每个指标的局限</td><td>同时覆盖 retrieval、generation 和 latency/safety 中至少两类</td></tr></tbody></table></div>
-<p>建议评分为完成/未完成。若 6 题中少于 4 题通过，学生应先完成本 handout 的补救任务，再提交第一个 graded programming assignment。</p>
+<p>If a student has not taken a systematic ML course, they should complete the following short diagnostic in Week 0 / Week 1. It can serve as a supplementary sub-section of the Prerequisite Diagnostic.</p>
+<div class="table-wrap"><table><thead><tr><th>Module</th><th>Question</th><th>Passing Criteria</th></tr></thead><tbody><tr><td>calculus</td><td>For <code>loss = (wx - y)^2</code>, write <code>d loss / d w</code> and explain the gradient descent update direction</td><td>Not just applying the formula; can explain how the update changes the prediction</td></tr><tr><td>probability</td><td>Write <code>P(x_1, x_2, x_3)</code> as a product of autoregressive conditional probabilities</td><td>The conditional objects and order are correct</td></tr><tr><td>statistics</td><td>Given the P95 latency of two benchmark runs, explain why a single run is insufficient to prove one system is faster</td><td>Mention variance, sample size, randomness, or load conditions</td></tr><tr><td>ML objective</td><td>Explain why cross entropy corresponds to maximum likelihood</td><td>Can connect <code>-log p_y</code> to increasing the probability of the correct token</td></tr><tr><td>generalization</td><td>When train loss decreases and val loss increases, list 3 directions for investigation</td><td>Mention overfitting, data leakage, split, regularization, or early stopping</td></tr><tr><td>evaluation</td><td>Select at least 3 metrics for a RAG QA project and explain the limitation of each metric</td><td>Covers at least two categories among retrieval, generation, and latency/safety</td></tr></tbody></table></div>
+<p>It is recommended to score as complete/incomplete. If a student passes fewer than 4 out of 6 questions, they should complete the remedial tasks in this handout before submitting the first graded programming assignment.</p>
 <h3 id="mini-lecture-calculus-to-backprop">Mini-Lecture: Calculus to Backprop</h3>
-<p>学生不需要手写大型 Jacobian，但必须理解梯度如何在计算图中传播：</p>
+<p>Students do not need to hand-write large Jacobians, but they must understand how gradients propagate through a computation graph:</p>
 <pre class="code-block" data-lang="text"><code>y_hat = model(x; theta)
 loss = L(y_hat, y)
 theta &lt;- theta - lr * d loss / d theta</code></pre>
-<p>最低要求：</p>
+<p>Minimum requirements:</p>
 <ul>
-<li>chain rule：复合函数梯度逐层相乘。</li>
-<li>partial derivative：多参数函数中只看某个参数方向的局部变化。</li>
-<li>gradient vector：所有参数方向的偏导数组成更新方向。</li>
-<li>local linear approximation：小步更新近似由一阶导数解释。</li>
+<li>chain rule: Gradients of composite functions multiply layer by layer.</li>
+<li>partial derivative: The local change in only one parameter direction for a multi-parameter function.</li>
+<li>gradient vector: The partial derivatives for all parameter directions form the update direction.</li>
+<li>local linear approximation: Small-step updates are approximately explained by the first derivative.</li>
 </ul>
-<p>课程连接：</p>
-<div class="table-wrap"><table><thead><tr><th>课程位置</th><th>需要的 calculus 直觉</th></tr></thead><tbody><tr><td>Ch03 attention</td><td>score、softmax、weighted sum 都在同一计算图中</td></tr><tr><td>Ch05 LayerNorm</td><td>mean 和 variance 依赖输入，反向传播不能只除以 std</td></tr><tr><td>Ch07 AdamW</td><td>gradient、momentum、weight decay 和 learning rate 分工不同</td></tr><tr><td>Ch09 DPO</td><td>chosen/rejected log ratio 的方向决定偏好更新</td></tr></tbody></table></div>
+<p>Course connections:</p>
+<div class="table-wrap"><table><thead><tr><th>Course Location</th><th>Required Calculus Intuition</th></tr></thead><tbody><tr><td>Ch03 attention</td><td>score, softmax, weighted sum are all in the same computation graph</td></tr><tr><td>Ch05 LayerNorm</td><td>mean and variance depend on the input; backpropagation cannot simply divide by std</td></tr><tr><td>Ch07 AdamW</td><td>gradient, momentum, weight decay, and learning rate have different roles</td></tr><tr><td>Ch09 DPO</td><td>The direction of the chosen/rejected log ratio determines the preference update</td></tr></tbody></table></div>
 <h3 id="mini-lecture-probability-and-language-models">Mini-Lecture: Probability and Language Models</h3>
-<p>自回归语言模型使用条件概率分解：</p>
+<p>Autoregressive language models use conditional probability decomposition:</p>
 <pre class="code-block" data-lang="text"><code>P(x_1, ..., x_T) = product_t P(x_t | x_&lt;t)
 log P(x_1, ..., x_T) = sum_t log P(x_t | x_&lt;t)</code></pre>
-<p>课程中常见概率对象：</p>
-<div class="table-wrap"><table><thead><tr><th>对象</th><th>解释</th><th>常见误区</th></tr></thead><tbody><tr><td>softmax probability</td><td>logits 归一化后的类别分布</td><td>logits 本身不是概率</td></tr><tr><td>cross entropy</td><td>对目标 token 的负 log probability 平均</td><td>loss 低不等于事实正确</td></tr><tr><td>perplexity</td><td><code>exp(cross_entropy)</code></td><td>PPL 不能单独评估开放式回答质量</td></tr><tr><td>sampling temperature</td><td>改变分布尖锐度</td><td>temperature 不保证真实性</td></tr><tr><td>top-p nucleus</td><td>保留累计概率达到阈值的最小集合</td><td>top-p 的候选数不是固定的</td></tr></tbody></table></div>
+<p>Common probability objects in the course:</p>
+<div class="table-wrap"><table><thead><tr><th>Object</th><th>Explanation</th><th>Common Misconception</th></tr></thead><tbody><tr><td>softmax probability</td><td>Class distribution after logits normalization</td><td>Logits themselves are not probabilities</td></tr><tr><td>cross entropy</td><td>Average negative log probability of the target token</td><td>Low loss does not mean factually correct</td></tr><tr><td>perplexity</td><td><code>exp(cross_entropy)</code></td><td>PPL alone cannot evaluate open-ended response quality</td></tr><tr><td>sampling temperature</td><td>Changes the sharpness of the distribution</td><td>Temperature does not guarantee factuality</td></tr><tr><td>top-p nucleus</td><td>The smallest set whose cumulative probability reaches a threshold</td><td>The number of candidates for top-p is not fixed</td></tr></tbody></table></div>
 <h3 id="mini-lecture-statistics-for-experiments">Mini-Lecture: Statistics for Experiments</h3>
-<p>训练和推理项目必须避免把单次结果当成稳定结论。</p>
-<div class="table-wrap"><table><thead><tr><th>统计概念</th><th>课程用法</th><th>报告要求</th></tr></thead><tbody><tr><td>sample mean</td><td>平均 loss、平均 latency、平均 score</td><td>同时报告样本数和条件</td></tr><tr><td>variance / std</td><td>多次 run、不同 prompt、不同 batch 的波动</td><td>解释异常值和失败样例</td></tr><tr><td>confidence interval</td><td>小样本评测的不确定性</td><td>可用 bootstrap 或 repeated runs 估计</td></tr><tr><td>distribution shift</td><td>train/dev/test 或线上流量不同</td><td>描述 split 和代表性</td></tr><tr><td>data leakage</td><td>训练数据、检索库或 prompt 泄漏答案</td><td>记录去重、污染检查和 held-out 集</td></tr><tr><td>seed sensitivity</td><td>不同初始化或采样导致指标变化</td><td>至少固定 seed，并说明仍可能不完全复现</td></tr></tbody></table></div>
+<p>Training and inference projects must avoid treating a single result as a stable conclusion.</p>
+<div class="table-wrap"><table><thead><tr><th>Statistical Concept</th><th>Course Usage</th><th>Reporting Requirement</th></tr></thead><tbody><tr><td>sample mean</td><td>average loss, average latency, average score</td><td>Report sample size and conditions simultaneously</td></tr><tr><td>variance / std</td><td>Fluctuation across multiple runs, different prompts, different batches</td><td>Explain outliers and failure cases</td></tr><tr><td>confidence interval</td><td>Uncertainty of small-sample evaluations</td><td>Can be estimated using bootstrap or repeated runs</td></tr><tr><td>distribution shift</td><td>Differences between train/dev/test or online traffic</td><td>Describe the split and representativeness</td></tr><tr><td>data leakage</td><td>Training data, retrieval corpus, or prompt leaking answers</td><td>Record deduplication, contamination checks, and held-out sets</td></tr><tr><td>seed sensitivity</td><td>Metric changes due to different initialization or sampling</td><td>At least fix the seed, and explain that full reproducibility may still not be possible</td></tr></tbody></table></div>
 <h3 id="mini-lecture-ml-objectives-and-generalization">Mini-Lecture: ML Objectives and Generalization</h3>
-<div class="table-wrap"><table><thead><tr><th>概念</th><th>最小解释</th><th>本课程产出</th></tr></thead><tbody><tr><td>maximum likelihood</td><td>提高数据中目标 token 或标签的概率</td><td>Ch07 CE、Ch09 SFT</td></tr><tr><td>empirical risk</td><td>在样本上的平均 loss</td><td>train/val loss table</td></tr><tr><td>regularization</td><td>限制模型或更新以减少过拟合</td><td>weight decay、dropout、early stopping</td></tr><tr><td>baseline</td><td>证明新方法有价值的比较对象</td><td>greedy vs top-p、no RAG vs RAG、mock engine vs serving engine</td></tr><tr><td>ablation</td><td>移除一个组件看影响</td><td>LoRA rank、chunk size、cache on/off</td></tr><tr><td>held-out evaluation</td><td>不参与训练或调参的数据</td><td>validation set、hidden tests、final eval set</td></tr></tbody></table></div>
-<p>学生报告中不能只写“模型效果不错”。至少要写清：</p>
+<div class="table-wrap"><table><thead><tr><th>Concept</th><th>Minimal Explanation</th><th>Output for This Course</th></tr></thead><tbody><tr><td>maximum likelihood</td><td>Increase the probability of target tokens or labels in the data</td><td>Ch07 CE, Ch09 SFT</td></tr><tr><td>empirical risk</td><td>Average loss over the sample</td><td>train/val loss table</td></tr><tr><td>regularization</td><td>Constrain the model or update to reduce overfitting</td><td>weight decay, dropout, early stopping</td></tr><tr><td>baseline</td><td>A comparison object that proves the value of the new method</td><td>greedy vs top-p, no RAG vs RAG, mock engine vs serving engine</td></tr><tr><td>ablation</td><td>Remove one component to see its effect</td><td>LoRA rank, chunk size, cache on/off</td></tr><tr><td>held-out evaluation</td><td>Data not used for training or hyperparameter tuning</td><td>validation set, hidden tests, final eval set</td></tr></tbody></table></div>
+<p>Student reports cannot simply state &quot;the model works well.&quot; They must at least clearly state:</p>
 <ul>
-<li>baseline 是什么。</li>
-<li>metric 衡量什么。</li>
-<li>split 如何产生。</li>
-<li>是否调参使用了 eval set。</li>
-<li>失败案例如何分类。</li>
-<li>哪个结论只在当前数据、seed、模型或硬件条件下成立。</li>
+<li>What the baseline is.</li>
+<li>What the metric measures.</li>
+<li>How the split was generated.</li>
+<li>Whether the eval set was used for hyperparameter tuning.</li>
+<li>How failure cases are categorized.</li>
+<li>Which conclusions are only valid under the current data, seed, model, or hardware conditions.</li>
 </ul>
 <h3 id="project-learning-outputs">Project Learning Outputs</h3>
-<div class="table-wrap"><table><thead><tr><th>learning output_id</th><th>要求</th></tr></thead><tbody><tr><td>objective_mapping</td><td>loss、reward、metric 或 SLO 对应项目目标</td></tr><tr><td>baseline_result</td><td>至少一个简单 baseline 或 no-system baseline</td></tr><tr><td>split_statement</td><td>train/dev/test、retrieval corpus/eval queries 或 benchmark prompt 的来源</td></tr><tr><td>leakage_check</td><td>数据去重、prompt 泄漏、retrieval contamination 或 benchmark contamination / public benchmark 污染检查</td></tr><tr><td>variance_note</td><td>repeated run、bootstrap、seed sensitivity 或负载波动说明</td></tr><tr><td>ablation_plan</td><td>至少一个组件、超参或数据处理的对比</td></tr><tr><td>metric_limit</td><td>每个关键 metric 的局限</td></tr><tr><td>generalization_boundary</td><td>结论不能推广的条件</td></tr></tbody></table></div>
-<h3 id="补救任务">补救任务</h3>
-<div class="table-wrap"><table><thead><tr><th>薄弱项</th><th>补救任务</th><th>检查</th></tr></thead><tbody><tr><td>calculus</td><td>手推 CE 梯度或 DPO log-ratio 方向</td><td>能解释更新方向，而不是只写公式</td></tr><tr><td>probability</td><td>完成 language model likelihood 分解和 top-p/top-k 对比</td><td>能说明概率分布和采样候选集</td></tr><tr><td>statistics</td><td>对 3 次 benchmark 结果计算 mean/std 并解释不确定性</td><td>报告样本数、条件和局限</td></tr><tr><td>ML objectives</td><td>把 Ch07 training loss、Ch09 SFT/DPO loss 和项目 metric 分别解释</td><td>能区分训练目标和评价指标</td></tr><tr><td>generalization</td><td>为项目写 split、baseline、ablation 和 leakage check</td><td>进入 proposal 或 milestone</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>learning output_id</th><th>Requirement</th></tr></thead><tbody><tr><td>objective_mapping</td><td>loss, reward, metric, or SLO corresponds to the project objective</td></tr><tr><td>baseline_result</td><td>At least one simple baseline or no-system baseline</td></tr><tr><td>split_statement</td><td>Source of train/dev/test, retrieval corpus/eval queries, or benchmark prompts</td></tr><tr><td>leakage_check</td><td>Data deduplication, prompt leakage, retrieval contamination, or benchmark contamination check</td></tr><tr><td>variance_note</td><td>Explanation of repeated runs, bootstrap, seed sensitivity, or load fluctuation</td></tr><tr><td>ablation_plan</td><td>Comparison of at least one component, hyperparameter, or data processing step</td></tr><tr><td>metric_limit</td><td>Limitation of each key metric</td></tr><tr><td>generalization_boundary</td><td>Conditions under which conclusions cannot be generalized</td></tr></tbody></table></div>
+<h3 id="remedial-tasks">Remedial Tasks</h3>
+<div class="table-wrap"><table><thead><tr><th>Weak Area</th><th>Remedial Task</th><th>Check</th></tr></thead><tbody><tr><td>calculus</td><td>Hand-derive the CE gradient or the DPO log-ratio direction</td><td>Can explain the update direction, not just write the formula</td></tr><tr><td>probability</td><td>Complete language model likelihood decomposition and top-p/top-k comparison</td><td>Can explain the probability distribution and the sampling candidate set</td></tr><tr><td>statistics</td><td>Calculate mean/std for 3 benchmark results and explain the uncertainty</td><td>Report sample size, conditions, and limitations</td></tr><tr><td>ML objectives</td><td>Explain Ch07 training loss, Ch09 SFT/DPO loss, and project metrics separately</td><td>Can distinguish between training objectives and evaluation metrics</td></tr><tr><td>generalization</td><td>Write the split, baseline, ablation, and leakage check for the project</td><td>Included in the proposal or milestone</td></tr></tbody></table></div>
     </section>
   </article>
 </main>

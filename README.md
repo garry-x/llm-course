@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="images/favicon.svg" width="64" alt="LLM 深度学习">
+  <img src="images/favicon.svg" width="64" alt="LLM Deep Learning">
 </p>
 
-<h1 align="center">LLM 深度学习</h1>
+<h1 align="center">LLM Deep Learning</h1>
 
 <p align="center">
-  <strong>从代码出发，11 章构建一个完整的大语言模型工程体系</strong>
+  <strong>Starting from code, 11 chapters to build a complete large language model engineering system</strong>
 </p>
 
 <p align="center">
@@ -20,199 +20,198 @@
 
 ---
 
-## 关于本课程
+## About This Course
 
-这是一门**从代码出发**的 LLM 实战课程。不做概念浏览，而是用 Python 和 PyTorch 逐行实现大语言模型的每一个核心组件。必要的数学、PyTorch、ML 和系统基础不会被拆成旁路，而是揉进每章开头的先修能力、章节内实现和验收信号里。
+This is a **code-first** hands-on LLM course. Instead of browsing concepts, it implements every core component of a large language model line by line using Python and PyTorch. Necessary foundations in math, PyTorch, ML, and systems are not separated into side tracks but are integrated into the prerequisites at the beginning of each chapter, the implementations within the chapter, and the validation signals.
 
-**每章的学习循环：**
-> 深度理论 → 理解"为什么" → 编程练习（你写代码）→ 对照参考解答 → 概念练习巩固
+**Learning loop for each chapter:**
+> Deep theory → Understand the "why" → Programming exercises (you write code) → Compare with reference solutions → Consolidate with conceptual exercises
 
-融入 MLA、MoE、GRPO/DAPO/GSPO、FP8、稀疏/压缩注意力、可学习残差连接等工业级架构案例，用它们理解每个组件背后的工程瓶颈，而不是追逐单个模型版本规格。
+Incorporates industrial-grade architecture cases such as MLA, MoE, GRPO/DAPO/GSPO, FP8, sparse/compressed attention, learnable residual connections, using them to understand the engineering bottlenecks behind each component, rather than chasing the specifications of individual model versions.
 
-## 初学者怎么学
+## How Beginners Should Learn
 
-这门课覆盖从基础组件到工业前沿的完整链路。第一次学习时不要把所有高级专题都当成必修，可以按三遍阅读节奏推进：
+This course covers the complete pipeline from basic components to industrial frontiers. When learning for the first time, don't treat all advanced topics as mandatory. Follow a three-pass reading rhythm:
 
-| 阶段 | 章节 | 目标 | 建议 |
-|------|------|------|------|
-| 第一遍：主线必学 | Ch01-Ch06 | 把文本变成 token，搭出能前向传播的 GPT | 代码练习必须动手写；DeepSeek 扩展先理解动机即可 |
-| 第二遍：跑起来 | Ch07-Ch08 | 训练小模型，并让模型生成文本 | 重点看 loss、optimizer、sampling 的输入输出形状 |
-| 第三遍：进阶选读 | Ch09-Ch10 | 微调、对齐、RAG、推理优化和前沿架构 | 先掌握概念地图，再回头补公式和工程细节 |
+| Phase | Chapters | Goal | Suggestion |
+|------|----------|------|------------|
+| First Pass: Main Line Required | Ch01-Ch06 | Turn text into tokens, build a GPT that can forward propagate | Must write code exercises; for DeepSeek extensions, just understand the motivation |
+| Second Pass: Make it Run | Ch07-Ch08 | Train a small model and make it generate text | Focus on the input/output shapes of loss, optimizer, sampling |
+| Third Pass: Advanced Selective Reading | Ch09-Ch10 | Fine-tuning, alignment, RAG, inference optimization, and frontier architectures | First grasp the concept map, then go back to fill in formulas and engineering details |
 
-**最低前置要求：**会 Python 函数、列表/字典、基础矩阵乘法，知道 PyTorch 张量的 `shape`。如果数学推导暂时吃力，先抓住每节的“输入是什么、输出是什么、形状怎么变”。数学、PyTorch、统计和系统知识只在被章节任务用到时展开；附录用于查阅，不要求先单独学完。
+**Minimum Prerequisites:** Know Python functions, lists/dictionaries, basic matrix multiplication, and the `shape` of PyTorch tensors. If math derivations are difficult initially, first grasp "what is the input, what is the output, how does the shape change" for each section. Math, PyTorch, statistics, and system knowledge are only expanded upon when needed by the chapter tasks; the appendix is for reference and does not require prior study.
 
-## LLM 知识体系
+## LLM Knowledge System
 
-本课程按“大模型如何被表示、计算、训练、生成、对齐和部署”组织，而不是按零散工具组织：
+This course is organized around "how large models are represented, computed, trained, generated, aligned, and deployed," not around scattered tools:
 
-| 模块 | 对应章节 | 核心问题 |
-|------|----------|----------|
-| 表示层 | Ch01-Ch02 | 文本如何变成 token，token 如何变成向量，模型如何获得位置信息 |
-| Transformer 核心 | Ch03-Ch06 | 注意力、mask、多头、GQA/MLA、Norm、FFN、MoE 和 GPT 前向传播如何组合 |
-| 训练闭环 | Ch07 | next-token prediction 为什么等价于最大似然，loss、PPL、优化器、checkpoint/resume integrity 和分布式训练 gate 如何工作 |
-| 生成与推理 | Ch08-Ch10 | prefill/decode、采样、推测解码、KV Cache、FlashAttention、RAG、多模态 serving 和推理服务如何取舍 |
-| 微调与对齐 | Ch09 | SFT chat template/mask/packing gate、偏好数据 gate、LoRA、偏好建模、DPO、GRPO/DAPO/GSPO、RLVR/RFT 如何改变模型行为 |
-| 经典 NLP 与评测 | Week 8 专题 / Ch11 作业 | RNN/LSTM、dependency parsing、seq2seq、BERT/MLM、BLEU/ROUGE/F1/EM 如何连接现代 LLM |
-| 前沿工程案例 | Ch04-Ch10 | MLA、MoE、FP8、GRPO/DAPO/GSPO、稀疏/压缩注意力、dynamic-resolution vision 和多模态 serving 等设计解决了哪些工程瓶颈 |
+| Module | Corresponding Chapters | Core Question |
+|--------|------------------------|---------------|
+| Representation Layer | Ch01-Ch02 | How text becomes tokens, how tokens become vectors, how the model obtains positional information |
+| Transformer Core | Ch03-Ch06 | How attention, mask, multi-head, GQA/MLA, Norm, FFN, MoE, and GPT forward propagation combine |
+| Training Loop | Ch07 | Why next-token prediction is equivalent to maximum likelihood, how loss, PPL, optimizer, checkpoint/resume integrity, and distributed training gates work |
+| Generation & Inference | Ch08-Ch10 | How prefill/decode, sampling, speculative decoding, KV Cache, FlashAttention, RAG, multimodal serving, and inference services trade off |
+| Fine-tuning & Alignment | Ch09 | How SFT chat template/mask/packing gates, preference data gates, LoRA, preference modeling, DPO, GRPO/DAPO/GSPO, RLVR/RFT change model behavior |
+| Classic NLP & Evaluation | Week 8 Topic / Ch11 Assignments | How RNN/LSTM, dependency parsing, seq2seq, BERT/MLM, BLEU/ROUGE/F1/EM connect to modern LLMs |
+| Frontier Engineering Cases | Ch04-Ch10 | What engineering bottlenecks designs like MLA, MoE, FP8, GRPO/DAPO/GSPO, sparse/compressed attention, dynamic-resolution vision, and multimodal serving solve |
 
-高校课程水准的关键不在材料数量，而在每个知识点都能回答三件事：
+The key to university-level course quality is not the quantity of materials, but that every knowledge point can answer three things:
 
-- 数学上它解决什么问题，公式里的每个量是什么。
-- 代码上它怎样落到 PyTorch 张量、shape、mask、dtype 和梯度。
-- 工程上它带来什么成本、速度、质量或稳定性的取舍。
+- Mathematically, what problem does it solve, and what is each quantity in the formula.
+- In code, how does it translate to PyTorch tensors, shapes, masks, dtypes, and gradients.
+- In engineering, what cost, speed, quality, or stability trade-offs does it introduce.
 
-## 章节内置基础
+## In-Chapter Foundations
 
-基础知识按章节任务就地出现。每章开头都给出“先修能力、本章内化、验收信号”，作业和书面题再把这些基础落到可运行代码或可复算推导。
+Foundational knowledge appears in place according to chapter tasks. Each chapter begins with "Prerequisites, In-Chapter Internalization, Validation Signal," and assignments and written questions ground these foundations in runnable code or reproducible derivations.
 
-| 章节 | 章节内化的基础 | 直接服务的工程判断 |
-|------|----------------|--------------------|
-| Ch01-Ch02 | Python 数据结构、矩阵查表、向量点积、位置旋转和 shape trace | token 成本、embedding 参数、context 利用率和 prefix cache 前提 |
-| Ch03-Ch05 | softmax、mask、广播、矩阵乘法、归一化、残差路径和资源估算 | attention 正确性、GQA/MLA 显存收益、block 稳定性和 FLOPs 预算 |
-| Ch06-Ch07 | 自回归概率分解、cross entropy、optimizer state、随机性和实验统计 | GPT 组装、训练曲线解释、checkpoint/resume integrity、数据 gate 和扩容判断 |
-| Ch08-Ch09 | logits 分布、采样方差、KL/reference model、chat template、assistant mask、偏好数据和 reward 假设 | 生成策略上线、reasoning 预算、SFT/DPO/GRPO 质量与安全边界 |
-| Ch10 | 排队、显存/带宽、KV cache、量化校准/回归、压测指标、RAG 检索指标、context engineering、模型路由、准入控制、发布 gate 和过载响应 | TTFT/TPOT/P95、quantization release gate、context engineering gate、model routing gate、continuous batching admission、P/D 解耦、容量规划、canary/control、load shedding 和回退 |
-| Ch11 | 序列建模、结构化预测、encoder-only、传统指标、judge 可靠性和 agent/workflow eval | 选择生成/抽取/排序/结构化解码，判断最终答案、轨迹、状态、安全和成本证据能否支持上线结论 |
+| Chapter | In-Chapter Foundations | Directly Served Engineering Judgments |
+|---------|------------------------|----------------------------------------|
+| Ch01-Ch02 | Python data structures, matrix lookup, vector dot product, positional rotation, and shape trace | Token cost, embedding parameters, context utilization, and prefix cache prerequisites |
+| Ch03-Ch05 | Softmax, mask, broadcasting, matrix multiplication, normalization, residual paths, and resource estimation | Attention correctness, GQA/MLA memory benefits, block stability, and FLOPs budget |
+| Ch06-Ch07 | Autoregressive probability decomposition, cross entropy, optimizer state, randomness, and experimental statistics | GPT assembly, training curve interpretation, checkpoint/resume integrity, data gates, and scaling decisions |
+| Ch08-Ch09 | Logits distribution, sampling variance, KL/reference model, chat template, assistant mask, preference data, and reward assumptions | Generation strategy deployment, reasoning budget, SFT/DPO/GRPO quality and safety boundaries |
+| Ch10 | Queuing, memory/bandwidth, KV cache, quantization calibration/regression, stress test metrics, RAG retrieval metrics, context engineering, model routing, admission control, release gates, and overload response | TTFT/TPOT/P95, quantization release gate, context engineering gate, model routing gate, continuous batching admission, P/D decoupling, capacity planning, canary/control, load shedding, and fallback |
+| Ch11 | Sequence modeling, structured prediction, encoder-only, traditional metrics, judge reliability, and agent/workflow evaluation | Choosing generation/extraction/ranking/structured decoding, determining if final answer, trajectory, state, safety, and cost evidence support deployment conclusions |
 
-配套学习材料：
+Supplementary learning materials:
 
-- [逐周阅读材料 Handout](docs/reading-list.html)：论文阅读、关键问题和章节连接。
-- [书面推导与概念题题库](docs/written-problem-set.html)：公式推导、复杂度分析和概念辨析。
-- [Worked Example Pack](docs/worked-example-pack.html)：BPE、RoPE、attention、GQA、Norm、AdamW、SFT mask/packing、DPO、KV cache 等可复算小例子。
-- [经典 NLP 专题 Handout](docs/classic-nlp-handout.html)：RNN/LSTM、dependency parsing、seq2seq/NMT、BERT、BLEU/ROUGE/F1/EM 与现代 LLM 的关系。
+- [Weekly Reading Handout](docs/reading-list.html): Paper reading, key questions, and chapter connections.
+- [Written Derivation & Concept Problem Set](docs/written-problem-set.html): Formula derivation, complexity analysis, and concept differentiation.
+- [Worked Example Pack](docs/worked-example-pack.html): Reproducible small examples for BPE, RoPE, attention, GQA, Norm, AdamW, SFT mask/packing, DPO, KV cache, etc.
+- [Classic NLP Topic Handout](docs/classic-nlp-handout.html): Relationship between RNN/LSTM, dependency parsing, seq2seq/NMT, BERT, BLEU/ROUGE/F1/EM and modern LLMs.
 
-章节作业入口：[assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/) · [assignments/ch11_classic_nlp/](assignments/ch11_classic_nlp/)。
+Chapter assignment entry points: [assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/) · [assignments/ch11_classic_nlp/](assignments/ch11_classic_nlp/).
 
-## 面向 LLM 推理工程师的能力路线
+## Capability Path for LLM Inference Engineers
 
-如果你的目标是成为 LLM 推理工程师，学习目标不只是“懂 Transformer”，而是能把模型稳定、低成本、可观测地服务给真实用户。课程按以下能力组织：
+If your goal is to become an LLM inference engineer, the learning objective is not just "understanding Transformers," but being able to serve the model stably, cost-effectively, and observably to real users. The course is organized by the following capabilities:
 
-| 能力 | 对应章节 | 你需要能做什么 |
-|------|----------|----------------|
-| 模型结构读懂 | Ch01-Ch06 | 看懂 tokenizer、attention、KV Cache 来源、logits 输出和参数规模 |
-| 生成与延迟拆解 | Ch08 | 区分 prefill/decode，解释 TTFT、TPOT、TPS、吞吐、采样质量和 reasoning 预算 |
-| 显存与带宽优化 | Ch04, Ch10 | 计算 KV Cache、理解 MQA/GQA/MLA、weight-only/W8A8/KV cache 量化、FlashAttention 和显存瓶颈 |
-| 推理服务架构 | Ch10 | 选择 vLLM/SGLang/TensorRT-LLM/llama.cpp，理解 MoE expert parallelism、model routing/cascade、continuous batching admission、prefix cache、并发调度、load shedding、observability trace、speculative decoding、多模态 serving、tool-call、MCP runtime security、agent trace 和 context engineering |
-| 检索与工具调用 | Ch08-Ch10 | 设计结构化输出、RAG、Agent 工具链、上下文压缩/记忆和失败兜底 |
-| 评测与上线 | Ch09-Ch11 | 设计质量/安全/延迟/成本指标，做 agent/workflow eval、压测、回归评估、canary/control 发布和回滚检查 |
+| Capability | Corresponding Chapters | What You Need to Be Able to Do |
+|------------|------------------------|--------------------------------|
+| Model Architecture Understanding | Ch01-Ch06 | Understand tokenizer, attention, KV Cache origin, logits output, and parameter scale |
+| Generation & Latency Decomposition | Ch08 | Distinguish prefill/decode, explain TTFT, TPOT, TPS, throughput, sampling quality, and reasoning budget |
+| Memory & Bandwidth Optimization | Ch04, Ch10 | Calculate KV Cache, understand MQA/GQA/MLA, weight-only/W8A8/KV cache quantization, FlashAttention, and memory bottlenecks |
+| Inference Service Architecture | Ch10 | Choose vLLM/SGLang/TensorRT-LLM/llama.cpp, understand MoE expert parallelism, model routing/cascade, continuous batching admission, prefix cache, concurrent scheduling, load shedding, observability trace, speculative decoding, multimodal serving, tool-call, MCP runtime security, agent trace, and context engineering |
+| Retrieval & Tool Calling | Ch08-Ch10 | Design structured output, RAG, Agent toolchain, context compression/memory, and failure fallback |
+| Evaluation & Deployment | Ch09-Ch11 | Design quality/safety/latency/cost metrics, perform agent/workflow eval, stress testing, regression evaluation, canary/control release, and rollback checks |
 
-## 面向 LLM 训练工程师的能力路线
+## Capability Path for LLM Training Engineers
 
-如果你的目标是成为 LLM 训练工程师，学习目标要从“能跑一个 loss”推进到“能交付可复现、可恢复、可观测、成本可解释的训练系统”。课程按以下能力组织：
+If your goal is to become an LLM training engineer, the learning objective should advance from "being able to run a loss" to "being able to deliver a reproducible, recoverable, observable, and cost-explainable training system." The course is organized by the following capabilities:
 
-| 能力 | 对应章节 | 你需要能做什么 |
-|------|----------|----------------|
-| 数据与 Token 预算 | Ch01, Ch07 | 分析样本、重复、质量过滤、eval contamination、领域混合、长度分布和 token 规模，估算训练 step |
-| 训练循环工程 | Ch06-Ch07 | 组织 PyTorch Dataset/DataLoader、forward、loss、backward、optimizer、scheduler |
-| 稳定性与恢复 | Ch07 | 使用 seed、grad clipping、checkpoint integrity、distributed resume 和异常排查保护训练 |
-| 监控与评测 | Ch07-Ch09 | 记录 train_loss、val_loss、ppl、lr、grad_norm、tokens/s，并解释曲线 |
-| 微调与对齐 | Ch09 | 区分 SFT/偏好数据 gate、LoRA、DPO、GRPO/DAPO/GSPO、RLVR/RFT 的数据格式、损失、rollout 日志和适用场景 |
-| 分布式与成本 | Ch07, Ch10 | 理解 AMP、FSDP/ZeRO、global batch tokens、MFU、GPU hours、distributed checkpoint、checkpoint 存储和 scale rehearsal |
+| Capability | Corresponding Chapters | What You Need to Be Able to Do |
+|------------|------------------------|--------------------------------|
+| Data & Token Budget | Ch01, Ch07 | Analyze samples, duplication, quality filtering, eval contamination, domain mixing, length distribution, and token scale; estimate training steps |
+| Training Loop Engineering | Ch06-Ch07 | Organize PyTorch Dataset/DataLoader, forward, loss, backward, optimizer, scheduler |
+| Stability & Recovery | Ch07 | Use seed, grad clipping, checkpoint integrity, distributed resume, and anomaly troubleshooting to protect training |
+| Monitoring & Evaluation | Ch07-Ch09 | Record train_loss, val_loss, ppl, lr, grad_norm, tokens/s, and interpret curves |
+| Fine-tuning & Alignment | Ch09 | Distinguish data formats, losses, rollout logs, and applicable scenarios for SFT/preference data gates, LoRA, DPO, GRPO/DAPO/GSPO, RLVR/RFT |
+| Distribution & Cost | Ch07, Ch10 | Understand AMP, FSDP/ZeRO, global batch tokens, MFU, GPU hours, distributed checkpoint, checkpoint storage, and scale rehearsal |
 
-## 快速开始
+## Quick Start
 
-### 本地开发
+### Local Development
 
 ```bash
 git clone https://github.com/garry-x/llm-course.git && cd llm-course
 
-./serve.sh                    # 默认 0.0.0.0:8080
-./serve.sh serve -p 3000      # 指定端口
+./serve.sh                    # Default 0.0.0.0:8080
+./serve.sh serve -p 3000      # Specify port
 ```
 
-### 运行作业测试
+### Running Assignment Tests
 
-本仓库推荐使用根目录下的 `.venv` 运行本地代码；如果你已经激活等价虚拟环境，也可以把 `.venv/bin/python` 替换为 `python`。先确认 PyTorch 可导入：
+This repository recommends using `.venv` in the root directory to run local code; if you have already activated an equivalent virtual environment, you can also replace `.venv/bin/python` with `python`. First confirm PyTorch is importable:
 
 ```bash
 .venv/bin/python -c "import sys, torch; print(sys.version.split()[0], torch.__version__)"
 .venv/bin/python run_assignment_tests.py
 ```
 
-### CLI 命令一览
+### CLI Command Overview
 
-| 命令 | 说明 | 支持 `-p` |
-|------|------|:---------:|
-| `serve` | 本地 Python HTTP 服务器 | ✓ |
+| Command | Description | Supports `-p` |
+|---------|-------------|:-------------:|
+| `serve` | Local Python HTTP server | ✓ |
 
-**环境要求：** Python 3.10+ / 现代浏览器（Safari / Chrome / Edge）；推荐 iPad Pro 或桌面端阅读。
+**Environment Requirements:** Python 3.10+ / Modern browser (Safari / Chrome / Edge); iPad Pro or desktop reading recommended.
 
-## 课程大纲
+## Course Outline
 
-| # | 章节 | 编程产出 | 练习 |
-|---|------|---------|:--:|
-| 1 | **环境搭建与分词** — 实现 BPE Tokenizer | `BPETokenizer` ~80行 | 5+5 |
-| 2 | **嵌入层与位置编码** — TokenEmbedding + RoPE + 上下文学习导论 | `TokenEmbedding` + `RoPE` ~60行 | 4+5 |
-| 3 | **单头自注意力** — Scaled Dot-Product Attention | `ScaledDotProductAttention` ~40行 | 5+5 |
-| 4 | **多头注意力与 MLA** — MHA → GQA → DeepSeek MLA | `MultiHeadAttention` ~60行 | 5+5 |
-| 5 | **Transformer Block** — RMSNorm + FFN/SwiGLU + mHC | `TransformerBlock` ~50行 | 5+5 |
-| 6 | **组装 GPT + DeepSeekMoE** — GPT-2 124M 完整模型 | `GPTModel` ~100行 | 5+5 |
-| 7 | **训练循环** — AdamW/Muon + FP8/MXFP8 + 分布式策略账本 | 完整训练脚本 + strategy/gate report | 7+5 |
-| 8 | **文本生成** — 采样策略 + reasoning budget + MTP 推测解码 + 约束生成 | 文本生成器 + test-time compute gate | 7+5 |
-| 9 | **微调与对齐** — SFT/偏好数据/合成蒸馏/LoRA/DPO/GRPO/DAPO/GSPO/RLVR + R1 推理 | SFT 协议、post-training 数据审计、LoRA、DPO/GRPO/RLVR、reasoning RL 日志和蒸馏数据质量分析 | 8+5 |
-| 10 | **推理优化与前沿** — KV Cache/量化 release gate/RAG/Context Engineering/Structured Output/Tool/MCP Gate/vLLM/Triton/MoE serving/模型路由/生产发布/长上下文/多模态 | KV Cache + 量化校准/回归 + RAG + context engineering gate + structured output gate + Tool/MCP Gate + MoE serving gate + model routing gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + 服务蓝图 | 11+5 |
-| 专题 | **经典 NLP 与评测** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics / agent workflow eval | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + agent eval protocol + MLM mask | Ch11 |
+| # | Chapter | Programming Output | Exercises |
+|---|---------|--------------------|:---------:|
+| 1 | **Environment Setup & Tokenization** — Implement BPE Tokenizer | `BPETokenizer` ~80 lines | 5+5 |
+| 2 | **Embedding Layer & Positional Encoding** — TokenEmbedding + RoPE + Introduction to In-Context Learning | `TokenEmbedding` + `RoPE` ~60 lines | 4+5 |
+| 3 | **Single-Head Self-Attention** — Scaled Dot-Product Attention | `ScaledDotProductAttention` ~40 lines | 5+5 |
+| 4 | **Multi-Head Attention & MLA** — MHA → GQA → DeepSeek MLA | `MultiHeadAttention` ~60 lines | 5+5 |
+| 5 | **Transformer Block** — RMSNorm + FFN/SwiGLU + mHC | `TransformerBlock` ~50 lines | 5+5 |
+| 6 | **Assemble GPT + DeepSeekMoE** — GPT-2 124M Complete Model | `GPTModel` ~100 lines | 5+5 |
+| 7 | **Training Loop** — AdamW/Muon + FP8/MXFP8 + Distributed Strategy Ledger | Complete training script + strategy/gate report | 7+5 |
+| 8 | **Text Generation** — Sampling strategies + reasoning budget + MTP speculative decoding + constrained generation | Text generator + test-time compute gate | 7+5 |
+| 9 | **Fine-tuning & Alignment** — SFT/preference data/synthetic distillation/LoRA/DPO/GRPO/DAPO/GSPO/RLVR + R1 reasoning | SFT protocol, post-training data audit, LoRA, DPO/GRPO/RLVR, reasoning RL logs, and distillation data quality analysis | 8+5 |
+| 10 | **Inference Optimization & Frontiers** — KV Cache/quantization release gate/RAG/Context Engineering/Structured Output/Tool/MCP Gate/vLLM/Triton/MoE serving/Model routing/Production release/Long context/Multimodal | KV Cache + quantization calibration/regression + RAG + context engineering gate + structured output gate + Tool/MCP Gate + MoE serving gate + model routing gate + rollout gate + overload response + continuous batching admission + P/D pool plan + speculative gate + long-context gate + LSH + service blueprint | 11+5 |
+| Topic | **Classic NLP & Evaluation** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics / agent workflow eval | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + agent eval protocol + MLM mask | Ch11 |
 
-> **总计：覆盖 11 章编程作业、书面推导题和经典 NLP 专题作业。**
+> **Total: Covers 11 chapters of programming assignments, written derivation problems, and classic NLP topic assignments.**
 
-## DeepSeek 技术融入
+## DeepSeek Technology Integration
 
-下表用于建立技术地图。具体论文和模型卡请在学习对应章节时打开原文阅读。
+The table below is for establishing a technology map. Please open and read the original papers and model cards when studying the corresponding chapters.
 
-| 技术 | 对应章节 | 学习重点 |
-|------|---------|----------|
-| MLA (Multi-head Latent Attention) | Ch04 | KV Cache 压缩，潜在向量解耦 RoPE |
-| GRPO (Group Relative Policy Optimization) | Ch09 | 无需 Critic，组内白化优势，RL 激励推理能力 |
-| DAPO / GSPO | Ch09 | 动态采样、长度控制、sequence-level ratio 和 MoE RL 稳定性诊断 |
-| RLVR / RFT | Ch09 | 用可验证 grader 训练 reasoning，并检查 reward signal、成本和 hacking 风险 |
-| DeepSeekMoE + Aux-Loss-Free | Ch06 | 稀疏激活、专家路由和动态偏置负载均衡 |
-| FP8 Mixed Precision + DualPipe | Ch07 | 低精度训练、缩放策略、通信计算重叠 |
-| MTP (Multi-Token Prediction) | Ch08 | 训练辅助目标和推测解码草稿信号 |
-| DSA / CSA / HCA | Ch10 | 长上下文稀疏注意力与 KV/计算成本压缩 |
-| Engram 外部记忆 | Ch10 | 模型外部记忆、LSH 检索和 RAG 的差异 |
-| mHC (Manifold-Constrained Hyper-Connections) | Ch05 | Birkhoff 约束、Sinkhorn-Knopp 和残差连接扩展 |
-| Muon Optimizer | Ch07 | 动量矩阵正交化和大规模优化器设计 |
+| Technology | Corresponding Chapter | Learning Focus |
+|------------|-----------------------|----------------|
+| MLA (Multi-head Latent Attention) | Ch04 | KV Cache compression, latent vector RoPE decoupling |
+| GRPO (Group Relative Policy Optimization) | Ch09 | No Critic needed, intra-group whitening advantage, RL incentivizes reasoning ability |
+| DAPO / GSPO | Ch09 | Dynamic sampling, length control, sequence-level ratio, and MoE RL stability diagnosis |
+| RLVR / RFT | Ch09 | Train reasoning with verifiable graders, and check reward signal, cost, and hacking risks |
+| DeepSeekMoE + Aux-Loss-Free | Ch06 | Sparse activation, expert routing, and dynamic bias load balancing |
+| FP8 Mixed Precision + DualPipe | Ch07 | Low-precision training, scaling strategy, communication computation overlap |
+| MTP (Multi-Token Prediction) | Ch08 | Training auxiliary objective and speculative decoding draft signal || DSA / CSA / HCA | Ch10 | Long-context sparse attention and KV/computation cost compression |
+| Engram external memory | Ch10 | Differences between model external memory, LSH retrieval, and RAG |
+| mHC (Manifold-Constrained Hyper-Connections) | Ch05 | Birkhoff constraint, Sinkhorn-Knopp, and residual connection extension |
+| Muon Optimizer | Ch07 | Momentum matrix orthogonalization and large-scale optimizer design |
 
-## 仓库结构
+## Repository Structure
 
 ```
 llm-course/
-├── index.html                # 课程首页：Hero + 仪表板 + 章节目录
-├── css/style.css              # 暖色 editorial 风格，暗色/浅色双主题
+├── index.html                # Course homepage: Hero + Dashboard + Chapter directory
+├── css/style.css              # Warm editorial style, dark/light dual theme
 ├── js/
-│   ├── db.js                  # IndexedDB 持久化存储层
-│   └── app.js                 # 搜索/主题/字号/进度/笔记/TOC/键盘导航
-├── chapters/                  # 11 章，纯 HTML
+│   ├── db.js                  # IndexedDB persistent storage layer
+│   └── app.js                 # Search/theme/font size/progress/notes/TOC/keyboard navigation
+├── chapters/                  # 11 chapters, pure HTML
 │   └── ch01.html ~ ch11.html
 ├── docs/
-│   ├── reading-list.md          # 逐周论文与技术报告阅读
-│   ├── written-problem-set.md   # 书面推导与概念题
-│   ├── worked-example-pack.md   # 可复算小例子
-│   ├── math-prerequisites.md    # 数学先修
-│   └── classic-nlp-handout.md   # 经典 NLP 专题
-├── images/                    # 11 张 SVG 概念示意图 + favicon（支持暗色模式）
-│   ├── bpe-pipeline.svg       # BPE 训练与编解码流程
-│   ├── rope-rotation.svg      # RoPE 旋转位置编码原理
-│   ├── attention-flow.svg     # Scaled Dot-Product Attention 数据流
-│   ├── transformer-arch.svg   # GPT 架构全景
-│   ├── mha-gqa-mla.svg        # MHA / GQA / MLA KV Cache 压缩对比
-│   ├── transformer-block.svg  # Transformer Block 内部结构
-│   ├── gpt-params.svg         # GPT-2 124M 参数分解
-│   ├── training-loop.svg      # 训练循环 + 优化器演进
-│   ├── sampling-strategies.svg# 4 种采样策略对比
-│   ├── rlhf-dpo-grpo.svg      # RLHF / DPO / GRPO 对齐方法对比
-│   ├── gpu-memory.svg         # GPU 内存层次 — A100 架构
-│   └── favicon.svg/.png/.ico  # ComfyUI + FLUX.1-dev 生成
-├── serve.sh                   # CLI: 本地静态服务器
+│   ├── reading-list.md          # Weekly paper and technical report reading
+│   ├── written-problem-set.md   # Written derivations and conceptual problems
+│   ├── worked-example-pack.md   # Reproducible small examples
+│   ├── math-prerequisites.md    # Mathematical prerequisites
+│   └── classic-nlp-handout.md   # Classic NLP topics
+├── images/                    # 11 SVG concept diagrams + favicon (supports dark mode)
+│   ├── bpe-pipeline.svg       # BPE training and encoding/decoding pipeline
+│   ├── rope-rotation.svg      # RoPE rotary position encoding principle
+│   ├── attention-flow.svg     # Scaled Dot-Product Attention data flow
+│   ├── transformer-arch.svg   # GPT architecture overview
+│   ├── mha-gqa-mla.svg        # MHA / GQA / MLA KV Cache compression comparison
+│   ├── transformer-block.svg  # Transformer Block internal structure
+│   ├── gpt-params.svg         # GPT-2 124M parameter breakdown
+│   ├── training-loop.svg      # Training loop + optimizer evolution
+│   ├── sampling-strategies.svg# Comparison of 4 sampling strategies
+│   ├── rlhf-dpo-grpo.svg      # RLHF / DPO / GRPO alignment method comparison
+│   ├── gpu-memory.svg         # GPU memory hierarchy — A100 architecture
+│   └── favicon.svg/.png/.ico  # Generated by ComfyUI + FLUX.1-dev
+├── serve.sh                   # CLI: local static server
 └── README.md
 ```
 
-## 内容维护原则
+## Content Maintenance Principles
 
-首页和 README 只保留课程主线、章节入口和运行方式。论文、技术报告和工具文档不在首页堆列表，而是进入对应章节和 [逐周阅读材料 Handout](docs/reading-list.html)，并要求学生把阅读结论落回公式、代码、系统指标或章节判断。
+The homepage and README only retain the course main line, chapter entry points, and how to run. Papers, technical reports, and tool documentation are not listed on the homepage; instead, they enter the corresponding chapters and the [weekly reading material handout](docs/reading-list.html), requiring students to map reading conclusions back to formulas, code, system metrics, or chapter judgments.
 
-后续扩展课程内容时优先遵循三条规则：
+When extending course content in the future, prioritize following three rules:
 
-- 新概念必须进入相关章节的目标函数、张量形状、系统指标或评测协议，不新增孤立补课路线。
-- 前沿案例必须说明它解决的工程瓶颈、依赖的基础知识、适用边界和报告证据。
-- 首页只回答“这门课如何系统地培养训练/推理工程师”，不承担资料导航站或产品功能说明。
+- New concepts must enter the objective function, tensor shape, system metric, or evaluation protocol of the relevant chapter; no isolated remedial paths are added.
+- Cutting-edge cases must explain the engineering bottleneck they solve, the prerequisite knowledge they depend on, the applicable boundary, and reported evidence.
+- The homepage only answers "How does this course systematically train training/inference engineers?" and does not serve as a resource navigation station or product feature description.

@@ -33,54 +33,54 @@
   <line class="arr" x1="410" y1="127" x2="410" y2="150"/>
   <rect class="b2" x="210" y="150" width="400" height="42"/>
   <text class="t2" x="410" y="169" text-anchor="middle">+ RoPE Positional Encoding</text>
-  <text class="ts" x="410" y="185" text-anchor="middle">无需额外参数，直接旋转 Q 和 K 向量</text>
+  <text class="ts" x="410" y="185" text-anchor="middle">No extra parameters, directly rotate Q and K vectors</text>
 
   <!-- Transformer Block xL -->
   <line class="arr" x1="410" y1="192" x2="410" y2="218"/>
   <rect class="b1" x="150" y="218" width="520" height="290"/>
-  <text class="t2" x="410" y="240" text-anchor="middle">Transformer Block × L  (重复 12 ~ 96 层, 每层独立参数)</text>
+  <text class="t2" x="410" y="240" text-anchor="middle">Transformer Block × L  (repeated 12 ~ 96 layers, independent parameters per layer)</text>
 
   <!-- MHA inside block -->
   <rect class="b1" x="185" y="258" width="450" height="60"/>
   <text class="t2" x="410" y="278" text-anchor="middle">Masked Multi-Head Self-Attention</text>
   <text class="t3" x="410" y="296" text-anchor="middle">Q = X·W_Q    K = X·W_K    V = X·W_V</text>
-  <text class="ts" x="410" y="312" text-anchor="middle">h 个并行注意力头 → Concat → W_O 投影</text>
+  <text class="ts" x="410" y="312" text-anchor="middle">h parallel attention heads → Concat → W_O projection</text>
 
   <line class="arr" x1="410" y1="318" x2="410" y2="335"/>
-  <text class="ts" x="410" y="348" text-anchor="middle">↑ 残差连接 + RMSNorm ↑</text>
+  <text class="ts" x="410" y="348" text-anchor="middle">↑ Residual Connection + RMSNorm ↑</text>
 
   <!-- FFN inside block -->
   <rect class="b1" x="185" y="362" width="450" height="60"/>
   <text class="t2" x="410" y="382" text-anchor="middle">Feed-Forward Network (SwiGLU)</text>
   <text class="t3" x="410" y="400" text-anchor="middle">SwiGLU(x) = (SiLU(x·W_gate) ⊙ x·W_up) · W_down</text>
-  <text class="ts" x="410" y="416" text-anchor="middle">隐藏维度通常为 4×d_model, 存储模型的大部分知识</text>
+  <text class="ts" x="410" y="416" text-anchor="middle">Hidden dimension is typically 4×d_model, stores most of the model's knowledge</text>
 
   <line class="arr" x1="410" y1="422" x2="410" y2="440"/>
-  <text class="ts" x="410" y="453" text-anchor="middle">↑ 残差连接 + RMSNorm ↑</text>
+  <text class="ts" x="410" y="453" text-anchor="middle">↑ Residual Connection + RMSNorm ↑</text>
 
-  <text class="ts" x="410" y="500" text-anchor="middle">↕ 每个 Block 独立参数，残差连接保证梯度流畅穿越深层 ↕</text>
+  <text class="ts" x="410" y="500" text-anchor="middle">↕ Each Block has independent parameters; residual connections ensure gradients flow smoothly through deep layers ↕</text>
 
   <!-- Final LayerNorm -->
   <line class="arr" x1="410" y1="508" x2="410" y2="535"/>
   <rect class="b1" x="210" y="535" width="400" height="42"/>
   <text class="t2" x="410" y="554" text-anchor="middle">Final RMSNorm</text>
-  <text class="ts" x="410" y="570" text-anchor="middle">最后一层输出归一化，稳定后续投影</text>
+  <text class="ts" x="410" y="570" text-anchor="middle">Normalize the final layer output to stabilize subsequent projection</text>
 
   <!-- LM Head -->
   <line class="arr" x1="410" y1="577" x2="410" y2="602"/>
   <rect class="b2" x="210" y="602" width="400" height="42"/>
   <text class="t2" x="410" y="621" text-anchor="middle">LM Head: d_model → vocab_size</text>
-  <text class="ts" x="410" y="637" text-anchor="middle">线性投影 (通常与 Token Embedding 共享权重)</text>
+  <text class="ts" x="410" y="637" text-anchor="middle">Linear projection (usually shares weights with Token Embedding)</text>
 
   <!-- Softmax -->
   <line class="arr" x1="410" y1="644" x2="410" y2="670"/>
   <rect class="b1" x="210" y="670" width="400" height="42" style="fill:#1e1d1a;stroke:#9e968a"/>
-  <text class="t2" x="410" y="689" text-anchor="middle" style="fill:#e8e4dc">Softmax → Token 概率分布 P(x_t | x_{&lt;t})</text>
-  <text class="ts" x="410" y="705" text-anchor="middle" style="fill:#a0a0a0">vocab_size 个概率值, 选择下一个 token</text>
+  <text class="t2" x="410" y="689" text-anchor="middle" style="fill:#e8e4dc">Softmax → Token Probability Distribution P(x_t | x_{&lt;t})</text>
+  <text class="ts" x="410" y="705" text-anchor="middle" style="fill:#a0a0a0">vocab_size probability values, select the next token</text>
 
   <!-- Output -->
   <line class="arr" x1="410" y1="712" x2="410" y2="740"/>
-  <text class="t2" x="410" y="758" text-anchor="middle">自回归生成: 选中的 token 拼回输入 → 重复直到 &lt;EOS&gt;</text>
+  <text class="t2" x="410" y="758" text-anchor="middle">Autoregressive Generation: selected token appended to input → repeat until &lt;EOS&gt;</text>
 
   <!-- Side annotations -->
   <rect class="b1" x="680" y="220" width="125" height="55"/>

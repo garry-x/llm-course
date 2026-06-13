@@ -1,41 +1,41 @@
-# 数学与 PyTorch 先修复习
+# Math and PyTorch Prerequisite Review
 
-本附录汇总高校课程中常见的线性代数、概率、反向传播和张量求导前置知识。它不是独立数学课，而是服务于每章的实现、推导和代码分析；遇到章节内的 shape、mask、loss 或梯度问题时再回来查阅。微积分、统计和机器学习基础到本课程项目产出的桥接见 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)。
+This appendix summarizes the prerequisite knowledge of linear algebra, probability, backpropagation, and tensor differentiation commonly found in university courses. It is not an independent math course, but serves the implementation, derivation, and code analysis in each chapter; refer back to it when encountering shape, mask, loss, or gradient issues within chapters. The bridge from calculus, statistics, and machine learning foundations to the output of this course project can be found in [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md).
 
-## 全课程符号与 Shape 约定
+## Full Course Notation and Shape Conventions
 
-为了避免每章重复解释符号，本课程默认使用以下约定。若某一章采用不同符号，会在该章局部说明。
+To avoid repeating symbol explanations in each chapter, this course uses the following conventions by default. If a particular chapter uses different symbols, it will be explained locally in that chapter.
 
-| 符号 | 含义 | 常见 shape 或单位 |
+| Symbol | Meaning | Common shape or unit |
 |------|------|------------------|
-| `B` | batch size | 标量 |
-| `T` | query 序列长度或当前输入长度 | 标量 |
-| `S` | key/value 序列长度，可能与 `T` 不同 | 标量 |
-| `V` | vocabulary size | 标量 |
-| `d_model` | residual stream hidden size | 标量 |
-| `H` | query attention heads | 标量 |
-| `H_kv` | KV heads，GQA/MQA 中可小于 `H` | 标量 |
-| `D` / `d_head` | 每个 head 的维度 | `d_model / H` |
-| `N` | 参数量或训练样本数，按上下文区分 | count |
-| `M` | MoE expert 数或矩阵行数，按上下文区分 | count |
-| `input_ids` | token id 序列 | `[B, T]` |
+| `B` | batch size | scalar |
+| `T` | query sequence length or current input length | scalar |
+| `S` | key/value sequence length, may differ from `T` | scalar |
+| `V` | vocabulary size | scalar |
+| `d_model` | residual stream hidden size | scalar |
+| `H` | query attention heads | scalar |
+| `H_kv` | KV heads, can be less than `H` in GQA/MQA | scalar |
+| `D` / `d_head` | dimension per head | `d_model / H` |
+| `N` | number of parameters or training samples, distinguished by context | count |
+| `M` | number of MoE experts or matrix rows, distinguished by context | count |
+| `input_ids` | token id sequence | `[B, T]` |
 | `embedding_weight` | token embedding table | `[V, d_model]` |
 | `hidden_states` | residual stream | `[B, T, d_model]` |
-| `logits` | 词表未归一化分数 | `[B, T, V]` |
-| `labels` | 目标 token ids，可能含 `ignore_index=-100` | `[B, T]` |
+| `logits` | unnormalized vocabulary scores | `[B, T, V]` |
+| `labels` | target token ids, may contain `ignore_index=-100` | `[B, T]` |
 | `Q` | query states | `[B, H, T, D]` |
-| `K, V_attn` | key/value states | `[B, H_kv, S, D]` 或重复后 `[B, H, S, D]` |
+| `K, V_attn` | key/value states | `[B, H_kv, S, D]` or `[B, H, S, D]` after repetition |
 | `attention_scores` | scaled dot-product logits | `[B, H, T, S]` |
-| `attention_mask` | `True` 表示可见，`False` 表示屏蔽 | 可广播到 `[B, H, T, S]` |
+| `attention_mask` | `True` means visible, `False` means masked | broadcastable to `[B, H, T, S]` |
 
-两个容易混淆的字母：
+Two easily confused letters:
 
-- `V` 在 embedding/LM head 中通常表示 vocab size；在 attention 中 `V_attn` 表示 value tensor。代码里应避免把它们写成同一个变量名。
-- `D` 在 attention 公式中常表示 `d_head`，在训练 scaling law 中也可能表示训练 token budget。书面推导必须先定义。
+- `V` usually means vocab size in embedding/LM head; in attention, `V_attn` means the value tensor. In code, avoid writing them as the same variable name.
+- `D` often means `d_head` in attention formulas, but may also mean training token budget in training scaling laws. Written derivations must define it first.
 
-## 核心张量流
+## Core Tensor Flow
 
-decoder-only LLM 的最小前向路径是：
+The minimal forward path for a decoder-only LLM is:
 
 ```text
 input_ids [B,T]
@@ -45,7 +45,7 @@ input_ids [B,T]
   -> shifted CE loss against labels [B,T]
 ```
 
-next-token loss 的对齐关系是：
+The alignment relationship for next-token loss is:
 
 ```text
 logits[:, t, :] predicts input_ids[:, t+1]
@@ -53,101 +53,101 @@ shift_logits = logits[:, :-1, :]
 shift_labels = labels[:, 1:]
 ```
 
-因此，如果一个 batch 的序列长度是 `T`，最多只有 `T-1` 个 next-token 监督位置。SFT、padding 和 prompt mask 会进一步通过 `ignore_index=-100` 移除无效位置，mean reduction 的分母应是有效 token 数，而不是 `B*T`。
+Therefore, if the sequence length of a batch is `T`, there are at most `T-1` next-token supervision positions. SFT, padding, and prompt masks will further remove invalid positions via `ignore_index=-100`, and the denominator for mean reduction should be the number of valid tokens, not `B*T`.
 
-## Mask 语义
+## Mask Semantics
 
-本课程默认 mask 在 softmax 或 loss 前应用：
+In this course, masks are applied before softmax or loss by default:
 
-| 场景 | mask 作用 | 常见错误 |
+| Scenario | Mask Function | Common Mistake |
 |------|-----------|----------|
-| Causal attention | 屏蔽未来 key | softmax 后再乘 mask，导致概率和不为 1 |
-| Padding attention | 屏蔽 padding key | 只屏蔽 padded query，仍让真实 token attend 到 padding key |
-| SFT / causal LM labels | `-100` 位置不参与 loss | gather 前直接用 `-100` 做索引 |
-| MLM labels | 只在 masked positions 上计算 CE | 把未 mask token 也放进平均分母 |
-| Constrained decoding | 非法 token logits 置为 `-inf` | 采样后再过滤，破坏概率语义 |
+| Causal attention | Mask future keys | Applying mask after softmax, causing probabilities not to sum to 1 |
+| Padding attention | Mask padding keys | Only masking padded queries, still allowing real tokens to attend to padding keys |
+| SFT / causal LM labels | Positions with `-100` do not participate in loss | Using `-100` directly as an index before gathering |
+| MLM labels | Compute CE only on masked positions | Including unmasked tokens in the averaging denominator |
+| Constrained decoding | Set illegal token logits to `-inf` | Filtering after sampling, breaking probability semantics |
 
-## 常用目标函数与评测对象
+## Common Objective Functions and Evaluation Targets
 
-| 名称 | 公式或计算对象 | 回答的问题 | 不回答的问题 |
+| Name | Formula or Computation Target | Question Answered | Question Not Answered |
 |------|----------------|------------|--------------|
-| Causal LM CE | `-mean log p(x_t | x_<t)` | 模型是否拟合 next-token 分布 | 回答是否真实、有用、安全 |
-| Perplexity | `exp(CE)` | 平均 token 预测难度 | 开放式任务质量 |
-| SFT loss | 只对 assistant response 的 shifted labels 做 CE | 模型是否学习回答格式和示例行为 | 偏好质量或安全边界 |
-| DPO loss | policy/reference chosen-rejected log-ratio | policy 是否相对 reference 提升 chosen | 偏好数据是否无偏 |
-| PPO/GRPO surrogate | policy ratio、advantage、clip/KL | 策略更新是否朝 reward 方向且受约束 | reward 是否代表真实质量 |
-| Recall@k / MRR / nDCG | 检索排序与相关标签 | RAG 是否找到相关证据 | 生成是否忠实使用证据 |
-| BLEU / ROUGE | n-gram 或 LCS 重合 | 输出与参考文本的词面重合 | 事实一致性或语义等价 |
-| EM / token F1 | 标准化答案或 token overlap | 抽取式 QA 的短答案匹配 | 多答案开放式质量 |
-| Span F1 | `(type,start,end)` 精确实体匹配 | NER/entity extraction 边界和类型 | token-level 部分正确性 |
-| TTFT / TPOT / tokens/s | 服务延迟与吞吐 | 用户等待、生成速度和容量成本 | 语义质量 |
+| Causal LM CE | `-mean log p(x_t | x_<t)` | Does the model fit the next-token distribution? | Is the answer truthful, useful, safe? |
+| Perplexity | `exp(CE)` | Average token prediction difficulty | Open-ended task quality |
+| SFT loss | CE only on shifted labels of assistant response | Does the model learn answer format and example behavior? | Preference quality or safety boundaries |
+| DPO loss | policy/reference chosen-rejected log-ratio | Does the policy improve chosen over reference? | Is the preference data unbiased? |
+| PPO/GRPO surrogate | policy ratio, advantage, clip/KL | Is the policy update towards the reward direction and constrained? | Does the reward represent true quality? |
+| Recall@k / MRR / nDCG | Retrieval ranking and relevance labels | Does RAG find relevant evidence? | Does the generation faithfully use the evidence? |
+| BLEU / ROUGE | n-gram or LCS overlap | Lexical overlap between output and reference text | Factual consistency or semantic equivalence |
+| EM / token F1 | Standardized answer or token overlap | Short answer matching for extractive QA | Multi-answer open-ended quality |
+| Span F1 | Exact entity match `(type,start,end)` | NER/entity extraction boundaries and types | Token-level partial correctness |
+| TTFT / TPOT / tokens/s | Service latency and throughput | User wait time, generation speed, and capacity cost | Semantic quality |
 
-## 线性代数最小集合
+## Minimal Set of Linear Algebra
 
-学生需要熟练掌握：
+Students need to be proficient in:
 
-- 向量、矩阵、张量的 shape 约定。
-- 矩阵乘法 `A @ B` 的维度条件。
-- 转置、广播、逐元素乘法和 reduction。
-- 点积、范数、余弦相似度。
-- softmax 前减去最大值的数值稳定性。
+- Shape conventions for vectors, matrices, and tensors.
+- Dimension conditions for matrix multiplication `A @ B`.
+- Transpose, broadcasting, element-wise multiplication, and reduction.
+- Dot product, norm, cosine similarity.
+- Numerical stability of subtracting the maximum value before softmax.
 
-### 检查点
+### Checkpoint
 
-给定 `Q, K, V` 的 shape 分别为 `[B, H, T, D]`、`[B, H, S, D]`、`[B, H, S, D]`：
+Given `Q, K, V` with shapes `[B, H, T, D]`, `[B, H, S, D]`, `[B, H, S, D]` respectively:
 
-- `Q @ K.transpose(-2, -1)` 的 shape 是 `[B, H, T, S]`。
-- attention probabilities 与 `V` 相乘后输出 `[B, H, T, D]`。
-- causal mask 的 shape 可以是 `[T, S]`、`[B, T, S]` 或 `[B, H, T, S]`，但语义必须是屏蔽未来位置。
+- The shape of `Q @ K.transpose(-2, -1)` is `[B, H, T, S]`.
+- Multiplying attention probabilities with `V` outputs `[B, H, T, D]`.
+- The shape of a causal mask can be `[T, S]`, `[B, T, S]`, or `[B, H, T, S]`, but the semantics must be to mask future positions.
 
-## 概率与语言模型
+## Probability and Language Models
 
-自回归语言模型把序列概率分解为：
+An autoregressive language model decomposes the sequence probability as:
 
 ```text
 P(x_1, ..., x_T) = product_t P(x_t | x_<t)
 ```
 
-训练时通常最大化 token 条件概率，等价于最小化 cross entropy：
+Training typically maximizes the token conditional probability, which is equivalent to minimizing cross entropy:
 
 ```text
 loss = -mean_t log P(target_t | context_t)
 ```
 
-perplexity 是 `exp(loss)`，表示平均每一步仍有多少等价候选。
+Perplexity is `exp(loss)`, representing the average number of equivalent candidates remaining at each step.
 
-## 统计与 ML Foundations 入口
+## Statistics and ML Foundations Entry Point
 
-本课程项目报告需要的统计和机器学习基础包括：
+The statistical and machine learning foundations required for this course's project reports include:
 
-- train / validation / test split。
-- baseline、ablation 和 held-out evaluation。
-- sample mean、variance、seed sensitivity 和 benchmark uncertainty。
-- overfitting、data leakage 和 benchmark contamination。
-- objective、metric 和 generalization boundary 的区别。
+- train / validation / test split.
+- baseline, ablation, and held-out evaluation.
+- sample mean, variance, seed sensitivity, and benchmark uncertainty.
+- overfitting, data leakage, and benchmark contamination.
+- The difference between objective, metric, and generalization boundary.
 
-这些内容按 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md) 补救，并在训练、推理和评测章节中作为判断结论是否可靠的依据。
+These topics are remediated according to [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md) and serve as the basis for judging the reliability of conclusions in the training, inference, and evaluation chapters.
 
-## 反向传播核心规则
+## Core Rules of Backpropagation
 
-需要掌握以下链式法则：
+The following chain rule must be mastered:
 
 ```text
 z = f(y), y = g(x)
 dz/dx = dz/dy * dy/dx
 ```
 
-对张量实现而言，重点不是手写 Jacobian，而是理解每个参数如何从 loss 收到梯度：
+For tensor implementations, the focus is not on writing Jacobians by hand, but on understanding how each parameter receives gradients from the loss:
 
-- `Linear`: `y = x W^T + b`，梯度流向 `x`、`W`、`b`。
-- `Embedding`: 只有被索引到的 token 行收到梯度。
-- `LayerNorm`: 梯度必须考虑均值和方差对所有特征维度的耦合。
-- `Attention`: `Q/K/V` 都通过 scores、softmax 和 weighted sum 收到梯度。
-- `Cross entropy`: 有效 token 的 logits 梯度是 `softmax(z)-one_hot(y)`；被 `ignore_index` 屏蔽的位置不进入平均，也不向 logits 传梯度。
+- `Linear`: `y = x W^T + b`, gradients flow to `x`, `W`, `b`.
+- `Embedding`: Only the rows of tokens that were indexed receive gradients.
+- `LayerNorm`: Gradients must account for the coupling of mean and variance across all feature dimensions.
+- `Attention`: `Q/K/V` all receive gradients through scores, softmax, and weighted sum.
+- `Cross entropy`: The gradient for logits of valid tokens is `softmax(z)-one_hot(y)`; positions masked by `ignore_index` do not enter the average and do not pass gradients to logits.
 
-## Cross Entropy 推导检查
+## Cross Entropy Derivation Check
 
-对单个样本 logits `z` 和目标类别 `y`：
+For a single sample logits `z` and target class `y`:
 
 ```text
 p_i = exp(z_i) / sum_j exp(z_j)
@@ -155,15 +155,15 @@ loss = -log p_y
 d loss / d z_i = p_i - 1[i = y]
 ```
 
-实现时应使用 log-sum-exp trick：
+The log-sum-exp trick should be used in implementation:
 
 ```text
 logsumexp(z) = m + log(sum_i exp(z_i - m)), m = max_i z_i
 ```
 
-## LayerNorm 推导检查
+## LayerNorm Derivation Check
 
-对最后一维归一化：
+Normalization over the last dimension:
 
 ```text
 mu = mean(x)
@@ -172,27 +172,27 @@ x_hat = (x - mu) / sqrt(var + eps)
 y = gamma * x_hat + beta
 ```
 
-反向传播中 `dx` 不能只写成 `dy * gamma / sqrt(var + eps)`，因为 `mu` 和 `var` 都依赖 `x`。正确实现应通过 gradcheck 或与 PyTorch 参考实现对齐。
+In backpropagation, `dx` cannot simply be written as `dy * gamma / sqrt(var + eps)`, because `mu` and `var` both depend on `x`. The correct implementation should pass gradcheck or align with the PyTorch reference implementation.
 
-## DPO/GRPO 推导检查
+## DPO/GRPO Derivation Check
 
-DPO 的核心比较是 chosen 与 rejected 在 policy/reference 下的 log probability ratio：
+The core comparison in DPO is the log probability ratio of chosen vs. rejected under policy/reference:
 
 ```text
 logit = beta * [(logp_pi(chosen)-logp_ref(chosen)) - (logp_pi(rejected)-logp_ref(rejected))]
 loss = -log sigmoid(logit)
 ```
 
-GRPO 的关键不是单个样本 reward，而是同 prompt 多个响应组成的组内标准化 advantage：
+The key point of GRPO is not the single sample reward, but the group-normalized advantage composed of multiple responses for the same prompt:
 
 ```text
 A_i = (r_i - mean_group(r)) / (std_group(r) + eps)
 ```
 
-## PyTorch 实现纪律
+## PyTorch Implementation Discipline
 
-- 每个核心函数都先写 shape 注释或测试。
-- 涉及概率的函数要测试极端 logits、mask、空边界和 dtype。
-- 涉及梯度的函数要用 `torch.autograd.gradcheck` 或与 PyTorch 官方模块对比。
-- 用 `.reshape` 处理可能不连续的张量，避免无意中依赖 `.view`。
-- 不在训练循环中静默吞掉 NaN；应记录 step、loss、grad_norm 和输入 batch。
+- Write shape comments or tests for every core function.
+- Test functions involving probabilities with extreme logits, masks, empty boundaries, and dtypes.
+- Test functions involving gradients with `torch.autograd.gradcheck` or compare against PyTorch official modules.
+- Use `.reshape` for tensors that may be non-contiguous, avoiding unintentional reliance on `.view`.
+- Do not silently swallow NaN in the training loop; log step, loss, grad_norm, and input batch.

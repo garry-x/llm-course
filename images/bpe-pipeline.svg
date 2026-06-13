@@ -20,72 +20,72 @@
   </defs>
   <rect class="bg" width="940" height="520"/>
 
-  <text class="t2" x="470" y="30" text-anchor="middle" style="font-size:18px">BPE 训练流程</text>
+  <text class="t2" x="470" y="30" text-anchor="middle" style="font-size:18px">BPE Training Process</text>
 
   <!-- Step 1 -->
   <rect class="box-a" x="40" y="55" width="200" height="65"/>
-  <text class="t2" x="140" y="78" text-anchor="middle">1. 初始化</text>
-  <text class="t1" x="140" y="95" text-anchor="middle">UTF-8 编码文本</text>
+  <text class="t2" x="140" y="78" text-anchor="middle">1. Initialization</text>
+  <text class="t1" x="140" y="95" text-anchor="middle">UTF-8 encoded text</text>
   <text class="t3" x="140" y="113" text-anchor="middle">ids = text.encode('utf-8')</text>
 
   <line class="arrow" x1="240" y1="88" x2="290" y2="88"/>
 
   <!-- Step 2 -->
   <rect class="box" x="295" y="55" width="200" height="65"/>
-  <text class="t2" x="395" y="78" text-anchor="middle">2. 统计 pair 频率</text>
-  <text class="t1" x="395" y="95" text-anchor="middle">滑动窗口统计相邻对</text>
+  <text class="t2" x="395" y="78" text-anchor="middle">2. Count pair frequencies</text>
+  <text class="t1" x="395" y="95" text-anchor="middle">Sliding window to count adjacent pairs</text>
   <text class="t3" x="395" y="113" text-anchor="middle">Counter(zip(ids,ids[1:]))</text>
 
   <line class="arrow" x1="495" y1="88" x2="545" y2="88"/>
 
   <!-- Step 3 -->
   <rect class="box" x="550" y="55" width="200" height="65"/>
-  <text class="t2" x="650" y="78" text-anchor="middle">3. 合并最高频对</text>
-  <text class="t1" x="650" y="95" text-anchor="middle">替换所有 (a,b) → new_id</text>
+  <text class="t2" x="650" y="78" text-anchor="middle">3. Merge most frequent pair</text>
+  <text class="t1" x="650" y="95" text-anchor="middle">Replace all (a,b) → new_id</text>
   <text class="t3" x="650" y="113" text-anchor="middle">ids = merge(ids, top_pair)</text>
 
   <!-- Loop -->
   <path class="loop" d="M 650 120 Q 650 170 450 170 Q 140 170 140 120"/>
-  <text class="t1" x="400" y="165" text-anchor="middle">重复 V-256 次 (如 GPT-2: 50000次)</text>
+  <text class="t1" x="400" y="165" text-anchor="middle">Repeat V-256 times (e.g., GPT-2: 50000 times)</text>
 
   <!-- Step 4-6 -->
   <rect class="box" x="20" y="195" width="220" height="55"/>
-  <text class="t2" x="130" y="218" text-anchor="middle">4. 保存词表 + 合并规则</text>
+  <text class="t2" x="130" y="218" text-anchor="middle">4. Save vocabulary + merge rules</text>
   <text class="t3" x="130" y="240" text-anchor="middle">vocab: {id → bytes}</text>
 
   <line class="arrow" x1="240" y1="225" x2="295" y2="225"/>
 
   <rect class="box-a" x="300" y="195" width="260" height="55"/>
-  <text class="t2" x="430" y="218" text-anchor="middle">5. Encode (文本→token序列)</text>
-  <text class="t3" x="430" y="240" text-anchor="middle">贪心最长匹配 → list[int]</text>
+  <text class="t2" x="430" y="218" text-anchor="middle">5. Encode (text → token sequence)</text>
+  <text class="t3" x="430" y="240" text-anchor="middle">Greedy longest match → list[int]</text>
 
   <line class="arrow" x1="560" y1="225" x2="615" y2="225"/>
 
   <rect class="box" x="620" y="195" width="260" height="55"/>
-  <text class="t2" x="750" y="218" text-anchor="middle">6. Decode (token→文本)</text>
-  <text class="t3" x="750" y="240" text-anchor="middle">id→bytes 拼接 → UTF-8 解码</text>
+  <text class="t2" x="750" y="218" text-anchor="middle">6. Decode (token → text)</text>
+  <text class="t3" x="750" y="240" text-anchor="middle">id→bytes concatenation → UTF-8 decode</text>
 
   <!-- Example box -->
   <rect class="box" x="20" y="280" width="900" height="225"/>
-  <text class="t2" x="470" y="308" text-anchor="middle" style="font-size:16px">完整示例: "low lower lowest" → 目标词表大小 V=300</text>
+  <text class="t2" x="470" y="308" text-anchor="middle" style="font-size:16px">Complete Example: "low lower lowest" → Target vocabulary size V=300</text>
 
   <g font-family="'JetBrains Mono','Fira Code',monospace" font-size="13">
-    <text class="t3" x="40" y="340">初始字节:</text>
+    <text class="t3" x="40" y="340">Initial bytes:</text>
     <text class="t1" x="160" y="340">l, o, w, _, l, o, w, e, r, _, l, o, w, e, s, t</text>
-    <text class="t1" x="700" y="340">(16 字节)</text>
+    <text class="t1" x="700" y="340">(16 bytes)</text>
 
-    <text class="t3" x="40" y="372">合并 #1:</text>
+    <text class="t3" x="40" y="372">Merge #1:</text>
     <text class="t1" x="160" y="372">lo, w, _, lo, w, e, r, _, lo, w, e, s, t</text>
-    <text class="t1" x="700" y="372">"l"+"o" (出现 3 次)</text>
+    <text class="t1" x="700" y="372">"l"+"o" (appears 3 times)</text>
 
-    <text class="t3" x="40" y="404">合并 #2:</text>
+    <text class="t3" x="40" y="404">Merge #2:</text>
     <text class="t1" x="160" y="404">low, _, low, e, r, _, low, e, s, t</text>
-    <text class="t1" x="700" y="404">"lo"+"w" (出现 3 次)</text>
+    <text class="t1" x="700" y="404">"lo"+"w" (appears 3 times)</text>
 
-    <text class="t3" x="40" y="436">合并 #3:</text>
+    <text class="t3" x="40" y="436">Merge #3:</text>
     <text class="t1" x="160" y="436">low, _, low, er, _, low, e, s, t</text>
-    <text class="t1" x="700" y="436">"e"+"r" (出现 2 次)</text>
+    <text class="t1" x="700" y="436">"e"+"r" (appears 2 times)</text>
 
-    <text class="t1" x="40" y="475">... 持续合并直到词表达到 300 个符号，序列长度从 16 压缩至约 6 个 token</text>
+    <text class="t1" x="40" y="475">... Continue merging until the vocabulary reaches 300 symbols, sequence length compressed from 16 to approximately 6 tokens</text>
   </g>
 </svg>

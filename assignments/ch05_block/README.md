@@ -1,12 +1,12 @@
 # Chapter 5 Assignment: Transformer Block
 
-本作业对应第 5 章的归一化、前馈网络和完整 Decoder Block 练习。目标是把 `LayerNorm`、`RMSNorm`、`FFN`、`SwiGLU` 和 Pre-Norm `TransformerBlock` 写成可测试模块，并把 RMSNorm 输入梯度、4x GELU FFN 与 SwiGLU 8/3 宽度的参数预算、Pre-Norm/Post-Norm 梯度路径推导转成可计算函数。
+This assignment corresponds to the normalization, feed-forward network, and complete Decoder Block exercises in Chapter 5. The goal is to implement `LayerNorm`, `RMSNorm`, `FFN`, `SwiGLU`, and Pre-Norm `TransformerBlock` as testable modules, and to convert the RMSNorm input gradient, 4x GELU FFN and SwiGLU 8/3 width parameter budget, and Pre-Norm/Post-Norm gradient path derivations into computable functions.
 
 ## Files
 
-- `starter.py`: 学生起始代码。
-- `reference_solution.py`: 参考实现。
-- `tests.py`: 可运行测试。
+- `starter.py`: Student starter code.
+- `reference_solution.py`: Reference implementation.
+- `tests.py`: Runnable tests.
 
 ## Run
 
@@ -14,7 +14,7 @@
 .venv/bin/python assignments/ch05_block/tests.py
 ```
 
-默认测试 `reference_solution.py`。测试学生代码时：
+By default, tests `reference_solution.py`. To test student code:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch05_block/tests.py
@@ -22,20 +22,20 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch05_block/tests.py
 
 ## Requirements
 
-- 不允许调用 `nn.LayerNorm` 实现 `LayerNorm`。
-- `LayerNormFunction.backward` 需要返回 `x`、`gamma`、`beta` 的正确梯度。
-- `RMSNorm` 只做 RMS 缩放，不做均值中心化。
-- `rms_norm_input_gradient` 需要写出 RMSNorm 对输入的梯度，并与 autograd 对齐。
-- `swiglu_hidden_size_for_param_budget` 和 `ffn_parameter_counts` 需要按 bias-free 矩阵参数量解释 8/3 宽度来源。
-- `residual_gradient_path_factors` 需要在线性化标量残差模型中比较 Pre-Norm 与 Post-Norm 的逐层梯度因子。
-- `TransformerBlock` 使用 Pre-Norm：`RMSNorm -> MHA -> residual` 和 `RMSNorm -> SwiGLU -> residual`。
-- `estimate_block_resources` 估算单个 block 的参数量、主要 FLOPs、attention score 显存和主要激活显存。
-- `activation_checkpointing_tradeoff` 估算 activation checkpointing 省下的激活显存和额外重算 FLOPs。
+- Calling `nn.LayerNorm` to implement `LayerNorm` is not allowed.
+- `LayerNormFunction.backward` must return correct gradients for `x`, `gamma`, `beta`.
+- `RMSNorm` only performs RMS scaling, no mean centering.
+- `rms_norm_input_gradient` must write the gradient of RMSNorm with respect to the input and align with autograd.
+- `swiglu_hidden_size_for_param_budget` and `ffn_parameter_counts` must explain the 8/3 width source based on bias-free matrix parameter counts.
+- `residual_gradient_path_factors` must compare the per-layer gradient factors of Pre-Norm and Post-Norm in a linearized scalar residual model.
+- `TransformerBlock` uses Pre-Norm: `RMSNorm -> MHA -> residual` and `RMSNorm -> SwiGLU -> residual`.
+- `estimate_block_resources` estimates the parameter count, major FLOPs, attention score memory, and major activation memory for a single block.
+- `activation_checkpointing_tradeoff` estimates the activation memory saved by activation checkpointing and the additional recomputation FLOPs.
 
-## 评分 Rubric
+## Grading Rubric
 
-| 项目 | 分值 | 标准 |
+| Item | Points | Criteria |
 |------|:--:|------|
-| Written questions | 35 | 推导 LayerNorm/RMSNorm forward 与 RMSNorm 输入梯度，比较 Pre-Norm/Post-Norm 梯度路径，计算 FFN/SwiGLU 参数量、FLOPs、激活显存、checkpointing 重算成本和 8/3 宽度来源，并解释 probing/patching/ablation 的结论边界 |
-| Programming parts | 55 | 实现 LayerNorm、RMSNorm、RMSNorm input gradient、FFN/SwiGLU、SwiGLU 参数预算函数、Pre/Post-Norm 梯度路径诊断、Pre-Norm TransformerBlock、block resource estimator 和 checkpointing tradeoff estimator |
-| Analysis / style | 10 | 说明数值稳定性、梯度检查、残差路径、SwiGLU 门控含义、资源估算边界、组件可解释性实验和跳过子层的投机实现风险 |
+| Written questions | 35 | Derive LayerNorm/RMSNorm forward and RMSNorm input gradient, compare Pre-Norm/Post-Norm gradient paths, compute FFN/SwiGLU parameter counts, FLOPs, activation memory, checkpointing recomputation cost and 8/3 width source, and explain the conclusion boundaries of probing/patching/ablation |
+| Programming parts | 55 | Implement LayerNorm, RMSNorm, RMSNorm input gradient, FFN/SwiGLU, SwiGLU parameter budget function, Pre/Post-Norm gradient path diagnosis, Pre-Norm TransformerBlock, block resource estimator and checkpointing tradeoff estimator |
+| Analysis / style | 10 | Explain numerical stability, gradient checking, residual paths, SwiGLU gating implications, resource estimation boundaries, component interpretability experiments, and speculative implementation risks of skipping sublayers |

@@ -2,42 +2,42 @@
 set -euo pipefail
 
 # ============================================================
-# LLM Learner — 本地开发服务器
+# LLM Learner — Local Development Server
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEFAULT_HOST="${LLM_HOST:-0.0.0.0}"
 DEFAULT_PORT="${LLM_PORT:-8080}"
 
-# ---- 颜色 ----
+# ---- Colors ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 
 usage() {
   cat <<EOF
-用法: $0 <命令> [选项]
+Usage: $0 <command> [options]
 
-LLM 深度学习课程 — 本地开发服务器
+LLM Deep Learning Course — Local Development Server
 
-命令:
-  serve               启动本地开发服务器 (python/http-server)
+Commands:
+  serve               Start local development server (python/http-server)
 
-选项:
-  -h, --host HOST     监听地址 (默认: $DEFAULT_HOST)
-  -p, --port PORT     监听端口 (默认: $DEFAULT_PORT)
-  --help              显示此帮助信息
+Options:
+  -h, --host HOST     Listen address (default: $DEFAULT_HOST)
+  -p, --port PORT     Listen port (default: $DEFAULT_PORT)
+  --help              Show this help message
 
-环境变量:
-  LLM_HOST / LLM_PORT  本地服务器地址/端口
+Environment Variables:
+  LLM_HOST / LLM_PORT  Local server address/port
 
-示例:
-  $0 serve                       # 本地开发服务器 :8080
-  $0 serve -p 3000               # 本地开发服务器 :3000
+Examples:
+  $0 serve                       # Local development server :8080
+  $0 serve -p 3000               # Local development server :3000
 
 EOF
   exit 0
 }
 
-# ---- 端口检查 ----
+# ---- Port Check ----
 check_port() {
   local port="$1"
   if command -v ss &>/dev/null; then
@@ -50,32 +50,32 @@ check_port() {
 
 kill_port() {
   local port="$1"
-  echo -e "${YELLOW}⚠ 端口 $port 已被占用${NC}"
+  echo -e "${YELLOW}⚠ Port $port is already in use${NC}"
   if command -v ss &>/dev/null; then
     local pid=$(ss -tlnp | grep ":$port " | grep -oP 'pid=\K\d+' | head -1)
   elif command -v lsof &>/dev/null; then
     local pid=$(lsof -Pi :"$port" -sTCP:LISTEN -t 2>/dev/null)
   fi
   if [ -n "${pid:-}" ]; then
-    read -rp "是否终止 PID $pid? [y/N] " answer
+    read -rp "Terminate PID $pid? [y/N] " answer
     if [[ "$answer" =~ ^[Yy]$ ]]; then
-      kill "$pid" 2>/dev/null && echo -e "${GREEN}✓ 已终止${NC}"
+      kill "$pid" 2>/dev/null && echo -e "${GREEN}✓ Terminated${NC}"
       sleep 0.5
     else
-      echo "已取消"; exit 1
+      echo "Cancelled"; exit 1
     fi
   fi
 }
 
 banner() {
   echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║   🧠 LLM 深度学习课程                    ║${NC}"
+  echo -e "${CYAN}║   🧠 LLM Deep Learning Course           ║${NC}"
   echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
   echo ""
 }
 
 # ================================================================
-# 命令实现
+# Command Implementations
 # ================================================================
 
 cmd_serve() {
@@ -85,17 +85,17 @@ cmd_serve() {
       -h|--host) host="$2"; shift 2 ;;
       -p|--port) port="$2"; shift 2 ;;
       --help) usage ;;
-      *) echo -e "${RED}未知参数: $1${NC}"; usage ;;
+      *) echo -e "${RED}Unknown parameter: $1${NC}"; usage ;;
     esac
   done
 
   check_port "$port" && kill_port "$port"
 
   banner
-  echo -e "  模式:    ${GREEN}本地开发${NC}"
-  echo -e "  地址:    ${GREEN}http://${host}:${port}${NC}"
-  echo -e "  目录:    ${SCRIPT_DIR}"
-  echo -e "  停止:    ${YELLOW}Ctrl+C${NC}"
+  echo -e "  Mode:    ${GREEN}Local Development${NC}"
+  echo -e "  Address: ${GREEN}http://${host}:${port}${NC}"
+  echo -e "  Directory: ${SCRIPT_DIR}"
+  echo -e "  Stop:    ${YELLOW}Ctrl+C${NC}"
   echo ""
 
   cd "$SCRIPT_DIR"
@@ -106,13 +106,13 @@ cmd_serve() {
   elif command -v npx &>/dev/null; then
     npx http-server "$SCRIPT_DIR" -a "$host" -p "$port"
   else
-    echo -e "${RED}错误: 未找到 python3 / python / npx${NC}"
+    echo -e "${RED}Error: python3 / python / npx not found${NC}"
     exit 1
   fi
 }
 
 # ================================================================
-# 主入口
+# Main Entry Point
 # ================================================================
 
 CMD="${1:-serve}"
@@ -121,5 +121,5 @@ shift || true
 case "$CMD" in
   serve)           cmd_serve "$@" ;;
   -h|--help|help)  usage ;;
-  *) echo -e "${RED}未知命令: $CMD${NC}"; usage ;;
+  *) echo -e "${RED}Unknown command: $CMD${NC}"; usage ;;
 esac

@@ -20,20 +20,20 @@
   </defs>
   <rect class="bg" width="940" height="620"/>
 
-  <text class="t2" x="470" y="28" text-anchor="middle" style="font-size:18px">多头注意力方案对比: MHA vs GQA vs MLA</text>
+  <text class="t2" x="470" y="28" text-anchor="middle" style="font-size:18px">Multi-Head Attention Comparison: MHA vs GQA vs MLA</text>
 
   <!-- MHA -->
   <rect class="box" x="20" y="48" width="290" height="370"/>
   <text class="t2" x="165" y="72" text-anchor="middle">MHA (Multi-Head Attention)</text>
-  <text class="ts" x="165" y="88" text-anchor="middle">GPT-3, 原始 Transformer</text>
+  <text class="ts" x="165" y="88" text-anchor="middle">GPT-3, Original Transformer</text>
 
   <g transform="translate(35,105)">
     <rect fill="#7baaf7" opacity="0.2" x="0" y="0" width="80" height="16" rx="2"/>
-    <text class="ts" x="40" y="12" text-anchor="middle">Q 头 × 8</text>
+    <text class="ts" x="40" y="12" text-anchor="middle">Q Heads × 8</text>
     <rect fill="#81c995" opacity="0.2" x="85" y="0" width="80" height="16" rx="2"/>
-    <text class="ts" x="125" y="12" text-anchor="middle">K 头 × 8</text>
+    <text class="ts" x="125" y="12" text-anchor="middle">K Heads × 8</text>
     <rect fill="#f28b82" opacity="0.2" x="170" y="0" width="80" height="16" rx="2"/>
-    <text class="ts" x="210" y="12" text-anchor="middle">V 头 × 8</text>
+    <text class="ts" x="210" y="12" text-anchor="middle">V Heads × 8</text>
   </g>
 
   <g transform="translate(35,130)">
@@ -71,25 +71,25 @@
     <text class="t1" x="125" y="12" text-anchor="middle">Concat + W_O</text>
   </g>
 
-  <text class="ts" x="165" y="310" text-anchor="middle">KV Cache: O(h·n·d_k·2) 每层</text>
-  <text class="t3" x="165" y="330" text-anchor="middle">8 头 × 128K × 64 × 2</text>
-  <text class="t3" x="165" y="348" text-anchor="middle">= 128 MB/token/层</text>
+  <text class="ts" x="165" y="310" text-anchor="middle">KV Cache: O(h·n·d_k·2) per layer</text>
+  <text class="t3" x="165" y="330" text-anchor="middle">8 heads × 128K × 64 × 2</text>
+  <text class="t3" x="165" y="348" text-anchor="middle">= 128 MB/token/layer</text>
 
   <rect class="box" x="20" y="380" width="290" height="35"/>
-  <text class="t1" x="165" y="402" text-anchor="middle" style="font-weight:600">KV Cache: 最大 ↑</text>
+  <text class="t1" x="165" y="402" text-anchor="middle" style="font-weight:600">KV Cache: Largest ↑</text>
 
   <!-- GQA -->
   <rect class="box" x="325" y="48" width="290" height="370"/>
   <text class="t2" x="470" y="72" text-anchor="middle">GQA (Grouped-Query)</text>
-  <text class="ts" x="470" y="88" text-anchor="middle">Llama 2/3, 组数=2~8</text>
+  <text class="ts" x="470" y="88" text-anchor="middle">Llama 2/3, groups=2~8</text>
 
   <g transform="translate(340,105)">
     <rect fill="#7baaf7" opacity="0.2" x="0" y="0" width="80" height="16" rx="2"/>
-    <text class="ts" x="40" y="12" text-anchor="middle">Q 头 × 8</text>
+    <text class="ts" x="40" y="12" text-anchor="middle">Q Heads × 8</text>
     <rect fill="#81c995" opacity="0.2" x="85" y="0" width="80" height="16" rx="2"/>
-    <text class="ts" x="125" y="12" text-anchor="middle">K 组 × 2</text>
+    <text class="ts" x="125" y="12" text-anchor="middle">K Groups × 2</text>
     <rect fill="#f28b82" opacity="0.2" x="170" y="0" width="80" height="16" rx="2"/>
-    <text class="ts" x="210" y="12" text-anchor="middle">V 组 × 2</text>
+    <text class="ts" x="210" y="12" text-anchor="middle">V Groups × 2</text>
   </g>
 
   <g transform="translate(340,130)">
@@ -110,12 +110,12 @@
     <text class="ts" x="125" y="12" text-anchor="middle">...</text>
   </g>
 
-  <text class="ts" x="470" y="310" text-anchor="middle">KV Cache: O(g·n·d_k·2) 每层</text>
-  <text class="t3" x="470" y="330" text-anchor="middle">2 组 × 128K × 64 × 2</text>
-  <text class="t3" x="470" y="348" text-anchor="middle">= 32 MB/token/层 (4× 压缩)</text>
+  <text class="ts" x="470" y="310" text-anchor="middle">KV Cache: O(g·n·d_k·2) per layer</text>
+  <text class="t3" x="470" y="330" text-anchor="middle">2 groups × 128K × 64 × 2</text>
+  <text class="t3" x="470" y="348" text-anchor="middle">= 32 MB/token/layer (4× compression)</text>
 
   <rect class="box" x="325" y="380" width="290" height="35"/>
-  <text class="t1" x="470" y="402" text-anchor="middle" style="font-weight:600">KV Cache: 中等 ↓</text>
+  <text class="t1" x="470" y="402" text-anchor="middle" style="font-weight:600">KV Cache: Medium ↓</text>
 
   <!-- MLA -->
   <rect class="b2" x="630" y="48" width="290" height="370"/>
@@ -124,67 +124,66 @@
 
   <g transform="translate(645,105)">
     <rect fill="#7baaf7" opacity="0.2" x="0" y="0" width="120" height="16" rx="2"/>
-    <text class="ts" x="60" y="12" text-anchor="middle">Q 头 × 8 (计算时解压)</text>
+    <text class="ts" x="60" y="12" text-anchor="middle">Q Heads × 8 (decompressed at compute)</text>
     <rect fill="#e08940" opacity="0.3" x="125" y="0" width="120" height="16" rx="2"/>
-    <text class="ts" x="185" y="12" text-anchor="middle">Latent KV (压缩)</text>
+    <text class="ts" x="185" y="12" text-anchor="middle">Latent KV (compressed)</text>
   </g>
 
   <g transform="translate(645,140)">
     <rect fill="#e08940" opacity="0.3" x="0" y="0" width="240" height="50" rx="2"/>
-    <text class="t1" x="120" y="22" text-anchor="middle" style="font-weight:700">低维潜在向量 c_t^{KV}</text>
-    <text class="ts" x="120" y="40" text-anchor="middle">维度 d_c &lt;&lt; 8×d_k  (例如 d_c=512)</text>
+    <text class="t1" x="120" y="22" text-anchor="middle" style="font-weight:700">Low-dimensional latent vector c_t^{KV}</text>
+    <text class="ts" x="120" y="40" text-anchor="middle">Dimension d_c &lt;&lt; 8×d_k  (e.g., d_c=512)</text>
   </g>
 
   <g transform="translate(645,210)">
     <rect fill="#7baaf7" opacity="0.3" x="0" y="0" width="240" height="50" rx="2"/>
-    <text class="t1" x="120" y="22" text-anchor="middle">解压: K = c·W_{UK}, V = c·W_{UV}</text>
-    <text class="ts" x="120" y="40" text-anchor="middle">推理时在 SRAM 中解压, 不写入 HBM</text>
+    <text class="t1" x="120" y="22" text-anchor="middle">Decompression: K = c·W_{UK}, V = c·W_{UV}</text>
+    <text class="ts" x="120" y="40" text-anchor="middle">Decompressed in SRAM during inference, not written to HBM</text>
   </g>
 
   <g transform="translate(645,275)">
     <rect fill="#7baaf7" opacity="0.3" x="0" y="0" width="240" height="50" rx="2"/>
-    <text class="t1" x="120" y="22" text-anchor="middle">RoPE 解耦: Q/K 分别施加旋转</text>
-    <text class="ts" x="120" y="40" text-anchor="middle">c_t^{KV} + 解耦位置向量 → 旋转</text>
+    <text class="t1" x="120" y="22" text-anchor="middle">RoPE Decoupling: Q/K each apply rotation</text>
+    <text class="ts" x="120" y="40" text-anchor="middle">c_t^{KV} + decoupled position vector → rotation</text>
   </g>
 
-  <text class="ts" x="775" y="350" text-anchor="middle">KV Cache: 仅缓存 c_t^{KV}</text>
-  <text class="t3" x="775" y="370" text-anchor="middle">512 × 128K = 64 KB/token/层</text>
-  <text class="t3" x="775" y="388" text-anchor="middle">≈ MHA 的 1/2000</text>
+  <text class="ts" x="775" y="350" text-anchor="middle">KV Cache: Only cache c_t^{KV}</text>
+  <text class="t3" x="775" y="370" text-anchor="middle">512 × 128K = 64 KB/token/layer</text>
+  <text class="t3" x="775" y="388" text-anchor="middle">≈ 1/2000 of MHA</text>
 
   <rect class="b2" x="630" y="380" width="290" height="35"/>
-  <text class="t1" x="775" y="402" text-anchor="middle" style="font-weight:700;fill:#e08940">KV Cache: 最小 ↓↓</text>
+  <text class="t1" x="775" y="402" text-anchor="middle" style="font-weight:700;fill:#e08940">KV Cache: Smallest ↓↓</text>
 
   <!-- Bottom comparison table -->
   <rect class="box" x="20" y="440" width="900" height="160"/>
-  <text class="t2" x="470" y="465" text-anchor="middle">定量对比 (n=128K 上下文, d_k=64, h=8 头, g=2 组, d_c=512)</text>
+  <text class="t2" x="470" y="465" text-anchor="middle">Quantitative Comparison (n=128K context, d_k=64, h=8 heads, g=2 groups, d_c=512)</text>
 
   <g font-size="12">
-    <text class="t1" x="40" y="495" text-anchor="start" style="font-weight:700">方案</text>
-    <text class="t1" x="140" y="495" text-anchor="start" style="font-weight:700">Q 头数</text>
-    <text class="t1" x="230" y="495" text-anchor="start" style="font-weight:700">K/V 组数</text>
-    <text class="t1" x="350" y="495" text-anchor="start" style="font-weight:700">KV Cache 每 token</text>
-    <text class="t1" x="550" y="495" text-anchor="start" style="font-weight:700">128K token 总缓存</text>
-    <text class="t1" x="720" y="495" text-anchor="start" style="font-weight:700">代表模型</text>
+    <text class="t1" x="40" y="495" text-anchor="start" style="font-weight:700">Scheme</text>
+    <text class="t1" x="140" y="495" text-anchor="start" style="font-weight:700">Q Heads</text>
+    <text class="t1" x="230" y="495" text-anchor="start" style="font-weight:700">K/V Groups</text>
+    <text class="t1" x="350" y="495" text-anchor="start" style="font-weight:700">KV Cache per Token</text>
+    <text class="t1" x="550" y="495" text-anchor="start" style="font-weight:700">Total Cache for 128K Tokens</text>
+    <text class="t1" x="720" y="495" text-anchor="start" style="font-weight:700">Representative Model</text>
 
     <text class="t1" x="40" y="520" text-anchor="start">MHA</text>
     <text class="t1" x="140" y="520" text-anchor="start">8</text>
     <text class="t1" x="230" y="520" text-anchor="start">8</text>
-    <text class="t3" x="350" y="520" text-anchor="start">8 × 128 KB = 1 MB</text>
-    <text class="t3" x="550" y="520" text-anchor="start">~8 GB (80层)</text>
+    <text class="t3" x="350" y="520" text-anchor="start">8 × 128 KB = 1 MB</text>    <text class="t3" x="550" y="520" text-anchor="start">~8 GB (80 layers)</text>
     <text class="t1" x="720" y="520" text-anchor="start">GPT-3 (175B)</text>
 
     <text class="t1" x="40" y="545" text-anchor="start">GQA</text>
     <text class="t1" x="140" y="545" text-anchor="start">8</text>
     <text class="t1" x="230" y="545" text-anchor="start">2</text>
     <text class="t3" x="350" y="545" text-anchor="start">2 × 128 KB = 256 KB</text>
-    <text class="t3" x="550" y="545" text-anchor="start">~2 GB (80层)</text>
+    <text class="t3" x="550" y="545" text-anchor="start">~2 GB (80 layers)</text>
     <text class="t1" x="720" y="545" text-anchor="start">Llama 3 (70B)</text>
 
     <text class="t1" x="40" y="570" text-anchor="start" style="fill:#b35c22;font-weight:700">MLA</text>
-    <text class="t1" x="140" y="570" text-anchor="start">8 (解压)</text>
-    <text class="t1" x="230" y="570" text-anchor="start">1 (压缩)</text>
+    <text class="t1" x="140" y="570" text-anchor="start">8 (decompressed)</text>
+    <text class="t1" x="230" y="570" text-anchor="start">1 (compressed)</text>
     <text class="t3" x="350" y="570" text-anchor="start" style="fill:#e08940">512 B = 0.5 KB</text>
-    <text class="t3" x="550" y="570" text-anchor="start" style="fill:#e08940">~4 MB (61层)</text>
+    <text class="t3" x="550" y="570" text-anchor="start" style="fill:#e08940">~4 MB (61 layers)</text>
     <text class="t1" x="720" y="570" text-anchor="start" style="fill:#e08940;font-weight:700">DeepSeek-V3 (671B)</text>
   </g>
 </svg>

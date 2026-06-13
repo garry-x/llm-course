@@ -1,53 +1,53 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
   <link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第8章 文本生成 — 采样策略+MTP推测解码 — LLM 深度学习</title>
+<title>Chapter 8 Text Generation — Sampling Strategies + MTP Speculative Decoding — LLM Deep Learning</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-ch="8">
 
-<button class="menu-toggle" aria-label="菜单">☰</button>
+<button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
-  <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
-  <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-progress"><span>Learning Progress: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
+  <input type="search" id="search-box" class="search-box" placeholder="Search course..." aria-label="Search">
   <div id="search-results" class="search-results"></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
-  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
-  <h2>第8章 文本生成</h2>
-  <p class="subtitle">采样策略 + DeepSeek MTP 推测解码——从概率到文本的最后一公里</p>
-  <div class="reading-time">⏱ 预计阅读: 110 分钟 · 15 小节 · 7 道编程练习 · 5 道概念练习</div>
-  <div class="font-controls"><span>字号:</span>
-    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
-    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
-    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  <h2>Chapter 8 Text Generation</h2>
+  <p class="subtitle">Sampling Strategies + DeepSeek MTP Speculative Decoding — The Last Mile from Probability to Text</p>
+  <div class="reading-time">⏱ Estimated Reading: 110 minutes · 15 sections · 7 coding exercises · 5 concept exercises</div>
+  <div class="font-controls"><span>Font Size:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
   </div>
 
 <section class="card">
-  <h3>本章怎么学：生成就是“反复选下一个 token”</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>先掌握贪心、temperature、top-k、top-p 这四种采样方式。推测解码、MTP 和 Attention Sink 是推理加速/长上下文优化，第一次学习时重点理解动机，不必追求一次写出工业级实现。</div></div>
+  <h3>How to Learn This Chapter: Generation is "Repeatedly Selecting the Next Token"</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> First master the four sampling methods: greedy, temperature, top-k, top-p. Speculative decoding, MTP, and Attention Sink are inference acceleration/long-context optimizations; on your first pass, focus on understanding the motivation, without striving to write an industrial-grade implementation immediately.</div></div>
   <ul>
-    <li><strong>前置知识：</strong>第 6 章 logits、softmax、概率采样。</li>
-    <li><strong>学习目标：</strong>解释自回归生成、prefill/decode、采样分布截断、重复陷阱、曝光偏差、推测解码和结构化解码的数学基础。</li>
-    <li><strong>本章产出：</strong>一个能用不同采样策略生成文本的 Generator。</li>
-    <li><strong>完成标准：</strong>你能解释为什么 temperature 越低越保守、top-p 比 top-k 更自适应。</li>
-    <li><strong>练习产出：</strong>提交生成器、采样策略对比表、distinct-n/重复率指标、约束 token mask，以及推测解码接受率实验；配套作业见 <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
+    <li><strong>Prerequisites:</strong> Chapter 6 logits, softmax, probability sampling.</li>
+    <li><strong>Learning Goals:</strong> Explain the mathematical foundations of autoregressive generation, prefill/decode, sampling distribution truncation, repetition traps, exposure bias, speculative decoding, and structured decoding.</li>
+    <li><strong>Chapter Output:</strong> A Generator capable of producing text using different sampling strategies.</li>
+    <li><strong>Completion Criteria:</strong> You can explain why lower temperature is more conservative and why top-p is more adaptive than top-k.</li>
+    <li><strong>Exercise Output:</strong> Submit the generator, a sampling strategy comparison table, distinct-n/repetition rate metrics, constrained token masks, and speculative decoding acceptance rate experiments; accompanying assignments are at <a href="../assignments/ch08_generation/">assignments/ch08_generation/</a>.</li>
   </ul>
-  <div class="dependency-note"><strong>先修能力：</strong>概率分布、logits 变换、采样方差、自回归状态、KV cache 直觉和基础质量/延迟指标。<br><strong>本章内化：</strong>temperature、top-k、top-p、beam、self-consistency、reasoning budget 和 speculative decoding 都会被写成“改变候选分布、重复计算或接受率”的可测策略，而不是孤立调参技巧。<br><strong>验收信号：</strong>你能把一次生成策略上线决策拆成质量、输出 token、P95 latency、成本、marginal gain 和回退策略，并接到 Ch10 服务 SLO。</div>
-  <p class="system-role"><strong>系统位置：</strong>本章把训练得到的 logits 转成用户可见行为。采样、reasoning 预算和推测解码会同时影响质量、延迟、token 成本和安全边界，因此它是 Ch09 对齐评估与 Ch10 serving SLO 之间的桥。</p>
+  <div class="dependency-note"><strong>Required Prior Knowledge:</strong> Probability distributions, logits transformation, sampling variance, autoregressive state, KV cache intuition, and basic quality/latency metrics.<br><strong>Internalization for This Chapter:</strong> temperature, top-k, top-p, beam, self-consistency, reasoning budget, and speculative decoding will all be written as measurable strategies that "change the candidate distribution, recompute, or acceptance rate," rather than isolated tuning tricks.<br><strong>Validation Signal:</strong> You can decompose a generation strategy deployment decision into quality, output tokens, P95 latency, cost, marginal gain, and a fallback strategy, and connect it to the Ch10 service SLO.</div>
+  <p class="system-role"><strong>System Position:</strong> This chapter transforms the trained logits into user-visible behavior. Sampling, reasoning budgets, and speculative decoding simultaneously impact quality, latency, token cost, and safety boundaries, thus serving as the bridge between Ch09 alignment evaluation and Ch10 serving SLO.</p>
   <div class="foundation-map">
-    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
-    <div class="foundation-graph" role="img" aria-label="第8章知识脑图：学习本章前需要懂 logits 分布、自回归状态和 KV cache，本章会学解码策略，学完后可以继续读 speculative decoding 和 verifier">
+    <h4>Learner Knowledge Map: What to Know Before / What This Chapter Teaches / What to Read Next</h4>
+    <div class="foundation-graph" role="img" aria-label="Chapter 8 Knowledge Map: Before learning this chapter, you need to understand logits distribution, autoregressive state, and KV cache. This chapter covers decoding strategies. After learning, you can continue to read about speculative decoding and verifiers">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-08" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -56,117 +56,115 @@
         <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
         <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
         <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
-        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第8章 Decoding</tspan><tspan class="dep-sub" x="430" dy="22">logits 变成回答</tspan></text>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">Ch8 Decoding</tspan><tspan class="dep-sub" x="430" dy="22">logits to answers</tspan></text>
         <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：概率分布</tspan><tspan class="dep-sub" x="129" dy="18">logits / temperature</tspan></text>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">Prerequisite: Probability Distribution</tspan><tspan class="dep-sub" x="129" dy="18">logits / temperature</tspan></text>
         <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：生成状态</tspan><tspan class="dep-sub" x="129" dy="18">AR loop / KV cache</tspan></text>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">Prerequisite: Generation State</tspan><tspan class="dep-sub" x="129" dy="18">AR loop / KV cache</tspan></text>
         <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：加速生成</tspan><tspan class="dep-sub" x="731" dy="18">speculative / EAGLE</tspan></text>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">Read Next: Accelerated Generation</tspan><tspan class="dep-sub" x="731" dy="18">speculative / EAGLE</tspan></text>
         <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：搜索评估</tspan><tspan class="dep-sub" x="731" dy="18">verifier / best-of-n</tspan></text>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">Read Next: Search & Evaluation</tspan><tspan class="dep-sub" x="731" dy="18">verifier / best-of-n</tspan></text>
         <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
-        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：logits -> filter/search -> tokens -> quality/cost</tspan></text>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">Chapter Main Line: logits -> filter/search -> tokens -> quality/cost</tspan></text>
       </svg>
     </div>
     <div class="table-wrap foundation-table">
       <table>
-        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
-        <tr><td>logits 到分布</td><td>把 temperature、top-k、top-p、min-p 和 repetition penalty 都放在 softmax 前后的正确位置。</td><td><strong>材料：</strong>contrastive decoding、typical sampling、grammar decoding。<br><strong>知识点：</strong>logit bias、constrained decoding、采样分布校准。</td></tr>
-        <tr><td>自回归循环</td><td>每步追加一个 token，更新 position 和 KV cache，并把停止条件、EOS 和 max tokens 写清楚。</td><td><strong>材料：</strong>streaming generation、continuous batching、decode profiling。<br><strong>知识点：</strong>stop sequence、EOS、decode-side latency。</td></tr>
-        <tr><td>search 与 sampling</td><td>比较 greedy、beam、随机采样、self-consistency、best-of-n 的质量和计算代价。</td><td><strong>材料：</strong>self-consistency、best-of-n、Tree-of-Thought。<br><strong>知识点：</strong>verifier/reranker、pass@k、搜索成本。</td></tr>
-        <tr><td>reasoning budget</td><td>把思考 token、并行样本、verifier、early stop 和 marginal gain 变成可控预算。</td><td><strong>材料：</strong>test-time scaling、speculative decoding、EAGLE/MTP。<br><strong>知识点：</strong>draft model、接受率、成本-质量曲线。</td></tr>
+        <tr><th>What to Know Before</th><th>This Chapter Will Clarify</th><th>Extended Reading Materials/Knowledge Points</th></tr>
+        <tr><td>logits to distribution</td><td>Place temperature, top-k, top-p, min-p, and repetition penalty in the correct positions before and after softmax.</td><td><strong>Materials:</strong> contrastive decoding, typical sampling, grammar decoding.<br><strong>Knowledge Points:</strong> logit bias, constrained decoding, sampling distribution calibration.</td></tr>
+        <tr><td>Autoregressive loop</td><td>Append one token per step, update position and KV cache, and clearly define stopping conditions, EOS, and max tokens.</td><td><strong>Materials:</strong> streaming generation, continuous batching, decode profiling.<br><strong>Knowledge Points:</strong> stop sequence, EOS, decode-side latency.</td></tr>
+        <tr><td>Search vs. Sampling</td><td>Compare the quality and computational cost of greedy, beam, random sampling, self-consistency, and best-of-n.</td><td><strong>Materials:</strong> self-consistency, best-of-n, Tree-of-Thought.<br><strong>Knowledge Points:</strong> verifier/reranker, pass@k, search cost.</td></tr>
+        <tr><td>Reasoning budget</td><td>Make thinking tokens, parallel samples, verifiers, early stopping, and marginal gain controllable budgets.</td><td><strong>Materials:</strong> test-time scaling, speculative decoding, EAGLE/MTP.<br><strong>Knowledge Points:</strong> draft model, acceptance rate, cost-quality curve.</td></tr>
       </table>
     </div>
-    <p><strong>本章覆盖情况：</strong>本章已经把 logits 变换、自回归循环、采样、搜索、reasoning budget 和成本指标放到同一框架；扩展阅读可深入 speculative decoding、draft model、verifier 和 test-time scaling。</p>
+    <p><strong>Chapter Coverage:</strong> This chapter places logits transformation, autoregressive loops, sampling, search, reasoning budgets, and cost metrics within the same framework; extended reading can delve into speculative decoding, draft models, verifiers, and test-time scaling.</p>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.1 自回归生成原理 -->
+<!-- 8.1 Autoregressive Generation Principle -->
 <!-- ================================================================ -->
 <section class="card" id="s8-1">
-  <h3>8.1 自回归生成的数学原理</h3>
-  <p>经过第 7 章的训练，我们得到了一个能预测下一个 token 的模型。但模型本身只是一个"评分器"：给定前缀，它输出一个概率分布。如何将概率分布转化为实际文本序列，这就是<strong>文本生成</strong>的核心问题。</p>
+  <h3>8.1 Mathematical Principles of Autoregressive Generation</h3>
+  <p>After training in Chapter 7, we obtain a model capable of predicting the next token. However, the model itself is merely a "scorer": given a prefix, it outputs a probability distribution. How to transform this probability distribution into an actual text sequence is the core problem of <strong>text generation</strong>.</p>
 
-  <h4>自回归分解</h4>
-  <p>生成的数学基础依然是<strong>自回归分解</strong>——序列的联合概率分解为条件概率的乘积：</p>
-  <div class="math-box"><div class="label">公式 8.1 自回归生成</div>
+  <h4>Autoregressive Decomposition</h4>
+  <p>The mathematical foundation of generation remains <strong>autoregressive decomposition</strong> — the joint probability of a sequence is decomposed into the product of conditional probabilities:</p>
+  <div class="math-box"><div class="label">Equation 8.1 Autoregressive Generation</div>
     <div class="katex" data-expr="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})" aria-label="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})" role="img"></div>
   </div>
-  <p>每一步，模型基于已有的前缀 <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" aria-label="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" role="img"></span>，输出一个词表上的概率分布 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})" aria-label="P(x_t \mid x_{&lt;t})" role="img"></span>。然后从该分布中<strong>采样</strong>或<strong>取最大值</strong>得到 <span class="katex-inline" data-expr="x_t" aria-label="x_t" role="img"></span>。这个过程是逐 token 进行的，直到生成结束 token 或达到最大长度。</p>
+  <p>At each step, the model, based on the existing prefix <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" aria-label="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" role="img"></span>, outputs a probability distribution over the vocabulary <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})" aria-label="P(x_t \mid x_{&lt;t})" role="img"></span>. Then, <span class="katex-inline" data-expr="x_t" aria-label="x_t" role="img"></span> is obtained by <strong>sampling</strong> from this distribution or <strong>taking the maximum</strong>. This process proceeds token by token until an end token is generated or the maximum length is reached.</p>
 
-  <h4>Prefilling 与 Decoding 两阶段</h4>
-  <p>生成过程分为两个计算特征完全不同的阶段：</p>
+  <h4>Two Phases: Prefilling and Decoding</h4>
+  <p>The generation process is divided into two phases with completely different computational characteristics:</p>
   <ul>
-    <li><strong>Prefilling（预填充）：</strong>将用户输入的 prompt 一次性送入模型。这是<strong>计算密集</strong>阶段——大量矩阵乘法并行执行。瓶颈在 GPU 算力（FLOPS）。首 token 延迟（TTFT）由这个阶段主导。</li>
-    <li><strong>Decoding（解码）：</strong>逐 token 生成，每次只输入一个 token，利用 KV Cache 增量计算。这通常是<strong>带宽密集</strong>阶段——小 batch 或低并发时 GPU 算力利用率可能明显低于 prefill，后续吞吐（TPS/TPOT）由这个阶段主导。</li>
+    <li><strong>Prefilling:</strong> The user's input prompt is fed into the model all at once. This is a <strong>compute-intensive</strong> phase — a large number of matrix multiplications are executed in parallel. The bottleneck is GPU compute power (FLOPS). Time to First Token (TTFT) is dominated by this phase.</li>
+    <li><strong>Decoding:</strong> Tokens are generated one by one. Each step inputs only one token, using the KV Cache for incremental computation. This is typically a <strong>bandwidth-intensive</strong> phase — with small batches or low concurrency, GPU compute utilization can be significantly lower than during prefill. Subsequent throughput (TPS/TPOT) is dominated by this phase.</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>重要概念：</strong>TTFT（Time to First Token）主要受 prefill、排队、网络和路由影响，用户感知为"等待第一个字出现的时间"；TPS/TPOT 主要受 decoding、batching、KV cache 和带宽影响，用户感知为"打字速度"。不同模型、上下文长度、并发和服务商的数值差异很大，因此课程项目要求学生自己用固定 benchmark 报告这些指标。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Important Concept:</strong> TTFT (Time to First Token) is primarily affected by prefill, queuing, network, and routing; the user perceives it as "the time to wait for the first character to appear." TPS/TPOT is primarily affected by decoding, batching, KV cache, and bandwidth; the user perceives it as "typing speed." Numerical values vary greatly across different models, context lengths, concurrency levels, and service providers. Therefore, the course project requires students to report these metrics using a fixed benchmark.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.2 为什么贪心解码失败 -->
+<!-- 8.2 Why Greedy Decoding Fails -->
 <!-- ================================================================ -->
 <section class="card">
 <div class="svg-diagram" style="max-width:940px">
-  <img src="../images/sampling-strategies.svg" alt="采样策略对比" style="width:100%">
+  <img src="../images/sampling-strategies.svg" alt="Sampling Strategy Comparison" style="width:100%">
 </div>
-<p class="diagram-caption">图 8-1: 四种采样策略对比——从贪心到 Nucleus</p>
+<p class="diagram-caption">Figure 8-1: Comparison of Four Sampling Strategies — From Greedy to Nucleus</p>
 </section>
 
 
-<section class="card" id="s8-2">
-  <h3>8.2 为什么贪心解码会失败？——重复陷阱与曝光偏差</h3>
-  <p>贪心解码（Greedy Decoding）每一步选择概率最高的 token：<span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>。它是最简单的策略，但有两个根本缺陷。</p>
+<section class="card" id="s8-2">  <h3>8.2 Why Does Greedy Decoding Fail? — Repetition Traps and Exposure Bias</h3>
+  <p>Greedy Decoding selects the token with the highest probability at each step: <span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>. It is the simplest strategy, but it has two fundamental flaws.</p>
 
-  <h4>缺陷一：重复陷阱（Repetition Loop）</h4>
-  <p>模型一旦进入某个高概率局部模式，后续 <code>argmax</code> 可能持续选择相似或相同 token，尤其在训练数据中常见短语、标点或功能词附近更明显。原因通常是条件分布过于尖锐、上下文里已有重复模式、缺少随机探索和停止约束等因素共同作用；这会让贪心解码陷入重复循环，但不能简单归因于某个 token 的 Key/Query 必然自我强化。</p>
+  <h4>Flaw 1: Repetition Loop</h4>
+  <p>Once the model enters a high-probability local pattern, subsequent <code>argmax</code> steps may continuously select similar or identical tokens. This is especially noticeable near common phrases, punctuation, or function words in the training data. The cause is typically a combination of factors: an overly sharp conditional distribution, existing repetitive patterns in the context, a lack of random exploration, and the absence of stopping constraints. These factors together can trap greedy decoding in a repetition loop, but it cannot be simply attributed to a single token's Key/Query necessarily self-reinforcing.</p>
 
-  <h4>缺陷二：曝光偏差（Exposure Bias）</h4>
-  <p>训练时，模型每一步看到的是<strong>真实的</strong> ground truth token。但推理时，模型看到的是<strong>自己生成的</strong> token。这两种情况下的分布不同——训练时的条件分布是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{真实}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{真实}})" role="img"></span>，推理时是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{生成}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{生成}})" role="img"></span>。一步的误差会在后续步中被放大，这就是<strong>误差累积</strong>（error accumulation）。</p>
+  <h4>Flaw 2: Exposure Bias</h4>
+  <p>During training, the model sees the <strong>true</strong> ground truth token at each step. However, during inference, the model sees the <strong>self-generated</strong> token. The distributions in these two scenarios differ — the conditional distribution during training is <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{true}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{true}})" role="img"></span>, while during inference it is <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{generated}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{generated}})" role="img"></span>. An error at one step gets amplified in subsequent steps; this is <strong>error accumulation</strong>.</p>
 
-  <h4>温度参数的熵控制视角</h4>
-  <p>解决方案是引入<strong>随机性</strong>——从概率分布中采样而不是取最大值。温度参数 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 控制这个随机性的程度：</p>
-  <div class="math-box"><div class="label">公式 8.2 温度采样</div>
+  <h4>Entropy Control Perspective of the Temperature Parameter</h4>
+  <p>The solution is to introduce <strong>randomness</strong> — sampling from the probability distribution instead of taking the maximum. The temperature parameter <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> controls the degree of this randomness:</p>
+  <div class="math-box"><div class="label">Equation 8.2 Temperature Sampling</div>
     <div class="katex" data-expr="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}" aria-label="P_T(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}" role="img"></div>
   </div>
   <ul>
-    <li><span class="katex-inline" data-expr="T \to 0" aria-label="T \to 0" role="img"></span>：退化为 argmax（完全确定）</li>
-    <li><span class="katex-inline" data-expr="T = 1" aria-label="T = 1" role="img"></span>：原始分布</li>
-    <li><span class="katex-inline" data-expr="T \to \infty" aria-label="T \to \infty" role="img"></span>：退化为均匀分布（完全随机）</li>
+    <li><span class="katex-inline" data-expr="T \to 0" aria-label="T \to 0" role="img"></span>: Degrades to argmax (completely deterministic)</li>
+    <li><span class="katex-inline" data-expr="T = 1" aria-label="T = 1" role="img"></span>: Original distribution</li>
+    <li><span class="katex-inline" data-expr="T \to \infty" aria-label="T \to \infty" role="img"></span>: Degrades to a uniform distribution (completely random)</li>
   </ul>
-  <p>温度的"热力学类比"：在 Boltzmann 分布中，温度控制系统的"探索"程度——高温使系统探索更多状态（更多样的词汇），低温使系统利用已知高概率模式（更确定的输出）。</p>
+  <p>"Thermodynamic Analogy" of Temperature: In the Boltzmann distribution, temperature controls the system's degree of "exploration" — high temperature makes the system explore more states (more diverse vocabulary), while low temperature makes the system exploit known high-probability patterns (more deterministic output).</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 1: Greedy Decoding -->
+<!-- Programming Exercise 1: Greedy Decoding -->
 <!-- ================================================================ -->
 <section class="card" id="s8-3">
-  <h3>8.3 编程练习 1：实现 Greedy Decoding</h3>
-  <p>虽然贪心解码有缺陷，但它是理解所有其他采样策略的起点。请实现它，然后观察其问题。</p>
+  <h3>8.3 Programming Exercise 1: Implementing Greedy Decoding</h3>  <p>Although greedy decoding has flaws, it is the starting point for understanding all other sampling strategies. Implement it, then observe its problems.</p>
 
   <div class="coding-exercise">
-    <h4>练习 1：贪心解码</h4>
+    <h4>Exercise 1: Greedy Decoding</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>generate_greedy(model, input_ids, max_new_tokens)</code> 函数。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement the <code>generate_greedy(model, input_ids, max_new_tokens)</code> function.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>输入 <code>input_ids: (1, seq_len)</code>，逐 token 生成最多 <code>max_new_tokens</code> 个新 token</li>
-        <li>每一步取 logits 最后一个位置（<code>logits[:, -1, :]</code>）的 argmax</li>
-        <li>检测 EOS token，遇到时提前停止</li>
-        <li>返回完整的 token 序列</li>
+        <li>Input <code>input_ids: (1, seq_len)</code>, generate up to <code>max_new_tokens</code> new tokens one by one</li>
+        <li>At each step, take the argmax of the logits at the last position (<code>logits[:, -1, :]</code>)</li>
+        <li>Detect the EOS token and stop early when encountered</li>
+        <li>Return the complete token sequence</li>
       </ul>
-      <pre># 预期用法
-prompt = tokenizer.encode("深度学习是", return_tensors='pt')
+      <pre># Expected usage
+prompt = tokenizer.encode("Deep learning is", return_tensors='pt')
 output = generate_greedy(model, prompt, max_new_tokens=50)
 print(tokenizer.decode(output[0]))
-# 可能输出: "深度学习是深度学习是深度学习是..."</pre>
+# Possible output: "Deep learning is deep learning is deep learning is..."</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def generate_greedy(model, input_ids, max_new_tokens=100):
-    """贪心解码：每一步选概率最高的 token"""
+    """Greedy decoding: select the token with the highest probability at each step"""
     model.eval()
     device = next(model.parameters()).device
     input_ids = input_ids.to(device)
@@ -174,7 +172,7 @@ def generate_greedy(model, input_ids, max_new_tokens=100):
     for _ in range(max_new_tokens):
         with torch.no_grad():
             logits = model(input_ids)
-        # 取最后一个位置的 logits
+        # Take the logits at the last position
         next_logits = logits[:, -1, :]          # (1, vocab_size)
         next_token = next_logits.argmax(dim=-1, keepdim=True)  # (1, 1)
         input_ids = torch.cat([input_ids, next_token], dim=-1)
@@ -183,47 +181,46 @@ def generate_greedy(model, input_ids, max_new_tokens=100):
             break
 
     return input_ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>观察：</strong>即使在小模型上，贪心解码也极其容易陷入重复。注意 <code>logits[:, -1, :]</code> 中的 <code>-1</code>——我们在取"最后一个位置"的 logits，即模型对<strong>下一个 token</strong> 的预测。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Observation:</strong> Even on small models, greedy decoding is extremely prone to falling into repetition. Note the <code>-1</code> in <code>logits[:, -1, :]</code> — we are taking the logits at the "last position", which is the model's prediction for the <strong>next token</strong>.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 2: Temperature Sampling -->
+<!-- Programming Exercise 2: Temperature Sampling -->
 <!-- ================================================================ -->
 <section class="card" id="s8-4">
-  <h3>8.4 编程练习 2：实现 Temperature Sampling</h3>
-  <p>温度采样通过在 logits 上应用除法 <span class="katex-inline" data-expr="z_i / T" aria-label="z_i / T" role="img"></span> 来控制分布的"锐度"。核心变化是：<strong>argmax → softmax + multinomial</strong>。</p>
+  <h3>8.4 Programming Exercise 2: Implementing Temperature Sampling</h3>
+  <p>Temperature sampling controls the "sharpness" of the distribution by applying a division <span class="katex-inline" data-expr="z_i / T" aria-label="z_i / T" role="img"></span> to the logits. The core change is: <strong>argmax → softmax + multinomial</strong>.</p>
 
   <div class="coding-exercise">
-    <h4>练习 2：温度采样</h4>
+    <h4>Exercise 2: Temperature Sampling</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>generate_temperature(model, input_ids, max_new_tokens, temperature)</code>。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement <code>generate_temperature(model, input_ids, max_new_tokens, temperature)</code>.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>logits 除以 temperature 后再做 softmax</li>
-        <li>使用 <code>torch.multinomial</code> 从分布中采样</li>
-        <li>处理 <span class="katex-inline" data-expr="T=0" aria-label="T=0" role="img"></span> 的特殊情况：退化为 argmax（避免除零）</li>
-        <li>接受相同 prompt 多次运行应产生不同结果（因为随机采样）</li>
+        <li>Divide logits by temperature before applying softmax</li>
+        <li>Use <code>torch.multinomial</code> to sample from the distribution</li>        <li>Handle the special case of <span class="katex-inline" data-expr="T=0" aria-label="T=0" role="img"></span>: degrade to argmax (avoid division by zero)</li>
+        <li>Running multiple times with the same prompt should yield different results (due to random sampling)</li>
       </ul>
-      <pre># 预期用法
-prompt = tokenizer.encode("人工智能的未来", return_tensors='pt')
+      <pre># Expected usage
+prompt = tokenizer.encode("The future of artificial intelligence", return_tensors='pt')
 
-# 低温: 确定性高
+# Low temperature: high determinism
 output1 = generate_temperature(model, prompt, 100, temperature=0.2)
-# 高温: 多样性高
+# High temperature: high diversity
 output2 = generate_temperature(model, prompt, 100, temperature=1.5)
 
-# 不同次运行应不同
+# Different runs should be different
 output3 = generate_temperature(model, prompt, 100, temperature=0.8)
 output4 = generate_temperature(model, prompt, 100, temperature=0.8)
 assert output3.tolist() != output4.tolist()</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def generate_temperature(model, input_ids, max_new_tokens=100,
                          temperature=1.0):
-    """温度采样：用 temperature 控制分布的尖锐程度"""
+    """Temperature sampling: use temperature to control the sharpness of the distribution"""
     model.eval()
     device = next(model.parameters()).device
     input_ids = input_ids.to(device)
@@ -233,7 +230,7 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
             logits = model(input_ids)
         next_logits = logits[:, -1, :]  # (1, vocab_size)
 
-        # T=0 退化为贪心
+        # T=0 degrades to greedy
         if temperature == 0:
             next_token = next_logits.argmax(dim=-1, keepdim=True)
         else:
@@ -247,39 +244,38 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
             break
 
     return input_ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>T=0 的处理：</strong>当 T→0 时，<span class="katex-inline" data-expr="z_i/0 \to \infty" aria-label="z_i/0 \to \infty" role="img"></span> 会导致数值溢出。实际实现中从不除以真正的 0——T=0 时直接用 argmax，T>0 时才做采样。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Handling T=0:</strong> When T→0, <span class="katex-inline" data-expr="z_i/0 \to \infty" aria-label="z_i/0 \to \infty" role="img"></span> can cause numerical overflow. In practice, we never divide by true 0 — use argmax directly when T=0, and only perform sampling when T>0.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.5 从 Temperature 到 Top-K/Top-P -->
+<!-- 8.5 From Temperature to Top-K/Top-P -->
 <!-- ================================================================ -->
 <section class="card" id="s8-5">
-  <h3>8.5 从 Temperature 到 Top-K / Top-P：截断"无聊的尾部"</h3>
-  <p>温度采样虽好，但有一个问题：当词表很大时（如 50257），softmax 的尾部包含大量概率极低的 token。即使使用 <span class="katex-inline" data-expr="T=0.8" aria-label="T=0.8" role="img"></span>，模型仍有小概率采样到这些"无意义"的 token，生成出一个荒谬的词。Top-K 和 Top-P 就是用来截断这个"无聊的尾部"的。</p>
+  <h3>8.5 From Temperature to Top-K / Top-P: Truncating the "Boring Tail"</h3>
+  <p>Temperature sampling is good, but it has one problem: when the vocabulary is large (e.g., 50257), the tail of the softmax contains a large number of tokens with extremely low probability. Even with <span class="katex-inline" data-expr="T=0.8" aria-label="T=0.8" role="img"></span>, the model still has a small probability of sampling these "meaningless" tokens, generating an absurd word. Top-K and Top-P are used to truncate this "boring tail".</p>
 
-  <h4>Top-K 的逻辑</h4>
-  <p>只保留概率最高的 K 个 token，重新归一化后从中采样。K 是一个固定值（GPT-2 默认 K=40）。</p>
+  <h4>The Logic of Top-K</h4>
+  <p>Keep only the K tokens with the highest probability, re-normalize them, and sample from this set. K is a fixed value (GPT-2 default K=40).</p>
 
-  <h4>Top-K 的固有问题</h4>
-  <p>K 是<strong>固定</strong>的。在某些上下文中可能只有 3 个合理的选择（K=40 引入了太多噪声），而在另一些上下文中可能有 100 个合理的延续（K=40 截断了太多可能性）。比如：</p>
+  <h4>Inherent Problem with Top-K</h4>  <p>K is <strong>fixed</strong>. In some contexts, there might only be 3 reasonable choices (K=40 introduces too much noise), while in other contexts, there might be 100 reasonable continuations (K=40 truncates too many possibilities). For example:</p>
   <ul>
-    <li><strong>"美国的首都是____"</strong> —— 分布极度尖锐，"华盛顿"的概率可能超过 90%。K=40 仍然从 40 个 token 中采样，小概率选到"纽约"（明显错误）</li>
-    <li><strong>"给她写一首关于____的诗"</strong> —— 分布很平缓，K=40 可能过于限制创造力</li>
+    <li><strong>"The capital of the United States is ____"</strong> — The distribution is extremely sharp; the probability of "Washington" might be over 90%. With K=40, you still sample from 40 tokens, with a small chance of selecting "New York" (clearly wrong)</li>
+    <li><strong>"Write her a poem about ____"</strong> — The distribution is very flat; K=40 might be too restrictive for creativity</li>
   </ul>
 
-  <h4>Top-P (Nucleus) 的自适应解决方案</h4>
-  <p>Top-P（Holtzman et al., 2020）不固定 K，而是选择累积概率达到 P 的最小 token 集合：</p>
+  <h4>The Adaptive Solution of Top-P (Nucleus)</h4>
+  <p>Top-P (Holtzman et al., 2020) does not fix K. Instead, it selects the smallest set of tokens whose cumulative probability reaches P:</p>
   <ol>
-    <li>将 token 按概率从高到低排序</li>
-    <li>从最高概率开始累加，直到累积概率 <span class="katex-inline" data-expr="\geq P" aria-label="\geq P" role="img"></span>（典型值 0.9 或 0.95）</li>
-    <li>只从这个"核心集"（nucleus）中采样</li>
+    <li>Sort tokens by probability from highest to lowest</li>
+    <li>Start accumulating from the highest probability until the cumulative probability <span class="katex-inline" data-expr="\geq P" aria-label="\geq P" role="img"></span> (typical value 0.9 or 0.95)</li>
+    <li>Sample only from this "nucleus"</li>
   </ol>
-  <p>当分布尖锐时核心集很小（"华盛顿"的例子可能只有 1-3 个 token），当分布平缓时核心集自动扩大。它不需要手动固定 K，是开放式生成中常见的采样策略之一；实际部署仍会结合 temperature、repetition penalty、stop 条件和任务约束调参。</p>
+  <p>When the distribution is sharp, the nucleus is small (the "Washington" example might only have 1-3 tokens); when the distribution is flat, the nucleus automatically expands. It does not require manually fixing K, and it is one of the common sampling strategies in open-ended generation; practical deployment still involves tuning parameters in conjunction with temperature, repetition penalty, stop conditions, and task constraints.</p>
 
-  <h4>Worked Example：同一个分布下 Top-K 与 Top-P 的候选集</h4>
-  <p>假设某一步生成时只有 6 个候选 token，logits 为 <code>[4, 3, 2, 1, 0, -1]</code>。温度 <code>T=1</code> 时 softmax 后的概率约为：</p>
+  <h4>Worked Example: Candidate Sets for Top-K vs. Top-P on the Same Distribution</h4>
+  <p>Assume that at a certain generation step, there are only 6 candidate tokens, with logits <code>[4, 3, 2, 1, 0, -1]</code>. With temperature <code>T=1</code>, the probabilities after softmax are approximately:</p>
   <div class="table-wrap">
     <table>
       <tr><th>token</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th></tr>
@@ -288,16 +284,15 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
       <tr><td>cumulative</td><td>0.634</td><td>0.867</td><td>0.953</td><td>0.985</td><td>0.996</td><td>1.000</td></tr>
     </table>
   </div>
-  <p><code>top-k=3</code> 会固定保留 <code>A,B,C</code>，然后把三者重新归一化，得到约 <code>[0.718, 0.264, 0.097]</code>。<code>top-p=0.9</code> 会从最高概率开始累加，直到累积概率超过 0.9；这里 <code>A+B=0.867</code> 还不够，加入 <code>C</code> 后达到 <code>0.953</code>，所以候选集同样是 <code>A,B,C</code>。如果改成 <code>top-p=0.8</code>，候选集只需要 <code>A,B</code>。</p>
-  <p>关键区别不在这个单例，而在分布形状变化时的行为。若分布非常尖锐，例如 <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>，<code>top-p=0.9</code> 只保留最高概率 token；若分布平缓，例如 <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>，<code>top-p=0.9</code> 需要保留前 5 个 token。固定 <code>top-k</code> 不会根据上下文不确定性自动改变候选集大小。</p>
+  <p><code>top-k=3</code> would fixedly retain <code>A,B,C</code>, then re-normalize them to approximately <code>[0.718, 0.264, 0.097]</code>. <code>top-p=0.9</code> would start accumulating from the highest probability until the cumulative probability exceeds 0.9; here <code>A+B=0.867</code> is not enough, adding <code>C</code> brings it to <code>0.953</code>, so the candidate set is also <code>A,B,C</code>. If changed to <code>top-p=0.8</code>, the candidate set would only need <code>A,B</code>.</p>  <p>The key difference is not this singleton, but the behavior when the distribution shape changes. If the distribution is very sharp, e.g., <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>, <code>top-p=0.9</code> only retains the highest probability token; if the distribution is flat, e.g., <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>, <code>top-p=0.9</code> needs to retain the first 5 tokens. A fixed <code>top-k</code> does not automatically adjust the candidate set size based on contextual uncertainty.</p>
 </section>
 
 <section class="card" id="s8-5a">
-  <h3>8.5A 采样分布账本：从 raw logits 到最终 token</h3>
-  <p>实际生成系统不会直接对 raw logits 做 softmax。一个生成步骤通常会先叠加多种变换：重复惩罚、合法 token 约束、temperature、top-k/top-p 截断，然后才重新归一化并采样。顺序写错会改变最终分布，也会让 logprob、entropy 和调参结论失去意义。</p>
+  <h3>8.5A Sampling Distribution Ledger: From raw logits to final token</h3>
+  <p>Real generation systems do not directly apply softmax to raw logits. A generation step typically first applies multiple transformations: repetition penalty, valid token constraints, temperature, top-k/top-p truncation, and only then renormalizes and samples. Writing the order incorrectly changes the final distribution, and also renders logprob, entropy, and tuning conclusions meaningless.</p>
 
-  <h4>1. 推荐的处理顺序</h4>
-  <p>课程作业中的 <code>decoding_distribution_report</code> 使用下面的顺序。真实系统可以有更多 processors，但每一步都应明确写进 generation policy：</p>
+  <h4>1. Recommended Processing Order</h4>
+  <p>The <code>decoding_distribution_report</code> in the course assignment uses the following order. Real systems can have more processors, but each step should be explicitly written into the generation policy:</p>
   <div class="code-block" data-lang="text">
 raw logits
   -> repetition penalty / frequency penalty
@@ -306,37 +301,37 @@ raw logits
   -> top-k or top-p filtering
   -> softmax over remaining tokens
   -> sample or argmax</div>
-  <p>重复惩罚要在截断前应用，否则已经出现过的 token 可能先进入 top-k/top-p 候选集，惩罚来不及生效。约束 mask 要在归一化前应用，把非法 token 的 logit 设为 <code>-inf</code>；后续 softmax 只在合法候选中分配概率。temperature 改变分布锐度，top-k/top-p 改变候选集合，二者不是同一类操作。</p>
+  <p>The repetition penalty should be applied before truncation; otherwise, tokens that have already appeared might enter the top-k/top-p candidate set first, and the penalty won't take effect in time. The constraint mask should be applied before normalization, setting the logits of illegal tokens to <code>-inf</code>; the subsequent softmax only distributes probability among valid candidates. Temperature changes the sharpness of the distribution, while top-k/top-p changes the candidate set; they are not the same type of operation.</p>
 
-  <h4>2. Worked Example：同一步 logits 的处理轨迹</h4>
-  <p>设当前 vocab 只有 5 个 token，raw logits 为：</p>
+  <h4>2. Worked Example: Processing trajectory of logits for the same step</h4>
+  <p>Assume the current vocab has only 5 tokens, and the raw logits are:</p>
   <div class="code-block" data-lang="text">
 token:       A     B     C     D     E
 raw logits:  4.0   3.0   2.0   1.0  -1.0</div>
-  <p>历史中已经出现过 <code>A</code>，使用 repetition penalty=2.0；语法当前只允许 <code>A/B/C</code>；temperature=1.0；top-p=0.8。处理轨迹可以写成：</p>
+  <p><code>A</code> has appeared in history, use repetition penalty=2.0; the grammar currently only allows <code>A/B/C</code>; temperature=1.0; top-p=0.8. The processing trajectory can be written as:</p>
   <div class="table-wrap">
     <table>
-      <tr><th>阶段</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>说明</th></tr>
-      <tr><td>raw logits</td><td>4.0</td><td>3.0</td><td>2.0</td><td>1.0</td><td>-1.0</td><td>模型原始输出</td></tr>
-      <tr><td>repetition penalty</td><td>2.0</td><td>3.0</td><td>2.0</td><td>1.0</td><td>-1.0</td><td>A 为正 logit，除以 penalty</td></tr>
-      <tr><td>constraint mask</td><td>2.0</td><td>3.0</td><td>2.0</td><td>-inf</td><td>-inf</td><td>D/E 当前非法</td></tr>
-      <tr><td>top-p=0.8</td><td>2.0</td><td>3.0</td><td>2.0</td><td>-inf</td><td>-inf</td><td>B 概率最高，加入 A 或 C 后达到阈值</td></tr>
+      <tr><th>Stage</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>Description</th></tr>
+      <tr><td>raw logits</td><td>4.0</td><td>3.0</td><td>2.0</td><td>1.0</td><td>-1.0</td><td>Model raw output</td></tr>
+      <tr><td>repetition penalty</td><td>2.0</td><td>3.0</td><td>2.0</td><td>1.0</td><td>-1.0</td><td>A has positive logit, divide by penalty</td></tr>
+      <tr><td>constraint mask</td><td>2.0</td><td>3.0</td><td>2.0</td><td>-inf</td><td>-inf</td><td>D/E currently illegal</td></tr>
+      <tr><td>top-p=0.8</td><td>2.0</td><td>3.0</td><td>2.0</td><td>-inf</td><td>-inf</td><td>B has highest probability, adding A or C reaches threshold</td></tr>
     </table>
   </div>
-  <p>最终概率不是 raw logits 的 softmax，而是处理后 logits 在保留候选上的 softmax。若 top-p 在并列概率中保留 <code>B,A</code>，则候选概率约为 <code>B=0.731, A=0.269</code>；若实现保留 <code>B,C</code>，概率同形但候选 token 不同。因此稳定 tie-breaking、token id 顺序和报告候选集合都很重要。</p>
+  <p>The final probability is not the softmax of the raw logits, but the softmax of the processed logits over the retained candidates. If top-p retains <code>B, A</code> in case of tied probabilities, the candidate probabilities are approximately <code>B=0.731, A=0.269</code>; if the implementation retains <code>B, C</code>, the probabilities are isomorphic but the candidate tokens differ. Therefore, stable tie-breaking, token id order, and reporting the candidate set are all important.</p>
 
-  <h4>3. logprob、entropy 和候选集合要绑定到同一个分布</h4>
-  <p>生成 API 常返回 <code>logprobs</code>、top token 列表或 entropy。必须说明这些量来自哪一个分布：</p>
+  <h4>3. logprob, entropy, and candidate set must be bound to the same distribution</h4>
+  <p>Generation APIs often return <code>logprobs</code>, a list of top tokens, or entropy. It must be stated which distribution these quantities come from:</p>
   <ul>
-    <li><strong>raw model logprob：</strong>未经过约束和截断，适合比较模型本身对 token 的偏好。</li>
-    <li><strong>processed logprob：</strong>经过 penalty、mask、temperature 和 truncation 后的概率，适合解释本次实际采样。</li>
-    <li><strong>entropy：</strong>如果在截断后计算，只表示候选集合内部的不确定性，不能和 raw full-vocab entropy 直接比较。</li>
-    <li><strong>selected token：</strong>要同时报告 token id、文本片段、处理后概率和是否受约束影响。</li>
+    <li><strong>raw model logprob:</strong> Unconstrained and untruncated, suitable for comparing the model's own preference for tokens.</li>
+    <li><strong>processed logprob:</strong> Probability after penalty, mask, temperature, and truncation, suitable for explaining the actual sampling in this instance.</li>
+    <li><strong>entropy:</strong> If calculated after truncation, it only represents the uncertainty within the candidate set and cannot be directly compared with the raw full-vocab entropy.</li>
+    <li><strong>selected token:</strong> The token id, text snippet, processed probability, and whether it was affected by constraints should all be reported.</li>
   </ul>
-  <p>如果一个系统声称“模型对这个答案很有信心”，但引用的是经过 top-p 截断和 JSON grammar mask 后的概率，这个说法就不严谨。约束分布中的高概率只说明“在合法集合里它最可能”，不等价于模型在开放词表上也高度确信。</p>
+  <p>If a system claims "the model is very confident in this answer," but cites the probability after top-p truncation and JSON grammar mask, this statement is not rigorous. A high probability in a constrained distribution only indicates "it is the most likely within the valid set," which is not equivalent to the model being highly confident over the open vocabulary.</p>
 
-  <h4>4. 调参时看什么</h4>
-  <p>调 temperature、top-p、repetition penalty 时，不应只看几段生成文本。至少要同时记录：</p>
+  <h4>4. What to look at when tuning parameters</h4>
+  <p>When tuning temperature, top-p, repetition penalty, one should not just look at a few generated texts. At a minimum, the following should be recorded simultaneously:</p>
   <div class="code-block" data-lang="text">
 kept_token_count / vocab_size
 selected_token_probability
@@ -344,36 +339,36 @@ entropy_after_filtering
 repetition rate or distinct-n
 stop reason: eos / stop string / max_new_tokens / constraint failure
 generated tokens and latency</div>
-  <p>这些量能帮助区分几类问题：输出无聊可能是温度太低或候选集过小；输出跑题可能是温度过高或 top-p 过宽；重复可能需要 repetition penalty、stop 条件或训练数据处理；格式错误更适合用约束解码，而不是继续降低 temperature。</p>
+  <p>These quantities help distinguish several types of problems: boring output might be due to too low temperature or too small a candidate set; off-topic output might be due to too high temperature or too wide top-p; repetition might require repetition penalty, stop conditions, or training data processing; format errors are better suited for constrained decoding rather than continuing to lower the temperature.</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节结论：</strong>生成不是“softmax 后采样”这么简单。一个严谨的生成实验必须报告 raw logits 到 processed distribution 的变换链路，否则无法复现实验，也无法判断质量变化来自模型、采样策略还是约束系统。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Section Conclusion:</strong> Generation is not as simple as "sample after softmax." A rigorous generation experiment must report the transformation chain from raw logits to the processed distribution; otherwise, the experiment cannot be reproduced, and it is impossible to determine whether quality changes come from the model, the sampling strategy, or the constraint system.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 3: Top-K and Top-P -->
+<!-- Programming Exercise 3: Top-K and Top-P -->
 <!-- ================================================================ -->
 <section class="card" id="s8-6">
-  <h3>8.6 编程练习 3-4：实现 Top-K 和 Top-P 采样</h3>
+  <h3>8.6 Programming Exercise 3-4: Implementing Top-K and Top-P Sampling</h3>
 
   <div class="coding-exercise">
-    <h4>练习 3：Top-K 采样</h4>
+    <h4>Exercise 3: Top-K Sampling</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>generate_topk(model, input_ids, max_new_tokens, k, temperature)</code>。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement <code>generate_topk(model, input_ids, max_new_tokens, k, temperature)</code>.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>用 <code>torch.topk</code> 取概率最高的 K 个 logits</li>
-        <li>在 Top-K 子集上做 softmax 归一化</li>
-        <li>采样后通过 <code>gather</code> 将索引映射回原始词表 ID</li>
+        <li>Use <code>torch.topk</code> to take the K logits with the highest probability</li>
+        <li>Perform softmax normalization on the Top-K subset</li>
+        <li>After sampling, use <code>gather</code> to map indices back to the original vocabulary IDs</li>
       </ul>
-      <pre># 预期用法
-prompt = tokenizer.encode("给我讲一个故事", return_tensors='pt')
+      <pre># Expected usage
+prompt = tokenizer.encode("Tell me a story", return_tensors='pt')
 output = generate_topk(model, prompt, 100, k=40, temperature=0.8)</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def generate_topk(model, input_ids, max_new_tokens=100,
                   k=40, temperature=1.0):
-    """Top-K 采样：只保留概率最高的 K 个 token"""
+    """Top-K sampling: only retain the K tokens with the highest probability"""
     model.eval()
     device = next(model.parameters()).device
     input_ids = input_ids.to(device)
@@ -383,14 +378,14 @@ def generate_topk(model, input_ids, max_new_tokens=100,
             logits = model(input_ids)
         next_logits = logits[:, -1, :] / temperature
 
-        # 取 top-k
+        # take top-k
         top_logits, top_indices = torch.topk(next_logits, k, dim=-1)
 
-        # 在 top-k 子集上采样
+        # sample on the top-k subset
         top_probs = torch.softmax(top_logits, dim=-1)
         sampled_idx = torch.multinomial(top_probs, num_samples=1)
 
-        # 映射回原始词表 ID
+        # map back to original vocabulary IDs
         next_token = top_indices.gather(-1, sampled_idx)
         input_ids = torch.cat([input_ids, next_token], dim=-1)
 
@@ -401,25 +396,25 @@ def generate_topk(model, input_ids, max_new_tokens=100,
   </div>
 
   <div class="coding-exercise" style="margin-top:16px">
-    <h4>练习 4：Top-P (Nucleus) 采样</h4>
+    <h4>Exercise 4: Top-P (Nucleus) Sampling</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>generate_topp(model, input_ids, max_new_tokens, p, temperature)</code>。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement <code>generate_topp(model, input_ids, max_new_tokens, p, temperature)</code>.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>对概率分布降序排序，计算累积概率</li>
-        <li><strong>关键：</strong>先用 <code>cumsum &gt;= p</code> 标记超过 nucleus 的位置，再将 mask 右移一位——确保第一个达到或超过 p 的 token 被保留，且 nucleus 尽可能小</li>
-        <li>mask 后将剩余概率重新归一化（确保求和为 1）</li>
-        <li>从归一化后的分布中采样</li>
+        <li>Sort the probability distribution in descending order, calculate cumulative probability</li>
+        <li><strong>Key:</strong> First use <code>cumsum &gt;= p</code> to mark positions that exceed the nucleus, then shift the mask right by one position — ensuring the first token that reaches or exceeds p is retained, and the nucleus is as small as possible</li>
+        <li>After masking, renormalize the remaining probabilities (ensuring they sum to 1)</li>
+        <li>Sample from the normalized distribution</li>
       </ul>
-      <pre># 预期用法
-prompt = tokenizer.encode("给我讲一个故事", return_tensors='pt')
+      <pre># Expected usage
+prompt = tokenizer.encode("Tell me a story", return_tensors='pt')
 output = generate_topp(model, prompt, 100, p=0.9, temperature=0.8)</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def generate_topp(model, input_ids, max_new_tokens=100,
                   p=0.9, temperature=1.0):
-    """Top-P (Nucleus) 采样：选择累积概率达到 p 的最小 token 集"""
+    """Top-P (Nucleus) sampling: select the smallest token set whose cumulative probability reaches p"""
     model.eval()
     device = next(model.parameters()).device
     input_ids = input_ids.to(device)
@@ -430,20 +425,20 @@ def generate_topp(model, input_ids, max_new_tokens=100,
         next_logits = logits[:, -1, :] / temperature
         probs = torch.softmax(next_logits, dim=-1)
 
-        # 降序排序
+        # sort in descending order
         sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
 
-        # 累积概率，mask 尾部
+        # cumulative probability, mask the tail
         cumsum = torch.cumsum(sorted_probs, dim=-1)
         mask = cumsum >= p
         mask[..., 1:] = mask[..., :-1].clone()
         mask[..., 0] = False
         sorted_probs = sorted_probs.masked_fill(mask, 0.0)
 
-        # 重新归一化
+        # renormalize
         renormalized = sorted_probs / sorted_probs.sum(dim=-1, keepdim=True)
 
-        # 采样
+        # sample
         sampled_idx = torch.multinomial(renormalized, num_samples=1)
         next_token = sorted_indices.gather(-1, sampled_idx)
         input_ids = torch.cat([input_ids, next_token], dim=-1)
@@ -451,50 +446,50 @@ def generate_topp(model, input_ids, max_new_tokens=100,
         if next_token.item() == model.tokenizer.eos_token_id:
             break
     return input_ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么要右移 mask？</strong><code>cumsum &gt;= p</code> 会标记第一个达到阈值的 token；把 mask 右移一位后，这个 token 被保留，后面的尾部 token 被移除。这样得到的是累计概率达到 p 的最小 nucleus。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why shift the mask right?</strong> <code>cumsum &gt;= p</code> marks the first token that reaches the threshold; after shifting the mask right by one position, this token is retained, and the tail tokens after it are removed. This yields the smallest nucleus whose cumulative probability reaches p.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 4: Compare Strategies -->
+<!-- Programming Exercise 4: Compare Strategies -->
 <!-- ================================================================ -->
 <section class="card" id="s8-7">
-  <h3>8.7 编程练习 5：四种采样策略对比实验</h3>
-  <p>现在把你实现的四种策略放在一起对比。用同一个 prompt 和同一个模型，观察输出差异。同时用定量指标评估质量。</p>
+  <h3>8.7 Programming Exercise 5: Comparative Experiment of Four Sampling Strategies</h3>
+  <p>Now put the four strategies you implemented together for comparison. Use the same prompt and the same model, and observe the output differences. Also use quantitative metrics to evaluate quality.</p>
 
   <div class="coding-exercise">
-    <h4>练习 5：策略对比 + 多样性评估</h4>
+    <h4>Exercise 5: Strategy Comparison + Diversity Evaluation</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>Generator</code> 类，统一封装四种策略。然后用同一个 prompt 生成文本，计算多样性指标。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement a <code>Generator</code> class that uniformly encapsulates the four strategies. Then use the same prompt to generate text and calculate diversity metrics.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li><code>Generator</code> 类接受 model 和 tokenizer，提供统一的 <code>generate(prompt, strategy, ...)</code> 接口</li>
-        <li>支持四种 strategy：<code>"greedy"</code>, <code>"temperature"</code>, <code>"top-k"</code>, <code>"top-p"</code></li>
-        <li>对每个策略生成 200 tokens 文本并打印</li>
-        <li>计算并对比每个策略的 distinct-1 和 distinct-2 分数</li>
+        <li>The <code>Generator</code> class accepts model and tokenizer, providing a unified <code>generate(prompt, strategy, ...)</code> interface</li>
+        <li>Supports four strategies: <code>"greedy"</code>, <code>"temperature"</code>, <code>"top-k"</code>, <code>"top-p"</code></li>
+        <li>Generate 200 tokens of text for each strategy and print it</li>
+        <li>Calculate and compare the distinct-1 and distinct-2 scores for each strategy</li>
       </ul>
-      <pre># 预期输出结构
+      <pre># Expected output structure
 === Greedy ===
-[生成的文本]
+[Generated text]
    distinct-1: 0.12, distinct-2: 0.35
 
 === Temperature (T=0.8) ===
-[生成的文本]
+[Generated text]
    distinct-1: 0.28, distinct-2: 0.52
 
 === Top-K (K=40, T=0.8) ===
-[生成的文本]
+[Generated text]
    distinct-1: 0.31, distinct-2: 0.58
 
 === Top-P (P=0.9, T=0.8) ===
-[生成的文本]
+[Generated text]
    distinct-1: 0.35, distinct-2: 0.61</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 class Generator:
-    """统一的生成器，支持多种采样策略"""
+    """Unified generator supporting multiple sampling strategies"""
 
     def __init__(self, model, tokenizer):
         self.model = model
@@ -513,8 +508,7 @@ class Generator:
 
             if strategy == "greedy":
                 next_token = next_logits.argmax(dim=-1, keepdim=True)
-            elif strategy == "temperature":
-                probs = torch.softmax(next_logits / temperature, dim=-1)
+            elif strategy == "temperature":                probs = torch.softmax(next_logits / temperature, dim=-1)
                 next_token = torch.multinomial(probs, 1)
             elif strategy == "top-k":
                 scaled = next_logits / temperature
@@ -549,9 +543,9 @@ class Generator:
             ngrams.add(' '.join(tokens[i:i+n]))
         return len(ngrams) / max(1, len(tokens) - n + 1)
 
-# === 对比实验 ===
+# === Comparative Experiment ===
 gen = Generator(model, tokenizer)
-prompt = "人工智能的未来发展将"
+prompt = "The future development of artificial intelligence will"
 
 for strategy in ["greedy", "temperature", "top-k", "top-p"]:
     text = gen.generate(prompt, strategy=strategy, max_new_tokens=200)
@@ -560,78 +554,78 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
     print(f"=== {strategy} ===")
     print(text[:200])
     print(f"   distinct-1: {d1:.2f}, distinct-2: {d2:.2f}\n")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>Greedy 往往更容易重复；Top-P 通常会提高候选多样性，但 distinct 分数和人工质量不总是一致。实际部署常把 Top-P、temperature、repetition penalty 和 stop 条件组合调参，不能把单一指标当作质量结论。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Expected Observation:</strong> Greedy tends to repeat more easily; Top-P usually increases candidate diversity, but distinct scores and human quality are not always consistent. In actual deployment, Top-P, temperature, repetition penalty, and stop conditions are often combined and tuned; a single metric should not be taken as a conclusion about quality.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.7A 生成评估边界 -->
+<!-- 8.7A Generation Evaluation Boundaries -->
 <!-- ================================================================ -->
 <section class="card" id="s8-7a">
-  <h3>8.7A 如何评价生成策略：多样性不是质量，低重复也不是正确</h3>
-  <p>比较 decoding 策略时，最常见的错误是只看一两个样例，或者只报告 distinct-n。生成质量是多目标问题：同一个策略可能提高多样性，同时降低事实性、格式稳定性或可复现性。严谨实验需要把<strong>任务类型、采样参数、随机种子、输出长度和评价指标</strong>固定下来。</p>
+  <h3>8.7A How to Evaluate Generation Strategies: Diversity is Not Quality, Low Repetition is Not Correctness</h3>
+  <p>When comparing decoding strategies, the most common mistake is to look at only one or two examples, or to only report distinct-n. Generation quality is a multi-objective problem: the same strategy might increase diversity while simultaneously reducing factuality, format stability, or reproducibility. Rigorous experiments need to fix the <strong>task type, sampling parameters, random seed, output length, and evaluation metrics</strong>.</p>
 
-  <h4>指标分别回答什么问题</h4>
+  <h4>What Questions Do the Metrics Answer?</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>指标/方法</th><th>主要回答</th><th>不能说明</th><th>适用场景</th></tr>
-      <tr><td>distinct-1 / distinct-2</td><td>输出 n-gram 多样性和重复程度</td><td>事实正确、逻辑连贯或任务完成</td><td>开放式生成、退化重复分析</td></tr>
-      <tr><td>重复率 / self-BLEU</td><td>模型是否在样本内或样本间重复</td><td>高重复是否一定错误</td><td>长文本、故事、对话生成</td></tr>
-      <tr><td>exact match / F1 / pass@k</td><td>是否完成有明确答案的任务</td><td>开放式文本的风格和偏好</td><td>QA、抽取、代码、数学短答</td></tr>
-      <tr><td>人工偏好或 pairwise ranking</td><td>人类更喜欢哪种输出</td><td>偏好原因是否来自事实性、风格还是长度</td><td>对话、摘要、创意写作</td></tr>
-      <tr><td>延迟与成本指标</td><td>TTFT、TPOT、tokens/s、每 1M tokens 成本</td><td>语义质量</td><td>服务部署和策略调参</td></tr>
+      <tr><th>Metric/Method</th><th>Main Question Answered</th><th>What It Does Not Explain</th><th>Applicable Scenario</th></tr>
+      <tr><td>distinct-1 / distinct-2</td><td>Output n-gram diversity and repetition degree</td><td>Factual correctness, logical coherence, or task completion</td><td>Open-ended generation, degenerate repetition analysis</td></tr>
+      <tr><td>Repetition Rate / self-BLEU</td><td>Whether the model repeats within or across samples</td><td>Whether high repetition is necessarily wrong</td><td>Long text, story, dialogue generation</td></tr>
+      <tr><td>exact match / F1 / pass@k</td><td>Whether tasks with clear answers are completed</td><td>Style and preference in open-ended text</td><td>QA, extraction, code, short math answers</td></tr>
+      <tr><td>Human Preference or Pairwise Ranking</td><td>Which output humans prefer</td><td>Whether the reason for preference is factuality, style, or length</td><td>Dialogue, summarization, creative writing</td></tr>
+      <tr><td>Latency and Cost Metrics</td><td>TTFT, TPOT, tokens/s, cost per 1M tokens</td><td>Semantic quality</td><td>Service deployment and strategy tuning</td></tr>
     </table>
   </div>
 
-  <h4>为什么要做参数 sweep</h4>
-  <p>Temperature、top-k 和 top-p 不是孤立开关。较高 temperature 通常增加熵；较低 top-p 会截断尾部；二者组合后可能互相抵消或放大。一个合理实验应在同一 prompt 集上比较多组参数，例如：</p>
+  <h4>Why Perform a Parameter Sweep</h4>
+  <p>Temperature, top-k, and top-p are not isolated switches. Higher temperature usually increases entropy; lower top-p truncates the tail; their combination can cancel out or amplify each other. A reasonable experiment should compare multiple parameter sets on the same prompt set, for example:</p>
   <div class="code-block" data-lang="text">
 temperature in {0.2, 0.7, 1.0}
 top_p       in {0.8, 0.9, 0.95}
 max_tokens  fixed
 seeds       at least 3
 metrics     distinct-2, repetition rate, task score, latency</div>
-  <p>如果只用一个 prompt、一个 seed、一个样例输出下结论，通常不足以说明策略优劣。开放式生成还应保存失败样例：重复循环、提前停止、跑题、事实错误、格式破坏和过度保守都属于不同失败模式。</p>
+  <p>If conclusions are drawn from only one prompt, one seed, and one sample output, it is usually insufficient to determine strategy superiority. For open-ended generation, failure cases should also be saved: repetitive loops, early stopping, going off-topic, factual errors, format corruption, and excessive conservatism are all different failure modes.</p>
 
-  <h4>Repetition penalty 的位置</h4>
-  <p>Repetition penalty 不是新的概率分布，也不是训练目标；它是在 softmax 与采样之前作用在 logits 上的 processor。常见规则是：对已经出现在 prefix 中的 token，若 logit 为正则除以 penalty，若 logit 为负则乘以 penalty，使这些 token 的相对概率下降。Ch08 作业中的 <code>apply_repetition_penalty</code> 要求学生手写这个变换，并验证它会在 greedy、top-k 或 top-p 选择之前改变候选排序。</p>
+  <h4>The Role of Repetition Penalty</h4>
+  <p>Repetition penalty is not a new probability distribution nor a training objective; it is a processor applied to logits before softmax and sampling. The common rule is: for tokens already present in the prefix, if the logit is positive, divide by the penalty; if the logit is negative, multiply by the penalty, thereby relatively decreasing the probability of these tokens. The <code>apply_repetition_penalty</code> in the Ch08 assignment requires students to implement this transformation manually and verify that it changes the candidate ranking before greedy, top-k, or top-p selection.</p>
 
-  <h4>Worked Example：从 logits processor 到最终采样分布</h4>
-  <p>给定 logits <code>[4.0, 3.0, -1.0]</code>，已生成 token ids 为 <code>[0,2]</code>，repetition penalty 为 <code>2.0</code>。先处理重复 token：token 0 的正 logit 从 <code>4.0</code> 变为 <code>2.0</code>，token 2 的负 logit 从 <code>-1.0</code> 变为 <code>-2.0</code>，得到 <code>[2.0,3.0,-2.0]</code>。若随后使用 <code>top_p=0.8</code>，softmax 后 token 1 的概率约为 <code>0.721</code>，还没达到 0.8；加入 token 0 后累计约为 <code>0.986</code>，因此 nucleus 是 token <code>{1,0}</code>，token 2 被截断。</p>
-  <p>最终采样前要在保留集合上重新归一化：token 0 和 token 1 的概率约为 <code>[0.269,0.731]</code>，entropy 约为 <code>0.582</code>，最高概率 token 是 1。作业中的 <code>decoding_distribution_report</code> 要求返回处理后的 logits、保留候选、归一化概率、entropy 和当前最高概率 token；它帮助学生把“采样参数改变了输出”落实到可检查的概率账本。</p>
+  <h4>Worked Example: From Logits Processor to Final Sampling Distribution</h4>
+  <p>Given logits <code>[4.0, 3.0, -1.0]</code>, generated token ids are <code>[0,2]</code>, repetition penalty is <code>2.0</code>. First, process the repeated tokens: the positive logit of token 0 changes from <code>4.0</code> to <code>2.0</code>, the negative logit of token 2 changes from <code>-1.0</code> to <code>-2.0</code>, resulting in <code>[2.0,3.0,-2.0]</code>. If <code>top_p=0.8</code> is then used, after softmax, the probability of token 1 is approximately <code>0.721</code>, which does not yet reach 0.8; adding token 0 brings the cumulative sum to approximately <code>0.986</code>, so the nucleus is tokens <code>{1,0}</code>, and token 2 is truncated.</p>
+  <p>Before final sampling, renormalize on the retained set: the probabilities of token 0 and token 1 are approximately <code>[0.269, 0.731]</code>, entropy is approximately <code>0.582</code>, and the highest probability token is 1. The <code>decoding_distribution_report</code> in the assignment requires returning the processed logits, retained candidates, normalized probabilities, entropy, and the current highest probability token; it helps students ground the statement "sampling parameters change the output" in a checkable probability ledger.</p>
 
-  <h4>策略选择的实际判断</h4>
+  <h4>Practical Judgment for Strategy Selection</h4>
   <ul>
-    <li><strong>代码、数学、抽取：</strong>优先低温或 beam / pass@k；多样性不是主要目标，正确性和可复现性更重要。</li>
-    <li><strong>创意写作、头脑风暴：</strong>可提高 temperature/top-p，但需要监控重复、跑题和安全边界。</li>
-    <li><strong>结构化输出：</strong>采样策略不能替代 schema 约束；应优先使用结构化解码或输出校验。</li>
-    <li><strong>在线服务：</strong>需要同时看质量和 TPOT/吞吐；高 top-p 可能增加输出长度和后处理失败率。</li>
+    <li><strong>Code, Math, Extraction:</strong> Prefer low temperature or beam / pass@k; diversity is not the primary goal, correctness and reproducibility are more important.</li>
+    <li><strong>Creative Writing, Brainstorming:</strong> Can increase temperature/top-p, but need to monitor repetition, going off-topic, and safety boundaries.</li>
+    <li><strong>Structured Output:</strong> Sampling strategies cannot replace schema constraints; prioritize structured decoding or output validation.</li>
+    <li><strong>Online Services:</strong> Need to consider both quality and TPOT/throughput; high top-p may increase output length and post-processing failure rate.</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>实验结论写法：</strong>不要写“top-p 最好”。应写“在某个 prompt 集、长度上限、温度、top-p、随机种子和指标下，top-p=0.9 相比 greedy 降低重复率但增加输出方差；人工检查中某些样例更发散”。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>How to Write Experimental Conclusions:</strong> Do not write "top-p is best." Instead, write "Under a specific prompt set, length limit, temperature, top-p, random seed, and metric, top-p=0.9 reduces repetition rate compared to greedy but increases output variance; human inspection shows some samples are more divergent."</div></div>
 </section>
 
 <!-- ================================================================ -->
 <!-- 8.7B Beam Search -->
 <!-- ================================================================ -->
 <section class="card" id="s8-7b">
-  <h3>8.7B Beam Search：搜索多个高概率候选，而不是只走一步最优</h3>
-  <p>Greedy decoding 每一步只保留当前概率最高的 token，容易早早走进局部最优。Beam search 保留 <code>num_beams</code> 条候选路径，每一步把每条路径扩展到若干下一个 token，再按累计 log probability 排序保留前几条。</p>
+  <h3>8.7B Beam Search: Searching Multiple High-Probability Candidates Instead of Taking Only the Single Best Step</h3>
+  <p>Greedy decoding only retains the highest probability token at each step, easily falling into a local optimum early on. Beam search retains <code>num_beams</code> candidate paths. At each step, it expands each path to several next tokens, then sorts by cumulative log probability and retains the top few.</p>
 
-  <h4>长度偏置</h4>
-  <p>直接累加 log probability 会天然偏向短序列，因为每多生成一个 token 都会再加一个非正的 log probability。机器翻译、摘要和结构化候选生成里常用长度归一化或 length penalty 缓解这个问题：</p>
+  <h4>Length Bias</h4>
+  <p>Directly accumulating log probability naturally biases towards shorter sequences because each additional generated token adds another non-positive log probability. In machine translation, summarization, and structured candidate generation, length normalization or length penalty is commonly used to mitigate this issue:</p>
   <div class="math-box"><div class="label">Length-normalized Beam Score</div>
     <div class="katex" data-expr="s(y)=\frac{\sum_t \log p(y_t|y_{<t},x)}{|y|^{\alpha}}" aria-label="s(y)=\frac{\sum_t \log p(y_t|y_{<t},x)}{|y|^{\alpha}}" role="img"></div>
   </div>
-  <p>Ch08 作业中的 <code>length_normalized_score</code> 和 <code>beam_search</code> 对应这个过程。这里使用的是教学版 batch size 1 实现，目的是让学生看清 beam table、raw score 和 normalized score 的关系。</p>
+  <p>The <code>length_normalized_score</code> and <code>beam_search</code> in the Ch08 assignment correspond to this process. The implementation here is a teaching version with batch size 1, aiming to let students see the relationship between the beam table, raw score, and normalized score.</p>
 
   <div class="worked-example">
-    <h4>Worked Example：两步 Beam Search 与长度归一化</h4>
-    <p>设 <code>num_beams=2</code>，第一步从 prompt 扩展出两个候选：<code>A</code> 的 log probability 为 <code>-0.2</code>，<code>EOS</code> 的 log probability 为 <code>-0.4</code>。若允许早停，<code>EOS</code> 是一条长度为 1 的完整短答案；<code>A</code> 还要继续生成。</p>
+    <h4>Worked Example: Two-Step Beam Search with Length Normalization</h4>
+    <p>Let <code>num_beams=2</code>. In the first step, two candidates are expanded from the prompt: the log probability of <code>A</code> is <code>-0.2</code>, and the log probability of <code>EOS</code> is <code>-0.4</code>. If early stopping is allowed, <code>EOS</code> is a complete short answer of length 1; <code>A</code> needs to continue generating.</p>
     <table class="metrics-table">
       <thead>
-        <tr><th>步骤</th><th>候选</th><th>新增 logp</th><th>累计 logp</th><th>长度</th><th><code>alpha=1</code> 归一化分数</th></tr>
+        <tr><th>Step</th><th>Candidate</th><th>New logp</th><th>Cumulative logp</th><th>Length</th><th><code>alpha=1</code> Normalized Score</th></tr>
       </thead>
       <tbody>
         <tr><td>1</td><td><code>EOS</code></td><td>-0.4</td><td>-0.4</td><td>1</td><td>-0.400</td></tr>
@@ -640,128 +634,126 @@ metrics     distinct-2, repetition rate, task score, latency</div>
         <tr><td>2</td><td><code>A C</code></td><td>-1.0</td><td>-1.2</td><td>2</td><td>-0.600</td></tr>
       </tbody>
     </table>
-    <p>如果只看累计 logp，短答案 <code>EOS</code> 的 <code>-0.4</code> 高于 <code>A B</code> 的 <code>-0.5</code>，beam 可能偏向过短输出。使用 <code>s(y)=logp/|y|</code> 后，<code>A B</code> 的分数是 <code>-0.25</code>，优于 <code>EOS</code> 的 <code>-0.4</code>。这就是 length penalty 的作用：不是无条件奖励长句，而是减少“每多一个 token 就多加一个负数”造成的短句偏置。</p>
+    <p>If only cumulative logp is considered, the short answer <code>EOS</code> with <code>-0.4</code> is higher than <code>A B</code> with <code>-0.5</code>, so the beam might favor overly short outputs. Using <code>s(y)=logp/|y|</code>, the score for <code>A B</code> is <code>-0.25</code>, which is better than <code>EOS</code>'s <code>-0.4</code>. This is the role of length penalty: it does not unconditionally reward long sentences, but reduces the short-sentence bias caused by "adding another negative number for each additional token."</p>
   </div>
 
-  <h4>什么时候用 beam</h4>
+  <h4>When to Use Beam</h4>
   <ul>
-    <li><strong>适合：</strong>翻译、抽取、代码候选、数学短答、schema 受限输出等有明确目标的任务。</li>
-    <li><strong>不适合盲用：</strong>开放式聊天和创意写作中，beam 可能产生高概率但平庸、重复或过短的输出。</li>
-    <li><strong>要报告：</strong>beam size、length penalty、最大长度、是否 early stop，以及候选排序指标。</li>
-  </ul>
-
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>边界：</strong>Beam search 是搜索策略，不是训练目标，也不是事实性保证。它能更系统地探索高概率区域，但如果模型概率本身偏向错误答案，beam 只会更稳定地找到高概率错误。</div></div>
+    <li><strong>Suitable for:</strong> Tasks with clear objectives like translation, extraction, code candidates, short math answers, schema-constrained output.</li>
+    <li><strong>Not suitable for blind use:</strong> In open-ended chat and creative writing, beam may produce high-probability but mediocre, repetitive, or overly short outputs.</li>
+    <li><strong>Must report:</strong> Beam size, length penalty, maximum length, whether early stopping is used, and candidate ranking metrics.</li>
+  </ul>  <div class="info-box key"><span class="icon">🔑</span><div><strong>Boundary:</strong> Beam search is a search strategy, not a training objective, nor a guarantee of factuality. It can explore high-probability regions more systematically, but if the model's probability inherently favors incorrect answers, beam search will only find high-probability errors more reliably.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.7C 推理式生成与 Test-Time Compute -->
+<!-- 8.7C Reasoning Generation and Test-Time Compute -->
 <!-- ================================================================ -->
 <section class="card" id="s8-7c">
-  <h3>8.7C 推理式生成：用更多 test-time compute 换更高正确率</h3>
-  <p>对数学、代码、规划和多跳问答来说，生成策略不只是“选哪个 token”。模型可能需要先生成中间推理，再选择最终答案。近年的 reasoning 方法可以统一看成一个问题：在训练完成后，是否愿意用更多<strong>测试时计算量</strong>换取更高的任务成功率。</p>
+  <h3>8.7C Reasoning Generation: Trading More Test-Time Compute for Higher Accuracy</h3>
+  <p>For mathematics, code, planning, and multi-hop QA, the generation strategy is not just about "which token to choose." The model may need to generate intermediate reasoning first, then select the final answer. Recent reasoning methods can be unified under one question: after training is complete, are you willing to use more <strong>test-time compute</strong> in exchange for a higher task success rate?</p>
 
-  <h4>常见方法</h4>
+  <h4>Common Methods</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>方法</th><th>做法</th><th>收益来源</th><th>代价/风险</th></tr>
-      <tr><td>Chain-of-Thought</td><td>让模型先写中间步骤再给答案</td><td>把隐式计算展开成 token 序列</td><td>步骤可能看似合理但实际错误</td></tr>
-      <tr><td>Self-consistency</td><td>采样多条推理路径，对最终答案投票</td><td>降低单一路径偶然错误</td><td>成本约乘以样本数，投票只适合可聚合答案</td></tr>
-      <tr><td>Best-of-N</td><td>生成 N 个候选，用奖励模型或规则选择</td><td>把生成问题变成搜索和重排</td><td>reranker 偏差会选择风格好但事实错的答案</td></tr>
-      <tr><td>Verifier / Critic</td><td>单独训练或调用模型判断解答是否正确</td><td>把“会做题”和“会判题”拆开</td><td>验证器覆盖不足时会放过同类错误</td></tr>
-      <tr><td>Process supervision</td><td>评价每一步推理而不只评价最终答案</td><td>更容易定位中间错误</td><td>标注成本高，步骤粒度难定义</td></tr>
+      <tr><th>Method</th><th>Approach</th><th>Source of Gain</th><th>Cost/Risk</th></tr>
+      <tr><td>Chain-of-Thought</td><td>Let the model write intermediate steps before giving the answer</td><td>Unfolds implicit computation into a token sequence</td><td>Steps may seem plausible but be factually incorrect</td></tr>
+      <tr><td>Self-consistency</td><td>Sample multiple reasoning paths, vote on the final answer</td><td>Reduces chance errors from a single path</td><td>Cost scales roughly with the number of samples; voting only works for aggregatable answers</td></tr>
+      <tr><td>Best-of-N</td><td>Generate N candidates, select using a reward model or rule</td><td>Turns generation into search and re-ranking</td><td>Reranker bias may select answers with good style but factual errors</td></tr>
+      <tr><td>Verifier / Critic</td><td>Train or call a separate model to judge if the solution is correct</td><td>Separates "solving" from "judging"</td><td>Insufficient verifier coverage may let similar errors pass</td></tr>
+      <tr><td>Process supervision</td><td>Evaluate each reasoning step instead of just the final answer</td><td>Easier to locate intermediate errors</td><td>High annotation cost; step granularity is hard to define</td></tr>
     </table>
   </div>
 
-  <h4>为什么它不同于普通 sampling</h4>
-  <p>普通 top-p 或 temperature 主要控制输出分布的熵；reasoning 生成关心的是<strong>搜索空间</strong>。同一个问题可以生成多条推理路径，每条路径都有自己的中间状态和最终答案。对有标准答案的任务，评价重点不是 distinct-n，而是 pass@k、majority vote accuracy、verifier accuracy、平均输出 token 数和单位正确答案成本。Ch08 作业中的 <code>pass_at_k</code> 使用 <code>1 - C(n-c,k)/C(n,k)</code> 估计从 <code>n</code> 个样本中抽取 <code>k</code> 个至少命中一个正确答案的概率；<code>self_consistency_vote</code> 则要求你显式定义 final-answer extractor，把多条候选输出聚合成 vote distribution，并同时报告总生成 token 数和平均 token 数。</p>
+  <h4>Why It Differs from Ordinary Sampling</h4>
+  <p>Ordinary top-p or temperature mainly controls the entropy of the output distribution; reasoning generation is concerned with the <strong>search space</strong>. The same problem can generate multiple reasoning paths, each with its own intermediate states and final answer. For tasks with a standard answer, the evaluation focus is not on distinct-n, but on pass@k, majority vote accuracy, verifier accuracy, average output token count, and cost per correct answer. In the Ch08 assignment, <code>pass_at_k</code> uses <code>1 - C(n-c,k)/C(n,k)</code> to estimate the probability of drawing at least one correct answer from <code>k</code> samples out of <code>n</code>; <code>self_consistency_vote</code> requires you to explicitly define a final-answer extractor, aggregate multiple candidate outputs into a vote distribution, and report both the total generated tokens and the average token count.</p>
 
-  <h4>Worked Example：pass@k 不是 <code>c/n</code></h4>
-  <p>假设同一道编程题采样 <code>n=10</code> 个候选，其中 <code>c=2</code> 个候选能通过测试。如果只看单次采样成功率，是 <code>c/n = 0.2</code>。但 pass@3 问的是：从这 10 个候选中随机抽 3 个提交，只要至少一个正确就算成功。失败事件是 3 个全都抽到错误候选：</p>
+  <h4>Worked Example: pass@k is not <code>c/n</code></h4>
+  <p>Suppose for the same coding problem, we sample <code>n=10</code> candidates, of which <code>c=2</code> pass the tests. If we look at the single-sample success rate, it is <code>c/n = 0.2</code>. But pass@3 asks: if we randomly draw 3 candidates from these 10 to submit, and we succeed if at least one is correct. The failure event is that all 3 drawn are incorrect candidates:</p>
   <div class="math-box"><div class="label">pass@3 for n=10, c=2</div>
     <div class="katex" data-expr="\text{pass@3}=1-\frac{\binom{8}{3}}{\binom{10}{3}}=1-\frac{56}{120}=0.533" aria-label="\text{pass@3}=1-\frac{\binom{8}{3}}{\binom{10}{3}}=1-\frac{56}{120}=0.533" role="img"></div>
   </div>
-  <p>所以同样的候选集合，pass@1 是 <code>0.2</code>，pass@3 约为 <code>0.533</code>。这说明 pass@k 衡量的是“给定多次尝试预算时至少命中一次”的概率，不是单个样本的平均正确率。报告 reasoning 实验时必须同时写清 <code>n</code>、<code>k</code>、采样参数和平均生成 token 数，否则准确率提升可能只是花了更多 test-time compute。</p>
+  <p>So for the same set of candidates, pass@1 is <code>0.2</code>, and pass@3 is approximately <code>0.533</code>. This shows that pass@k measures the "probability of hitting at least once given a budget of k attempts," not the average accuracy of a single sample. When reporting reasoning experiments, you must clearly state <code>n</code>, <code>k</code>, sampling parameters, and the average number of generated tokens; otherwise, an accuracy improvement might simply be due to spending more test-time compute.</p>
 
-  <h4>计算预算怎么报告</h4>
-  <p>如果一个方法把准确率从 60% 提到 72%，但每题从 1 次生成变成 32 次生成，就不能只报告准确率。至少要同时报告：</p>
+  <h4>How to Report the Compute Budget</h4>
+  <p>If a method improves accuracy from 60% to 72%, but goes from 1 generation per problem to 32 generations, you cannot just report the accuracy. You should at least report:</p>
   <ul>
-    <li><strong>样本数：</strong><code>N</code>、temperature、top-p、max reasoning tokens。</li>
-    <li><strong>正确率：</strong>single sample、pass@k、majority vote 或 reranked top-1。</li>
-    <li><strong>成本：</strong>平均生成 token 数、TTFT/TPOT、每题延迟和每题 token 成本。</li>
-    <li><strong>失败类型：</strong>算术错误、条件遗漏、无效代码、错误投票、verifier 误判。</li>
+    <li><strong>Number of samples:</strong> <code>N</code>, temperature, top-p, max reasoning tokens.</li>
+    <li><strong>Accuracy:</strong> single sample, pass@k, majority vote, or reranked top-1.</li>
+    <li><strong>Cost:</strong> average generated tokens, TTFT/TPOT, latency per problem, and token cost per problem.</li>
+    <li><strong>Failure types:</strong> arithmetic errors, missing conditions, invalid code, incorrect votes, verifier misjudgments.</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Reasoning 能力不是“输出更长解释”。严谨实验必须证明更多中间 token 或更多候选确实提高了任务成功率，并说明它花掉了多少测试时计算量。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Core Judgment:</strong> Reasoning ability is not "outputting a longer explanation." Rigorous experiments must prove that more intermediate tokens or more candidates indeed improve the task success rate, and must state how much test-time compute was consumed.</div></div>
 </section>
 
 <!-- ================================================================ -->
 <!-- 8.8 MTP Theory -->
 <!-- ================================================================ -->
 <section class="card" id="s8-8">
-  <h3>8.8 DeepSeek MTP——多 Token 预测的理论</h3>
-  <p><strong>多 Token 预测（Multi-Token Prediction, MTP）</strong>是 DeepSeek-V3 的一项重要技术创新。传统语言模型每次只预测<strong>一个</strong>未来的 token，而 MTP 让模型一次预测<strong>多个</strong>未来 token。</p>
+  <h3>8.8 DeepSeek MTP – The Theory of Multi-Token Prediction</h3>
+  <p><strong>Multi-Token Prediction (MTP)</strong> is an important technical innovation in DeepSeek-V3. Traditional language models predict only <strong>one</strong> future token at a time, whereas MTP allows the model to predict <strong>multiple</strong> future tokens at once.</p>
 
-  <h4>训练时的 MTP：多输出头架构</h4>
-  <p>标准语言模型只有一个输出头（LM Head），将最后一层隐藏状态 <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> 映射到词表 logits，预测 <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。MTP 添加 <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 个额外的输出头（MTP Heads），每个头预测不同偏移的未来 token：</p>
-  <div class="math-box"><div class="label">公式 8.3 MTP 损失</div>
+  <h4>MTP During Training: Multi-Output Head Architecture</h4>
+  <p>A standard language model has only one output head (LM Head), which maps the last hidden state <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> to vocabulary logits to predict <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>. MTP adds <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> additional output heads (MTP Heads), each predicting a future token at a different offset:</p>
+  <div class="math-box"><div class="label">Equation 8.3 MTP Loss</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})" aria-label="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})" role="img"></div>
   </div>
-  <p>每个 MTP Head 是一个小 MLP + LayerNorm，参数量远小于主 Transformer。它们共享底层特征表示，只在输出层有独立参数。</p>
+  <p>Each MTP Head is a small MLP + LayerNorm, with far fewer parameters than the main Transformer. They share the underlying feature representation, only having independent parameters at the output layer.</p>
 
-  <h4>双重增益</h4>
+  <h4>Dual Benefits</h4>
   <ul>
-    <li><strong>训练增益：</strong>更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测下下个 token。这可能促使模型学习更长距离的依赖。DeepSeek-V3 报告给出过 MTP 带来的训练效率收益；具体幅度依赖模型、数据和训练设置，正文不把它外推为通用比例。</li>
-    <li><strong>推理增益：</strong>MTP Head 在推理时可以作为<strong>推测解码的草稿模型</strong>。由于 MTP Head 的参数远小于完整 Transformer，它们可以快速生成候选 token，然后由主模型一次性验证。</li>
+    <li><strong>Training Benefit:</strong> Denser supervision signals. Each token position must predict not only the next token but also the token after that. This may encourage the model to learn longer-range dependencies. The DeepSeek-V3 report noted the training efficiency gains brought by MTP; the specific magnitude depends on the model, data, and training setup, and the main text does not extrapolate it as a universal ratio.</li>
+    <li><strong>Inference Benefit:</strong> During inference, the MTP Head can serve as a <strong>draft model for speculative decoding</strong>. Because the MTP Head has far fewer parameters than the full Transformer, it can quickly generate candidate tokens, which are then verified by the main model in a single forward pass.</li>
   </ul>
-  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 报告选择 <span class="katex-inline" data-expr="D = 1" aria-label="D = 1" role="img"></span>（额外预测 1 个 token），因为其实验中更大的 <span class="katex-inline" data-expr="D" aria-label="D"></span> 带来的边际收益递减。学习这里的重点是理解“多预测头可以服务训练，也可以服务草稿生成”，而不是记住某个固定收益比例。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>The DeepSeek-V3 report chose <span class="katex-inline" data-expr="D = 1" aria-label="D = 1" role="img"></span> (predicting 1 additional token) because larger <span class="katex-inline" data-expr="D" aria-label="D"></span> showed diminishing marginal returns in their experiments. The key takeaway here is understanding that "multiple prediction heads can serve both training and draft generation," not memorizing a specific fixed benefit ratio.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 5: Speculative Decoding -->
+<!-- Programming Exercise 5: Speculative Decoding -->
 <!-- ================================================================ -->
 <section class="card" id="s8-9">
-  <h3>8.9 编程练习 6：实现简化版推测解码</h3>
-  <p><strong>推测解码（Speculative Decoding）</strong>的核心思想非常巧妙：用一个<strong>小模型（草稿模型）</strong>快速生成候选 tokens，然后由<strong>大模型（目标模型）</strong>并行验证这些候选。满足拒绝采样条件时，它可以保持目标模型采样分布；实际加速比取决于草稿模型速度、接受率、batching 和系统瓶颈，论文与系统报告中常见约 1.x 到数倍的提升。</p>
+  <h3>8.9 Programming Exercise 6: Implementing a Simplified Speculative Decoding</h3>
+  <p>The core idea of <strong>Speculative Decoding</strong> is very clever: use a <strong>small model (draft model)</strong> to quickly generate candidate tokens, then use a <strong>large model (target model)</strong> to verify these candidates in parallel. When the rejection sampling condition is met, it can preserve the target model's sampling distribution; the actual speedup depends on the draft model's speed, acceptance rate, batching, and system bottlenecks, with papers and system reports commonly showing improvements of roughly 1.x to several times.</p>
 
-  <h4>算法流程</h4>
+  <h4>Algorithm Flow</h4>
   <ol>
-    <li><strong>草稿阶段：</strong>用轻量草稿模型（如 100M）自回归生成 <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span> 个候选 token（通常 <span class="katex-inline" data-expr="\gamma = 4" aria-label="\gamma = 4" role="img"></span> 或 5）</li>
-    <li><strong>验证阶段：</strong>将候选 tokens + 前缀送入目标模型（如 7B），一次 forward 获得所有位置的 logits</li>
-    <li><strong>拒绝采样：</strong>逐位置检查目标/草稿模型的概率分布——分歧过大则拒绝，从修正分布中重新采样</li>
-    <li><strong>接受：</strong>被接受的 token 和重新采样的 token 一起加入输出序列</li>
+    <li><strong>Draft Phase:</strong> Use a lightweight draft model (e.g., 100M) to autoregressively generate <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span> candidate tokens (typically <span class="katex-inline" data-expr="\gamma = 4" aria-label="\gamma = 4" role="img"></span> or 5)</li>
+    <li><strong>Verification Phase:</strong> Feed the candidate tokens + prefix into the target model (e.g., 7B), obtain logits for all positions in one forward pass</li>
+    <li><strong>Rejection Sampling:</strong> Check the probability distributions of the target/draft models at each position – if the divergence is too large, reject and resample from a corrected distribution</li>
+    <li><strong>Acceptance:</strong> The accepted tokens and the resampled token are added to the output sequence together</li>
   </ol>
 
-  <div class="math-box"><div class="label">公式 8.4 接受/拒绝准则</div>
+  <div class="math-box"><div class="label">Equation 8.4 Acceptance/Rejection Criterion</div>
     <div class="katex" data-expr="\text{Accept } x_t \text{ with prob } \min\left(1, \frac{p_{\text{target}}(x_t)}{p_{\text{draft}}(x_t)}\right)" aria-label="\text{Accept } x_t \text{ with prob } \min\left(1, \frac{p_{\text{target}}(x_t)}{p_{\text{draft}}(x_t)}\right)" role="img"></div>
   </div>
 
   <div class="coding-exercise">
-    <h4>练习 6：实现推测解码</h4>
+    <h4>Exercise 6: Implementing Speculative Decoding</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>speculative_decoding(target_model, draft_model, input_ids, gamma=4, max_new_tokens=100, eos_token_id=None)</code>。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement <code>speculative_decoding(target_model, draft_model, input_ids, gamma=4, max_new_tokens=100, eos_token_id=None)</code>.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>草稿模型用 Top-P 采样生成 <code>gamma</code> 个候选 token</li>
-        <li>目标模型验证：一次 forward 计算所有候选位置的目标概率和草稿概率</li>
-        <li>拒绝采样：以 <code>min(1, p_target / p_draft)</code> 的概率接受每个候选</li>
-        <li>被拒绝时从 <code>max(0, p_target - p_draft)</code> 重新采样</li>
-        <li>全部接受则额外从目标模型采样一个 token</li>
+        <li>The draft model uses Top-P sampling to generate <code>gamma</code> candidate tokens</li>
+        <li>Target model verification: compute target probabilities and draft probabilities for all candidate positions in one forward pass</li>
+        <li>Rejection sampling: accept each candidate with probability <code>min(1, p_target / p_draft)</code></li>
+        <li>When rejected, resample from <code>max(0, p_target - p_draft)</code></li>
+        <li>If all are accepted, additionally sample one token from the target model</li>
       </ul>
-      <pre># 预期用法
+      <pre># Expected usage
 output, stats = speculative_decoding(
-    target_model=model_7b,       # 大模型
-    draft_model=model_100m,      # 小模型
+    target_model=model_7b,       # Large model
+    draft_model=model_100m,      # Small model
     input_ids=prompt,
     gamma=4,
 )
 print(stats)  # proposed, accepted, acceptance_rate</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def speculative_decoding(target_model, draft_model,
                          input_ids, gamma=4, max_new_tokens=100,
                          eos_token_id=None):
-    """推测解码：草稿 → 验证 → 拒绝采样 → 分布保持加速"""
+    """Speculative Decoding: Draft → Verify → Rejection Sampling → Distribution-Preserving Acceleration"""
     device = next(target_model.parameters()).device
     prefix = input_ids.to(device)
     n_orig = prefix.size(1)
@@ -795,8 +787,7 @@ def speculative_decoding(target_model, draft_model,
                 accepted.append(token)
                 n_accepted += 1
                 accepted_count += 1
-            else:
-                residual = (target_probs[0, t] - draft_probs[0, t]).clamp(min=0)
+            else:                residual = (target_probs[0, t] - draft_probs[0, t]).clamp(min=0)
                 residual = residual / residual.sum()
                 accepted.append(torch.multinomial(residual, 1).item())
                 break
@@ -816,7 +807,7 @@ def speculative_decoding(target_model, draft_model,
         "acceptance_rate": accepted_count / proposed if proposed else 0.0,
     }
     return prefix, stats</div>
-	      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>分布保持分析：</strong>在草稿/目标概率、采样温度和拒绝采样实现都满足论文假设时，最终输出分布可与直接用目标模型采样保持一致。速度收益不能只看 <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span>：如果每轮草稿生成 <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span> 个 token、目标模型验证 1 次、草稿单步耗时是目标单步的 <span class="katex-inline" data-expr="\alpha" aria-label="\alpha" role="img"></span>，则每轮耗时约为 <span class="katex-inline" data-expr="1+\alpha\gamma" aria-label="1+\alpha\gamma" role="img"></span> 个目标模型单步单位；真正的分子是该轮实际写入输出的 token 数，取决于接受率。</p>
+	      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Distribution Preservation Analysis:</strong> When the draft/target probabilities, sampling temperature, and rejection sampling implementation all satisfy the paper's assumptions, the final output distribution can be consistent with directly sampling from the target model. The speedup cannot be judged solely by <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span>: if each round generates <span class="katex-inline" data-expr="\gamma" aria-label="\gamma" role="img"></span> draft tokens, the target model verifies once, and the draft model's per-step cost is <span class="katex-inline" data-expr="\alpha" aria-label="\alpha" role="img"></span> times that of the target model's per-step cost, then the time per round is approximately <span class="katex-inline" data-expr="1+\alpha\gamma" aria-label="1+\alpha\gamma" role="img"></span> target model step units; the real numerator is the number of tokens actually written as output in that round, which depends on the acceptance rate.</p>
 	    </div>
 	  </div>
 	</section>
@@ -825,89 +816,89 @@ def speculative_decoding(target_model, draft_model,
 <!-- 8.9A Worked Example -->
 <!-- ================================================================ -->
 <section class="card" id="s8-9a">
-  <h3>8.9A Worked Example：推测解码的接受率与速度账本</h3>
-  <p>设 <code>gamma=4</code>，草稿模型生成一个 token 的耗时是目标模型单步耗时的 <span class="katex-inline" data-expr="\alpha=0.2" aria-label="\alpha=0.2" role="img"></span>。每轮都先用草稿模型提议 4 个 token，再用目标模型做 1 次并行验证。考虑三轮生成：</p>
+  <h3>8.9A Worked Example: Acceptance Rate and Speedup Accounting for Speculative Decoding</h3>
+  <p>Let <code>gamma=4</code>, and the time for the draft model to generate one token is <span class="katex-inline" data-expr="\alpha=0.2" aria-label="\alpha=0.2" role="img"></span> times the time for the target model to take one step. In each round, the draft model first proposes 4 tokens, then the target model performs 1 parallel verification. Consider three rounds of generation:</p>
   <div class="table-wrap">
     <table>
-      <tr><th>轮次</th><th>草稿提议数</th><th>被接受的草稿 token</th><th>写入输出 token</th><th>说明</th></tr>
-      <tr><td>1</td><td>4</td><td>4</td><td>5</td><td>4 个全接受，目标模型额外采样 1 个 token</td></tr>
-      <tr><td>2</td><td>4</td><td>2</td><td>3</td><td>第 3 个草稿 token 被拒绝，写入 2 个接受 token + 1 个修正 token</td></tr>
-      <tr><td>3</td><td>4</td><td>3</td><td>4</td><td>接受 3 个后拒绝 1 个，写入修正 token 后进入下一轮</td></tr>
+      <tr><th>Round</th><th>Draft Proposals</th><th>Accepted Draft Tokens</th><th>Output Tokens Written</th><th>Explanation</th></tr>
+      <tr><td>1</td><td>4</td><td>4</td><td>5</td><td>All 4 accepted, target model samples 1 additional token</td></tr>
+      <tr><td>2</td><td>4</td><td>2</td><td>3</td><td>3rd draft token rejected, write 2 accepted tokens + 1 correction token</td></tr>
+      <tr><td>3</td><td>4</td><td>3</td><td>4</td><td>Accept 3 then reject 1, write correction token and proceed to next round</td></tr>
     </table>
   </div>
-  <p>这三轮一共提议 <code>12</code> 个草稿 token，接受 <code>9</code> 个，接受率是 <code>9/12=75%</code>；实际写入输出 <code>5+3+4=12</code> 个 token。若不用推测解码，目标模型需要 12 次自回归 forward。使用推测解码时，目标模型只验证 3 次，但草稿模型运行了 12 次，所以粗略耗时为：</p>
+  <p>Over these three rounds, a total of <code>12</code> draft tokens were proposed, <code>9</code> were accepted, giving an acceptance rate of <code>9/12=75%</code>; the actual number of output tokens written is <code>5+3+4=12</code>. Without speculative decoding, the target model would need 12 autoregressive forward passes. With speculative decoding, the target model only verifies 3 times, but the draft model runs 12 times, so the approximate time is:</p>
   <div class="math-box"><div class="label">speculative decoding rough speedup</div>
     <div class="katex" data-expr="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" aria-label="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" role="img"></div>
   </div>
-  <p>这个账本解释了两个常见误区：第一，<code>gamma=4</code> 不代表固定 4 倍加速，因为草稿模型也要花时间，且拒绝会减少每轮产出的 token；第二，接受率高也不自动等于端到端高吞吐，真实服务还受 batching、KV cache、内存带宽、网络和排队影响。因此实验报告应同时给出 <code>proposed</code>、<code>accepted</code>、<code>generated_tokens</code>、<code>acceptance_rate</code>、目标模型验证次数、草稿模型步数和粗略 speedup。Ch08 作业中的 <code>speculative_decoding_speedup</code> 要求把这些量从每轮接受数和输出 token 数中算出来；到 Ch10 时，这些量会进入 <code>speculative_serving_gate_report</code>，和 P95 latency、QPS、draft 开销、额外显存、质量/分布校验一起决定是否启用推测解码。</p>
+  <p>This accounting explains two common misconceptions: First, <code>gamma=4</code> does not guarantee a fixed 4x speedup, because the draft model also takes time, and rejections reduce the number of tokens produced per round. Second, a high acceptance rate does not automatically translate to high end-to-end throughput; real services are also affected by batching, KV cache, memory bandwidth, network, and queuing. Therefore, experimental reports should simultaneously report <code>proposed</code>, <code>accepted</code>, <code>generated_tokens</code>, <code>acceptance_rate</code>, the number of target model verifications, the number of draft model steps, and a rough speedup. The <code>speculative_decoding_speedup</code> in the Ch08 assignment requires calculating these quantities from the per-round acceptance counts and output token counts; by Ch10, these quantities will be included in the <code>speculative_serving_gate_report</code>, and together with P95 latency, QPS, draft overhead, additional memory, and quality/distribution checks, they will determine whether to enable speculative decoding.</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.10 上下文窗口 -->
+<!-- 8.10 Context Window -->
 <!-- ================================================================ -->
 <section class="card" id="s8-10">
-  <h3>8.10 上下文窗口与 Attention Sink</h3>
-  <p><strong>上下文窗口</strong>是模型在一次生成中能"看到"的最大 token 数量。为什么越长越好？</p>
+  <h3>8.10 Context Window and Attention Sink</h3>
+  <p><strong>Context Window</strong> is the maximum number of tokens a model can "see" during a single generation. Why is longer better?</p>
   <ul>
-    <li><strong>长程依赖：</strong>小说的伏笔需要数百页后揭晓；函数定义在文件开头、调用在末尾。更长的上下文意味着更好的跨段落推理。</li>
-    <li><strong>少样本学习：</strong>prompt 中放入更多示例（in-context examples），模型表现更好。上下文越长，可容纳的示例越多。</li>
-    <li><strong>多轮对话：</strong>保持完整的对话历史。128K 窗口约可容纳 10 万字对话历史。</li>
+    <li><strong>Long-range Dependencies:</strong> A novel's foreshadowing might be revealed hundreds of pages later; a function definition is at the beginning of a file, but its call is at the end. Longer context means better cross-paragraph reasoning.</li>
+    <li><strong>Few-shot Learning:</strong> Placing more examples (in-context examples) in the prompt improves model performance. The longer the context, the more examples can be accommodated.</li>
+    <li><strong>Multi-turn Dialogue:</strong> Maintaining a complete conversation history. A 128K window can hold approximately 100,000 characters of dialogue history.</li>
   </ul>
 
   <h4>Attention Sink</h4>
-  <p>近期的研究发现了一个有趣的现象——在长序列中，模型会将大量的注意力权重分配给初始 token（通常是 <code>&lt;BOS&gt;</code> 或句首 token），即使这些 token 与当前生成的内容无关。这被称为 <strong>Attention Sink</strong>（Xiao et al., 2024）。</p>
-  <p>成因：训练时序列长度有限（如 4K），模型会产生"残差注意力偏移"——初始 token 吸收了多余的注意力分数。当推理时序列变长，这种偏移被放大，模型浪费大量注意力在无关的早期 token 上。</p>
+  <p>Recent research has discovered an interesting phenomenon—in long sequences, models tend to allocate a large amount of attention weight to the initial tokens (usually <code>&lt;BOS&gt;</code> or sentence-start tokens), even when these tokens are irrelevant to the current generation. This is called the <strong>Attention Sink</strong> (Xiao et al., 2024).</p>
+  <p>Cause: During training, the sequence length is limited (e.g., 4K), causing the model to develop a "residual attention bias"—initial tokens absorb excess attention scores. When the sequence length increases during inference, this bias is amplified, and the model wastes significant attention on irrelevant early tokens.</p>
 
-  <h4>上下文窗口示例</h4>
+  <h4>Context Window Examples</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>模型/报告示例</th><th>公开规格示例</th><th>教学用途</th></tr>
-      <tr><td>GPT-4 系列长上下文版本</td><td>百 K 级上下文</td><td>说明产品规格会随版本和 API 变化</td></tr>
-      <tr><td>Claude 3 系列</td><td>约 200K 级上下文</td><td>说明长上下文仍受价格、延迟和召回质量约束</td></tr>
-      <tr><td>Gemini 1.5 Pro</td><td>百万级上下文公开案例</td><td>说明 context length 不等于稳定检索能力</td></tr>
-      <tr><td>前沿长上下文模型卡</td><td>百万级 context 的公开案例</td><td>说明前沿模型规格必须带来源和日期</td></tr>
+      <tr><th>Model/Report Example</th><th>Public Specification Example</th><th>Teaching Purpose</th></tr>
+      <tr><td>GPT-4 series long-context versions</td><td>Hundreds of K context</td><td>Illustrates that product specifications change with versions and APIs</td></tr>
+      <tr><td>Claude 3 series</td><td>Approximately 200K context</td><td>Illustrates that long context is still constrained by price, latency, and recall quality</td></tr>
+      <tr><td>Gemini 1.5 Pro</td><td>Million-level context public case</td><td>Illustrates that context length does not equal stable retrieval capability</td></tr>
+      <tr><td>Frontier long-context model card</td><td>Million-level context public case</td><td>Illustrates that frontier model specifications must include source and date</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>阅读提示：</strong>长上下文数字经常随模型版本、API 形态和计费策略变化。学习时应把这些数字当作理解工程取舍的例子：窗口越长，注意力、KV Cache、检索质量、延迟和价格都需要一起分析。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Reading Note:</strong> Long context numbers often change with model versions, API forms, and billing strategies. When studying, treat these numbers as examples for understanding engineering trade-offs: the longer the window, the more attention, KV Cache, retrieval quality, latency, and cost need to be analyzed together.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.10A 生成策略上线决策 -->
+<!-- 8.10A Generation Strategy Deployment Decision -->
 <!-- ================================================================ -->
 <section class="card" id="s8-10a">
-  <h3>8.10A 生成策略上线决策：把质量、格式、延迟和成本放在同一张表里</h3>
-  <p>课程中的 greedy、top-p、beam、self-consistency、推测解码和约束解码不是互相替代的一组按钮。真实服务通常把它们组合成一条 generation policy：先根据任务决定输出空间，再选择采样/搜索方式，最后用格式约束、停止条件和成本预算保护系统。</p>
+  <h3>8.10A Generation Strategy Deployment Decision: Putting Quality, Format, Latency, and Cost on the Same Table</h3>
+  <p>The greedy, top-p, beam, self-consistency, speculative decoding, and constrained decoding covered in the course are not a set of mutually exclusive buttons. Real services typically combine them into a generation policy: first determine the output space based on the task, then choose the sampling/search method, and finally use format constraints, stopping conditions, and cost budgets to protect the system.</p>
 
   <div class="table-wrap">
     <table>
-      <tr><th>场景</th><th>推荐起点</th><th>质量指标</th><th>系统指标</th><th>主要风险</th></tr>
-      <tr><td>代码补全</td><td>低温 top-p 或 pass@k</td><td>unit tests、compile rate、pass@k</td><td>平均输出 token、每题成本</td><td>生成看似合理但无法运行的代码</td></tr>
-      <tr><td>数学/推理</td><td>temperature + self-consistency</td><td>final answer accuracy、majority vote accuracy</td><td>samples per question、reasoning tokens、P95 延迟</td><td>成本用多倍 token 换来，投票可能聚合错误答案</td></tr>
-      <tr><td>客服/RAG</td><td>低温、引用约束、stop 条件</td><td>answer correctness、faithfulness、引用覆盖</td><td>TTFT、TPOT、检索延迟、重试率</td><td>事实性错误、引用不存在、输出过长</td></tr>
-      <tr><td>结构化 API 输出</td><td>schema constrained decoding</td><td>schema pass rate、字段准确率</td><td>解码开销、失败重试次数</td><td>JSON 合法但语义字段错</td></tr>
-      <tr><td>创意写作</td><td>较高 temperature/top-p</td><td>人工偏好、多样性、连贯性</td><td>输出长度、用户编辑率</td><td>跑题、重复、风格漂移</td></tr>
+      <tr><th>Scenario</th><th>Recommended Starting Point</th><th>Quality Metrics</th><th>System Metrics</th><th>Primary Risk</th></tr>
+      <tr><td>Code Completion</td><td>Low temperature top-p or pass@k</td><td>unit tests, compile rate, pass@k</td><td>Average output tokens, cost per question</td><td>Generates code that looks reasonable but doesn't run</td></tr>
+      <tr><td>Math/Reasoning</td><td>temperature + self-consistency</td><td>final answer accuracy, majority vote accuracy</td><td>samples per question, reasoning tokens, P95 latency</td><td>Cost scales with multiple tokens, voting may aggregate wrong answers</td></tr>
+      <tr><td>Customer Service/RAG</td><td>Low temperature, citation constraints, stop conditions</td><td>answer correctness, faithfulness, citation coverage</td><td>TTFT, TPOT, retrieval latency, retry rate</td><td>Factual errors, non-existent citations, overly long outputs</td></tr>
+      <tr><td>Structured API Output</td><td>schema constrained decoding</td><td>schema pass rate, field accuracy</td><td>Decoding overhead, failure retry count</td><td>JSON is valid but semantic fields are wrong</td></tr>
+      <tr><td>Creative Writing</td><td>Higher temperature/top-p</td><td>Human preference, diversity, coherence</td><td>Output length, user edit rate</td><td>Off-topic, repetition, style drift</td></tr>
     </table>
   </div>
 
-  <h4>1. 先确定输出空间</h4>
-  <p>如果输出必须是 JSON、SQL、函数调用或固定枚举，应该优先使用约束解码或结构化输出，而不是靠 prompt 提醒模型“请只输出 JSON”。如果输出是开放式解释，才需要重点调 temperature、top-p 和重复惩罚。若任务有可验证答案，例如代码和数学，采样多样性本身不是目标；多样本生成必须通过 pass@k、unit tests 或 verifier 转化为正确率。</p>
+  <h4>1. First Determine the Output Space</h4>
+  <p>If the output must be JSON, SQL, function calls, or a fixed enumeration, constrained decoding or structured output should be prioritized, rather than relying on a prompt to remind the model "please output only JSON". If the output is an open-ended explanation, then tuning temperature, top-p, and repetition penalty is the main focus. If the task has a verifiable answer, such as code or math, sampling diversity itself is not the goal; multi-sample generation must be converted into correctness rates via pass@k, unit tests, or a verifier.</p>
 
-  <h4>2. 再确定风险边界</h4>
-  <p>每个 generation policy 都应写清失败边界。例如客服 RAG 中，低温能降低随机性，但不能保证忠实引用；beam search 能搜索高概率候选，但不能修复检索漏召回；self-consistency 能降低单次推理偶然错误，但对系统性误解会多数投错；结构化解码能保证语法合法，却不能保证字段语义正确。</p>
+  <h4>2. Then Determine Risk Boundaries</h4>
+  <p>Each generation policy should clearly state its failure boundaries. For example, in customer service RAG, low temperature can reduce randomness but cannot guarantee faithful citations; beam search can search for high-probability candidates but cannot fix missed retrievals; self-consistency can reduce the chance of a single inference error but can lead to a majority of wrong votes for systematic misunderstandings; structured decoding can guarantee syntactic validity but cannot guarantee semantic field correctness.</p>
 
-  <h4>3. 成本要按完整请求计算</h4>
-  <p>上线报告不能只写模型 tokens/s。一个请求的端到端成本包括 prompt tokens、generated tokens、reasoning samples、RAG 检索/重排、工具调用、结构化解码开销、重试和排队。可以用一个简化账本描述：</p>
+  <h4>3. Cost Must Be Calculated Per Complete Request</h4>
+  <p>A deployment report cannot just write the model's tokens/s. The end-to-end cost of a request includes prompt tokens, generated tokens, reasoning samples, RAG retrieval/reranking, tool calls, structured decoding overhead, retries, and queuing. A simplified accounting can be described as:</p>
   <div class="code-block" data-lang="text">
 request_cost ~= prompt_tokens
              + generated_tokens * samples
              + reranker_calls * reranker_cost
              + tool_calls * tool_cost
              + retries * retry_cost</div>
-  <p>如果把 <code>samples</code> 从 1 提到 16，pass@k 可能提高，但 P95 延迟和 token 成本也会接近线性上升，除非系统做并行采样并有足够 batch/硬件余量。推测解码能降低目标模型验证次数，但也引入草稿模型计算和调度复杂度。</p>
+  <p>If <code>samples</code> is increased from 1 to 16, pass@k might improve, but P95 latency and token cost will also increase nearly linearly, unless the system performs parallel sampling and has sufficient batch/hardware headroom. Speculative decoding can reduce the number of target model verifications, but it also introduces draft model computation and scheduling complexity.</p>
 
-  <h4>3A. Reasoning / test-time compute 要先过预算 gate</h4>
-  <p>OpenAI o1、DeepSeek-R1 和 Kimi k1.5 之后，很多系统会把“多想一会儿”作为质量提升手段：增加 reasoning token、采样多条解题路径、用 verifier 或 unit tests 选 best-of-N，或把长链路蒸馏成短输出。工程上不能只报告准确率提升，必须同时报告每题样本数、平均输出 token、P95 延迟、verifier 调用、单位正确答案成本和边际收益。</p>
-  <p>Ch08 作业中的 <code>test_time_compute_budget_report</code> 把这个判断落成一个可测试 gate。它比较 greedy、self-consistency、best-of-N、verifier reranking 或 reasoning model 档位，输出 quality、token budget、latency、cost 和 marginal efficiency gate，并给出是否可以上线的推荐策略。</p>
+  <h4>3A. Reasoning / test-time compute must first pass a budget gate</h4>
+  <p>After OpenAI o1, DeepSeek-R1, and Kimi k1.5, many systems use "thinking a bit longer" as a quality improvement method: increasing reasoning tokens, sampling multiple solution paths, using a verifier or unit tests for best-of-N selection, or distilling long chains into short outputs. Engineering reports cannot just report accuracy improvements; they must also report samples per question, average output tokens, P95 latency, verifier calls, cost per correct answer, and marginal benefit.</p>
+  <p>The <code>test_time_compute_budget_report</code> in the Ch08 assignment formalizes this judgment into a testable gate. It compares greedy, self-consistency, best-of-N, verifier reranking, or reasoning model tiers, and outputs quality, token budget, latency, cost, and marginal efficiency gate, along with a recommended strategy for deployment.</p>
   <div class="code-block" data-lang="python">
 report = test_time_compute_budget_report(
     [
@@ -923,42 +914,40 @@ report = test_time_compute_budget_report(
     },
 )
 assert report["recommended_strategy"] == "self_consistency_5"</div>
-  <p>这个 gate 的核心不是替代 benchmark，而是防止“无限采样换分数”的结论污染上线决策。如果 best-of-16 准确率最高但超过 token 和延迟预算，合格报告应写“需要蒸馏、路由到难题、优化并行采样或拒绝该策略”，而不是直接把最高分当作生产策略。</p>
+  <p>The core of this gate is not to replace benchmarks, but to prevent the conclusion of "trading unlimited sampling for scores" from polluting deployment decisions. If best-of-16 has the highest accuracy but exceeds the token and latency budget, a qualified report should state "requires distillation, routing to hard problems, optimizing parallel sampling, or rejecting this strategy", rather than directly using the highest score as the production strategy.</p>
 
-  <h4>4. 一个合格策略说明的格式</h4>
-  <p>课程项目中的 generation policy 应能写成下面这种形式：</p>
+  <h4>4. Format of a Qualified Strategy Description</h4>
+  <p>The generation policy in the course project should be written in the following form:</p>
   <div class="code-block" data-lang="text">
 Task: Chinese customer-service RAG
 Output: natural-language answer with cited document ids
-Decoding: temperature=0.2, top_p=0.9, max_new_tokens=512, stop=["\n\n用户:"]
-Constraints: answer must include at least one retrieved doc id; JSON only for tool calls
+Decoding: temperature=0.2, top_p=0.9, max_new_tokens=512, stop=["\n\nUser:"]Constraints: answer must include at least one retrieved doc id; JSON only for tool calls
 Evaluation: faithfulness, answer F1, citation precision/recall, unsafe completion rate
 System: TTFT/P95 TPOT, generated tokens/request, retry rate, cost/request
 Known boundary: low temperature reduces variance but does not prove faithfulness</div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>生成策略不是单个超参数，而是任务目标、输出约束、采样/搜索、评估指标和服务 SLO 的组合。课程报告应说明为什么选择这组策略，以及它在哪些任务、负载和风险边界内成立。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Engineering Judgment:</strong> The generation strategy is not a single hyperparameter, but a combination of task objectives, output constraints, sampling/search, evaluation metrics, and service SLOs. The course report should explain why this set of strategies was chosen and within which tasks, loads, and risk boundaries it holds.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 8.11 总结 -->
+<!-- 8.11 Summary -->
 <!-- ================================================================ -->
 <section class="card" id="s8-11">
-  <h3>8.11 本章总结</h3>
+  <h3>8.11 Chapter Summary</h3>
   <ul>
-    <li>✅ <strong>自回归生成原理</strong> — Autoregressive decomposition of P(x), Prefilling vs. Decoding</li>
-    <li>✅ <strong>编程练习 1：Greedy Decoding</strong> — argmax 策略，暴露重复陷阱和曝光偏差</li>
-    <li>✅ <strong>编程练习 2：Temperature Sampling</strong> — 温度控制分布熵，T→0 退化为贪心</li>
-    <li>✅ <strong>编程练习 3：Top-K Sampling</strong> — 固定 K 截断，缺点是无法自适应</li>
-    <li>✅ <strong>编程练习 4：Top-P (Nucleus) Sampling</strong> — 累积概率动态截断，开放式生成常用策略之一</li>
-    <li>✅ <strong>编程练习 5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
-    <li>✅ <strong>生成评估边界</strong> — 区分多样性、质量、事实性、延迟和任务完成率</li>
-    <li>✅ <strong>推理式生成</strong> — CoT、self-consistency voting、pass@k、best-of-N、verifier 和 test-time compute 取舍</li>
-    <li>✅ <strong>约束解码</strong> — 将非法 token 的 logits mask 为 <code>-inf</code>，再在合法集合上重新归一化</li>
-    <li>✅ <strong>编程练习 6：Speculative Decoding</strong> — 草稿 + 验证 + 拒绝采样，理解分布保持加速的适用条件</li>
-    <li>✅ <strong>MTP 理论</strong> — 多输出头，训练/推理双重增益</li>
-    <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>
+    <li>✅ <strong>Autoregressive Generation Principle</strong> — Autoregressive decomposition of P(x), Prefilling vs. Decoding</li>
+    <li>✅ <strong>Programming Exercise 1: Greedy Decoding</strong> — argmax strategy, exposes repetition trap and exposure bias</li>
+    <li>✅ <strong>Programming Exercise 2: Temperature Sampling</strong> — Temperature controls distribution entropy, T→0 degenerates to greedy</li>
+    <li>✅ <strong>Programming Exercise 3: Top-K Sampling</strong> — Fixed K truncation, disadvantage is inability to adapt</li>
+    <li>✅ <strong>Programming Exercise 4: Top-P (Nucleus) Sampling</strong> — Dynamic truncation based on cumulative probability, one of the common strategies for open-ended generation</li>
+    <li>✅ <strong>Programming Exercise 5: Strategy Comparison</strong> — Unified Generator class + distinct-n quantitative evaluation</li>
+    <li>✅ <strong>Generation Evaluation Boundaries</strong> — Distinguish diversity, quality, factuality, latency, and task completion rate</li>
+    <li>✅ <strong>Reasoning-based Generation</strong> — CoT, self-consistency voting, pass@k, best-of-N, verifier, and test-time compute trade-offs</li>
+    <li>✅ <strong>Constrained Decoding</strong> — Mask logits of illegal tokens to <code>-inf</code>, then renormalize over the legal set</li>    <li>✅ <strong>Programming Exercise 6: Speculative Decoding</strong> — Draft + verify + rejection sampling, understand the applicable conditions for distribution-preserving acceleration</li>
+    <li>✅ <strong>MTP Theory</strong> — Multiple output heads, dual training/inference gains</li>
+    <li>✅ <strong>Context Window and Attention Sink</strong></li>
   </ul>
-  <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
+  <div class="info-box key"><span class="icon">📚</span><div><strong>Further Reading:</strong>
     <a href="https://arxiv.org/abs/1904.09751" target="_blank">Holtzman et al. (2020) — The Curious Case of Neural Text Degeneration (Top-P)</a> ·
     <a href="https://arxiv.org/abs/2302.01318" target="_blank">Leviathan et al. (2023) — Fast Inference via Speculative Decoding</a> ·
     <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 (§3.3 MTP, §4.3 Speculative Decoding)</a> ·
@@ -966,36 +955,36 @@ Known boundary: low temperature reduces variance but does not prove faithfulness
 </section>
 
 <!-- ================================================================ -->
-<!-- 概念练习 -->
+<!-- Concept Exercises -->
 <!-- ================================================================ -->
 <!-- ================================================================ -->
-<!-- 8.12 结构化解码 -->
+<!-- 8.12 Structured Decoding -->
 <!-- ================================================================ -->
 <section class="card" id="s8-12">
-  <h3>8.12 结构化解码——JSON 模式与约束生成</h3>
-  <p>在 API 和 Agent 场景中，我们通常需要 LLM 输出<strong>特定格式的结构化数据</strong>（JSON、YAML），而不是自由文本。让 LLM "尽量输出 JSON"是不够的——它偶尔会输出不完整的 JSON 或多余的文本。</p>
+  <h3>8.12 Structured Decoding — JSON Mode and Constrained Generation</h3>
+  <p>In API and Agent scenarios, we often need the LLM to output <strong>structured data in a specific format</strong> (JSON, YAML), rather than free text. Asking the LLM to "try to output JSON" is not enough — it occasionally outputs incomplete JSON or extraneous text.</p>
 
-  <h4>约束解码原理</h4>
-  <p>约束解码在<strong>采样的每一步</strong>根据目标语法动态修改 logits：将不符合语法的 token 概率设为 -inf，确保生成符合指定格式。</p>
-  <div class="math-box"><div class="label">约束解码</div>
-    <div class="katex" data-expr="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ 合法} \\ -\infty & \text{否则} \end{cases}" aria-label="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ 合法} \\ -\infty & \text{否则} \end{cases}" role="img"></div>
+  <h4>Constrained Decoding Principle</h4>
+  <p>Constrained decoding dynamically modifies logits at <strong>each sampling step</strong> according to the target grammar: it sets the probability of tokens that do not conform to the grammar to -inf, ensuring the generation adheres to the specified format.</p>
+  <div class="math-box"><div class="label">Constrained Decoding</div>
+    <div class="katex" data-expr="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ is legal} \\ -\infty & \text{otherwise} \end{cases}" aria-label="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ is legal} \\ -\infty & \text{otherwise} \end{cases}" role="img"></div>
   </div>
 
-  <h4>实现：基于 JSON Schema 的 Token 过滤</h4>
-  <p>以 JSON 为例：将 JSON Schema 编译为<strong>确定性有限自动机（DFA）</strong>。每一步解码时，将词表中每个 token 喂入 DFA 判断是否合法——只有合法 token 可被采样。例如前缀为 <code>{"name":</code> 时，下一个 token 必须是 <code>"</code>。</p>
+  <h4>Implementation: Token Filtering based on JSON Schema</h4>
+  <p>Taking JSON as an example: compile the JSON Schema into a <strong>Deterministic Finite Automaton (DFA)</strong>. At each decoding step, feed each token in the vocabulary into the DFA to determine if it is legal — only legal tokens can be sampled. For example, when the prefix is <code>{"name":</code>, the next token must be <code>"</code>.</p>
 
   <div class="coding-exercise">
-    <h4>练习 7：实现 Token Constraint Mask</h4>
+    <h4>Exercise 7: Implement Token Constraint Mask</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>apply_token_constraints(logits, allowed_token_ids)</code>，把每个 batch row 中不合法的 token logits 设为 <code>-inf</code>。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement <code>apply_token_constraints(logits, allowed_token_ids)</code>, setting the logits of illegal tokens in each batch row to <code>-inf</code>.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>输入 logits 形状为 <code>[batch, vocab]</code></li>
-        <li><code>allowed_token_ids</code> 可以是所有样本共享的一组 token，也可以是每个样本各自一组 token</li>
-        <li>每一行至少保留一个合法 token；非法 id 或空集合应报错</li>
-        <li>约束后再执行 greedy、top-k 或 top-p；概率只在合法 token 集合内重新归一化</li>
+        <li>Input logits shape is <code>[batch, vocab]</code></li>
+        <li><code>allowed_token_ids</code> can be a set of tokens shared by all samples, or a separate set for each sample</li>
+        <li>Each row must retain at least one legal token; illegal ids or an empty set should raise an error</li>
+        <li>After applying constraints, execute greedy, top-k, or top-p; probabilities are renormalized only over the set of legal tokens</li>
       </ul>
-      <pre># 例子：第二行原本 token 2 logit 最高，但 grammar 当前只允许 0 或 1
+      <pre># Example: In the second row, token 2 originally has the highest logit, but the grammar currently only allows 0 or 1
 logits = torch.tensor([[5.0, 4.0, 3.0],
                        [1.0, 2.0, 9.0]])
 allowed = [[1, 2], [0, 1]]
@@ -1005,93 +994,92 @@ next_token = sample_next_token(masked, strategy="greedy")
     </div>
   </div>
 
-  <h4>主流工具</h4>
+  <h4>Mainstream Tools</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>工具</th><th>原理</th><th>支持引擎</th></tr>
-      <tr><td><strong>Outlines</strong></td><td>JSON Schema → 索引，高效 token 过滤</td><td>vLLM, llama.cpp</td></tr>
-      <tr><td><strong>guidance</strong></td><td>正则自动机，每步过滤 token</td><td>HuggingFace, vLLM</td></tr>
-      <tr><td><strong>OpenAI Structured Outputs</strong></td><td>服务端结构化输出能力，提高 schema 遵循率；应用侧仍应校验</td><td>OpenAI API</td></tr>
-      <tr><td><strong>SGLang</strong></td><td>RadixAttention + 原生约束解码</td><td>SGLang</td></tr>
+      <tr><th>Tool</th><th>Principle</th><th>Supported Engines</th></tr>
+      <tr><td><strong>Outlines</strong></td><td>JSON Schema → index, efficient token filtering</td><td>vLLM, llama.cpp</td></tr>
+      <tr><td><strong>guidance</strong></td><td>Regex automaton, filters tokens per step</td><td>HuggingFace, vLLM</td></tr>
+      <tr><td><strong>OpenAI Structured Outputs</strong></td><td>Server-side structured output capability, improves schema adherence; client-side validation is still recommended</td><td>OpenAI API</td></tr>
+      <tr><td><strong>SGLang</strong></td><td>RadixAttention + native constrained decoding</td><td>SGLang</td></tr>
     </table>
   </div>
-  <div class="info-box tip"><span class="icon">💡</span><div>构建 API 或 Agent 时，应优先使用结构化输出或约束解码，并在应用侧做 schema 校验。只依赖 prompt engineering 很难稳定保证 JSON 格式；outlines、vLLM、SGLang、llama.cpp 等工具可按部署环境选择。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>When building APIs or Agents, prioritize structured output or constrained decoding, and perform schema validation on the application side. Relying solely on prompt engineering makes it difficult to stably guarantee JSON format; tools like outlines, vLLM, SGLang, and llama.cpp can be chosen based on the deployment environment.</div></div>
 </section>
 
 
 <section class="card">
-  <h3>概念练习巩固</h3>
+  <h3>Concept Exercise Review</h3>
 
-  <div class="exercise" data-answer="1" data-explain="Top-K 固定 K 值，无法适应不同上下文需要的候选数。Top-P 通过累积概率动态调整候选集——分布尖锐时候选集小，分布平缓时候选集自动扩大。">
-    <h4>练习 1：Top-K 采样相对于 Top-P 采样的主要缺陷是什么？</h4>
+  <div class="exercise" data-answer="1" data-explain="Top-K uses a fixed K value and cannot adapt to the number of candidates needed in different contexts. Top-P dynamically adjusts the candidate set via cumulative probability — when the distribution is sharp, the candidate set is small; when the distribution is flat, the candidate set automatically expands.">
+    <h4>Exercise 1: What is the main disadvantage of Top-K sampling compared to Top-P sampling?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q1" value="0"> A. Top-K 计算速度更慢</label>
-      <label><input type="radio" name="q1" value="1"> B. K 固定无法自适应不同上下文的需要</label>
-      <label><input type="radio" name="q1" value="2"> C. Top-K 不支持温度调节</label>
-      <label><input type="radio" name="q1" value="3"> D. Top-K 需要更大的 GPU 显存</label>
+      <label><input type="radio" name="q1" value="0"> A. Top-K is slower computationally</label>
+      <label><input type="radio" name="q1" value="1"> B. Fixed K cannot adapt to the needs of different contexts</label>
+      <label><input type="radio" name="q1" value="2"> C. Top-K does not support temperature adjustment</label>
+      <label><input type="radio" name="q1" value="3"> D. Top-K requires more GPU memory</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="当 T→0 时，softmax 退化为 argmax——概率最高的 token 的概率趋近于 1，其他趋近于 0，因此相当于贪心解码。">
-    <h4>练习 2：当温度参数 T 趋近于 0 时，温度采样会退化为哪种策略？</h4>
+  <div class="exercise" data-answer="0" data-explain="When T→0, softmax degenerates to argmax — the probability of the highest probability token approaches 1, and others approach 0, thus it is equivalent to greedy decoding.">
+    <h4>Exercise 2: When the temperature parameter T approaches 0, which strategy does temperature sampling degenerate into?</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q2" value="0"> A. Greedy Decoding</label>
-      <label><input type="radio" name="q2" value="1"> B. Top-K 采样</label>
-      <label><input type="radio" name="q2" value="2"> C. Top-P 采样</label>
-      <label><input type="radio" name="q2" value="3"> D. 均匀随机采样</label>
+      <label><input type="radio" name="q2" value="1"> B. Top-K Sampling</label>
+      <label><input type="radio" name="q2" value="2"> C. Top-P Sampling</label>
+      <label><input type="radio" name="q2" value="3"> D. Uniform Random Sampling</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="在论文假设成立时，推测解码通过拒绝采样保持目标模型的采样分布。接受/拒绝准则 min(1, p/q) 是分布校正的关键；真实系统中的收益仍取决于接受率、草稿模型速度和调度实现。">
-    <h4>练习 3：推测解码为什么能保持目标采样分布？</h4>
+  <div class="exercise" data-answer="2" data-explain="When the paper's assumptions hold, speculative decoding uses rejection sampling to preserve the target model's sampling distribution. The accept/reject criterion min(1, p/q) is key to distribution correction; the actual benefit in a real system still depends on the acceptance rate, draft model speed, and scheduling implementation.">
+    <h4>Exercise 3: Why can speculative decoding preserve the target sampling distribution?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q3" value="0"> A. 因为它使用量化减少精度</label>
-      <label><input type="radio" name="q3" value="1"> B. 因为它只在简单上下文中加速</label>
-      <label><input type="radio" name="q3" value="2"> C. 因为在论文假设成立时，拒绝采样会校正草稿分布，使最终采样分布与目标模型采样一致</label>
-      <label><input type="radio" name="q3" value="3"> D. 因为它跳过了一些不必要的注意力计算</label>
+      <label><input type="radio" name="q3" value="0"> A. Because it uses quantization to reduce precision</label>
+      <label><input type="radio" name="q3" value="1"> B. Because it only accelerates in simple contexts</label>
+      <label><input type="radio" name="q3" value="2"> C. Because when the paper's assumptions hold, rejection sampling corrects the draft distribution, making the final sampling distribution consistent with the target model's sampling</label>
+      <label><input type="radio" name="q3" value="3"> D. Because it skips some unnecessary attention computations</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="Prefilling 阶段并行处理整个 prompt，矩阵乘法规模大，通常更容易把算力用满。Decoding 阶段每步只处理少量新 token，低并发或小 batch 时常受权重/KV cache 读取和调度开销限制，因此更容易表现为 memory-bound。">
-    <h4>练习 4：为什么 Decoding 阶段 GPU 利用率远低于 Prefilling 阶段？</h4>
+  <div class="exercise" data-answer="1" data-explain="The Prefilling stage processes the entire prompt in parallel, with large matrix multiplications, making it easier to saturate compute. The Decoding stage processes only a small number of new tokens per step; with low concurrency or small batches, it is often limited by weight/KV cache reading and scheduling overhead, thus more likely to be memory-bound.">
+    <h4>Exercise 4: Why is GPU utilization during the Decoding stage much lower than during the Prefilling stage?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q4" value="0"> A. 因为 Decoding 需要更多层计算</label>
-      <label><input type="radio" name="q4" value="1"> B. 因为 Decoding 每步只处理一个 token，计算量小，瓶颈在内存带宽</label>
-      <label><input type="radio" name="q4" value="2"> C. 因为 Decoding 阶段精度更高</label>
-      <label><input type="radio" name="q4" value="3"> D. 因为 Decoding 阶段禁用了矩阵乘法</label>
+      <label><input type="radio" name="q4" value="0"> A. Because Decoding requires more layers of computation</label>
+      <label><input type="radio" name="q4" value="1"> B. Because Decoding processes only one token per step, with a small amount of computation, and the bottleneck is memory bandwidth</label>
+      <label><input type="radio" name="q4" value="2"> C. Because the Decoding stage uses higher precision</label>
+      <label><input type="radio" name="q4" value="3"> D. Because matrix multiplication is disabled during the Decoding stage</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="Attention Sink 指模型将大量注意力分配给初始 token（BOS 或句首 token）的现象，即使这些 token 与当前输出无关。这导致长序列上注意力分布不健康，浪费在无关的早期 token 上。">
-    <h4>练习 5：Attention Sink 现象指的是什么？</h4>
+  <div class="exercise" data-answer="0" data-explain="Attention Sink refers to the phenomenon where the model allocates a large amount of attention to the initial tokens (BOS or sentence-start tokens), even when these tokens are irrelevant to the current output. This leads to an unhealthy attention distribution over long sequences, wasting attention on irrelevant early tokens.">
+    <h4>Exercise 5: What does the Attention Sink phenomenon refer to?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q5" value="0"> A. 模型将过多注意力分配给初始 token</label>
-      <label><input type="radio" name="q5" value="1"> B. 注意力权重在深层网络中消失</label>
-      <label><input type="radio" name="q5" value="2"> C. 注意力分数溢出导致 NaN</label>
-      <label><input type="radio" name="q5" value="3"> D. KV Cache 溢出 GPU 显存</label>
-    </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <label><input type="radio" name="q5" value="0"> A. The model allocates too much attention to the initial tokens</label>
+      <label><input type="radio" name="q5" value="1"> B. Attention weights vanish in deep networks</label>
+      <label><input type="radio" name="q5" value="2"> C. Attention scores overflow, causing NaN</label>
+      <label><input type="radio" name="q5" value="3"> D. KV Cache overflows GPU memory</label>    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 </section></article>
 
 <nav class="chapter-nav">
-  <a href="ch07.html" class="btn btn-outline" rel="prev">← 上一章</a>
-  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
-  <a href="ch09.html" class="btn btn-outline" rel="next">下一章 →</a>
+  <a href="ch07.html" class="btn btn-outline" rel="prev">← Previous Chapter</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ Mark Complete</button>
+  <a href="ch09.html" class="btn btn-outline" rel="next">Next Chapter →</a>
 </nav>
 </main>
 

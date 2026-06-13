@@ -1,39 +1,39 @@
-# Ch04 多头注意力 / GQA / MLA 作业测试
+# Ch04 Multi-Head Attention / GQA / MLA Homework Tests
 
-本目录把第 4 章的编程练习整理成可自动验收的作业入口，覆盖 MHA、单头参数等价性、GQA KV head 重复、GQA head mapping、简化版 MLA、MLA 矩阵吸收等价性、KV Cache 大小计算和跨层显存预算。
+This directory organizes the programming exercises from Chapter 4 into auto-gradable homework entry points, covering MHA, single-head parameter equivalence, GQA KV head repetition, GQA head mapping, simplified MLA, MLA matrix absorption equivalence, KV Cache size calculation, and cross-layer memory budget.
 
-## 文件说明
+## File Descriptions
 
-| 文件 | 用途 |
-|------|------|
-| `starter.py` | 学生起始代码，包含需要实现的 TODO |
-| `reference_solution.py` | 教师参考实现，用于验证测试本身 |
-| `tests.py` | `unittest` 测试，覆盖 shape、mask、参数量、KV head repeat、GQA head mapping、MLA latent score 等价性、cache 压缩比和 batch/layer/dtype 显存预算 |
+| File | Purpose |
+|------|---------|
+| `starter.py` | Student starter code, contains TODOs to implement |
+| `reference_solution.py` | Instructor reference implementation, used to verify the tests themselves |
+| `tests.py` | `unittest` tests covering shape, mask, parameter count, KV head repeat, GQA head mapping, MLA latent score equivalence, cache compression ratio, and batch/layer/dtype memory budget |
 
-## 学生运行方式
+## Student Run Instructions
 
 ```bash
 cp assignments/ch04_multihead/starter.py assignments/ch04_multihead/student_solution.py
-# 编辑 student_solution.py 完成 TODO
+# Edit student_solution.py to complete TODOs
 STUDENT_MODULE=student_solution .venv/bin/python assignments/ch04_multihead/tests.py
 ```
 
-也可以直接让测试加载 `starter.py`：
+You can also directly load `starter.py` for testing:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch04_multihead/tests.py
 ```
 
-也可以直接验证课程内置参考实现：
+Or directly verify the built-in course reference implementation:
 
 ```bash
 .venv/bin/python assignments/ch04_multihead/tests.py
 ```
 
-## 评分 Rubric
+## Grading Rubric
 
-| 项目 | 分值 | 标准 |
-|------|:--:|------|
-| Written questions | 35 | 计算 MHA 参数量，比较 MHA/MQA/GQA/MLA 的 KV cache，写出 Q head 到 KV head 的映射，推导 MLA 的 K 解压矩阵吸收等价式，解释 head redundancy、RoPE 与 latent cache 的边界，并能把 batch/layers/dtype 纳入显存预算 |
-| Programming parts | 55 | 实现 MHA、单头对照、`repeat_kv_heads`、GQA、GQA head mapping、简化 MLA、MLA absorbed scores、KV cache 分析和跨层显存预算 |
-| Analysis / style | 10 | 说明 head grouping、head redundancy、latent cache、mask broadcast 和实现复杂度取舍 |
+| Item | Points | Criteria |
+|------|:--:|---------|
+| Written questions | 35 | Calculate MHA parameter count, compare MHA/MQA/GQA/MLA KV cache, write Q head to KV head mapping, derive MLA K decompression matrix absorption equivalence, explain head redundancy, RoPE and latent cache boundary, and incorporate batch/layers/dtype into memory budget |
+| Programming parts | 55 | Implement MHA, single-head comparison, `repeat_kv_heads`, GQA, GQA head mapping, simplified MLA, MLA absorbed scores, KV cache analysis, and cross-layer memory budget |
+| Analysis / style | 10 | Explain head grouping, head redundancy, latent cache, mask broadcast, and implementation complexity trade-offs |

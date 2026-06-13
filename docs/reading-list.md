@@ -1,429 +1,424 @@
-# 逐周阅读材料 Handout
+# Weekly Reading Handout
 
-本 handout 把 10 周课程的阅读材料按章节任务组织起来。它不是独立补课路径；每篇阅读都必须回到章节代码、书面题或章节判断中。阅读分为三类：
+This handout organizes the reading materials for the 10-week course by chapter and task. It is not an independent remedial path; each reading must be tied back to chapter code, written assignments, or chapter judgments. Readings are divided into three categories:
 
-- 必读：课堂讨论和作业默认依赖。
-- 选读：用于项目、报告或加深理解。
-- 课程连接：用于把阅读中的目标函数、架构细节或实验设计落到本课程代码。
+- Required: Default dependencies for class discussions and assignments.
+- Optional: For projects, reports, or deeper understanding.
+- Course Connections: Used to map objective functions, architectural details, or experimental designs from the readings to the code in this course.
 
-每次阅读后重点回答三个问题：这篇材料解决什么技术问题，核心方法如何写成公式或算法步骤，和本课程哪一章的代码、书面题或系统设计直接相关。
+After each reading, focus on answering three questions: What technical problem does this material address, how is the core method expressed as a formula or algorithmic step, and which chapter's code, written assignments, or system design in this course is it directly related to.
 
-## 阅读方法：从论文到课程能力
+## Reading Method: From Papers to Course Competencies
 
-本课程不要求学生记住论文列表，而要求把论文中的技术选择转成可推导、可实现、可评测的能力。阅读每篇材料时，应至少完成四步：
+This course does not require students to memorize a list of papers, but rather to transform the technical choices in the papers into derivable, implementable, and evaluable competencies. When reading each piece of material, you should complete at least four steps:
 
-1. 问题设定：写出输入、输出、训练数据、模型假设和目标任务。
-2. 数学对象：定位一个目标函数、概率分解、矩阵运算、mask 规则、复杂度公式或评测指标，并解释每个变量。
-3. 代码落点：指出它对应本课程中的哪个函数、张量 shape、测试用例或系统设计判断。
-4. 结论边界：说明实验结论依赖的数据、规模、指标、硬件、prompt、解码策略或人工标注假设。
+1.  Problem Setting: Write down the input, output, training data, model assumptions, and target task.
+2.  Mathematical Object: Identify an objective function, probability decomposition, matrix operation, mask rule, complexity formula, or evaluation metric, and explain each variable.
+3.  Code Landing Point: Point out which function, tensor shape, test case, or system design judgment in this course it corresponds to.
+4.  Conclusion Boundaries: Explain the data, scale, metrics, hardware, prompt, decoding strategy, or human annotation assumptions on which the experimental conclusions depend.
 
-阅读深度按三层递进：
+Reading depth progresses through three levels:
 
-| 层级 | 学生应能做到 | 例子 |
-|------|--------------|------|
-| 概念层 | 用自己的话复述问题、方法、结果和限制 | BPE 为什么缓解 OOV；DPO 为什么需要 reference model |
-| 数学层 | 展开关键公式并完成一个小数值例子 | SGNS loss、attention scaling、next-token CE、DPO log-ratio |
-| 系统层 | 把论文方法连接到资源、延迟、质量或安全取舍 | GQA 的 KV cache、PagedAttention 的显存分页、RAG 的检索/生成双指标 |
+| Level | What Students Should Be Able to Do | Example |
+|-------|------------------------------------|---------|
+| Conceptual Level | Rephrase the problem, method, results, and limitations in their own words | Why BPE alleviates OOV; why DPO requires a reference model |
+| Mathematical Level | Expand key formulas and complete a small numerical example | SGNS loss, attention scaling, next-token CE, DPO log-ratio |
+| Systems Level | Connect the paper's method to resource, latency, quality, or safety trade-offs | GQA's KV cache, PagedAttention's memory paging, RAG's retrieval/generation dual metrics |
 
-## Week 0: 章节内置先修诊断
+## Week 0: Built-in Prerequisite Diagnosis in Chapter
 
-对应材料：Prerequisite Diagnostic、[数学与 PyTorch 先修复习](math-prerequisites.md)、[ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)。
+Corresponding Materials: Prerequisite Diagnostic, [Math and PyTorch Prerequisite Review](math-prerequisites.md), [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md).
 
-本周阅读目标：确认学生能把基础 ML 语言转成 LLM 课程中反复使用的对象，包括 loss、gradient、generalization、held-out evaluation、tensor shape 和 PyTorch module。若诊断暴露短板，直接回到相关章节的“先修能力/本章内化/验收信号”补强，而不是另走一条独立课程。
+This week's reading goal: Ensure students can translate basic ML language into objects repeatedly used in the LLM course, including loss, gradient, generalization, held-out evaluation, tensor shape, and PyTorch module. If the diagnosis reveals weaknesses, directly return to the "Prerequisite Skills/Internalization within Chapter/Acceptance Signal" of the relevant chapter to reinforce, rather than taking a separate independent course.
 
-必读：
+Required:
 
-- 本课程 [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md)：重点看 calculus、probability/statistics、ML objectives、generalization 和 evaluation 如何进入 Ch07-Ch11 的训练、评测和上线结论。
-- Goodfellow, Bengio, Courville. [Deep Learning](https://www.deeplearningbook.org/), optimization 和 ML basics 相关章节。
-- 本课程 [数学与 PyTorch 先修复习](math-prerequisites.md)：重点确认 Python、PyTorch、calculus、linear algebra、probability/statistics 和 ML foundations 在 Ch01-Ch06 的 shape、mask、loss 和梯度实现中如何出现。
+- This course [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md): Focus on how calculus, probability/statistics, ML objectives, generalization, and evaluation enter the training, evaluation, and deployment conclusions in Ch07-Ch11.
+- Goodfellow, Bengio, Courville. [Deep Learning](https://www.deeplearningbook.org/), relevant chapters on optimization and ML basics.
+- This course [Math and PyTorch Prerequisite Review](math-prerequisites.md): Focus on confirming how Python, PyTorch, calculus, linear algebra, probability/statistics, and ML foundations appear in the shape, mask, loss, and gradient implementations in Ch01-Ch06.
 
-思考问题：
+Questions to consider:
 
-- 训练目标、验证指标和工程结论之间是什么关系？
-- 一个 benchmark 或 hidden test 结果在什么条件下不能推广？
-- 为什么 cross entropy 可以作为概率模型的负对数似然？它和 accuracy/F1 的关系是什么？
-- PyTorch 中 shape 正确但语义错误的实现通常会在哪些地方出现？
+- What is the relationship between training objectives, validation metrics, and engineering conclusions?
+- Under what conditions can a benchmark or hidden test result not generalize?
+- Why can cross entropy serve as the negative log-likelihood for a probabilistic model? What is its relationship with accuracy/F1?
+- Where do implementations with correct shapes but semantic errors in PyTorch typically occur?
 
-## 阅读重点
+## Reading Focus
 
-- 核心结论：用自己的话说明论文或文档解决的问题、方法和结论。
-- 技术细节：至少解释一个公式、结构图、算法步骤或实验设置。
-- 代码连接：明确指出对应章节代码、作业函数或系统设计判断。
-- 边界条件：写出一个失败模式、反例或适用范围。
-- 延伸问题：提出一个可在课堂讨论或作业中继续追问的问题。
+- Core conclusion: Describe in your own words the problem, method, and conclusion addressed by the paper or document.
+- Technical details: Explain at least one formula, structural diagram, algorithm step, or experimental setup.
+- Code connection: Clearly point out the corresponding chapter code, assignment function, or system design judgment.
+- Boundary conditions: Write down one failure mode, counterexample, or scope of application.
+- Extended question: Pose a question that can be further explored in class discussion or assignments.
 
-## Week 1: Tokenization 与 Word Vectors
+## Week 1: Tokenization and Word Vectors
 
-对应章节：Ch01-Ch02。
+Corresponding chapters: Ch01-Ch02.
 
-本周阅读目标：理解从离散文本到连续向量的两条路线：子词 tokenization 解决符号覆盖和压缩问题，word vectors 用分布式语义把共现关系投影到向量空间。
+Reading goal for this week: Understand two approaches from discrete text to continuous vectors: subword tokenization addresses symbol coverage and compression issues, while word vectors use distributed semantics to project co-occurrence relationships into vector space.
 
-必读：
+Required reading:
 
-- Sennrich, Haddow, Birch. [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909). 重点看 BPE 如何缓解 OOV。
-- Mikolov et al. [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781). 重点看 skip-gram 目标。
-- Pennington, Socher, Manning. [GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/pubs/glove.pdf). 重点看共现矩阵与加权最小二乘目标。
+- Sennrich, Haddow, Birch. [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909). Focus on how BPE alleviates OOV.
+- Mikolov et al. [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781). Focus on the skip-gram objective.
+- Pennington, Socher, Manning. [GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/pubs/glove.pdf). Focus on the co-occurrence matrix and weighted least squares objective.
 
-选读：
+Optional reading:
 
-- 本课程 Ch02 的 word vectors 与 embedding 相关小节。
-- Jurafsky and Martin, Speech and Language Processing, word embeddings 相关章节。
+- Sections related to word vectors and embeddings in Chapter 02 of this course.
+- Chapters on word embeddings in Jurafsky and Martin, Speech and Language Processing.
 
-思考问题：
+Questions to consider:
 
-- BPE merge 规则为什么是贪心的？它在哪些语料上会产生不符合语义直觉的 token？
-- skip-gram 的窗口共现样本如何变成 positive/negative 二分类目标？
-- word2vec 的类比现象是训练目标直接保证的吗？还是空间结构中的经验现象？
-- SGNS、PMI 和 GloVe 都在利用共现统计，它们的归一化和权重处理有什么不同？
-- token 粒度如何影响 context length、embedding 参数量、训练 token budget 和推理成本？
+- Why are BPE merge rules greedy? On which corpora do they produce tokens that are semantically unintuitive?
+- How do skip-gram window co-occurrence samples become positive/negative binary classification targets?
+- Is the analogy phenomenon in word2vec directly guaranteed by the training objective, or is it an empirical phenomenon in the spatial structure?
+- SGNS, PMI, and GloVe all utilize co-occurrence statistics. What are the differences in their normalization and weighting approaches?
+- How does token granularity affect context length, embedding parameter count, training token budget, and inference cost?
 
-## Week 2: Attention 与 Tensor Derivatives
+## Week 2: Attention and Tensor Derivatives
 
-对应章节：Ch03 与数学先修复习。
+Corresponding chapters: Chapter 03 and math prerequisite review.
 
-本周阅读目标：把 Transformer 的 attention 写成完整张量计算，并能解释 scaling、mask、softmax、weighted sum 和反向传播中的每个维度。
+Reading goal for this week: Write the Transformer's attention as a complete tensor computation, and be able to explain every dimension in scaling, masking, softmax, weighted sum, and backpropagation.
 
-必读：
+Required reading:
 
-- Vaswani et al. [Attention Is All You Need](https://arxiv.org/abs/1706.03762). 重点看 scaled dot-product attention、mask 和 multi-head 结构。
-- 本课程 Ch03 attention 作业与书面题：重点看 neural network foundations、tensor derivatives 和 masked attention。
+- Vaswani et al. [Attention Is All You Need](https://arxiv.org/abs/1706.03762). Focus on scaled dot-product attention, masking, and multi-head structure.
+- Chapter 03 attention assignments and written problems from this course: Focus on neural network foundations, tensor derivatives, and masked attention.
 
-选读：
+Optional reading:
 
-- Goodfellow, Bengio, Courville. [Deep Learning](https://www.deeplearningbook.org/), optimization 和 backpropagation 相关章节。
-- The Matrix Cookbook 中 softmax/cross entropy 与矩阵求导条目。
+- Goodfellow, Bengio, Courville. [Deep Learning](https://www.deeplearningbook.org/), chapters on optimization and backpropagation.
+- Entries on softmax/cross entropy and matrix derivatives from The Matrix Cookbook.
 
-思考问题：
+Questions to consider:
+- Why should the attention score be divided by `sqrt(d_k)`?
+- Why does the additive implementation of the causal mask typically use a very large negative number instead of multiplying by 0 directly?
+- Do the padding mask and the causal mask constrain the query or the key respectively? How should the shapes be broadcast after combination?
+- Can attention weights be directly used as model explanations? What type of diagnostic conclusions do they support at most?
 
-- 为什么 attention score 要除以 `sqrt(d_k)`？
-- causal mask 的加法实现为什么通常使用一个很大的负数，而不是直接乘 0？
-- padding mask 和 causal mask 分别约束 query 还是 key？合成后 shape 应该如何广播？
-- attention 权重能否直接作为模型解释？它最多支持哪类诊断结论？
+## Week 3: Multi-Head Attention, GQA, MLA, and the Block
 
-## Week 3: Multi-Head Attention、GQA、MLA 与 Block
+Corresponding chapters: Ch04-Ch05.
 
-对应章节：Ch04-Ch05。
+Reading goal for this week: Extend from standard multi-head attention to GQA, MLA, norm, FFN, and the complete block, understanding how modern LLM architectures make trade-offs regarding memory, throughput, training stability, and expressiveness.
 
-本周阅读目标：从标准 multi-head attention 扩展到 GQA、MLA、norm、FFN 和完整 block，理解现代 LLM 架构如何围绕显存、吞吐、训练稳定性和表达能力做取舍。
+Required reading:
 
-必读：
+- Vaswani et al. [Attention Is All You Need](https://arxiv.org/abs/1706.03762). Re-read multi-head attention and positional encoding.
+- Ainslie et al. [GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints](https://arxiv.org/abs/2305.13245). Focus on the number of KV heads and inference efficiency.
+- DeepSeek-AI. [DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model](https://arxiv.org/abs/2405.04434). Focus on the motivation for KV cache compression in MLA.
 
-- Vaswani et al. [Attention Is All You Need](https://arxiv.org/abs/1706.03762). 复读 multi-head attention 与 positional encoding。
-- Ainslie et al. [GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints](https://arxiv.org/abs/2305.13245). 重点看 KV head 数与推理效率。
-- DeepSeek-AI. [DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model](https://arxiv.org/abs/2405.04434). 重点看 MLA 的 KV cache 压缩动机。
-
-选读：
+Optional reading:
 
 - Zhang and Sennrich. [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467).
 - Shazeer. [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202).
-- Geva et al. [Transformer Feed-Forward Layers Are Key-Value Memories](https://arxiv.org/abs/2012.14913). 重点看 FFN neuron 的键值存储解释。
-- Meng et al. [Locating and Editing Factual Associations in GPT](https://arxiv.org/abs/2202.05262). 重点看 causal tracing、activation patching 和模型编辑边界。
+- Geva et al. [Transformer Feed-Forward Layers Are Key-Value Memories](https://arxiv.org/abs/2012.14913). Focus on the key-value storage interpretation of FFN neurons.
+- Meng et al. [Locating and Editing Factual Associations in GPT](https://arxiv.org/abs/2202.05262). Focus on causal tracing, activation patching, and the boundaries of model editing.
 
-思考问题：
+Questions for thought:
 
-- GQA 节省 KV cache 的同时损失了什么表达能力？
-- MLA 的 latent cache 与 RoPE 解耦为什么会改变工程实现？
-- Probing、activation patching 和 ablation 分别能支持什么结论，不能支持什么结论？
-- Pre-Norm、RMSNorm、SwiGLU 和 residual path 分别解决训练中的哪类数值或优化问题？
-- 只看参数量为什么不足以预测训练显存和推理显存？
+- What expressive power is lost when GQA saves KV cache?
+- Why does the decoupling of MLA's latent cache and RoPE change the engineering implementation?
+- What conclusions can Probing, activation patching, and ablation support, and what conclusions can they not support?
+- What numerical or optimization problems during training do Pre-Norm, RMSNorm, SwiGLU, and the residual path solve respectively?
+- Why is parameter count alone insufficient to predict training memory and inference memory?
 
-## Week 4: GPT 组装、预训练目标与 MoE
+## Week 4: GPT Assembly, Pre-training Objectives, and MoE
 
-对应章节：Ch06。
+Corresponding chapter: Ch06.
 
-本周阅读目标：把 decoder-only LM 的概率分解、PyTorch forward、label shift、LM head 和 MoE 稀疏激活组织成一个完整模型。
+Reading goal for this week: Organize the probabilistic decomposition of a decoder-only LM, PyTorch forward pass, label shift, LM head, and MoE sparse activation into a complete model.
 
-必读：
+Required reading:
 
-- Radford et al. [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf). 重点看 GPT-2 的 decoder-only 预训练范式。
-- Fedus, Zoph, Shazeer. [Switch Transformers](https://arxiv.org/abs/2101.03961). 重点看 top-1 routing、capacity 和 load balancing。
-- DeepSeek-AI. [DeepSeek-V3 Technical Report](https://arxiv.org/abs/2412.19437). 重点看 DeepSeekMoE 与 auxiliary-loss-free load balancing。
+- Radford et al. [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf). Focus on the decoder-only pre-training paradigm of GPT-2.
+- Fedus, Zoph, Shazeer. [Switch Transformers](https://arxiv.org/abs/2101.03961). Focus on top-1 routing, capacity, and load balancing.
+- DeepSeek-AI. [DeepSeek-V3 Technical Report](https://arxiv.org/abs/2412.19437). Focus on DeepSeekMoE and auxiliary-loss-free load balancing.
 
-选读：
+Optional reading:
 
 - Brown et al. [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165).
-- Hugging Face Transformers GPT-2 model documentation。
+- Hugging Face Transformers GPT-2 model documentation.
 
-思考问题：
+Questions for thought:
 
-- decoder-only LM 的训练标签为什么是右移一位？
-- MoE 的 capacity factor 太低或太高分别会造成什么问题？
-- tied embedding、final norm、position encoding 和 causal mask 分别在 GPT forward 中处于什么位置？
-- MoE 的“总参数量”和“每 token 激活参数量”为什么必须分开报告？
+- Why is the training label for a decoder-only LM shifted right by one position?
+- What problems arise if the MoE capacity factor is too low or too high?
+- Where do tied embedding, final norm, position encoding, and causal mask reside in the GPT forward pass?
+- Why must the "total parameter count" and "activated parameters per token" for MoE be reported separately?
 
-## Week 5: Training Loop、Scaling 与 Distributed Training
+## Week 5: Training Loop, Scaling, and Distributed Training
 
-对应章节：Ch07。
+Corresponding chapter: Ch07.
 
-本周阅读目标：从单步 loss 进入训练系统，理解数据策展、optimizer、scheduler、mixed precision、checkpoint、scaling law 和 distributed memory sharding 如何共同决定可训练规模。
+Reading goal for this week: Move from single-step loss into the training system, understanding how data curation, optimizer, scheduler, mixed precision, checkpoint, scaling law, and distributed memory sharding collectively determine the feasible training scale.
 
-必读：
+Required reading:
 
-- Loshchilov and Hutter. [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101). 重点看 AdamW 与 L2 正则的差别。
-- Hoffmann et al. [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556). 重点看 Chinchilla scaling law 的数据/参数权衡。
-- Li et al. [DataComp-LM: In search of the next generation of training sets for language models](https://arxiv.org/abs/2406.11794). 重点看 data curation strategies：deduplication、filtering、data mixing 和多尺度评估。
-- Penedo et al. [The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale](https://arxiv.org/abs/2406.17557). 重点看 pretraining data 的 filtering、deduplication、ablation 和 FineWeb-Edu 的教育文本过滤。
-- Rajbhandari et al. [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054). 重点看 optimizer/gradient/parameter state sharding。
-- Shoeybi et al. [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053). 重点看 tensor parallelism 如何切分 Transformer 层内矩阵。
-- Jiang et al. [MegaScale: Scaling Large Language Model Training to More Than 10,000 GPUs](https://arxiv.org/abs/2402.15627). 重点看大规模训练中的 full-stack observability、straggler 诊断、容错和 MFU，而不是只记住 GPU 数。
+- Loshchilov and Hutter. [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101). Focus on the difference between AdamW and L2 regularization.
+- Hoffmann et al. [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556). Focus on the data/parameter trade-off in the Chinchilla scaling law.
+- Li et al. [DataComp-LM: In search of the next generation of training sets for language models](https://arxiv.org/abs/2406.11794). Focus on data curation strategies: deduplication, filtering, data mixing, and multi-scale evaluation.
+- Penedo et al. [The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale](https://arxiv.org/abs/2406.17557). Focus on filtering, deduplication, ablation of pretraining data, and the educational text filtering of FineWeb-Edu.- Rajbhandari et al. [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054). Focus on optimizer/gradient/parameter state sharding.
+- Shoeybi et al. [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053). Focus on how tensor parallelism partitions matrices within Transformer layers.
+- Jiang et al. [MegaScale: Scaling Large Language Model Training to More Than 10,000 GPUs](https://arxiv.org/abs/2402.15627). Focus on full-stack observability, straggler diagnosis, fault tolerance, and MFU in large-scale training, rather than just memorizing the GPU count.
 
-选读：
+Optional reading:
 
-- Huang et al. [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://arxiv.org/abs/1811.06965). 重点看 micro-batch、pipeline bubble 和 activation rematerialization。
-- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, [FSDP2](https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html)、[DTensor](https://docs.pytorch.org/docs/stable/distributed.tensor.html) 和 [Distributed Checkpoint](https://docs.pytorch.org/docs/stable/distributed.checkpoint.html)。重点看 FSDP2 如何用 DTensor 风格分片参数、梯度和 optimizer state，DCP 如何做多 rank checkpoint 与 load-time resharding，以及 resume parity 如何验证。
-- PyTorch [TorchTitan checkpoint guide](https://github.com/pytorch/torchtitan/blob/main/docs/checkpoint.md)。重点看 model-only save 与完整训练状态保存的差异，以及 checkpoint interval/async/keep-latest 这类工程参数如何进入训练可靠性。
-- NVIDIA Transformer Engine documentation on [FP8/MXFP8/NVFP4](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html)。重点看低精度训练不仅是 dtype 选择，还包括 scaling、amax history、kernel 支持和 checkpoint state。
-- NVIDIA Megatron Core parallelism guide。重点看 DP、TP、PP、CP、EP 和 sequence parallelism 分别切什么维度，什么时候组合。
-- DeepSeek-V3 Technical Report 中 FP8 mixed precision、DualPipe、MLA/MoE 和 MTP。重点看这些设计如何共同服务训练效率和稳定性。
-- Meta. [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783). 重点看 pre-training data cleaning、deduplication、PII/adult-content filtering 和 contamination analysis 如何影响评测解释。
-- Jordan et al. [Muon is Scalable for LLM Training](https://arxiv.org/abs/2502.16982)。重点看 Muon 从小模型实验扩展到 LLM 时需要 weight decay 和 update scale，不能只背“正交化”口号。
-- NVIDIA / PyTorch profiler 文档中 GPU utilization、kernel timeline、communication overlap 和 dataloader bottleneck 的诊断方法。
+- Huang et al. [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://arxiv.org/abs/1811.06965). Focus on micro-batch, pipeline bubble, and activation rematerialization.
+- PyTorch documentation: `torch.amp`, `DistributedDataParallel`, [FSDP2](https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html), [DTensor](https://docs.pytorch.org/docs/stable/distributed.tensor.html), and [Distributed Checkpoint](https://docs.pytorch.org/docs/stable/distributed.checkpoint.html). Focus on how FSDP2 uses DTensor-style sharding for parameters, gradients, and optimizer state, how DCP performs multi-rank checkpointing and load-time resharding, and how resume parity is verified.
+- PyTorch [TorchTitan checkpoint guide](https://github.com/pytorch/torchtitan/blob/main/docs/checkpoint.md). Focus on the difference between model-only save and full training state save, and how engineering parameters like checkpoint interval/async/keep-latest affect training reliability.
+- NVIDIA Transformer Engine documentation on [FP8/MXFP8/NVFP4](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html). Focus on low-precision training not only as a dtype choice, but also including scaling, amax history, kernel support, and checkpoint state.
+- NVIDIA Megatron Core parallelism guide. Focus on which dimensions DP, TP, PP, CP, EP, and sequence parallelism respectively shard, and when to combine them.
+- DeepSeek-V3 Technical Report on FP8 mixed precision, DualPipe, MLA/MoE, and MTP. Focus on how these designs collectively serve training efficiency and stability.
+- Meta. [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783). Focus on how pre-training data cleaning, deduplication, PII/adult-content filtering, and contamination analysis affect evaluation interpretation.
+- Jordan et al. [Muon is Scalable for LLM Training](https://arxiv.org/abs/2502.16982). Focus on the need for weight decay and update scale when scaling Muon from small model experiments to LLMs; do not just memorize the "orthogonalization" slogan.
+- NVIDIA / PyTorch profiler documentation: diagnostic methods for GPU utilization, kernel timeline, communication overlap, and dataloader bottleneck.
 
-思考问题：
+Questions to consider:
 
-- AdamW 的 weight decay 为什么不能简单等同于 Adam 里的 L2 penalty？
-- 在固定算力下，为什么“更大的模型”不一定比“较小模型 + 更多训练 token”更合理？
-- `training_data_curation_report` 的 size、dedup、quality、eval contamination、domain mixture 和 privacy gate 分别阻止哪类错误训练结论？
-- 训练日志里 loss 下降但开发集变差时，应该先查哪些产出？
-- 参数、梯度、optimizer state、activation 和 communication buffer 分别如何进入显存预算？
-- DDP、ZeRO/FSDP、tensor parallel 和 pipeline parallel 分别解决容量、通信还是吞吐中的哪一类瓶颈？
-- `distributed_training_strategy_report` 中每卡模型状态、global batch tokens、MFU 和 action item 分别对应训练系统的哪个风险？
-- `checkpoint_resume_integrity_report` 中 state completeness、write integrity、distributed reshard、interval 和 overhead gate 分别阻止哪类恢复失败？
-- MFU 低时，如何区分 batch 太小、通信等待、数据加载不足、checkpoint 写盘和 kernel 未融合？
-- FP8/MXFP8 带来吞吐收益时，为什么仍要单独检查 loss spike、scale/amax history、梯度范围和 checkpoint resume？
-- 一次训练 run 的 optimization、throughput、state/checkpoint 和 evaluation gate 分别需要哪些最低证据？
-- FSDP2 / Distributed Checkpoint / Megatron Core 这类工具解决的是课程 tiny train 中哪一个被简化掉的问题？
-- 为什么 model-only export 不能替代可恢复训练 checkpoint？FSDP/ZeRO 下为什么还要检查 sharded/DCP 格式和 shard metadata？
-- Chinchilla scaling law 的结论在数据质量、token 重复率或领域迁移变化时有什么边界？
+- Why can AdamW's weight decay not simply be equated to L2 penalty in Adam?
+- Given fixed compute, why is a "larger model" not necessarily more reasonable than a "smaller model + more training tokens"?
+- Which types of erroneous training conclusions do the size, dedup, quality, eval contamination, domain mixture, and privacy gate of the `training_data_curation_report` respectively prevent?
+- When training loss decreases but the development set worsens, which outputs should be checked first?
+- How do parameters, gradients, optimizer state, activations, and communication buffers respectively enter the GPU memory budget?
+- Which bottlenecks (capacity, communication, or throughput) do DDP, ZeRO/FSDP, tensor parallel, and pipeline parallel respectively address?
+- Which risks to the training system do the per-GPU model state, global batch tokens, MFU, and action item in the `distributed_training_strategy_report` respectively correspond to?
+- Which types of recovery failures do the state completeness, write integrity, distributed reshard, interval, and overhead gate in the `checkpoint_resume_integrity_report` respectively prevent?- When MFU is low, how to distinguish between batch size too small, communication waiting, insufficient data loading, checkpoint writing to disk, and unfused kernels?
+- When FP8/MXFP8 brings throughput gains, why is it still necessary to separately check loss spikes, scale/amax history, gradient ranges, and checkpoint resume?
+- What minimum evidence is required for the optimization, throughput, state/checkpoint, and evaluation gates of a single training run?
+- Which simplified problem in the course's tiny train do tools like FSDP2 / Distributed Checkpoint / Megatron Core solve?
+- Why can a model-only export not replace a recoverable training checkpoint? Under FSDP/ZeRO, why is it still necessary to check the sharded/DCP format and shard metadata?
+- What are the boundaries of the Chinchilla scaling law's conclusions when data quality, token repetition rate, or domain shift changes?
 
-## Week 6: Generation、Search 与 Speculative Decoding
+## Week 6: Generation, Search, and Speculative Decoding
 
-对应章节：Ch08。
+Corresponding chapter: Ch08.
 
-本周阅读目标：把同一个 next-token 分布转成不同解码行为，理解 greedy、sampling、beam、self-consistency、constrained decoding 和 speculative decoding 的质量/成本关系。
+This week's reading goal: Transform the same next-token distribution into different decoding behaviors, understanding the quality/cost trade-offs of greedy, sampling, beam, self-consistency, constrained decoding, and speculative decoding.
 
-必读：
+Required reading:
 
-- Holtzman et al. [The Curious Case of Neural Text Degeneration](https://arxiv.org/abs/1904.09751). 重点看 nucleus sampling。
-- Leviathan, Kalman, Matias. [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192). 重点看 draft/target 接受机制。
-- Stern et al. [Blockwise Parallel Decoding for Deep Autoregressive Models](https://arxiv.org/abs/1811.03115). 重点看一次预测多个 token 的动机。
-- Wei et al. [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903). 重点看中间推理 token 如何改变任务成功率。
-- Wang et al. [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171). 重点看多路径采样与投票。
-- Snell et al. [Scaling LLM Test-Time Compute Optimally Can be More Effective than Scaling Model Parameters](https://arxiv.org/abs/2408.03314). 重点看 verifier search、test-time compute 与边际收益，不要把多采样等同于免费提升。
+- Holtzman et al. [The Curious Case of Neural Text Degeneration](https://arxiv.org/abs/1904.09751). Focus on nucleus sampling.
+- Leviathan, Kalman, Matias. [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192). Focus on the draft/target acceptance mechanism.
+- Stern et al. [Blockwise Parallel Decoding for Deep Autoregressive Models](https://arxiv.org/abs/1811.03115). Focus on the motivation for predicting multiple tokens at once.
+- Wei et al. [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903). Focus on how intermediate reasoning tokens change task success rates.
+- Wang et al. [Self-Consistency Improves Chain of Thought Reasoning in Language Models](https://arxiv.org/abs/2203.11171). Focus on multi-path sampling and voting.
+- Snell et al. [Scaling LLM Test-Time Compute Optimally Can be More Effective than Scaling Model Parameters](https://arxiv.org/abs/2408.03314). Focus on verifier search, test-time compute, and marginal returns; do not equate multiple sampling with a free improvement.
 
-选读：
+Optional reading:
 
-- Hugging Face Transformers generation strategies documentation。
-- DeepSeek-V3 Technical Report 中 multi-token prediction。
-- OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/). 重点看 train-time compute 与 test-time compute 的区别，以及为什么 reasoning 模型的系统指标要单独报告。
+- Hugging Face Transformers generation strategies documentation.
+- DeepSeek-V3 Technical Report on multi-token prediction.
+- OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/). Focus on the difference between train-time compute and test-time compute, and why system metrics for reasoning models should be reported separately.
 
-思考问题：
+Questions to consider:
 
-- top-k、top-p、temperature 分别控制分布的哪个性质？
-- speculative decoding 在什么情况下不能带来明显加速？
-- self-consistency 或 best-of-N 的准确率提升应如何同时报告 token 成本和延迟？
-- `test_time_compute_budget_report` 的 quality、token、latency、cost 和 efficiency gate 分别阻止哪类错误上线结论？
-- constrained decoding 是改变模型参数、logits、token mask 还是后处理？不同实现的失败模式是什么？
-- test-time compute 提高准确率时，应该同时报告哪些系统指标？
+- Which properties of the distribution do top-k, top-p, and temperature respectively control?
+- Under what circumstances does speculative decoding not yield significant speedup?
+- When reporting accuracy improvements from self-consistency or best-of-N, how should token cost and latency be reported simultaneously?
+- Which types of erroneous deployment conclusions do the quality, token, latency, cost, and efficiency gates of the `test_time_compute_budget_report` respectively prevent?
+- Does constrained decoding modify model parameters, logits, token masks, or post-processing? What are the failure modes of different implementations?
+- When test-time compute improves accuracy, which system metrics should be reported simultaneously?
 
-## Week 7: SFT、LoRA、DPO、GRPO 与 RLVR/RFT
+## Week 7: SFT, LoRA, DPO, GRPO, and RLVR/RFT
 
-对应章节：Ch09。
+Corresponding chapter: Ch09.
 
-本周阅读目标：区分 SFT、parameter-efficient fine-tuning、合成数据/蒸馏、reward modeling、DPO、GRPO 和 RLVR/RFT 的训练信号，理解偏好数据、AI/人工反馈、安全切片、rejection sampling 和可验证 reward 如何进入目标函数。
+This week's reading goal: Distinguish the training signals of SFT, parameter-efficient fine-tuning, synthetic data/distillation, reward modeling, DPO, GRPO, and RLVR/RFT. Understand how preference data, AI/human feedback, safety slices, rejection sampling, and verifiable rewards enter the objective function.
 
-必读：
+Required reading:
 
-- Hugging Face. [Chat templates](https://huggingface.co/docs/transformers/chat_templating). 重点看 role/message 如何被序列化成模型真实输入，以及为什么训练和推理必须使用一致模板。
-- Hugging Face TRL. [SFT Trainer](https://huggingface.co/docs/trl/sft_trainer). 重点看 assistant/completion-only loss、packing 和训练数据格式如何影响 SFT label mask。
-- OpenAI. [Fine-tuning guide](https://platform.openai.com/docs/guides/fine-tuning). 重点看 chat 格式训练样本、训练/验证切分和生产微调数据协议。
-- Hu et al. [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685). 重点看低秩增量和可训练参数比例。
-- Bai et al. [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862). 重点看 chosen/rejected 偏好数据、helpful/harmless 目标和在线反馈数据迭代。
-- Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). 重点看从 KL-constrained RL 到分类式 loss 的推导。
-- DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). 重点看 GRPO、冷启动数据、rejection sampling、蒸馏模型和方法边界。
-- Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). 重点看 long-context RL、long2short、长度控制、采样策略和多模态 reasoning 的工程取舍。
-- Yu et al. [DAPO: An Open-Source LLM Reinforcement Learning System at Scale](https://arxiv.org/abs/2503.14476). 重点看 Clip-Higher、dynamic sampling、token-level policy gradient loss、overlong reward shaping 和开源 RL recipe 如何服务可复现训练。
-- Zheng et al. [Group Sequence Policy Optimization](https://arxiv.org/abs/2507.18071). 重点看 sequence-level importance ratio、length normalization、MoE RL 稳定性和为什么 token-level ratio 噪声会影响长训练。
+- Hugging Face. [Chat templates](https://huggingface.co/docs/transformers/chat_templating). Focus on how roles/messages are serialized into the model's actual input, and why training and inference must use a consistent template.
+- Hugging Face TRL. [SFT Trainer](https://huggingface.co/docs/trl/sft_trainer). Focus on how assistant/completion-only loss, packing, and training data format affect the SFT label mask.
+- OpenAI. [Fine-tuning guide](https://platform.openai.com/docs/guides/fine-tuning). Focus on chat-format training samples, training/validation splits, and production fine-tuning data protocols.
+- Hu et al. [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685). Focus on low-rank increments and the proportion of trainable parameters.
+- Bai et al. [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862). Focus on chosen/rejected preference data, helpful/harmless objectives, and online feedback data iteration.
+- Rafailov et al. [Direct Preference Optimization](https://arxiv.org/abs/2305.18290). Focus on the derivation from KL-constrained RL to a classification-style loss.
+- DeepSeek-AI. [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948). Focus on GRPO, cold-start data, rejection sampling, distilled models, and method boundaries.
+- Kimi Team. [Kimi k1.5: Scaling Reinforcement Learning with LLMs](https://arxiv.org/abs/2501.12599). Focus on long-context RL, long2short, length control, sampling strategies, and engineering trade-offs for multimodal reasoning.
+- Yu et al. [DAPO: An Open-Source LLM Reinforcement Learning System at Scale](https://arxiv.org/abs/2503.14476). Focus on Clip-Higher, dynamic sampling, token-level policy gradient loss, overlong reward shaping, and how open-source RL recipes serve reproducible training.
+- Zheng et al. [Group Sequence Policy Optimization](https://arxiv.org/abs/2507.18071). Focus on sequence-level importance ratio, length normalization, MoE RL stability, and why token-level ratio noise affects long training runs.
 
-选读：
+Optional reading:
 
 - Ouyang et al. [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155).
-- Bai et al. [Constitutional AI: Harmlessness from AI Feedback](https://arxiv.org/abs/2212.08073). 重点看 AI feedback 如何生成 harmlessness preference data，以及为什么仍要审计数据混合和安全边界。
-- Meta. [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783). 重点看 post-training 数据、rejection sampling、reward model、human annotation、安全数据和评测切片如何共同支撑发布结论。
-- OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/) 与 [Reinforcement fine-tuning guide](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning)。重点看 train-time/test-time compute、programmable grader、validation split 和 grader 适用条件。
+- Bai et al. [Constitutional AI: Harmlessness from AI Feedback](https://arxiv.org/abs/2212.08073). Focus on how AI feedback generates harmlessness preference data, and why auditing data mixture and safety boundaries is still necessary.
+- Meta. [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783). Focus on how post-training data, rejection sampling, reward models, human annotation, safety data, and evaluation slices collectively support the release conclusions.
+- OpenAI. [Learning to reason with LLMs](https://openai.com/index/learning-to-reason-with-llms/) and [Reinforcement fine-tuning guide](https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning). Focus on train-time/test-time compute, programmable graders, validation splits, and grader applicability conditions.
 
-思考问题：
+Questions to consider:
 
-- DPO 为什么需要 reference model？`beta` 调大或调小会怎样？
-- SFT 数据从 messages 变成 token 序列后，哪些信息必须保留下来才能检查 assistant-only loss、truncation 和 packing 边界？
-- 合成/蒸馏数据进入 SFT 或偏好优化前，为什么必须记录 teacher 版本、采样参数、verifier 准确性、人工抽检、去重和 eval overlap？
-- 偏好数据中的长度偏差、风格偏差或标注者分歧会怎样进入 DPO/RLHF 的目标函数？
-- `post_training_data_audit` 的 coverage、label quality、leakage 和 safety gate 分别对应 post-training 的哪类失败结论？
-- 如果 SFT/偏好数据的任务覆盖不足或 eval overlap 不为零，为什么不能用 DPO/GRPO 训练 loss 下降作为上线证据？
-- GRPO 的组内 advantage 白化依赖什么采样假设？
-- DAPO/GSPO 式 reasoning RL 报告为什么必须同时看 rollout 命中率、completion length、entropy、clip fraction、sequence ratio 和 held-out prompt 切片？
-- RLVR/RFT 的 grader 为什么需要 pass-rate、reward variance、completion length 和 hacking signal 四类检查？
-- LoRA 的低秩增量限制了哪些更新方向？它节省的是训练参数、optimizer state 还是前向激活？
-- 对齐后模型质量上升但能力回退时，应如何区分数据分布、KL 约束和评测指标的问题？
+- Why does DPO need a reference model? What happens when `beta` is increased or decreased?
+- After SFT data is converted from messages to token sequences, what information must be retained to check assistant-only loss, truncation, and packing boundaries?
+- Before synthetic/distilled data enters SFT or preference optimization, why must the teacher version, sampling parameters, verifier accuracy, human spot-checking, deduplication, and eval overlap be recorded?
+- How do length bias, style bias, or annotator disagreement in preference data enter the DPO/RLHF objective function?
+- Which types of failed post-training conclusions do the coverage, label quality, leakage, and safety gates of the `post_training_data_audit` respectively correspond to?
+- If the task coverage of SFT/preference data is insufficient or the eval overlap is non-zero, why can a decrease in DPO/GRPO training loss not be used as evidence for deployment?
+- What sampling assumption does the intra-group advantage whitening in GRPO rely on?
+- Why must a DAPO/GSPO-style reasoning RL report simultaneously examine rollout hit rate, completion length, entropy, clip fraction, sequence ratio, and held-out prompt slices?
+- Why does the grader for RLVR/RFT require four types of checks: pass-rate, reward variance, completion length, and hacking signal?
+- Which update directions are constrained by LoRA's low-rank increments? Does it save training parameters, optimizer states, or forward activations?
+- When model quality improves after alignment but capability regresses, how should one distinguish between issues related to data distribution, KL constraint, and evaluation metrics?
 
-## Week 8: Inference Engineering、RAG、Quantization 与 Serving
+## Week 8: Inference Engineering, RAG, Quantization, and Serving
 
-对应章节：Ch10。
+Corresponding chapter: Ch10.
 
-本周阅读目标：把模型输出接入真实服务，理解 KV cache、continuous batching、paged memory、FlashAttention、quantization、RAG、speculative decoding 和多模态输入如何共同影响延迟、吞吐、成本和质量。
+This week's reading goal: Integrate model outputs into real services, understanding how KV cache, continuous batching, paged memory, FlashAttention, quantization, RAG, speculative decoding, and multimodal inputs jointly affect latency, throughput, cost, and quality.
 
-必读：
+Required reading:
 
-- Kwon et al. [Efficient Memory Management for Large Language Model Serving with PagedAttention](https://arxiv.org/abs/2309.06180). 重点看 KV cache 分页。
-- Dao et al. [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://arxiv.org/abs/2205.14135). 重点看 IO-aware attention。
-- Lewis et al. [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401). 重点看 retriever/generator 组合。
-- Dettmers et al. [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314). 重点看 4-bit quantization 与 LoRA 结合。
-- Yu et al. [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu). 重点看 iteration-level scheduling 和 continuous batching 为什么能减少队列浪费。
-- vLLM documentation: [Optimization and Tuning](https://docs.vllm.ai/en/stable/configuration/optimization/) 与 [serve scheduler arguments](https://docs.vllm.ai/en/stable/cli/serve/). 重点看 `max_num_seqs`、`max_num_batched_tokens`、chunked prefill、KV cache capacity 和 queue/SLO 之间的关系。
-- vLLM documentation: [Disaggregated Prefilling](https://docs.vllm.ai/en/latest/features/disagg_prefill/). 重点看为什么 prefill/decode 分离能分别调 TTFT 与 ITL、为什么该功能仍应和 chunked prefill、KV transfer 与故障恢复一起评估。
-- PyTorch and vLLM. [Disaggregated Inference at Scale with PyTorch & vLLM](https://pytorch.org/blog/disaggregated-inference-at-scale-with-pytorch-vllm/). 重点看 prefill/decode 分离如何同时影响 TTFT、TPOT、throughput 和 KV transfer。
-- OpenAI. [Function calling](https://developers.openai.com/api/docs/guides/function-calling) 与 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). 重点看 function tools、JSON schema、strict structured output 和 tool call output 如何构成服务端协议。
-- vLLM. [Structured Outputs](https://docs.vllm.ai/en/latest/features/structured_outputs/) 与 SGLang. [Structured Outputs](https://docs.sglang.ai/advanced_features/structured_outputs.html). 重点看 OpenAI-compatible serving 中的 JSON schema、choice、regex、grammar/EBNF constrained decoding，以及为什么仍要做 parse/schema/retry/safety 回归。
-- vLLM. [Quantization](https://docs.vllm.ai/en/latest/features/quantization/) 与 [Quantized KV Cache](https://docs.vllm.ai/en/latest/features/quantization/quantized_kvcache/). 重点看 FP8/INT8/INT4、weight-only 与 KV cache quantization 分别作用在什么资源上，以及为什么 KV cache 量化要用长上下文质量 gate 验证。
-- NVIDIA TensorRT-LLM. [Quantization](https://nvidia.github.io/TensorRT-LLM/latest/features/quantization.html) 与 Transformer Engine [FP8/FP4 primer](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html). 重点看 SmoothQuant、AWQ、FP8 KV cache、FP8/FP4 scale metadata、硬件代际和 kernel 支持如何决定真实收益。
-- Xiao et al. [SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models](https://arxiv.org/abs/2211.10438)、Frantar et al. [GPTQ](https://arxiv.org/abs/2210.17323)、Lin et al. [AWQ](https://arxiv.org/abs/2306.00978). 重点看 W8A8 激活 outlier、近似二阶 weight quantization 和 activation-aware weight-only quantization 的不同假设。
-- Model Context Protocol. [Specification](https://modelcontextprotocol.io/specification/2025-06-18) / [Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) 与 [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). 重点看 host/client/server、resources/prompts/tools、sampling/roots/elicitation、authorization、用户同意、数据隐私和 tool safety。
-- Anthropic. [Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp). 重点看工具定义和中间结果如何消耗上下文，以及为什么大型 agent 系统需要延迟加载工具、执行环境处理和结果摘要。
-- Anthropic. [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) 与 Claude Cookbook [Context engineering: memory, compaction, and tool clearing](https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools). 重点看 active context、context rot、compaction、tool-result clearing、memory 和为什么 agent/RAG 不能只靠扩大 context window。
-- OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) 与 [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). 重点看 prompt injection、insecure output handling、insecure plugin design、excessive agency 和外部内容隔离。
-- OpenAI. [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices) 与 [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 prototype 到 production 时的可靠性、监控、评测和成本控制如何进入上线判断。
-- Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) 与 [Implementing SLOs](https://sre.google/workbook/implementing-slos/). 重点看 canary/control、流量分阶段、SLO/SLI 和 error budget 如何转成发布 gate。
-- Google SRE. [Handling Overload](https://sre.google/sre-book/handling-overload/) 与 [Addressing Cascading Failures](https://sre.google/sre-book/addressing-cascading-failures/). 重点看 degraded responses、load shedding、动态超时和防止过载级联。
-- OpenTelemetry. [Generative AI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) 与 [GenAI attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/). 重点看 model、operation、token usage、finish reason、prompt/completion/tool event 和 trace span 如何变成跨平台遥测字段。
-- OpenAI Agents SDK [Tracing](https://openai.github.io/openai-agents-python/tracing/). 重点看 agent run 中 LLM generation、tool calls、handoffs、guardrails 和 custom spans 如何帮助调试生产 workflow。
-- Chen, Zaharia, Zou. [FrugalGPT](https://arxiv.org/abs/2305.05176) 与 Ong et al. [RouteLLM](https://arxiv.org/abs/2406.18665). 重点看 LLM cascade、强/弱模型 query routing、成本-质量边界和为什么 router 需要偏好/质量数据验证。
-- LiteLLM [Router / Load Balancing](https://docs.litellm.ai/docs/routing) 与 [Fallbacks](https://docs.litellm.ai/docs/proxy/reliability). 重点看 load balancing、cooldowns、timeouts、retries、fallbacks 和 provider/model group 管理如何进入可靠性 gate。
-- vLLM documentation: [Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/) 与 [V1 Metrics design](https://docs.vllm.ai/en/latest/design/v1/metrics.html). 重点看推理引擎的 request/engine metrics 如何服务生产监控、capacity planning 和 incident triage。
-- vLLM. [Expert Parallel Deployment](https://docs.vllm.ai/en/latest/serving/expert_parallel_deployment/) 与 [Parallelism and Scaling](https://docs.vllm.ai/en/stable/serving/parallelism_scaling/). 重点看 MoE 层为什么需要 Expert Parallelism、DP+EP、`--enable-expert-parallel`、EPLB 和 KV cache/AllToAll 权衡。
-- SGLang Team. [Deploying DeepSeek with PD Disaggregation and Large-Scale Expert Parallelism](https://lmsys.org/blog/2025-05-05-large-scale-ep/) 与 DeepSeek-AI [EPLB](https://github.com/deepseek-ai/eplb). 重点看 DeepSeek-style MoE serving 中 prefill/decode 解耦、大规模 EP、专家复制/放置和负载均衡如何一起影响吞吐与成本。
-- Google Gemini API [Long context](https://ai.google.dev/gemini-api/docs/long-context) 与 Anthropic Claude API [Context windows](https://platform.claude.com/docs/en/build-with-claude/context-windows). 重点看 1M+ context 带来的产品形态、context rot、context management、token counting 和长上下文并不自动等于稳定召回。
-- vLLM [Automatic Prefix Caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/) 与 [serve scheduler arguments](https://docs.vllm.ai/en/stable/cli/serve/). 重点看长文档重复查询、prefix cache、chunked prefill、long-prefill scheduling 和 full input sequence length KV admission。
+- Kwon et al. [Efficient Memory Management for Large Language Model Serving with PagedAttention](https://arxiv.org/abs/2309.06180). Focus on KV cache paging.
+- Dao et al. [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://arxiv.org/abs/2205.14135). Focus on IO-aware attention.
+- Lewis et al. [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401). Focus on the retriever/generator combination.
+- Dettmers et al. [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314). Focus on combining 4-bit quantization with LoRA.
+- Yu et al. [Orca: A Distributed Serving System for Transformer-Based Generative Models](https://www.usenix.org/conference/osdi22/presentation/yu). Focus on why iteration-level scheduling and continuous batching reduce queue waste.
+- vLLM documentation: [Optimization and Tuning](https://docs.vllm.ai/en/stable/configuration/optimization/) and [serve scheduler arguments](https://docs.vllm.ai/en/stable/cli/serve/). Focus on the relationship between `max_num_seqs`, `max_num_batched_tokens`, chunked prefill, KV cache capacity, and queue/SLO.
+- vLLM documentation: [Disaggregated Prefilling](https://docs.vllm.ai/en/latest/features/disagg_prefill/). Focus on why separating prefill/decode allows tuning TTFT and ITL independently, and why this feature should still be evaluated alongside chunked prefill, KV transfer, and failure recovery.
+- PyTorch and vLLM. [Disaggregated Inference at Scale with PyTorch & vLLM](https://pytorch.org/blog/disaggregated-inference-at-scale-with-pytorch-vllm/). Focus on how separating prefill/decode simultaneously affects TTFT, TPOT, throughput, and KV transfer.
+- OpenAI. [Function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Focus on how function tools, JSON schema, strict structured output, and tool call output form the server-side protocol.
+- vLLM. [Structured Outputs](https://docs.vllm.ai/en/latest/features/structured_outputs/) and SGLang. [Structured Outputs](https://docs.sglang.ai/advanced_features/structured_outputs.html). Focus on JSON schema, choice, regex, grammar/EBNF constrained decoding in OpenAI-compatible serving, and why parse/schema/retry/safety regression testing is still necessary.
+- vLLM. [Quantization](https://docs.vllm.ai/en/latest/features/quantization/) and [Quantized KV Cache](https://docs.vllm.ai/en/latest/features/quantization/quantized_kvcache/). Focus on which resources FP8/INT8/INT4, weight-only, and KV cache quantization respectively act upon, and why KV cache quantization requires long-context quality gates for validation.- NVIDIA TensorRT-LLM. [Quantization](https://nvidia.github.io/TensorRT-LLM/latest/features/quantization.html) and Transformer Engine [FP8/FP4 primer](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html). Focus on how SmoothQuant, AWQ, FP8 KV cache, FP8/FP4 scale metadata, hardware generations, and kernel support determine actual gains.
+- Xiao et al. [SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models](https://arxiv.org/abs/2211.10438), Frantar et al. [GPTQ](https://arxiv.org/abs/2210.17323), Lin et al. [AWQ](https://arxiv.org/abs/2306.00978). Focus on the different assumptions of W8A8 activation outliers, approximate second-order weight quantization, and activation-aware weight-only quantization.
+- Model Context Protocol. [Specification](https://modelcontextprotocol.io/specification/2025-06-18) / [Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) and [What is MCP?](https://modelcontextprotocol.io/docs/getting-started/intro). Focus on host/client/server, resources/prompts/tools, sampling/roots/elicitation, authorization, user consent, data privacy, and tool safety.
+- Anthropic. [Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp). Focus on how tool definitions and intermediate results consume context, and why large agent systems require lazy loading of tools, execution environment handling, and result summarization.
+- Anthropic. [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) and Claude Cookbook [Context engineering: memory, compaction, and tool clearing](https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools). Focus on active context, context rot, compaction, tool-result clearing, memory, and why agent/RAG cannot rely solely on expanding the context window.
+- OWASP. [Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) and [LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/). Focus on prompt injection, insecure output handling, insecure plugin design, excessive agency, and external content isolation.
+- OpenAI. [Production best practices](https://developers.openai.com/api/docs/guides/production-best-practices) and [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). Focus on how reliability, monitoring, evaluation, and cost control during the transition from prototype to production factor into go-live decisions.
+- Google SRE. [Canarying Releases](https://sre.google/workbook/canarying-releases/) and [Implementing SLOs](https://sre.google/workbook/implementing-slos/). Focus on how canary/control, phased traffic shifting, SLO/SLI, and error budget translate into release gates.
+- Google SRE. [Handling Overload](https://sre.google/sre-book/handling-overload/) and [Addressing Cascading Failures](https://sre.google/sre-book/addressing-cascading-failures/). Focus on degraded responses, load shedding, dynamic timeouts, and preventing overload cascades.
+- OpenTelemetry. [Generative AI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) and [GenAI attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/). Focus on how model, operation, token usage, finish reason, prompt/completion/tool event, and trace span become cross-platform telemetry fields.
+- OpenAI Agents SDK [Tracing](https://openai.github.io/openai-agents-python/tracing/). Focus on how LLM generation, tool calls, handoffs, guardrails, and custom spans within an agent run help debug production workflows.
+- Chen, Zaharia, Zou. [FrugalGPT](https://arxiv.org/abs/2305.05176) and Ong et al. [RouteLLM](https://arxiv.org/abs/2406.18665). Focus on LLM cascade, strong/weak model query routing, cost-quality frontier, and why the router needs preference/quality data for validation.
+- LiteLLM [Router / Load Balancing](https://docs.litellm.ai/docs/routing) and [Fallbacks](https://docs.litellm.ai/docs/proxy/reliability). Focus on how load balancing, cooldowns, timeouts, retries, fallbacks, and provider/model group management factor into reliability gates.
+- vLLM documentation: [Production Metrics](https://docs.vllm.ai/en/latest/usage/metrics/) and [V1 Metrics design](https://docs.vllm.ai/en/latest/design/v1/metrics.html). Focus on how the inference engine's request/engine metrics serve production monitoring, capacity planning, and incident triage.
+- vLLM. [Expert Parallel Deployment](https://docs.vllm.ai/en/latest/serving/expert_parallel_deployment/) and [Parallelism and Scaling](https://docs.vllm.ai/en/stable/serving/parallelism_scaling/). Focus on why MoE layers require Expert Parallelism, DP+EP, `--enable-expert-parallel`, EPLB, and the KV cache/AllToAll trade-off.
+- SGLang Team. [Deploying DeepSeek with PD Disaggregation and Large-Scale Expert Parallelism](https://lmsys.org/blog/2025-05-05-large-scale-ep/) and DeepSeek-AI [EPLB](https://github.com/deepseek-ai/eplb). Focus on how prefill/decode decoupling, large-scale EP, expert replication/placement, and load balancing in DeepSeek-style MoE serving collectively impact throughput and cost.
+- Google Gemini API [Long context](https://ai.google.dev/gemini-api/docs/long-context) and Anthropic Claude API [Context windows](https://platform.claude.com/docs/en/build-with-claude/context-windows). Focus on the product implications of 1M+ context, context rot, context management, token counting, and the fact that long context does not automatically equate to stable recall.
+- vLLM [Automatic Prefix Caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/) and [serve scheduler arguments](https://docs.vllm.ai/en/stable/cli/serve/). Focus on long document repeated queries, prefix cache, chunked prefill, long-prefill scheduling, and full input sequence length KV admission.
 
-选读：
+Optional Reading:
 
-- vLLM documentation on PagedAttention、continuous batching、prefix caching 和 disaggregated prefilling。
-- TensorRT-LLM documentation on [in-flight batching and request scheduling](https://nvidia.github.io/TensorRT-LLM/). 重点看 in-flight batching 如何在 generation loop 中动态加入/退出请求。
-- vLLM [Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/) documentation。重点看 medium-to-low QPS、memory-bound workload、draft/EAGLE/MTP/n-gram/suffix 方法选择和 lossless validation 边界。
-- SGLang [Speculative Decoding](https://docs.sglang.ai/advanced_features/speculative_decoding.html) documentation。重点看 EAGLE-2/EAGLE-3、MTP、standalone draft model、NGRAM 和 OOM/benchmark 注意事项。
-- SGLang v0.4 release note。重点看 zero-overhead batch scheduler、cache-aware load balancer、RadixAttention 和 structured outputs 如何把 CPU 调度、前缀缓存和格式约束揉进 serving engine。
-- TensorRT-LLM disaggregated serving 文档。重点看 KV cache exchange、layout conversion、UCX/NIXL、KV transfer 与计算重叠。
-- Model Context Protocol tools specification。重点看工具名、metadata、input schema、tool result 与跨服务工具发现如何标准化；同时检查工具列表膨胀后对 TTFT、上下文窗口和工具选择准确率的影响。
-- OpenAI Agents SDK guardrails 与 tracing。重点看 input/output/tool guardrails 在 agent workflow 中运行的不同位置，以及 tracing 如何记录 LLM generation、tool calls、handoffs、guardrail events 和 custom spans。
-- Google SRE Book. [Release Engineering](https://sre.google/sre-book/release-engineering/) 与 [Service Level Objectives](https://sre.google/sre-book/service-level-objectives/). 重点看发布工程、回滚、SLO 与业务风险之间的连接。
-- llama.cpp 官方文档中 quantization、CPU/GPU offload 和本地部署边界。
-- Sarathi-Serve 或 chunked prefill 相关论文/文档：重点看长 prompt prefill 如何影响短请求 TTFT。
-- Liu et al. [Visual Instruction Tuning](https://arxiv.org/abs/2304.08485). 重点看 vision encoder、projection 和 LLM instruction tuning 的两阶段流程。
-- OpenAI. [GPT-4o System Card](https://cdn.openai.com/gpt-4o-system-card.pdf). 重点看 text/audio/image/video 统一模型、安全评估、语音/视觉风险、敏感属性拒答和多模态能力不能只用文本 benchmark 解释。
-- Gemini Team. [Gemini 1.5: Unlocking multimodal understanding across millions of tokens of context](https://arxiv.org/abs/2403.05530). 重点看长文档、视频、音频和多模态 long-context recall 如何同时影响质量、latency、context budget 和任务边界。
-- Qwen Team. [Qwen2.5-VL Technical Report](https://arxiv.org/abs/2502.13923). 重点看 dynamic resolution、window attention、document parsing、chart/layout、object localization、video event localization 和 GUI/agent task 如何改变视觉 token 表示与推理路径。
-- Wang et al. [InternVL3.5: Advancing Open-Source Multimodal Models in Versatility, Reasoning, and Efficiency](https://arxiv.org/abs/2508.18265). 重点看开源多模态模型在 general、reasoning、text、agentic benchmarks 和 inference efficiency 上如何报告 trade-off。
-- OpenAI, Anthropic 或 Google DeepMind 的多模态 model card / system card：重点看输入分辨率、任务设置、延迟和安全边界如何描述。
+- vLLM documentation on PagedAttention, continuous batching, prefix caching, and disaggregated prefilling.
+- TensorRT-LLM documentation on [in-flight batching and request scheduling](https://nvidia.github.io/TensorRT-LLM/). Focus on how in-flight batching dynamically adds/removes requests in the generation loop.
+- vLLM [Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/) documentation. Focus on medium-to-low QPS, memory-bound workload, draft/EAGLE/MTP/n-gram/suffix method selection, and lossless validation boundaries.
+- SGLang [Speculative Decoding](https://docs.sglang.ai/advanced_features/speculative_decoding.html) documentation. Focus on EAGLE-2/EAGLE-3, MTP, standalone draft model, NGRAM, and OOM/benchmark considerations.
+- SGLang v0.4 release note. Focus on how the zero-overhead batch scheduler, cache-aware load balancer, RadixAttention, and structured outputs integrate CPU scheduling, prefix caching, and format constraints into the serving engine.
+- TensorRT-LLM disaggregated serving documentation. Focus on KV cache exchange, layout conversion, UCX/NIXL, and KV transfer overlap with computation.
+- Model Context Protocol tools specification. Focus on how tool names, metadata, input schema, tool results, and cross-service tool discovery are standardized; also examine the impact of tool list bloat on TTFT, context window, and tool selection accuracy.
+- OpenAI Agents SDK guardrails and tracing. Focus on the different positions where input/output/tool guardrails run within the agent workflow, and how tracing records LLM generation, tool calls, handoffs, guardrail events, and custom spans.
+- Google SRE Book. [Release Engineering](https://sre.google/sre-book/release-engineering/) and [Service Level Objectives](https://sre.google/sre-book/service-level-objectives/). Focus on the connection between release engineering, rollback, SLOs, and business risk.
+- llama.cpp official documentation on quantization, CPU/GPU offload, and local deployment boundaries.
+- Sarathi-Serve or chunked prefill related papers/documentation: Focus on how long prompt prefill affects short request TTFT.
+- Liu et al. [Visual Instruction Tuning](https://arxiv.org/abs/2304.08485). Focus on the two-stage process of vision encoder, projection, and LLM instruction tuning.
+- OpenAI. [GPT-4o System Card](https://cdn.openai.com/gpt-4o-system-card.pdf). Focus on the unified text/audio/image/video model, safety assessment, voice/vision risks, refusal on sensitive attributes, and the fact that multimodal capabilities cannot be explained by text benchmarks alone.
+- Gemini Team. [Gemini 1.5: Unlocking multimodal understanding across millions of tokens of context](https://arxiv.org/abs/2403.05530). Focus on how long documents, video, audio, and multimodal long-context recall simultaneously impact quality, latency, context budget, and task boundaries.
+- Qwen Team. [Qwen2.5-VL Technical Report](https://arxiv.org/abs/2502.13923). Focus on how dynamic resolution, window attention, document parsing, chart/layout, object localization, video event localization, and GUI/agent tasks change visual token representation and inference paths.
+- Wang et al. [InternVL3.5: Advancing Open-Source Multimodal Models in Versatility, Reasoning, and Efficiency](https://arxiv.org/abs/2508.18265). Focus on how open-source multimodal models report trade-offs on general, reasoning, text, agentic benchmarks, and inference efficiency.
+- OpenAI, Anthropic, or Google DeepMind multimodal model card / system card: Focus on how input resolution, task settings, latency, and safety boundaries are described.
 
-思考问题：
+Questions for Thought:
 
-- TTFT、TPOT、TPS 分别受哪些系统瓶颈影响？
-- RAG 评测为什么必须同时看检索质量和生成质量？
-- 多模态评估为什么要分开看 VQA、OCR、图表理解和视觉定位？
-- 多模态服务为什么要同时理解 resolution/crop、vision/audio token、preprocess/encoder/prefill/decode latency、active KV tokens、cache isolation 和安全失败？
-- dynamic resolution、OCR-first、query resampler 和 video frame sampling 分别降低或放大哪些成本与失败模式？
-- 一个 benchmark summary 应怎样限制结论的适用范围？
-- prefill 和 decode 阶段的计算/访存瓶颈为什么不同？
-- quantization 的误差会优先影响哪些任务、层或 token 分布？
-- 为什么 serving admission control 不能只按并发请求数，而要看 active KV tokens、prompt/output token 分布和 SLO 队列？
-- 长 prompt 进入 continuous batching 时，chunked prefill 和 prefix cache 分别缓解哪类 TTFT 问题？
-- tool/function calling 为什么不能只依赖 prompt 约束？schema、权限和循环预算分别拦截哪类失败？
-- 结构化输出上线时，为什么要同时报告 JSON parse rate、schema valid rate、repair retry、fallback/refusal、P95 latency 和 safety violation，而不是只看一次示例输出？
-- MCP/remote tool 接入后，为什么还要单独审计 server trust、用户同意、roots/elicitation、敏感数据外发、observation isolation 和 recursive sampling？
-- agent trace 为什么要记录 guardrail events、tool spans、context budget 和 side-effect log？这些字段分别帮助定位哪类生产事故？
-- context engineering gate 为什么要同时报告 active context、retrieved context、summary、memory、tool observation 和 cleared results 的 token 占比、引用保留、summary fidelity、权限和 P95 TTFT？
-- 生产发布时，为什么候选模型即使离线 pass rate 更高，也必须经过 canary/control、per-version quality/safety/SLO/cost monitoring 和 rollback readiness gate？
-- 模型路由或级联上线时，为什么平均成本下降不能替代 route branch 的质量、安全、schema、RAG 和高风险任务切片回归？
-- 服务运行中 queue backlog、KV cache nearing full、swapped requests、TPOT 变差、timeout 上升和单租户超配额分别指向哪些不同的 overload response？
-- prefill/decode 解耦后，为什么必须把 KV transfer、decode queue 和 active KV tokens 单独报告？
-- MoE serving gate 为什么必须同时看 TP baseline、EP/DP+EP、expert token skew、AllToAll/dispatch/combine 时间、KV cache per rank、EPLB 和 P95 TPOT？
-- SGLang 的 cache-aware load balancing、vLLM 的 disaggregated prefilling 和 TensorRT-LLM 的 KV transfer overlap 分别在解决哪一层 bottleneck？
-- speculative decoding 的 acceptance rate、draft overhead、QPS 和 quality regression 如何共同决定是否启用，而不是只看 `num_speculative_tokens`？
-- 长上下文上线时，为什么不能只报告 max context length？`long_context_serving_gate_report` 的 context fit、quality、position robustness 和 serving cost 分别挡住哪类失败？
+- Which system bottlenecks affect TTFT, TPOT, and TPS respectively?
+- Why must RAG evaluation simultaneously consider both retrieval quality and generation quality?
+- Why should multimodal evaluation separately examine VQA, OCR, chart understanding, and visual grounding?
+- Why must multimodal serving simultaneously understand resolution/crop, vision/audio token, preprocess/encoder/prefill/decode latency, active KV tokens, cache isolation, and safety failures?
+- Which costs and failure modes do dynamic resolution, OCR-first, query resampler, and video frame sampling respectively reduce or amplify?
+- How should a benchmark summary limit the scope of its conclusions?
+- Why are the compute/memory bottlenecks different for the prefill and decode phases?
+- Which tasks, layers, or token distributions are preferentially affected by quantization errors?
+- Why can't serving admission control be based solely on the number of concurrent requests, but must consider active KV tokens, prompt/output token distribution, and SLO queues?
+- When a long prompt enters continuous batching, which TTFT issues do chunked prefill and prefix cache respectively mitigate?
+- Why can't tool/function calling rely solely on prompt constraints? Which failures do schema, permissions, and loop budget respectively intercept?
+- When deploying structured outputs, why must one simultaneously report JSON parse rate, schema valid rate, repair retry, fallback/refusal, P95 latency, and safety violation, rather than just looking at a single example output?
+- After integrating MCP/remote tools, why must one separately audit server trust, user consent, roots/elicitation, sensitive data egress, observation isolation, and recursive sampling?
+- Why must agent traces record guardrail events, tool spans, context budget, and side-effect logs? Which types of production incidents do these fields respectively help locate?
+- Why must the context engineering gate simultaneously report the token proportion, citation retention, summary fidelity, permissions, and P95 TTFT for active context, retrieved context, summary, memory, tool observation, and cleared results?
+- During production release, even if a candidate model has a higher offline pass rate, why must it still pass through canary/control, per-version quality/safety/SLO/cost monitoring, and rollback readiness gates?- When model routing or cascading goes online, why can't average cost reduction replace regression testing on route branch quality, safety, schema, RAG, and high-risk task slices?
+- During service operation, what different overload responses do queue backlog, KV cache nearing full, swapped requests, worsening TPOT, rising timeout, and single-tenant over-quota each point to?
+- After prefill/decode decoupling, why must KV transfer, decode queue, and active KV tokens be reported separately?
+- For the MoE serving gate, why must TP baseline, EP/DP+EP, expert token skew, AllToAll/dispatch/combine time, KV cache per rank, EPLB, and P95 TPOT all be monitored simultaneously?
+- What layer of bottleneck do SGLang's cache-aware load balancing, vLLM's disaggregated prefilling, and TensorRT-LLM's KV transfer overlap each solve?
+- How do speculative decoding's acceptance rate, draft overhead, QPS, and quality regression collectively determine whether to enable it, rather than just looking at `num_speculative_tokens`?
+- When deploying long contexts, why can't you only report max context length? What types of failures do context fit, quality, position robustness, and serving cost in `long_context_serving_gate_report` each prevent?
 
-## Week 9: RNN、经典 NLP、Encoder-only、Evaluation 与 Ethics
+## Week 9: RNN, Classic NLP, Encoder-only, Evaluation & Ethics
 
-对应材料：经典 NLP 专题 Handout、Classic NLP Deep-Dive Teaching Module、书面推导与概念题题库。
+Corresponding Materials: Classic NLP Topic Handout, Classic NLP Deep-Dive Teaching Module, Written Derivation and Conceptual Question Bank.
 
-本周阅读目标：把现代 LLM 放回 NLP 课程脉络中，理解 RNN/LSTM、dependency parsing、seq2seq、BERT 和传统指标为什么仍然是理解结构预测、表示学习和评测局限的基础。
+Reading Goals for This Week: Place modern LLMs back into the NLP curriculum context, understanding why RNN/LSTM, dependency parsing, seq2seq, BERT, and traditional metrics remain fundamental for understanding structural prediction, representation learning, and evaluation limitations.
 
-必读：
+Required Reading:
 
-- Elman. [Finding Structure in Time](https://crl.ucsd.edu/~elman/Papers/fsit.pdf). 重点看 recurrent hidden state 如何表示前缀。
-- Hochreiter and Schmidhuber. [Long Short-Term Memory](https://www.bioinf.jku.at/publications/older/2604.pdf). 重点看 gate 与 cell state 如何缓解长程梯度问题。
-- Chen and Manning. [A Fast and Accurate Dependency Parser using Neural Networks](https://aclanthology.org/D14-1082/). 重点看 transition-based parsing。
-- Sutskever, Vinyals, Le. [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215). 重点看 encoder-decoder 和 teacher forcing。
-- Devlin et al. [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805). 重点看 MLM/NSP 与 encoder-only 表示。
-- Bommasani et al. [On the Opportunities and Risks of Foundation Models](https://arxiv.org/abs/2108.07258). 重点看风险分类。
+- Elman. [Finding Structure in Time](https://crl.ucsd.edu/~elman/Papers/fsit.pdf). Focus on how the recurrent hidden state represents prefixes.
+- Hochreiter and Schmidhuber. [Long Short-Term Memory](https://www.bioinf.jku.at/publications/older/2604.pdf). Focus on how gates and cell state mitigate the long-range gradient problem.
+- Chen and Manning. [A Fast and Accurate Dependency Parser using Neural Networks](https://aclanthology.org/D14-1082/). Focus on transition-based parsing.
+- Sutskever, Vinyals, Le. [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215). Focus on encoder-decoder and teacher forcing.
+- Devlin et al. [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805). Focus on MLM/NSP and encoder-only representations.
+- Bommasani et al. [On the Opportunities and Risks of Foundation Models](https://arxiv.org/abs/2108.07258). Focus on risk classification.
 
-选读：
+Optional Reading:
 
 - Papineni et al. [BLEU: a Method for Automatic Evaluation of Machine Translation](https://aclanthology.org/P02-1040/).
 - Lin. [ROUGE: A Package for Automatic Evaluation of Summaries](https://aclanthology.org/W04-1013/).
-- Zheng et al. [Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena](https://papers.nips.cc/paper_files/paper/2023/hash/91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_Benchmarks.html). 重点看 position、verbosity、self-enhancement bias 和与人工偏好的一致性验证。
-- OpenAI. [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). 重点看 model graders 需要先和 human labels 验证一致性，再用于优化。
-- Jimenez et al. [SWE-bench: Can Language Models Resolve Real-World GitHub Issues?](https://arxiv.org/abs/2310.06770). 重点看真实代码库 issue、patch、测试验证和多文件修改如何把代码 agent 评测从“生成代码片段”变成任务级 workflow eval。
-- Yao et al. [tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains](https://arxiv.org/abs/2406.12045) 与 [tau-bench repository](https://github.com/sierra-research/tau2-bench). 重点看多轮用户、领域 policy、API tools、最终数据库状态、重复 trial 一致性和 task fixes 如何进入 agent eval protocol。
-- OpenAI. [BrowseComp: a benchmark for browsing agents](https://openai.com/index/browsecomp/). 重点看难找但可验证的短答案、浏览深度、搜索策略、答案可验证性，以及为什么短答案 benchmark 不能代表所有开放式研究任务。
+- Zheng et al. [Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena](https://papers.nips.cc/paper_files/paper/2023/hash/91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_Benchmarks.html). Focus on position, verbosity, self-enhancement bias, and consistency verification with human preferences.
+- OpenAI. [Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). Focus on model graders needing to verify consistency with human labels first before being used for optimization.
+- Jimenez et al. [SWE-bench: Can Language Models Resolve Real-World GitHub Issues?](https://arxiv.org/abs/2310.06770). Focus on how real-world codebase issues, patches, test verification, and multi-file modifications transform code agent evaluation from "generating code snippets" into task-level workflow eval.
+- Yao et al. [tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains](https://arxiv.org/abs/2406.12045) and [tau-bench repository](https://github.com/sierra-research/tau2-bench). Focus on how multi-turn users, domain policies, API tools, final database state, repeated trial consistency, and task fixes enter the agent eval protocol.
+- OpenAI. [BrowseComp: a benchmark for browsing agents](https://openai.com/index/browsecomp/). Focus on hard-to-find but verifiable short answers, browsing depth, search strategy, answer verifiability, and why short-answer benchmarks cannot represent all open-ended research tasks.
 
-思考问题：
+Questions for Thought:
 
-- RNN 的 BPTT 梯度连乘为什么会导致长程依赖困难？LSTM 改变了哪条路径？
-- dependency parsing 与 decoder-only LLM 在结构归纳偏置上有什么差异？
-- encoder-decoder cross-attention 和 decoder-only causal self-attention 的 K/V 来源有什么不同？
-- BERT MLM labels 中为什么未 mask token 要使用 ignore index？
-- BLEU/ROUGE/F1/EM 为什么不能单独作为 LLM 质量指标？
-- 什么时候 encoder-only token classification 或 span extraction 比开放式生成更合适？
-- transition-based parsing 中的合法动作约束和 structured decoding 中的 token mask 有什么共同点？
-- LLM-as-judge 的 position bias、verbosity bias、swapped-order inconsistency 和 human-label disagreement 分别会让什么结论失真？
-- agent/workflow eval 为什么要同时报告 final task success、tool trajectory、state delta、side effects、latency/cost 和环境版本？
-- SWE-bench、tau-bench 和 BrowseComp 分别覆盖了 agent 能力的哪一部分？各自没有覆盖什么真实生产风险？
+- Why does the multiplicative chain of gradients in RNN BPTT cause difficulty with long-range dependencies? Which path does LSTM change?
+- What are the differences in structural inductive bias between dependency parsing and decoder-only LLMs?
+- How do the K/V sources differ between encoder-decoder cross-attention and decoder-only causal self-attention?
+- In BERT MLM labels, why is an ignore index used for non-masked tokens?
+- Why can't BLEU/ROUGE/F1/EM alone serve as quality metrics for LLMs?
+- When is encoder-only token classification or span extraction more appropriate than open-ended generation?
+- What commonality exists between legal action constraints in transition-based parsing and token masks in structured decoding?
+- What conclusions do position bias, verbosity bias, swapped-order inconsistency, and human-label disagreement in LLM-as-judge each distort?
+- Why must agent/workflow eval simultaneously report final task success, tool trajectory, state delta, side effects, latency/cost, and environment version?
+- Which parts of agent capability do SWE-bench, tau-bench, and BrowseComp each cover? What real-world production risks does each fail to cover?
 
-## Week 10: 前沿方法、Benchmark 边界与章节连接
+## Week 10: Frontier Methods, Benchmark Boundaries & Chapter Connections
 
-对应材料：Ch10 前沿推理部分、worked-example-pack 和前沿主题阅读。
+Corresponding Materials: Ch10 Frontier Reasoning Section, Worked-Example-Pack, and Frontier Topic Readings.
 
-本周阅读目标：综合前面九周的表示、架构、训练、生成、对齐、评测和服务知识，分析一个前沿方法到底改变了哪一层技术栈，以及它的 claim 需要哪些实验才能支撑。
+Reading Goals for This Week: Synthesize knowledge from the previous nine weeks on representation, architecture, training, generation, alignment, evaluation, and serving to analyze which layer of the technology stack a frontier method actually changes, and what experiments are needed to support its claims.
 
-必读：
+Required Reading:
 
-- 目标方向的官方论文、课程讲义或模型卡：interpretability、multimodality、social impact、agents 或 reasoning。
-- 本课程 worked-example-pack：重点检查每个模块的可计算定义和常见误解。
+- Official paper, course handout, or model card for the target direction: interpretability, multimodality, social impact, agents, or reasoning.
+- This course's worked-example-pack: Focus on checking the computable definitions and common misconceptions for each module.
 
-选读：
+Optional Reading:
 
-- 目标模型、框架或数据集的官方 model card / technical report / API documentation。
-- 近一年同主题论文的 related work 和 evaluation section。
-- interpretability、多模态、agent、reasoning 或安全治理方向的官方论文、课程讲义或模型卡。
+- Official model card / technical report / API documentation for the target model, framework, or dataset.
+- Related work and evaluation sections of papers on the same topic from the past year.
+- Official papers, course handouts, or model cards for interpretability, multimodality, agents, reasoning, or safety governance directions.
 
-前沿论文阅读任务：
+Frontier Paper Reading Task:
 
-每位学生需要选 2 篇最接近当前章节问题的材料：一篇方法论文或系统论文，一篇模型卡、benchmark paper 或官方技术报告。阅读目标不是堆引用，而是把课程中的训练、推理或评测判断放进一个明确技术坐标中：
+Each student needs to select 2 materials closest to the current chapter's problem: one methods or systems paper, and one model card, benchmark paper, or official technical report. The reading goal is not to pile up citations, but to place the training, inference, or evaluation judgments from the course into a clear technical coordinate system:
 
-| 论文部分 | 你需要抽取什么 | 如何映射到章节内容 |
+| Paper Section | What You Need to Extract | How to Map to Chapter Content |
 |----------|----------------|---------------------|
-| Problem setup | 输入、输出、约束、目标用户或系统 workload | 写清当前问题和不研究什么 |
-| Method | 核心算法、模型结构、训练目标或系统机制 | 对应 baseline、改动点和实现边界 |
-| Experiments | 数据集、样本量、指标、baseline、消融和硬件 | 对应评测集、压测、ablation 和成本估算 |
-| Analysis | 失败样例、误差分类、资源瓶颈或安全边界 | 对应 error analysis 和上线风险 |
-| Limitations | 作者承认的限制和未覆盖场景 | 对应 conclusion boundary |
+| Problem setup | Input, output, constraints, target user or system workload | Clearly state the current problem and what is not being studied |
+| Method | Core algorithm, model structure, training objective, or system mechanism | Correspond to baseline, modification points, and implementation boundaries |
+| Experiments | Dataset, sample size, metrics, baseline, ablation, and hardware | Correspond to evaluation set, stress test, ablation, and cost estimation |
+| Analysis | Failure examples, error classification, resource bottlenecks, or safety boundaries | Correspond to error analysis and deployment risks |
+| Limitations | Limitations acknowledged by the authors and uncovered scenarios | Correspond to conclusion boundary |
 
-阅读笔记应包含一个短的 related work 段落，说明当前判断继承了什么思路、简化了什么条件、没有覆盖哪些论文中的实验范围。训练方向通常关联 optimizer、scaling、LoRA/对齐或数据质量；推理方向通常关联 serving、RAG、quantization、structured output 或 evaluation。
+Reading notes should include a short related work paragraph, explaining what ideas the current judgment inherits, what conditions it simplifies, and which experimental scopes from the paper it does not cover. Training directions typically relate to optimizer, scaling, LoRA/alignment, or data quality; inference directions typically relate to serving, RAG, quantization, structured output, or evaluation.
 
-思考问题：
+Questions for Thought:
 
-- 目标方向的 benchmark 衡量什么能力？没有衡量什么能力？
-- 论文或模型卡中的哪个 claim 依赖特定数据集、推理设置或评测器？
-- 如果把该方法接入本课程的训练或推理系统，最先受影响的是显存、延迟、质量、安全性还是成本？
-- 一个新方法如果只在单一 benchmark、单一模型规模或单一 prompt 模板上有效，结论应如何表述？
-- 如何把 interpretability、multimodality、agents、reasoning 或 safety 的论文 claim 映射到本课程已有的公式、代码和系统指标？
-- 技术结论中的 method、experiments、analysis 和 limitations 应分别回答什么问题？
+- What capability does the benchmark for the target direction measure? What capability does it not measure?
+- Which claim in the paper or model card depends on a specific dataset, inference setting, or evaluator?
+- If this method were integrated into this course's training or inference system, would memory, latency, quality, safety, or cost be affected first?
+- If a new method is only effective on a single benchmark, a single model scale, or a single prompt template, how should the conclusion be stated?
+- How can claims from papers on interpretability, multimodality, agents, reasoning, or safety be mapped to the formulas, code, and system metrics already present in this course?
+- What questions should the method, experiments, analysis, and limitations sections of a technical conclusion each answer?

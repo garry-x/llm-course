@@ -29,7 +29,7 @@
 
   <!-- Input X -->
   <rect class="box" x="50" y="40" width="140" height="44"/>
-  <text class="t2" x="120" y="58" text-anchor="middle">输入 X</text>
+  <text class="t2" x="120" y="58" text-anchor="middle">Input X</text>
   <text class="t1" x="120" y="74" text-anchor="middle">(batch, seq_len, d)</text>
 
   <!-- QKV Projections -->
@@ -40,51 +40,51 @@
   <!-- Q -->
   <rect class="box-q" x="235" y="130" width="220" height="50"/>
   <text class="t2" x="345" y="150" text-anchor="middle" style="fill:#7baaf7">Query (Q) = X · W_Q</text>
-  <text class="t1" x="345" y="170" text-anchor="middle">"我在找什么?"  ·  d_k 维</text>
+  <text class="t1" x="345" y="170" text-anchor="middle">"What am I looking for?"  ·  d_k dim</text>
 
   <!-- K -->
   <rect class="box-k" x="235" y="260" width="220" height="50"/>
   <text class="t2" x="345" y="280" text-anchor="middle" style="fill:#81c995">Key (K) = X · W_K</text>
-  <text class="t1" x="345" y="300" text-anchor="middle">"我有什么?"  ·  d_k 维</text>
+  <text class="t1" x="345" y="300" text-anchor="middle">"What do I have?"  ·  d_k dim</text>
 
   <!-- V -->
   <rect class="box-v" x="235" y="390" width="220" height="50"/>
   <text class="t2" x="345" y="410" text-anchor="middle" style="fill:#f28b82">Value (V) = X · W_V</text>
-  <text class="t1" x="345" y="430" text-anchor="middle">"我的内容"  ·  d_k 维</text>
+  <text class="t1" x="345" y="430" text-anchor="middle">"My content"  ·  d_k dim</text>
 
   <!-- Score = Q × K^T -->
   <line class="arr" x1="455" y1="155" x2="520" y2="210"/>
   <line class="arr" x1="455" y1="285" x2="520" y2="235"/>
   <rect class="box" x="525" y="195" width="240" height="60"/>
   <text class="t2" x="645" y="216" text-anchor="middle">Scores = Q · K^T</text>
-  <text class="t3" x="645" y="236" text-anchor="middle">(n × n) 注意力分数 + √d_k 缩放</text>
+  <text class="t3" x="645" y="236" text-anchor="middle">(n × n) attention scores + √d_k scaling</text>
 
   <!-- Softmax -->
   <line class="arr" x1="645" y1="255" x2="645" y2="295"/>
   <rect class="box-out" x="520" y="295" width="250" height="44"/>
-  <text class="t2" x="645" y="316" text-anchor="middle">Softmax (按行归一化)</text>
-  <text class="t1" x="645" y="332" text-anchor="middle">每行之和 = 1.0，变成概率分布</text>
+  <text class="t2" x="645" y="316" text-anchor="middle">Softmax (row-wise normalization)</text>
+  <text class="t1" x="645" y="332" text-anchor="middle">Each row sums to 1.0, becomes a probability distribution</text>
 
   <!-- Attention × V -->
   <line class="arr" x1="645" y1="339" x2="645" y2="380"/>
   <line class="arr-v" x1="455" y1="415" x2="515" y2="415"/>
   <rect class="box" x="520" y="378" width="250" height="60"/>
   <text class="t2" x="645" y="399" text-anchor="middle">Output = Attn · V</text>
-  <text class="t3" x="645" y="420" text-anchor="middle">加权聚合每个位置的 Value</text>
+  <text class="t3" x="645" y="420" text-anchor="middle">Weighted aggregation of each position's Value</text>
   <text class="t1" x="645" y="436" text-anchor="middle">→ (batch, seq_len, d_k)</text>
 
   <!-- Output -->
   <line class="arr" x1="645" y1="438" x2="645" y2="485"/>
   <rect class="box-out" x="520" y="485" width="250" height="44"/>
-  <text class="t2" x="645" y="506" text-anchor="middle">注意力输出</text>
-  <text class="t1" x="645" y="522" text-anchor="middle">每个位置的上下文感知表示</text>
+  <text class="t2" x="645" y="506" text-anchor="middle">Attention Output</text>
+  <text class="t1" x="645" y="522" text-anchor="middle">Context-aware representation for each position</text>
 
   <!-- Annotation box -->
   <rect class="box" x="50" y="520" width="380" height="100"/>
-  <text class="t2" x="60" y="542" text-anchor="start" style="font-size:14px">为什么除以 √d_k？</text>
+  <text class="t2" x="60" y="542" text-anchor="start" style="font-size:14px">Why divide by √d_k?</text>
   <g font-size="13">
-    <text class="t1" x="60" y="565" text-anchor="start">• QK^T 点积的方差 = d_k，除以 √d_k 方差归一化为 1</text>
-    <text class="t1" x="60" y="585" text-anchor="start">• 防止 softmax 进入梯度饱和区 (p_i ≈ 1 时梯度 → 0)</text>
-    <text class="t1" x="60" y="605" text-anchor="start">• 等价于使用 temperature τ = √d_k</text>
+    <text class="t1" x="60" y="565" text-anchor="start">• Variance of QK^T dot product = d_k, dividing by √d_k normalizes variance to 1</text>
+    <text class="t1" x="60" y="585" text-anchor="start">• Prevents softmax from entering gradient saturation region (gradient → 0 when p_i ≈ 1)</text>
+    <text class="t1" x="60" y="605" text-anchor="start">• Equivalent to using temperature τ = √d_k</text>
   </g>
 </svg>

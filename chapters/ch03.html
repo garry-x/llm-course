@@ -1,53 +1,53 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
   <link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第3章 单头自注意力 — LLM 深度学习</title>
+<title>Chapter 3 Single-Head Self-Attention — LLM Deep Learning</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-ch="3">
 
-<button class="menu-toggle" aria-label="菜单">☰</button>
+<button class="menu-toggle" aria-label="Menu">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header"><h1>LLM 深度学习</h1><p>从代码出发，构建大语言模型</p></div>
-  <div class="sidebar-progress"><span>学习进度: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
-  <input type="search" id="search-box" class="search-box" placeholder="搜索课程..." aria-label="搜索">
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>Build Large Language Models from Code</p></div>
+  <div class="sidebar-progress"><span>Learning Progress: <strong id="progress-text">0 / 11</strong></span><div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div></div>
+  <input type="search" id="search-box" class="search-box" placeholder="Search course..." aria-label="Search">
   <div id="search-results" class="search-results"></div>
   <nav class="sidebar-nav" id="sidebar-nav"></nav>
-  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">暗色模式</span></button></div>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
-  <h2>第3章 单头自注意力</h2>
-  <p class="subtitle">从零实现 Scaled Dot-Product Attention——LLM 一切魔力的源头</p>
-  <div class="reading-time">⏱ 预计阅读: 120 分钟 · 19 小节 · 6 道编程练习 · 6 道概念练习</div>
-  <div class="font-controls"><span>字号:</span>
-    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">小</button>
-    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">中</button>
-    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">大</button>
+  <h2>Chapter 3 Single-Head Self-Attention</h2>
+  <p class="subtitle">Implementing Scaled Dot-Product Attention from Scratch—The Source of All LLM Magic</p>
+  <div class="reading-time">⏱ Estimated Reading: 120 minutes · 19 sections · 6 programming exercises · 6 conceptual exercises</div>
+  <div class="font-controls"><span>Font Size:</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
   </div>
 
 <section class="card">
-  <h3>本章怎么学：把注意力当成“可微检索”</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong>不要先背公式。先记住 Q 是“我要找什么”，K 是“我有什么标签”，V 是“真正取回的信息”。本章最重要的是看懂 <code>Q @ K.T</code> 得到权重，再用权重加权 <code>V</code>。</div></div>
+  <h3>How to Learn This Chapter: Treat Attention as "Differentiable Retrieval"</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Focus for Beginners:</strong> Don't memorize formulas first. First remember that Q is "what am I looking for", K is "what labels do I have", and V is "the information actually retrieved". The most important thing in this chapter is to understand that <code>Q @ K.T</code> yields weights, and then use those weights to weight <code>V</code>.</div></div>
   <ul>
-    <li><strong>前置知识：</strong>矩阵乘法、softmax、张量最后一维的含义。</li>
-    <li><strong>学习目标：</strong>从 RNN 长程依赖问题引出自注意力，推导 Q/K/V、缩放因子、softmax 温度、causal mask 和注意力复杂度。</li>
-    <li><strong>本章产出：</strong>单头 Scaled Dot-Product Attention 和 Causal Mask。</li>
-    <li><strong>完成标准：</strong>你能解释为什么生成第 t 个 token 时不能看未来 token。</li>
-    <li><strong>练习产出：</strong>提交手写 attention、mask 单元测试、缩放因子的方差推导，以及一张 attention heatmap 分析；可用 <a href="../assignments/ch03_attention/" target="_blank">Ch03 注意力作业测试</a> 检查核心实现。</li>
+    <li><strong>Prerequisites:</strong> Matrix multiplication, softmax, meaning of the last dimension of a tensor.</li>
+    <li><strong>Learning Goals:</strong> Derive self-attention from the RNN long-range dependency problem, derive Q/K/V, scaling factor, softmax temperature, causal mask, and attention complexity.</li>
+    <li><strong>Chapter Output:</strong> Single-head Scaled Dot-Product Attention and Causal Mask.</li>
+    <li><strong>Completion Criteria:</strong> You can explain why you cannot look at future tokens when generating the t-th token.</li>
+    <li><strong>Exercise Output:</strong> Submit handwritten attention, mask unit tests, variance derivation of the scaling factor, and an attention heatmap analysis; use <a href="../assignments/ch03_attention/" target="_blank">Ch03 Attention Assignment Tests</a> to check core implementation.</li>
   </ul>
-  <div class="dependency-note"><strong>先修能力：</strong>矩阵乘法、softmax、mask 语义、概率归一化和基础广播规则。<br><strong>本章内化：</strong>这些基础会被放进 <code>QK^T / sqrt(d)</code>、mask-before-softmax、attention row sum、padding/causal 区分和数值稳定 softmax 的实现检查中。<br><strong>验收信号：</strong>你能定位 attention bug 属于 score shape、mask 时机、概率归一化还是可见性约束，并说明它会如何影响 Ch04 多头拆分、Ch06 因果 LM 和 Ch08 生成。</div>
-  <p class="system-role"><strong>系统位置：</strong>本章是 Transformer 的计算核心：把每个 token 的表示变成一次可微检索。它向前依赖 Ch02 的向量和位置，向后支撑多头压缩、GPT 因果训练、生成可见性和长上下文服务成本。</p>
+  <div class="dependency-note"><strong>Required Skills:</strong> Matrix multiplication, softmax, mask semantics, probability normalization, and basic broadcasting rules.<br><strong>Internalization in this Chapter:</strong> These fundamentals will be checked in the implementation of <code>QK^T / sqrt(d)</code>, mask-before-softmax, attention row sum, padding/causal distinction, and numerically stable softmax.<br><strong>Validation Signal:</strong> You can locate an attention bug as belonging to score shape, mask timing, probability normalization, or visibility constraints, and explain how it would affect Ch04 multi-head splitting, Ch06 causal LM, and Ch08 generation.</div>
+  <p class="system-role"><strong>System Position:</strong> This chapter is the computational core of the Transformer: turning the representation of each token into a differentiable retrieval. It depends forward on Ch02's vectors and positions, and supports backward multi-head compression, GPT causal training, generation visibility, and long-context serving costs.</p>
   <div class="foundation-map">
-    <h4>学习者知识脑图：先懂什么 / 本章学什么 / 继续读什么</h4>
-    <div class="foundation-graph" role="img" aria-label="第3章知识脑图：学习本章前需要懂矩阵乘法、softmax 和 mask，本章会学 self-attention，学完后可以继续读 FlashAttention 和 sparse attention">
+    <h4>Learner Mind Map: What to Know First / What This Chapter Teaches / What to Read Next</h4>
+    <div class="foundation-graph" role="img" aria-label="Chapter 3 knowledge map: Before learning this chapter, you need to understand matrix multiplication, softmax, and masks. This chapter teaches self-attention. After learning, you can continue to FlashAttention and sparse attention.">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-03" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
         <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
@@ -56,112 +56,111 @@
         <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
         <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
         <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
-        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第3章 Attention</tspan><tspan class="dep-sub" x="430" dy="22">可微检索与可见性</tspan></text>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">Ch03 Attention</tspan><tspan class="dep-sub" x="430" dy="22">Differentiable Retrieval & Visibility</tspan></text>
         <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">先懂：矩阵概率</tspan><tspan class="dep-sub" x="129" dy="18">matmul / softmax</tspan></text>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">Prerequisite: Matrix Probability</tspan><tspan class="dep-sub" x="129" dy="18">matmul / softmax</tspan></text>
         <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">先懂：可见性</tspan><tspan class="dep-sub" x="129" dy="18">mask / broadcasting</tspan></text>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">Prerequisite: Visibility</tspan><tspan class="dep-sub" x="129" dy="18">mask / broadcasting</tspan></text>
         <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">继续读：高效注意力</tspan><tspan class="dep-sub" x="731" dy="18">FlashAttention</tspan></text>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">Read Next: Efficient Attention</tspan><tspan class="dep-sub" x="731" dy="18">FlashAttention</tspan></text>
         <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
-        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">继续读：长序列</tspan><tspan class="dep-sub" x="731" dy="18">Longformer / linear attention</tspan></text>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">Read Next: Long Sequences</tspan><tspan class="dep-sub" x="731" dy="18">Longformer / linear attention</tspan></text>
         <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
-        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：QK score -> mask -> softmax -> weighted value</tspan></text>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">Chapter Main Line: QK score -> mask -> softmax -> weighted value</tspan></text>
       </svg>
     </div>
     <div class="table-wrap foundation-table">
       <table>
-        <tr><th>学习前需要懂</th><th>本章会讲清楚</th><th>扩展阅读材料/知识点</th></tr>
-        <tr><td>Q/K/V 语义</td><td>把 query 看成当前 token 的问题，key 看成可检索索引，value 看成被加权搬运的信息。</td><td><strong>材料：</strong>Transformer cross-attention、retrieval attention、attention sink 分析。<br><strong>知识点：</strong>head specialization、可解释性、检索式注意力。</td></tr>
-        <tr><td>softmax 概率</td><td>强调每一行 attention weight 归一化，温度 scale 会改变熵和梯度。</td><td><strong>材料：</strong>FlashAttention / FlashAttention-2。<br><strong>知识点：</strong>online softmax、IO-aware attention、低精度数值稳定性。</td></tr>
-        <tr><td>causal 与 padding mask</td><td>区分“不能看未来”和“不能看 padding”，并解释两者在训练和推理中的来源不同。</td><td><strong>材料：</strong>packed sequence、sliding-window attention、block sparse attention。<br><strong>知识点：</strong>mask 组合、prefix LM 可见性、长序列训练。</td></tr>
-        <tr><td>复杂度账本</td><td>把 score 矩阵写成 <code>[B,H,T,T]</code>，直接连接显存、长上下文和服务成本。</td><td><strong>材料：</strong>Longformer、Performer、linear attention、Mamba/SSM 综述。<br><strong>知识点：</strong>稀疏注意力、线性注意力、hybrid architecture。</td></tr>
+        <tr><th>Need to Know Before Learning</th><th>This Chapter Will Clarify</th><th>Extended Reading Materials/Knowledge Points</th></tr>
+        <tr><td>Q/K/V Semantics</td><td>Treat query as the current token's question, key as a retrievable index, and value as the information to be weighted and carried.</td><td><strong>Materials:</strong> Transformer cross-attention, retrieval attention, attention sink analysis.<br><strong>Knowledge Points:</strong> head specialization, interpretability, retrieval-based attention.</td></tr>
+        <tr><td>Softmax Probability</td><td>Emphasize that each row of attention weights is normalized, and the temperature scale changes entropy and gradients.</td><td><strong>Materials:</strong> FlashAttention / FlashAttention-2.<br><strong>Knowledge Points:</strong> online softmax, IO-aware attention, low-precision numerical stability.</td></tr>
+        <tr><td>Causal & Padding Mask</td><td>Distinguish between "cannot see the future" and "cannot see padding", and explain their different origins in training and inference.</td><td><strong>Materials:</strong> packed sequence, sliding-window attention, block sparse attention.<br><strong>Knowledge Points:</strong> mask combination, prefix LM visibility, long sequence training.</td></tr>
+        <tr><td>Complexity Budget</td><td>Write the score matrix as <code>[B,H,T,T]</code>, directly connecting to memory, long context, and serving costs.</td><td><strong>Materials:</strong> Longformer, Performer, linear attention, Mamba/SSM survey.<br><strong>Knowledge Points:</strong> sparse attention, linear attention, hybrid architecture.</td></tr>
       </table>
     </div>
-    <p><strong>本章覆盖情况：</strong>本章已经把 attention 的概率、mask、shape 和复杂度讲清楚；如果继续深入，可读 FlashAttention 的 IO-aware 视角和长序列稀疏注意力，但这些属于性能扩展，不影响本章主线理解。</p>
+    <p><strong>Chapter Coverage:</strong> This chapter clearly explains the probability, mask, shape, and complexity of attention; for deeper study, you can read FlashAttention's IO-aware perspective and long-sequence sparse attention, but these are performance extensions and do not affect the understanding of this chapter's main line.</p>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.1 为什么需要注意力 -->
+<!-- 3.1 Why Attention is Needed -->
 <!-- ================================================================ -->
 <section class="card" id="s3-1">
-  <h3>3.1 为什么需要注意力？——RNN 的困境与注意力的突破</h3>
-  <p>在 Transformer（2017）出现之前，序列建模长期由 RNN/LSTM 主导。理解它们在并行性和长程依赖上的<strong>结构性局限</strong>，才能真正理解注意力机制为什么成为后续架构的关键选择。</p>
+  <h3>3.1 Why is Attention Needed? — The Predicament of RNNs and the Breakthrough of Attention</h3>
+  <p>Before the Transformer (2017), sequence modeling was long dominated by RNNs/LSTMs. Understanding their <strong>structural limitations</strong> in parallelism and long-range dependencies is key to truly understanding why the attention mechanism became the critical choice for subsequent architectures.</p>
 
-  <h4>RNN 的工作原理：迭代式压缩</h4>
-  <p>RNN 将序列处理看作一个逐步"压缩"的过程：每读入一个 token <span class="katex-inline" data-expr="\mathbf{x}_t" aria-label="\mathbf{x}_t" role="img"></span>，就将之前的所有信息（存储在隐状态 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span> 中）和当前输入一起"融合"，产生新的隐状态：</p>
-  <div class="math-box"><div class="label">RNN 状态更新</div>
+  <h4>How RNNs Work: Iterative Compression</h4>
+  <p>An RNN treats sequence processing as a step-by-step "compression" process: each time it reads a token <span class="katex-inline" data-expr="\mathbf{x}_t" aria-label="\mathbf{x}_t" role="img"></span>, it "fuses" all previous information (stored in the hidden state <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span>) with the current input to produce a new hidden state:</p>
+  <div class="math-box"><div class="label">RNN State Update</div>
     <div class="katex" data-expr="\mathbf{h}_t = \tanh(\mathbf{W}_h \mathbf{h}_{t-1} + \mathbf{W}_x \mathbf{x}_t + \mathbf{b})" aria-label="\mathbf{h}_t = \tanh(\mathbf{W}_h \mathbf{h}_{t-1} + \mathbf{W}_x \mathbf{x}_t + \mathbf{b})" role="img"></div>
   </div>
 
-  <h4>两个结构性局限</h4>
-  <p><strong>缺陷一：顺序计算瓶颈（Sequential Bottleneck）。</strong>计算 <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> 必须先知道 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span>，这造成了严格的顺序依赖。在 GPU 上，这意味着 1000 个 token 需要 1000 个串行步骤——你无法并行处理序列中的不同位置。训练时间随序列长度线性增长。</p>
-  <p><strong>缺陷二：长程依赖衰减（Long-Range Dependency Decay）。</strong>隐状态是一个固定维度的"瓶颈"——无论前面的信息有多丰富，都必须压缩到一个固定大小的向量里。当信息从位置 1 传到位置 1000 时，需要经过 999 次非线性变换。在这个过程中，梯度以指数级衰减（梯度消失）或增长（梯度爆炸）：</p>
-  <div class="math-box"><div class="label">梯度传播（简化）</div>
+  <h4>Two Structural Limitations</h4>
+  <p><strong>Defect 1: Sequential Bottleneck.</strong> Computing <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> requires knowing <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span> first, creating a strict sequential dependency. On a GPU, this means 1000 tokens require 1000 serial steps—you cannot process different positions in the sequence in parallel. Training time grows linearly with sequence length.</p>
+  <p><strong>Defect 2: Long-Range Dependency Decay.</strong> The hidden state is a fixed-dimensional "bottleneck"—no matter how rich the preceding information is, it must be compressed into a fixed-size vector. When information travels from position 1 to position 1000, it must pass through 999 non-linear transformations. During this process, gradients decay exponentially (vanishing gradients) or grow exponentially (exploding gradients):</p>
+  <div class="math-box"><div class="label">Gradient Propagation (Simplified)</div>
     <div class="katex" data-expr="\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \cdot \prod_{t=2}^{T} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}" aria-label="\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \cdot \prod_{t=2}^{T} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}" role="img"></div>
   </div>
-  <p>当连乘项中许多因子小于 1 时，T 步后梯度会趋近于零，模型很难学习远程依赖。LSTM 的门控机制能显著缓解梯度传播问题，但仍保留顺序计算路径和固定维度状态瓶颈。</p>
+  <p>When many factors in the product are less than 1, the gradient approaches zero after T steps, making it difficult for the model to learn long-range dependencies. The gating mechanism of LSTMs can significantly alleviate the gradient propagation problem, but they still retain the sequential computation path and the fixed-dimensional state bottleneck.</p>
 
-  <h4>注意力的突破：用检索代替记忆</h4>
-  <p>Transformer 的核心洞见非常简洁：<strong>不要让信息"穿过"中间位置才能到达目标位置</strong>。每个位置应该可以直接"看见"序列中的任意其他位置，直接从源头提取信息。</p>
-  <p>这就好比：RNN 是让一个人依次经过 1000 个房间，到达最后一个房间时，他只能靠"记忆"来回忆第一个房间的内容。而注意力是给每个房间都装了<strong>监控摄像头</strong>——任何时候都可以直接查看任意房间的状况。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>注意力的优势：单层内任意两位置的信息路径长度为 O(1)。</strong>一个位置可以在同一层直接读取其他位置的 value，而不是沿时间步逐个传递。这有利于并行训练和长程依赖建模；实际能处理多长上下文还取决于注意力复杂度、位置编码、训练分布和推理系统。</div></div>
+  <h4>The Breakthrough of Attention: Retrieval Instead of Memory</h4>
+  <p>The core insight of the Transformer is very simple: <strong>Don't force information to "pass through" intermediate positions to reach the target position</strong>. Each position should be able to directly "see" any other position in the sequence and extract information directly from the source.</p>  <p>This is like: RNN makes a person pass through 1000 rooms one by one, and when they reach the last room, they can only rely on "memory" to recall the contents of the first room. Attention, on the other hand, installs a <strong>surveillance camera</strong> in every room—allowing you to directly check the status of any room at any time.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Advantage of Attention: The information path length between any two positions within a single layer is O(1).</strong> A position can directly read the value of another position in the same layer, rather than passing it along time steps one by one. This facilitates parallel training and long-range dependency modeling; the actual context length it can handle also depends on attention complexity, positional encoding, training distribution, and inference system.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.2 QKV 原理 -->
+<!-- 3.2 QKV Principle -->
 <!-- ================================================================ -->
 <section class="card" id="s3-2">
-  <h3>3.2 Q、K、V 三元组——注意力机制的"检索语言"</h3>
-  <p>Scaled Dot-Product Attention 的核心思想可以用<strong>数据库检索</strong>来类比：</p>
+  <h3>3.2 Q, K, V Triplet—The "Retrieval Language" of the Attention Mechanism</h3>
+  <p>The core idea of Scaled Dot-Product Attention can be analogized to <strong>database retrieval</strong>:</p>
   <ul>
-    <li><strong>Query (Q, 查询)：</strong>"我想找什么？"——每个位置根据自己当前的语境，主动发出一个"问题"。比如在翻译任务中，"I"想知道自己要对应哪个中文词。</li>
-    <li><strong>Key (K, 键)：</strong>"我有什么信息？"——每个位置产生一个"标签"，描述自己可以提供什么。Query 会和所有 Key 做匹配，找到最相关的信息源。</li>
-    <li><strong>Value (V, 值)：</strong>"我的具体内容。"——匹配完成后，从匹配到的位置提取实际的信息内容。Value 才是最终被聚合到输出中的东西。</li>
+    <li><strong>Query (Q):</strong> "What am I looking for?"—Each position actively sends out a "question" based on its current context. For example, in a translation task, "I" wants to know which Chinese word it corresponds to.</li>
+    <li><strong>Key (K):</strong> "What information do I have?"—Each position generates a "label" describing what it can provide. The Query matches against all Keys to find the most relevant information sources.</li>
+    <li><strong>Value (V):</strong> "My specific content."—After matching, the actual information content is extracted from the matched positions. The Value is what ultimately gets aggregated into the output.</li>
   </ul>
-  <p><strong>为什么需要三个不同的向量？</strong>关键在于 Q 和 K 的<strong>分离</strong>。一个 token 在作为"信息消费者"（发出 Q）和"信息提供者"（提供 K）时，关注点不同。比如在句子"The cat sat on the mat"中，当处理"sat"时：</p>
+  <p><strong>Why are three different vectors needed?</strong> The key lies in the <strong>separation</strong> of Q and K. When a token acts as an "information consumer" (emitting Q) and an "information provider" (providing K), its focus differs. For example, in the sentence "The cat sat on the mat," when processing "sat":</p>
   <ul>
-    <li>作为 Query，"sat"想要找"谁在 sat？"——所以它的 Q 应该接近表示主语（名词）的 Key</li>
-    <li>作为 Key，"sat"想要告诉别人"这是一个动作"——所以它的 K 应该接近表示动作的 Query</li>
+    <li>As a Query, "sat" wants to find "who sat?"—so its Q should be close to the Key representing the subject (noun)</li>
+    <li>As a Key, "sat" wants to tell others "this is an action"—so its K should be close to the Query representing an action</li>
   </ul>
-  <p>Q 和 K 的非对称性使得注意力能学习<strong>有向的</strong>依赖关系——"A 关注 B"和"B 关注 A"是不同的。</p>
+  <p>The asymmetry of Q and K allows attention to learn <strong>directed</strong> dependencies—"A attends to B" and "B attends to A" are different.</p>
 
-  <h4>从输入到 Q、K、V：线性投影</h4>
-  <p>给定输入序列 <span class="katex-inline" data-expr="\mathbf{X} \in \mathbb{R}^{n \times d}" aria-label="\mathbf{X} \in \mathbb{R}^{n \times d}" role="img"></span>（n 个 token，每个 d 维），Q、K、V 都通过<strong>可学习的线性变换</strong>从同一个输入产生：</p>
-  <div class="math-box"><div class="label">线性投影</div>
+  <h4>From Input to Q, K, V: Linear Projection</h4>
+  <p>Given the input sequence <span class="katex-inline" data-expr="\mathbf{X} \in \mathbb{R}^{n \times d}" aria-label="\mathbf{X} \in \mathbb{R}^{n \times d}" role="img"></span> (n tokens, each d-dimensional), Q, K, V are all generated from the same input through <strong>learnable linear transformations</strong>:</p>
+  <div class="math-box"><div class="label">Linear Projection</div>
     <div class="katex" data-expr="\mathbf{Q} = \mathbf{X}\mathbf{W}^Q,\quad \mathbf{K} = \mathbf{X}\mathbf{W}^K,\quad \mathbf{V} = \mathbf{X}\mathbf{W}^V" aria-label="\mathbf{Q} = \mathbf{X}\mathbf{W}^Q,\quad \mathbf{K} = \mathbf{X}\mathbf{W}^K,\quad \mathbf{V} = \mathbf{X}\mathbf{W}^V" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" aria-label="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" role="img"></span> 是可训练的权重矩阵。投影的目的不是"创造信息"，而是<strong>重新组织信息</strong>——让同一个输入在不同的角色（查询者、被查者、信息提供者）下表现出不同的特征。</p>
-  <p>这就是"自注意力"中"自"的含义：Q、K、V 都来自<strong>同一个序列 X</strong>——每个 token 在和自己及其他 token 之间建立关系。</p>
+  <p>Where <span class="katex-inline" data-expr="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" aria-label="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" role="img"></span> are trainable weight matrices. The purpose of projection is not to "create information," but to <strong>reorganize information</strong>—allowing the same input to exhibit different characteristics under different roles (querier, queried, information provider).</p>
+  <p>This is the meaning of "self" in "self-attention": Q, K, V all come from the <strong>same sequence X</strong>—each token establishes relationships with itself and other tokens.</p>
 </section>
 
 <!-- ================================================================ -->
 
 <section class="card">
 <div class="svg-diagram" style="max-width:900px">
-  <img src="../images/attention-flow.svg" alt="Scaled Dot-Product Attention 数据流" style="width:100%">
+  <img src="../images/attention-flow.svg" alt="Scaled Dot-Product Attention Data Flow" style="width:100%">
 </div>
-<p class="diagram-caption">图 3-1: Scaled Dot-Product Attention 完整数据流——从输入到输出</p>
+<p class="diagram-caption">Figure 3-1: Scaled Dot-Product Attention Complete Data Flow—From Input to Output</p>
 </section>
 
-<!-- 编程练习 1: QKV 投影 -->
+<!-- Programming Exercise 1: QKV Projection -->
 <!-- ================================================================ -->
 <section class="card" id="s3-3">
-  <h3>3.3 编程练习 1：实现 QKV 线性投影</h3>
-  <p>现在，请动手实现注意力机制的第一个组件——Q、K、V 投影。</p>
+  <h3>3.3 Programming Exercise 1: Implementing QKV Linear Projection</h3>
+  <p>Now, please implement the first component of the attention mechanism—Q, K, V projection.</p>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 1：QKVProjection 模块</h4>
+    <h4>🖥️ Exercise 1: QKVProjection Module</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现一个 PyTorch <code>nn.Module</code>，给定输入 <code>x: (batch, seq_len, d_model)</code>，输出 Q、K、V 三个张量。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Implement a PyTorch <code>nn.Module</code> that, given input <code>x: (batch, seq_len, d_model)</code>, outputs three tensors: Q, K, V.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>使用 <code>nn.Linear</code> 定义三个投影矩阵（不要用一个大 Linear 然后 split）</li>
-        <li>支持配置 <code>d_model</code>（输入维度）和 <code>d_k</code>（每个头的维度）</li>
-        <li><code>forward</code> 返回 <code>(Q, K, V)</code> 三个张量，每个形状为 <code>(batch, seq_len, d_k)</code></li>
+        <li>Use <code>nn.Linear</code> to define three projection matrices (do not use one large Linear and then split)</li>
+        <li>Support configuration of <code>d_model</code> (input dimension) and <code>d_k</code> (dimension per head)</li>
+        <li><code>forward</code> returns three tensors <code>(Q, K, V)</code>, each of shape <code>(batch, seq_len, d_k)</code></li>
       </ul>
-      <pre># 预期用法
+      <pre># Expected usage
 proj = QKVProjection(d_model=512, d_k=64)
 x = torch.randn(2, 10, 512)  # batch=2, seq_len=10, d_model=512
 Q, K, V = proj(x)
@@ -169,14 +168,14 @@ assert Q.shape == (2, 10, 64)
 assert K.shape == (2, 10, 64)
 assert V.shape == (2, 10, 64)</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 import torch
 import torch.nn as nn
 import math
 
 class QKVProjection(nn.Module):
-    """将输入 X 投影为 Query, Key, Value 三元组"""
+    """Project input X into Query, Key, Value triplet"""
     def __init__(self, d_model, d_k):
         super().__init__()
         self.W_q = nn.Linear(d_model, d_k, bias=False)
@@ -190,76 +189,76 @@ class QKVProjection(nn.Module):
         K = self.W_k(x)  # (batch, seq_len, d_k)
         V = self.W_v(x)  # (batch, seq_len, d_k)
         return Q, K, V</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 bias=False？</strong>在自注意力中，QKV 投影通常不设偏置。偏置会引入一个绝对的"中心点"，而注意力关心的是 token 之间的<strong>相对关系</strong>（Q 和 K 的点积），加偏置反而可能干扰这种关系的学习。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why bias=False?</strong> In self-attention, QKV projections typically do not use bias. Bias introduces an absolute "center point," whereas attention cares about the <strong>relative relationships</strong> between tokens (the dot product of Q and K). Adding bias might interfere with learning this relationship.</p>
     </div>
   </div>
 </section>
 
 <section class="card" id="s3-3a">
-  <h3>3.3A Worked Example：Q/K/V 的 shape 与参数量账本</h3>
-  <p>设一个教学配置为 <code>B=2</code>、<code>T=3</code>、<code>d_model=4</code>、<code>d_k=2</code>。输入张量 <code>X</code> 的形状是 <code>[2,3,4]</code>，三个投影矩阵分别是 <code>W_Q,W_K,W_V</code>，每个形状为 <code>[4,2]</code>。因此：</p>
+  <h3>3.3A Worked Example: Q/K/V Shape and Parameter Count Ledger</h3>
+  <p>Assume a teaching configuration of <code>B=2</code>, <code>T=3</code>, <code>d_model=4</code>, <code>d_k=2</code>. The input tensor <code>X</code> has shape <code>[2,3,4]</code>, and the three projection matrices are <code>W_Q, W_K, W_V</code>, each of shape <code>[4,2]</code>. Therefore:</p>
   <div class="code-block" data-lang="text">
 Q = X @ W_Q  -> [2, 3, 2]
 K = X @ W_K  -> [2, 3, 2]
 V = X @ W_V  -> [2, 3, 2]</div>
-  <p>参数量不是 <code>B*T*d_model*d_k</code>，因为 batch 和 sequence length 不是模型参数；它们只是同一组权重被应用多少次。无 bias 时参数量为：</p>
+  <p>The parameter count is not <code>B*T*d_model*d_k</code>, because batch and sequence length are not model parameters; they are just how many times the same set of weights is applied. Without bias, the parameter count is:</p>
   <div class="math-box"><div class="label">QKV projection parameters</div>
     <div class="katex" data-expr="3 \times d_{\text{model}} \times d_k = 3 \times 4 \times 2 = 24" aria-label="3*d_model*d_k = 24" role="img"></div>
   </div>
-  <p>随后注意力分数来自 <code>QK^T</code>。对每个 batch 样本，<code>Q[3,2]</code> 与 <code>K[3,2]</code> 相乘得到 <code>[3,3]</code> 的 token-to-token score matrix；整个 batch 的 score 形状是 <code>[2,3,3]</code>。再乘以 <code>V[2,3,2]</code> 后，输出回到 <code>[2,3,2]</code>。Ch04 多头注意力会把这个过程复制到多个 head 上，再把各 head 输出拼接回 <code>d_model</code>。</p>
-  <p>这个例子对应 Ch03 作业中 <code>QKVProjection</code> 的测试：权重参数只来自三个线性层，输出 shape 与 batch/sequence 对齐，后续 attention score 的二次项来自 <code>T*T</code>，而不是参数量增长。</p>
+  <p>Then the attention scores come from <code>QK^T</code>. For each batch sample, <code>Q[3,2]</code> multiplied by <code>K[3,2]</code> yields a <code>[3,3]</code> token-to-token score matrix; the score for the entire batch has shape <code>[2,3,3]</code>. After multiplying by <code>V[2,3,2]</code>, the output returns to <code>[2,3,2]</code>. Chapter 04's multi-head attention will replicate this process across multiple heads and then concatenate the outputs of each head back to <code>d_model</code>.</p>
+  <p>This example corresponds to the test for <code>QKVProjection</code> in Chapter 03's homework: the weight parameters come only from the three linear layers, the output shape aligns with batch/sequence, and the quadratic term of the subsequent attention score comes from <code>T*T</code>, not from parameter count growth.</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 2: Scaled Dot-Product Attention -->
+<!-- Programming Exercise 2: Scaled Dot-Product Attention -->
 <!-- ================================================================ -->
 <section class="card" id="s3-4">
-  <h3>3.4 编程练习 2：实现 Scaled Dot-Product Attention</h3>
+  <h3>3.4 Programming Exercise 2: Implementing Scaled Dot-Product Attention</h3>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 2：ScaledDotProductAttention 函数</h4>
+    <h4>🖥️ Exercise 2: ScaledDotProductAttention Function</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现完整的 Scaled Dot-Product Attention 前向计算。</p>
-      <p><strong>核心公式：</strong></p>
+      <p><strong>Task:</strong> Implement the complete forward computation of Scaled Dot-Product Attention.</p>
+      <p><strong>Core Formula:</strong></p>
       <div class="katex" data-expr="\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}" aria-label="\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}" role="img"></div>
-      <p><strong>要求：</strong></p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>输入 Q、K、V 形状均为 <code>(batch, seq_len, d_k)</code></li>
-        <li>返回 <code>output</code> 形状 <code>(batch, seq_len, d_k)</code>，以及 <code>attn_weights</code> 形状 <code>(batch, seq_len, seq_len)</code></li>
-        <li>支持可选的 <code>mask</code> 参数（形状 <code>(seq_len, seq_len)</code> 或 <code>(batch, seq_len, seq_len)</code>），对 mask==0 的位置在 softmax 前设为 -1e9</li>
-        <li><strong>不要</strong>使用 PyTorch 内置的 <code>F.scaled_dot_product_attention</code>——手写每一步</li>
+        <li>Inputs Q, K, V all have shape <code>(batch, seq_len, d_k)</code></li>
+        <li>Return <code>output</code> of shape <code>(batch, seq_len, d_k)</code>, and <code>attn_weights</code> of shape <code>(batch, seq_len, seq_len)</code></li>
+        <li>Support an optional <code>mask</code> parameter (shape <code>(seq_len, seq_len)</code> or <code>(batch, seq_len, seq_len)</code>), set positions where mask==0 to -1e9 before softmax</li>
+        <li><strong>Do not</strong> use PyTorch's built-in <code>F.scaled_dot_product_attention</code>—write each step manually</li>
       </ul>
-      <pre># 预期用法
+      <pre># Expected usage
 Q = torch.randn(2, 10, 64)
 K = torch.randn(2, 10, 64)
 V = torch.randn(2, 10, 64)
 output, attn = scaled_dot_product_attention(Q, K, V)
 assert output.shape == (2, 10, 64)
 assert attn.shape == (2, 10, 10)
-assert torch.allclose(attn.sum(dim=-1), torch.ones(2, 10))  # softmax 检验</pre>
+assert torch.allclose(attn.sum(dim=-1), torch.ones(2, 10))  # softmax check</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def scaled_dot_product_attention(Q, K, V, mask=None):
     """
     Scaled Dot-Product Attention
     Q, K, V: (batch, seq_len, d_k)
-    mask: (seq_len, seq_len) 或 (batch, seq_len, seq_len), 0=屏蔽
+    mask: (seq_len, seq_len) or (batch, seq_len, seq_len), 0=blocked
     """
     d_k = Q.size(-1)
-    # 1. 计算注意力分数: Q @ K^T
+    # 1. Compute attention scores: Q @ K^T
     scores = torch.matmul(Q, K.transpose(-2, -1))  # (batch, seq_len, seq_len)
-    # 2. 缩放: 除以 sqrt(d_k)
+    # 2. Scale: divide by sqrt(d_k)
     scores = scores / math.sqrt(d_k)
-    # 3. 应用掩码（如有）
+    # 3. Apply mask (if any)
     if mask is not None:
         scores = scores.masked_fill(mask == 0, -1e9)
-    # 4. Softmax 归一化
+    # 4. Softmax normalization
     attn_weights = torch.softmax(scores, dim=-1)
-    # 5. 加权聚合 Value
+    # 5. Weighted aggregation of Values
     output = torch.matmul(attn_weights, V)  # (batch, seq_len, d_k)
     return output, attn_weights</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么用 -1e9 而不是 -inf？</strong>浮点数的 -inf 在某些硬件上可能导致 NaN。使用一个足够小的负数（如 -1e9）既安全又高效，因为 exp(-1e9) ≈ 0 在精度范围内。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Why use -1e9 instead of -inf?</strong> The floating-point -inf can cause NaN on some hardware. Using a sufficiently small negative number (like -1e9) is both safe and efficient, because exp(-1e9) ≈ 0 within precision limits.</p>
     </div>
   </div>
 </section>
@@ -267,111 +266,109 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 <!-- ================================================================ -->
 <!-- 3.4A Worked Example -->
 <!-- ================================================================ -->
-<section class="card" id="s3-4a">
-  <h3>3.4A Worked Example：手算一次带 causal mask 的 attention</h3>
-  <p>考虑单个 query 位置 <code>t=2</code>，head dimension 为 <span class="katex-inline" data-expr="d_k=2" aria-label="d_k=2" role="img"></span>。当前位置的 query 与三个 key/value 如下：</p>
+<section class="card" id="s3-4a">  <h3>3.4A Worked Example: Hand-calculating Attention with a Causal Mask</h3>
+  <p>Consider a single query position <code>t=2</code>, with head dimension <span class="katex-inline" data-expr="d_k=2" aria-label="d_k=2" role="img"></span>. The query at the current position and the three key/value pairs are as follows:</p>
   <div class="table-wrap">
     <table>
-      <tr><th>位置</th><th>Key <code>k_i</code></th><th>Value <code>v_i</code></th><th>是否可见</th></tr>
-      <tr><td>0</td><td>[1, 0]</td><td>[2, 0]</td><td>可见</td></tr>
-      <tr><td>1</td><td>[0, 1]</td><td>[0, 3]</td><td>可见</td></tr>
-      <tr><td>2</td><td>[1, 1]</td><td>[1, 1]</td><td>可见</td></tr>
-      <tr><td>3</td><td>[2, 0]</td><td>[5, 5]</td><td>未来 token，屏蔽</td></tr>
+      <tr><th>Position</th><th>Key <code>k_i</code></th><th>Value <code>v_i</code></th><th>Visible?</th></tr>
+      <tr><td>0</td><td>[1, 0]</td><td>[2, 0]</td><td>Visible</td></tr>
+      <tr><td>1</td><td>[0, 1]</td><td>[0, 3]</td><td>Visible</td></tr>
+      <tr><td>2</td><td>[1, 1]</td><td>[1, 1]</td><td>Visible</td></tr>
+      <tr><td>3</td><td>[2, 0]</td><td>[5, 5]</td><td>Future token, masked</td></tr>
     </table>
   </div>
-  <p>令 query <code>q=[1,1]</code>。未缩放 dot product 为 <code>[1, 1, 2, 2]</code>；除以 <span class="katex-inline" data-expr="\sqrt{2}" aria-label="\sqrt{2}" role="img"></span> 后得到近似 <code>[0.707, 0.707, 1.414, 1.414]</code>。causal mask 要在 softmax 前把未来位置 3 设为一个很大的负数：</p>
+  <p>Let the query be <code>q=[1,1]</code>. The unscaled dot products are <code>[1, 1, 2, 2]</code>; after dividing by <span class="katex-inline" data-expr="\sqrt{2}" aria-label="\sqrt{2}" role="img"></span>, we get approximately <code>[0.707, 0.707, 1.414, 1.414]</code>. The causal mask must set the future position 3 to a very large negative number before softmax:</p>
   <div class="math-box"><div class="label">Masked logits</div>
     <div class="katex" data-expr="[0.707,\;0.707,\;1.414,\;-\infty]" aria-label="[0.707,0.707,1.414,-infty]" role="img"></div>
   </div>
-  <p>softmax 只在可见位置上归一化，因此分母不是四个位置的和，而是前三个位置：</p>
+  <p>Softmax normalizes only over the visible positions, so the denominator is not the sum of four positions, but the sum of the first three:</p>
   <div class="math-box"><div class="label">Softmax denominator</div>
     <div class="katex" data-expr="Z=e^{0.707}+e^{0.707}+e^{1.414}\approx2.028+2.028+4.113=8.169" aria-label="Z=e^{0.707}+e^{0.707}+e^{1.414}\approx2.028+2.028+4.113=8.169" role="img"></div>
   </div>
-  <p>注意力权重约为 <code>[0.248, 0.248, 0.504, 0.000]</code>。最终输出是对 value 的加权和：</p>
+  <p>The attention weights are approximately <code>[0.248, 0.248, 0.504, 0.000]</code>. The final output is the weighted sum of the values:</p>
   <div class="math-box"><div class="label">Weighted value sum</div>
     <div class="katex" data-expr="o=0.248[2,0]+0.248[0,3]+0.504[1,1]+0[5,5]\approx[1.000,\;1.248]" aria-label="o=0.248[2,0]+0.248[0,3]+0.504[1,1]+0[5,5]\approx[1.000,1.248]" role="img"></div>
   </div>
-  <p>这个例子强调三个实现细节：mask 必须加在 softmax 前；masked 位置不进入 softmax 分母；value 是否很大不重要，只要对应 key 被 mask，权重就是 0，它不会进入输出。</p>
+  <p>This example highlights three implementation details: the mask must be applied before softmax; masked positions do not enter the softmax denominator; it doesn't matter if a value is large, as long as its corresponding key is masked, the weight is 0, and it will not contribute to the output.</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.4A Self-Attention 的置换等变性 -->
+<!-- 3.4A Self-Attention Permutation Equivariance -->
 <!-- ================================================================ -->
 <section class="card" id="s3-4b">
-  <h3>3.4B Self-Attention 的置换等变性：为什么位置仍然要单独编码</h3>
-  <p>如果不加入位置编码，也不使用 causal mask，self-attention 只看 token 内容之间的相似度。给输入序列乘一个置换矩阵 <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span>，Q、K、V 的行会以同样方式重排，注意力输出也只会以同样方式重排：</p>
+  <h3>3.4B Permutation Equivariance of Self-Attention: Why Positions Still Need Separate Encoding</h3>
+  <p>Without positional encoding and without using a causal mask, self-attention only looks at the similarity between token contents. Multiplying the input sequence by a permutation matrix <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span> will reorder the rows of Q, K, V in the same way, and the attention output will only be reordered in the same way:</p>
   <div class="math-box"><div class="label">Self-attention permutation equivariance</div>
     <div class="katex" data-expr="\text{Attn}(PX)=P\,\text{Attn}(X)" aria-label="\text{Attn}(PX)=P\,\text{Attn}(X)" role="img"></div>
   </div>
-  <p>这不是坏性质：它说明 attention 对集合式输入很自然。但语言序列需要区分“我打你”和“你打我”，所以 Transformer 必须通过 absolute position embedding、RoPE、ALiBi 或 causal mask 等机制引入顺序信息。Ch03 作业中的 <code>self_attention_permutation_error(x, permutation)</code> 用数值方式验证无位置、无遮挡 self-attention 的等变性：比较 <code>Attention(Px)</code> 与 <code>P Attention(x)</code> 的最大误差。</p>
+  <p>This is not a bad property: it shows that attention is natural for set-like inputs. However, language sequences need to distinguish between "I hit you" and "you hit me", so Transformers must introduce order information through mechanisms like absolute position embedding, RoPE, ALiBi, or causal masks. The <code>self_attention_permutation_error(x, permutation)</code> function in the Ch03 assignment numerically verifies the equivariance of self-attention without position or masking: compare the maximum error between <code>Attention(Px)</code> and <code>P Attention(x)</code>.</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.5 深度理论: √dₖ -->
+<!-- 3.5 Deep Theory: √dₖ -->
 <!-- ================================================================ -->
 <section class="card" id="s3-5">
-  <h3>3.5 深入理解：为什么除以 √dₖ？——方差分析与梯度行为</h3>
-  <p>这是 Transformer 论文中看似简单但极为深刻的一个设计细节。让我们从概率论的角度来理解它。</p>
+  <h3>3.5 Deep Dive: Why Divide by √dₖ? — Variance Analysis and Gradient Behavior</h3>
+  <p>This is a seemingly simple but profoundly deep design detail in the Transformer paper. Let's understand it from a probability theory perspective.</p>
 
-  <h4>问题：不缩放会发生什么？</h4>
-  <p>假设 Q 和 K 的每个元素是独立同分布的，均值为 0，方差为 1。那么点积 <span class="katex-inline" data-expr="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" aria-label="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" role="img"></span> 是一个 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 个独立随机变量之和。</p>
-  <p>根据<strong>独立随机变量之和的方差性质</strong>：</p>
-  <div class="math-box"><div class="label">点积的方差</div>
+  <h4>Problem: What happens without scaling?</h4>
+  <p>Assume each element of Q and K is independent and identically distributed, with mean 0 and variance 1. Then the dot product <span class="katex-inline" data-expr="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" aria-label="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" role="img"></span> is the sum of <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> independent random variables.</p>
+  <p>According to the <strong>variance property of the sum of independent random variables</strong>:</p>
+  <div class="math-box"><div class="label">Variance of the dot product</div>
     <div class="katex" data-expr="\text{Var}(s_{ij}) = \sum_{m=1}^{d_k} \text{Var}(q_{im} k_{jm}) = \sum_{m=1}^{d_k} \text{Var}(q_{im}) \cdot \text{Var}(k_{jm}) = d_k \cdot 1 \cdot 1 = d_k" aria-label="\text{Var}(s_{ij}) = \sum_{m=1}^{d_k} \text{Var}(q_{im} k_{jm}) = \sum_{m=1}^{d_k} \text{Var}(q_{im}) \cdot \text{Var}(k_{jm}) = d_k \cdot 1 \cdot 1 = d_k" role="img"></div>
   </div>
-  <p>点积的标准差是 <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span>。当 <span class="katex-inline" data-expr="d_k = 64" aria-label="d_k = 64" role="img"></span> 时，点积的标准差是 8；当 <span class="katex-inline" data-expr="d_k = 128" aria-label="d_k = 128" role="img"></span> 时，标准差是 11.3。</p>
+  <p>The standard deviation of the dot product is <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span>. When <span class="katex-inline" data-expr="d_k = 64" aria-label="d_k = 64" role="img"></span>, the standard deviation is 8; when <span class="katex-inline" data-expr="d_k = 128" aria-label="d_k = 128" role="img"></span>, the standard deviation is 11.3.</p>
 
-  <h4>大量值的 softmax 会怎样？</h4>
-  <p>Softmax 的梯度正比于 <span class="katex-inline" data-expr="p_i(1-p_i)" aria-label="p_i(1-p_i)" role="img"></span>。当输入值很大时，softmax 输出趋近于 <strong>one-hot 分布</strong>（某个位置概率 ≈1，其余 ≈0），此时梯度近乎为零——模型无法学习。</p>
-  <p>除以 <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span> 将点积的方差归一化为 1，使得 softmax 输入保持在合理范围内，梯度可以正常流动。</p>
+  <h4>What happens to softmax with large values?</h4>
+  <p>The gradient of softmax is proportional to <span class="katex-inline" data-expr="p_i(1-p_i)" aria-label="p_i(1-p_i)" role="img"></span>. When input values are large, the softmax output approaches a <strong>one-hot distribution</strong> (one position has probability ≈1, the rest ≈0), at which point the gradient is nearly zero — the model cannot learn.</p>
+  <p>Dividing by <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span> normalizes the variance of the dot product to 1, keeping the softmax inputs within a reasonable range so gradients can flow properly.</p>
 
-  <h4>经验验证</h4>
-  <p>你可以自己验证：用 <code>torch.randn</code> 生成两组随机向量，计算点积的方差，看除以 √dₖ 前后的分布变化。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>关键启示：</strong>√dₖ 不是随意选的"魔法数字"，而是从概率论的方差传播中严格推导出来的。这种"先分析统计性质，再针对性修正"的思维方式，是设计深度学习模块的核心能力。</div></div>
+  <h4>Empirical Verification</h4>
+  <p>You can verify this yourself: use <code>torch.randn</code> to generate two sets of random vectors, calculate the variance of their dot products, and observe the distribution change before and after dividing by √dₖ.</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>Key Insight:</strong> √dₖ is not an arbitrarily chosen "magic number", but is rigorously derived from the propagation of variance in probability theory. This way of thinking — "first analyze the statistical properties, then make targeted corrections" — is a core skill for designing deep learning modules.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.6 深度理论: Softmax温度 -->
+<!-- 3.6 Deep Theory: Softmax Temperature -->
 <!-- ================================================================ -->
 <section class="card" id="s3-6">
-  <h3>3.6 深入理解：Softmax 温度、梯度饱和与注意力分布的"锐度"</h3>
-  <p>在实现了基础的 Scaled Dot-Product Attention 之后，让我们深入理解 softmax 在这个过程中的数学行为。</p>
+  <h3>3.6 Deep Dive: Softmax Temperature, Gradient Saturation, and the "Sharpness" of Attention Distributions</h3>
+  <p>After implementing basic Scaled Dot-Product Attention, let's delve deeper into the mathematical behavior of softmax in this process.</p>
 
-  <h4>Softmax 函数的梯度</h4>
-  <p>设 <span class="katex-inline" data-expr="\mathbf{p} = \text{softmax}(\mathbf{z})" aria-label="\mathbf{p} = \text{softmax}(\mathbf{z})" role="img"></span>，softmax 对输入的雅可比矩阵（Jacobian）为：</p>
-  <div class="math-box"><div class="label">Softmax 梯度（雅可比矩阵）</div>
+  <h4>Gradient of the Softmax Function</h4>
+  <p>Let <span class="katex-inline" data-expr="\mathbf{p} = \text{softmax}(\mathbf{z})" aria-label="\mathbf{p} = \text{softmax}(\mathbf{z})" role="img"></span>. The Jacobian matrix of softmax with respect to its input is:</p>
+  <div class="math-box"><div class="label">Softmax Gradient (Jacobian Matrix)</div>
     <div class="katex" data-expr="\frac{\partial p_i}{\partial z_j} = \begin{cases} p_i(1-p_i) & i=j \\ -p_i p_j & i \neq j \end{cases}" aria-label="\frac{\partial p_i}{\partial z_j} = \begin{cases} p_i(1-p_i) & i=j \\ -p_i p_j & i \neq j \end{cases}" role="img"></div>
   </div>
-  <p>这意味着：</p>
+  <p>This means:</p>
   <ul>
-    <li>当 <span class="katex-inline" data-expr="p_i \approx 1" aria-label="p_i \approx 1" role="img"></span>（即某个 token 的注意力极度集中），<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0" aria-label="p_i(1-p_i) \approx 0" role="img"></span>——梯度消失，停止学习</li>
-    <li>当 <span class="katex-inline" data-expr="p_i \approx 0.5" aria-label="p_i \approx 0.5" role="img"></span>（注意力分散），<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0.25" aria-label="p_i(1-p_i) \approx 0.25" role="img"></span>——梯度最大</li>
+    <li>When <span class="katex-inline" data-expr="p_i \approx 1" aria-label="p_i \approx 1" role="img"></span> (i.e., attention is extremely concentrated on one token), <span class="katex-inline" data-expr="p_i(1-p_i) \approx 0" aria-label="p_i(1-p_i) \approx 0" role="img"></span> — gradients vanish, learning stops</li>
+    <li>When <span class="katex-inline" data-expr="p_i \approx 0.5" aria-label="p_i \approx 0.5" role="img"></span> (attention is diffuse), <span class="katex-inline" data-expr="p_i(1-p_i) \approx 0.25" aria-label="p_i(1-p_i) \approx 0.25" role="img"></span> — gradients are maximal</li>
   </ul>
 
-  <h4>温度参数 τ 的作用</h4>
-  <p>如果在 softmax 之前除以温度 τ：<span class="katex-inline" data-expr="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" aria-label="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" role="img"></span></p>
+  <h4>The Role of the Temperature Parameter τ</h4>
+  <p>If we divide by a temperature τ before softmax: <span class="katex-inline" data-expr="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" aria-label="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" role="img"></span></p>
   <ul>
-    <li><strong>τ &lt; 1：</strong>分布更尖锐（peaked），模型更"确定"，但梯度更小</li>
-    <li><strong>τ &gt; 1：</strong>分布更平滑（smooth），模型更"不确定"，梯度更大</li>
+    <li><strong>τ &lt; 1:</strong> The distribution is more peaked (sharper), the model is more "certain", but gradients are smaller</li>
+    <li><strong>τ &gt; 1:</strong> The distribution is smoother, the model is more "uncertain", gradients are larger</li>
   </ul>
-  <p>训练时温度固定为 1，但推理时调整温度可以<strong>控制生成文本的随机性</strong>——这将在第 8 章中实际应用。</p>
+  <p>During training, the temperature is fixed at 1, but adjusting the temperature during inference can <strong>control the randomness of generated text</strong> — this will be applied in practice in Chapter 8.</p>
 
-  <h4>√dₖ 与温度的等价性</h4>
-  <p>除以 √dₖ 等价于在注意力 logits 上使用温度 <span class="katex-inline" data-expr="\tau = \sqrt{d_k}" aria-label="\tau = \sqrt{d_k}" role="img"></span>。在 Q/K 各维近似独立、方差约为 1 的初始化假设下，未缩放点积的方差会随 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 增长；缩放后 logits 的量级回到较稳定范围，避免 softmax 过早饱和。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：√dₖ 是一个<em>logit 尺度控制机制</em>。</strong>它不改变同一 query 下各 key 的相对排序（因为除以正数是单调变换），但会改变 softmax 分布的尖锐程度和梯度尺度。它有助于训练稳定，但不能保证所有层、所有数据分布下梯度都“始终有效”。</div></div>
-  <p>Ch03 作业中的 <code>attention_entropy(attn_weights)</code> 用 <span class="katex-inline" data-expr="H(p)=-\sum_i p_i\log p_i" aria-label="H(p)=-\sum_i p_i\log p_i" role="img"></span> 量化注意力分布的尖锐程度。one-hot attention 的熵接近 0，均匀关注 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 个位置时熵为 <span class="katex-inline" data-expr="\log T" aria-label="\log T" role="img"></span>。这不是“好坏分数”，而是判断 softmax 是否过早饱和的一个数值信号。</p>
+  <h4>Equivalence of √dₖ and Temperature</h4>
+  <p>Dividing by √dₖ is equivalent to using a temperature <span class="katex-inline" data-expr="\tau = \sqrt{d_k}" aria-label="\tau = \sqrt{d_k}" role="img"></span> on the attention logits. Under the initialization assumption that the dimensions of Q/K are approximately independent with variance ~1, the variance of the unscaled dot product grows with <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span>; scaling brings the magnitude of the logits back to a more stable range, preventing premature softmax saturation.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Essence: √dₖ is a <em>logit scale control mechanism</em>.</strong> It does not change the relative ordering of keys for a given query (since dividing by a positive number is a monotonic transformation), but it does change the sharpness of the softmax distribution and the scale of the gradients. It aids training stability, but cannot guarantee that gradients are "always effective" across all layers and data distributions.</div></div>
+  <p>The <code>attention_entropy(attn_weights)</code> function in the Ch03 assignment uses <span class="katex-inline" data-expr="H(p)=-\sum_i p_i\log p_i" aria-label="H(p)=-\sum_i p_i\log p_i" role="img"></span> to quantify the sharpness of the attention distribution. The entropy of a one-hot attention is close to 0, while uniformly attending to <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> positions gives an entropy of <span class="katex-inline" data-expr="\log T" aria-label="\log T" role="img"></span>. This is not a "good or bad score", but a numerical signal to judge whether softmax has prematurely saturated.</p>
 
-  <h4>从输出梯度传回 attention logits</h4>
-  <p>对单个 query，attention 输出为 <span class="katex-inline" data-expr="\mathbf{o}=\sum_i p_i\mathbf{v}_i" aria-label="\mathbf{o}=\sum_i p_i\mathbf{v}_i" role="img"></span>，其中 <span class="katex-inline" data-expr="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" aria-label="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" role="img"></span>。若上游梯度为 <span class="katex-inline" data-expr="\mathbf{g}=\partial L/\partial \mathbf{o}" aria-label="\mathbf{g}=\partial L/\partial \mathbf{o}" role="img"></span>，则先有：</p>
-  <div class="math-box"><div class="label">Attention Backward Path</div>
-    <div class="katex" data-expr="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" aria-label="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" role="img"></div>
+  <h4>Backpropagating Gradients from Output to Attention Logits</h4>
+  <p>For a single query, the attention output is <span class="katex-inline" data-expr="\mathbf{o}=\sum_i p_i\mathbf{v}_i" aria-label="\mathbf{o}=\sum_i p_i\mathbf{v}_i" role="img"></span>, where <span class="katex-inline" data-expr="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" aria-label="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" role="img"></span>. If the upstream gradient is <span class="katex-inline" data-expr="\mathbf{g}=\partial L/\partial \mathbf{o}" aria-label="\mathbf{g}=\partial L/\partial \mathbf{o}" role="img"></span>, then we first have:</p>
+  <div class="math-box"><div class="label">Attention Backward Path</div>    <div class="katex" data-expr="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" aria-label="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" role="img"></div>
   </div>
   <div class="worked-example">
-    <h4>Worked Example：从输出梯度手算回 attention logits</h4>
-    <p>设某个 query 的注意力权重为 <code>p=[0.2, 0.3, 0.5]</code>，三个 value 为 <code>v1=[1,0]</code>、<code>v2=[0,2]</code>、<code>v3=[-1,1]</code>，上游梯度为 <code>g=[0.5,-1.5]</code>。先计算每个 value 对 loss 的局部贡献：</p>
+    <h4>Worked Example: Manually computing attention logits gradients from output gradients</h4>
+    <p>Suppose a query's attention weights are <code>p=[0.2, 0.3, 0.5]</code>, the three values are <code>v1=[1,0]</code>, <code>v2=[0,2]</code>, <code>v3=[-1,1]</code>, and the upstream gradient is <code>g=[0.5,-1.5]</code>. First compute the local contribution of each value to the loss:</p>
     <table class="metrics-table">
       <thead>
-        <tr><th>位置</th><th>value</th><th><code>dL/dp_i = g dot v_i</code></th></tr>
+        <tr><th>Position</th><th>value</th><th><code>dL/dp_i = g dot v_i</code></th></tr>
       </thead>
       <tbody>
         <tr><td>1</td><td><code>[1,0]</code></td><td><code>0.5</code></td></tr>
@@ -379,91 +376,91 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
         <tr><td>3</td><td><code>[-1,1]</code></td><td><code>-2.0</code></td></tr>
       </tbody>
     </table>
-    <p>加权平均项为 <code>sum_i p_i dL/dp_i = 0.2*0.5 + 0.3*(-3.0) + 0.5*(-2.0) = -1.8</code>。因此 logits 梯度为：</p>
+    <p>The weighted average term is <code>sum_i p_i dL/dp_i = 0.2*0.5 + 0.3*(-3.0) + 0.5*(-2.0) = -1.8</code>. Therefore the logits gradients are:</p>
     <pre>dL/dz_1 = 0.2 * ( 0.5 - (-1.8)) =  0.46
 dL/dz_2 = 0.3 * (-3.0 - (-1.8)) = -0.36
 dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
-    <p>三个 logits 梯度相加为 0，这是 softmax 的平移不变性：所有 logits 同时加同一个常数不会改变概率分布。这个例子对应作业中的 <code>attention_logits_gradient</code>，也说明了 value 内容会影响哪些 attention logits 被推高或压低。</p>
+    <p>The three logits gradients sum to zero, which is the translation invariance of softmax: adding the same constant to all logits simultaneously does not change the probability distribution. This example corresponds to <code>attention_logits_gradient</code> in the homework, and also illustrates that the value content influences which attention logits are pushed up or down.</p>
   </div>
-  <p>Ch03 作业中的 <code>softmax_jacobian</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 对应这条路径。学生不需要手写完整 Transformer backward，但应该能解释：梯度先穿过 value 加权和，再穿过 softmax Jacobian，最后回到 Q/K 点积。</p>
-  <div class="math-box"><div class="label">从 logits 梯度回到 Q/K/V</div>
+  <p>The <code>softmax_jacobian</code>, <code>attention_logits_gradient</code>, and <code>attention_qkv_gradients</code> in the Ch03 homework correspond to this path. Students do not need to write the full Transformer backward by hand, but should be able to explain: the gradient first passes through the value weighted sum, then through the softmax Jacobian, and finally back to the Q/K dot product.</p>
+  <div class="math-box"><div class="label">From logits gradients back to Q/K/V</div>
     <div class="katex" data-expr="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" aria-label="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" role="img"></div>
   </div>
-  <p>这里的关键不是背公式，而是把链式法则和矩阵乘法方向对齐：<code>dV</code> 来自 attention weights 对 value 的加权，<code>dQ</code> 和 <code>dK</code> 来自 score 矩阵对点积两侧的梯度，且二者都必须带上 <code>1/sqrt(d_k)</code>。这也是为什么课程要求把手写梯度和 PyTorch autograd 数值对齐。</p>
+  <p>The key here is not to memorize formulas, but to align the chain rule with the matrix multiplication directions: <code>dV</code> comes from the attention weights weighting the values, <code>dQ</code> and <code>dK</code> come from the score matrix's gradient with respect to both sides of the dot product, and both must carry the <code>1/sqrt(d_k)</code> factor. This is also why the course requires aligning hand-written gradients numerically with PyTorch autograd.</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.6A Attention 诊断账本 -->
+<!-- 3.6A Attention Diagnostic Ledger -->
 <!-- ================================================================ -->
 <section class="card" id="s3-6a">
-  <h3>3.6A Attention 诊断账本：logits、entropy、梯度和 mask</h3>
-  <p>训练 Transformer 时，attention heatmap 很直观，但它不是第一诊断工具。真正需要先看的是一组数值量：它们能告诉你 attention 是否在正确位置归一化、logits 是否过大、mask 是否泄漏、梯度是否还能穿过 softmax，以及当前序列长度是否已经触发显存瓶颈。</p>
+  <h3>3.6A Attention Diagnostic Ledger: logits, entropy, gradients, and mask</h3>
+  <p>When training a Transformer, the attention heatmap is intuitive, but it is not the first diagnostic tool. What really needs to be examined first is a set of numerical quantities: they can tell you whether attention is normalizing at the correct positions, whether logits are too large, whether the mask is leaking, whether gradients can still pass through softmax, and whether the current sequence length has already triggered a memory bottleneck.</p>
 
-  <h4>先记录哪些量</h4>
-  <p>对一层中的一个 batch，可以按 head 和序列位置统计下面这些量。它们不要求改变模型结构，只需要在调试模式下从 <code>scores = QK^T / sqrt(d_k)</code>、mask 后 logits、softmax 权重和反向梯度中读取。</p>
+  <h4>Which quantities to record first</h4>
+  <p>For one batch in one layer, the following quantities can be recorded per head and per sequence position. They do not require changing the model structure, only reading from <code>scores = QK^T / sqrt(d_k)</code>, masked logits, softmax weights, and backward gradients in debug mode.</p>
   <table class="metrics-table">
     <thead>
-      <tr><th>量</th><th>含义</th><th>异常时通常说明什么</th></tr>
+      <tr><th>Quantity</th><th>Meaning</th><th>What an anomaly usually indicates</th></tr>
     </thead>
     <tbody>
-      <tr><td><code>score_mean/std/max/min</code></td><td>attention logits 的尺度</td><td>缺少 <code>1/sqrt(d_k)</code>、Q/K 初始化或 LayerNorm 分布异常</td></tr>
-      <tr><td><code>max_attention_prob</code></td><td>每个 query 最关注的 key 概率</td><td>接近 1 且大面积出现时，softmax 可能过早饱和</td></tr>
-      <tr><td><code>attention_entropy</code></td><td>注意力分布的熵</td><td>熵长期接近 0 表示极尖锐，长期接近 <code>log(visible_keys)</code> 表示近似均匀</td></tr>
-      <tr><td><code>masked_position_prob_sum</code></td><td>被 mask 位置获得的总概率</td><td>非零通常表示 mask 方向、广播维度或应用顺序有错误</td></tr>
-      <tr><td><code>all_masked_rows</code></td><td>某些 query 是否没有任何可见 key</td><td>softmax 可能产生 NaN，常见于 padding mask 和 causal mask 组合错误</td></tr>
-      <tr><td><code>grad_norm_q/k/v</code></td><td>Q/K/V 三条路径的梯度范数</td><td>Q/K 梯度消失而 V 正常时，常见原因是 softmax 饱和或 mask 截断了 score 路径</td></tr>
-      <tr><td><code>score_memory_bytes</code></td><td>dense score 张量 <code>[B,H,T,T]</code> 的物化成本</td><td>长上下文训练或推理需要 FlashAttention、分块或 KV cache 策略</td></tr>
+      <tr><td><code>score_mean/std/max/min</code></td><td>Scale of attention logits</td><td>Missing <code>1/sqrt(d_k)</code>, abnormal Q/K initialization or LayerNorm distribution</td></tr>
+      <tr><td><code>max_attention_prob</code></td><td>Probability of the key each query attends to most</td><td>When close to 1 and widespread, softmax may be saturating prematurely</td></tr>
+      <tr><td><code>attention_entropy</code></td><td>Entropy of the attention distribution</td><td>Entropy near 0 for a long time indicates extreme sharpness; near <code>log(visible_keys)</code> indicates near uniformity</td></tr>
+      <tr><td><code>masked_position_prob_sum</code></td><td>Total probability assigned to masked positions</td><td>Non-zero usually indicates an error in mask direction, broadcast dimension, or application order</td></tr>
+      <tr><td><code>all_masked_rows</code></td><td>Whether some queries have no visible keys</td><td>Softmax may produce NaN, common with incorrect combination of padding mask and causal mask</td></tr>
+      <tr><td><code>grad_norm_q/k/v</code></td><td>Gradient norm of Q/K/V paths</td><td>When Q/K gradients vanish but V is normal, common causes are softmax saturation or mask cutting off the score path</td></tr>
+      <tr><td><code>score_memory_bytes</code></td><td>Materialization cost of the dense score tensor <code>[B,H,T,T]</code></td><td>Long-context training or inference requires FlashAttention, chunking, or KV cache strategies</td></tr>
     </tbody>
   </table>
 
-  <h4>用熵判断分布锐度</h4>
-  <p>对单个 query，如果它能看到 <code>m</code> 个 key，完全均匀的 attention 分布熵为 <span class="katex-inline" data-expr="\log m" aria-label="\log m" role="img"></span>；几乎 one-hot 的分布熵接近 0。注意力熵不是“越高越好”或“越低越好”：复制、括号匹配、分隔符定位等行为可能自然产生低熵；但如果训练早期所有层、所有 head 都低熵，就要检查 logits 缩放、mask 和数值精度。</p>
+  <h4>Judging distribution sharpness with entropy</h4>
+  <p>For a single query, if it can see <code>m</code> keys, the entropy of a perfectly uniform attention distribution is <span class="katex-inline" data-expr="\log m" aria-label="\log m" role="img"></span>; the entropy of a nearly one-hot distribution is close to 0. Attention entropy is not "higher is better" or "lower is better": behaviors like copying, bracket matching, delimiter positioning, etc., may naturally produce low entropy; but if all layers and all heads have low entropy early in training, check logits scaling, mask, and numerical precision.</p>
   <div class="worked-example">
-    <h4>Worked Example：两个 logits 向量的诊断差异</h4>
-    <p>设某个 query 的 mask 后 logits 为 <code>[0.0, 0.0, 0.0, -inf]</code>。最后一个位置被屏蔽，前三个可见位置 softmax 后为均匀分布 <code>[1/3, 1/3, 1/3, 0]</code>，熵为 <code>log(3) ≈ 1.099</code>。这说明模型没有偏向某个 key，但 mask 本身生效。</p>
-    <p>如果 logits 为 <code>[8.0, 0.0, -1.0, -inf]</code>，softmax 约为 <code>[0.9995, 0.0003, 0.0001, 0]</code>，熵接近 0。此时 heatmap 看起来“很确定”，但 softmax Jacobian 中多数项也接近 0，Q/K 路径的梯度可能很弱。若训练一开始就普遍出现这种模式，应优先检查是否漏掉了 <code>sqrt(d_k)</code> 缩放，或混合精度下的 mask sentinel 是否导致数值异常。</p>
+    <h4>Worked Example: Diagnostic difference between two logits vectors</h4>
+    <p>Suppose a query's masked logits are <code>[0.0, 0.0, 0.0, -inf]</code>. The last position is masked, and after softmax the first three visible positions yield a uniform distribution <code>[1/3, 1/3, 1/3, 0]</code>, with entropy <code>log(3) ≈ 1.099</code>. This indicates the model has no bias towards any key, but the mask itself is effective.</p>
+    <p>If the logits are <code>[8.0, 0.0, -1.0, -inf]</code>, softmax is approximately <code>[0.9995, 0.0003, 0.0001, 0]</code>, and the entropy is close to 0. At this point, the heatmap looks "very certain", but most terms in the softmax Jacobian are also close to 0, and the gradients for the Q/K path may be very weak. If this pattern is widespread from the start of training, first check whether the <code>sqrt(d_k)</code> scaling is missing, or whether the mask sentinel under mixed precision is causing numerical anomalies.</p>
   </div>
 
-  <h4>常见症状到排查方向</h4>
+  <h4>Common symptoms and troubleshooting directions</h4>
   <table class="metrics-table">
     <thead>
-      <tr><th>症状</th><th>优先排查</th></tr>
+      <tr><th>Symptom</th><th>Priority check</th></tr>
     </thead>
     <tbody>
-      <tr><td>未来 token 的 attention probability 非零</td><td>causal mask 上三角/下三角方向、mask 是否在 softmax 前应用、mask 维度是否能正确广播到 <code>[B,H,T,T]</code></td></tr>
-      <tr><td>第一批训练就大量低熵、<code>max_attention_prob</code> 接近 1</td><td><code>1/sqrt(d_k)</code> 缩放、temperature、Q/K 权重初始化、LayerNorm 输出尺度</td></tr>
-      <tr><td>所有 head 长期近似均匀</td><td>Q/K 投影是否被训练、学习率是否过小、mask 是否只留下很少可见位置、输入是否被错误置零</td></tr>
-      <tr><td>attention 权重出现 NaN</td><td>是否存在 all-masked row、是否出现 <code>inf - inf</code>、fp16/bf16 下是否使用了不合适的极小值</td></tr>
-      <tr><td>V 梯度正常但 Q/K 梯度接近 0</td><td>softmax 饱和、mask 阻断 score 路径、loss 是否只通过 value 内容产生弱监督</td></tr>
-      <tr><td>长序列显存突然按平方增长</td><td>score 矩阵是否被显式保存，是否需要 FlashAttention、activation checkpoint、序列分块或推理端 KV cache</td></tr>
+      <tr><td>Non-zero attention probability for future tokens</td><td>Direction of causal mask (upper/lower triangle), whether mask is applied before softmax, whether mask dimensions broadcast correctly to <code>[B,H,T,T]</code></td></tr>
+      <tr><td>Widespread low entropy and <code>max_attention_prob</code> near 1 in the first training batches</td><td><code>1/sqrt(d_k)</code> scaling, temperature, Q/K weight initialization, LayerNorm output scale</td></tr>
+      <tr><td>All heads are nearly uniform for a long time</td><td>Whether Q/K projections are being trained, learning rate too small, mask leaving very few visible positions, input incorrectly zeroed out</td></tr>
+      <tr><td>NaN in attention weights</td><td>Whether there are all-masked rows, whether <code>inf - inf</code> occurs, whether an inappropriate very small value is used under fp16/bf16</td></tr>
+      <tr><td>V gradient normal but Q/K gradient near 0</td><td>Softmax saturation, mask blocking the score path, whether the loss only provides weak supervision through value content</td></tr>
+      <tr><td>Long sequence memory suddenly grows quadratically</td><td>Whether the score matrix is explicitly saved, whether FlashAttention, activation checkpointing, sequence chunking, or inference-side KV cache is needed</td></tr>
     </tbody>
   </table>
 
-  <p>Ch03 作业中的 <code>attention_entropy</code>、<code>attention_score_memory_bytes</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 分别对应上表中的分布锐度、显存估算、logits 反向路径和 Q/K/V 梯度路径。完成这些函数后，你应该能从一段 attention 训练日志判断：问题是 mask 错、logits 尺度错、梯度被 softmax 饱和压住，还是单纯的长上下文计算成本过高。</p>
+  <p>The <code>attention_entropy</code>, <code>attention_score_memory_bytes</code>, <code>attention_logits_gradient</code>, and <code>attention_qkv_gradients</code> in the Ch03 homework correspond to distribution sharpness, memory estimation, logits backward path, and Q/K/V gradient paths in the table above. After completing these functions, you should be able to diagnose from a segment of attention training logs whether the problem is a wrong mask, wrong logits scale, gradients suppressed by softmax saturation, or simply the high computational cost of long contexts.</p>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 3: Causal Mask -->
+<!-- Programming Exercise 3: Causal Mask -->
 <!-- ================================================================ -->
 <section class="card" id="s3-7">
-  <h3>3.7 编程练习 3-5：实现并应用 Attention Mask</h3>
-  <p>在自回归（GPT 风格）语言模型中，位置 t 只能看到当前位置及其之前的 token，不能看到未来 token。实现时通常把<strong>上三角未来位置</strong>屏蔽掉，只保留下三角（含对角线）为可见位置。</p>
+  <h3>3.7 Programming Exercises 3-5: Implementing and Applying Attention Masks</h3>
+  <p>In an autoregressive (GPT-style) language model, position t can only see the current position and positions before it, not future tokens. In implementation, the <strong>upper triangular future positions</strong> are usually masked out, keeping only the lower triangle (including the diagonal) as visible positions.</p>
 
-  <div class="math-box"><div class="label">Causal Mask 矩阵（n=4 示例）</div>
+  <div class="math-box"><div class="label">Causal Mask Matrix (n=4 example)</div>
     <div class="katex" data-expr="\mathbf{M} = \begin{pmatrix} 0 & -\infty & -\infty & -\infty \\ 0 & 0 & -\infty & -\infty \\ 0 & 0 & 0 & -\infty \\ 0 & 0 & 0 & 0 \end{pmatrix}" aria-label="\mathbf{M} = \begin{pmatrix} 0 & -\infty & -\infty & -\infty \\ 0 & 0 & -\infty & -\infty \\ 0 & 0 & 0 & -\infty \\ 0 & 0 & 0 & 0 \end{pmatrix}" role="img"></div>
   </div>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 3：生成 Causal Mask</h4>
+    <h4>🖥️ Exercise 3: Generate Causal Mask</h4>
     <div class="task">
-      <p><strong>任务：</strong>写一个函数，给定序列长度 <code>seq_len</code>，返回因果掩码矩阵。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Write a function that, given a sequence length <code>seq_len</code>, returns a causal mask matrix.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>返回形状为 <code>(seq_len, seq_len)</code> 的布尔张量（True=可见, False=屏蔽）</li>
-        <li>下三角（含对角线）为 True，上三角为 False</li>
-        <li>不要用 for 循环——利用 PyTorch 的张量操作（如 <code>torch.tril</code> 或广播）</li>
+        <li>Return a boolean tensor of shape <code>(seq_len, seq_len)</code> (True=visible, False=masked)</li>
+        <li>The lower triangle (including the diagonal) is True, the upper triangle is False</li>
+        <li>Do not use for loops—utilize PyTorch tensor operations (e.g., <code>torch.tril</code> or broadcasting)</li>
       </ul>
-      <pre># 预期用法
+      <pre># Expected usage
 mask = create_causal_mask(4)
 print(mask)
 # tensor([[ True, False, False, False],
@@ -471,27 +468,26 @@ print(mask)
 #         [ True,  True,  True, False],
 #         [ True,  True,  True,  True]])</pre>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def create_causal_mask(seq_len):
-    """创建因果（下三角）注意力掩码"""
-    # torch.tril 直接生成下三角全 1 矩阵
+    """Create a causal (lower triangular) attention mask"""
+    # torch.tril directly generates a lower triangular matrix of all ones
     mask = torch.tril(torch.ones(seq_len, seq_len))
-    return mask.bool()  # 转为布尔类型
+    return mask.bool()  # Convert to boolean type
 
-# 或者更紧凑的写法：
+# Or a more compact version:
 def create_causal_mask(seq_len):
     return torch.ones(seq_len, seq_len).tril().bool()</div>
     </div>
   </div>
 
   <div class="coding-exercise" style="margin-top:16px">
-    <h4>🖥️ 练习 4：合成 Causal Mask 与 Padding Mask</h4>
+    <h4>🖥️ Exercise 4: Combine Causal Mask and Padding Mask</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>combine_causal_padding_mask(padding_mask)</code>。输入 <code>padding_mask</code> 形状为 <code>(batch, seq_len)</code>，True 表示真实 token，False 表示 padding；输出形状为 <code>(batch, seq_len, seq_len)</code>，同时屏蔽未来 key 和 padding key。</p>
-      <p><strong>关键 shape：</strong><code>causal_mask</code> 为 <code>(T,T)</code>，扩展成 <code>(1,T,T)</code>；<code>padding_mask</code> 作为 key mask 扩展成 <code>(B,1,T)</code>；二者逻辑与得到 <code>(B,T,T)</code>。</p>
-      <h4>Worked Example：一行 padding mask 如何变成注意力矩阵</h4>
-      <p>设单个样本长度为 4，<code>padding_mask = [True, True, True, False]</code>，最后一个位置是 padding。因果 mask 只允许每个 query 看见自己和过去；padding mask 只允许看见真实 key。二者合成后得到：</p>
+      <p><strong>Task:</strong> Implement <code>combine_causal_padding_mask(padding_mask)</code>. The input <code>padding_mask</code> has shape <code>(batch, seq_len)</code>, where True indicates a real token and False indicates padding; the output has shape <code>(batch, seq_len, seq_len)</code>, masking both future keys and padding keys.</p>      <p><strong>Key shape:</strong> <code>causal_mask</code> is <code>(T,T)</code>, expanded to <code>(1,T,T)</code>; <code>padding_mask</code> as key mask is expanded to <code>(B,1,T)</code>; the logical AND of the two yields <code>(B,T,T)</code>.</p>
+      <h4>Worked Example: How a single row padding mask becomes an attention matrix</h4>
+      <p>Assume a single sample length of 4, <code>padding_mask = [True, True, True, False]</code>, the last position is padding. The causal mask only allows each query to see itself and the past. The padding mask only allows seeing real keys. Combining them yields:</p>
       <pre>causal mask:
 [[1, 0, 0, 0],
  [1, 1, 0, 0],
@@ -509,12 +505,12 @@ combined mask:
  [1, 1, 0, 0],
  [1, 1, 1, 0],
  [1, 1, 1, 0]]</pre>
-      <p>注意最后一行仍然能“看见”前三个真实 key，这是因为这个函数只屏蔽 padding key 列；实际训练 loss 会用 label mask 或 attention/output mask 跳过 padding query 位置。把 padding query 行也清零通常会导致整行 softmax 全是 <code>-inf</code>，需要额外处理，因此作业里先要求学生正确实现 key-side padding mask。</p>
+      <p>Note that the last row can still "see" the first three real keys. This is because this function only masks the padding key columns; the actual training loss uses a label mask or attention/output mask to skip the padding query positions. Zeroing out the padding query rows entirely usually causes the entire row's softmax to be <code>-inf</code>, requiring extra handling. Therefore, the assignment first asks students to correctly implement the key-side padding mask.</p>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def combine_causal_padding_mask(padding_mask):
-    """合成下三角因果约束和 padding key 约束。"""
+    """Combine lower-triangular causal constraint and padding key constraint."""
     if padding_mask.dim() != 2:
         raise ValueError("padding_mask must have shape [B, T]")
     valid_keys = padding_mask.bool()
@@ -525,344 +521,342 @@ def combine_causal_padding_mask(padding_mask):
   </div>
 
   <div class="coding-exercise" style="margin-top:16px">
-    <h4>🖥️ 练习 5：将 Causal Mask 集成到注意力中</h4>
+    <h4>🖥️ Exercise 5: Integrating the Causal Mask into Attention</h4>
     <div class="task">
-      <p><strong>任务：</strong>修改你在 3.4 中实现的 <code>scaled_dot_product_attention</code> 函数，加入 causal mask 支持。要求 mask==False 的位置在 softmax 前被设为 -1e9。</p>
-      <p><strong>测试：</strong>取 Q=K=V=torch.randn(1,4,64)，验证 causal attention 下位置 0 只关注位置 0，位置 3 关注位置 0-3。</p>
+      <p><strong>Task:</strong> Modify the <code>scaled_dot_product_attention</code> function you implemented in 3.4 to add causal mask support. Positions where mask==False should be set to -1e9 before softmax.</p>
+      <p><strong>Test:</strong> Use Q=K=V=torch.randn(1,4,64), verify that under causal attention, position 0 only attends to position 0, and position 3 attends to positions 0-3.</p>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 def causal_attention(Q, K, V):
-    """带因果掩码的 Scaled Dot-Product Attention"""
+    """Scaled Dot-Product Attention with causal mask"""
     d_k = Q.size(-1)
     seq_len = Q.size(1)
-    # 创建因果掩码
+    # Create causal mask
     causal_mask = create_causal_mask(seq_len)  # (seq_len, seq_len)
     scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
-    # 掩码 False 位置 → -1e9
+    # Mask False positions → -1e9
     scores = scores.masked_fill(~causal_mask, -1e9)
     attn_weights = torch.softmax(scores, dim=-1)
     output = torch.matmul(attn_weights, V)
     return output, attn_weights
 
-# 测试：位置 0 的注意力应该只有位置 0（权重=1.0）
+# Test: Attention for position 0 should only be on position 0 (weight=1.0)
 Q = K = V = torch.randn(1, 4, 64)
 out, attn = causal_attention(Q, K, V)
-print("位置0的注意力:", attn[0, 0])  # 应该只有 [0] > 0
-print("位置3的注意力:", attn[0, 3])  # [0,1,2,3] 都应该 > 0</div>
+print("Attention for position 0:", attn[0, 0])  # Should only have [0] > 0
+print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</div>
     </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.7A Attention 实现边界 -->
+<!-- 3.7A Attention Implementation Boundaries -->
 <!-- ================================================================ -->
 <section class="card" id="s3-7a">
-  <h3>3.7A Attention 实现边界：从教学函数到真实模型</h3>
-  <p>教学版 attention 用几十行代码就能跑通，但真实模型里的 attention 往往出错在边界条件，而不是公式本身。工程师需要知道哪些地方可以简化，哪些地方不能简化：mask 的语义、dtype、广播、全屏蔽 query、混合精度 sentinel、增量解码和高性能 kernel 的 API 约定。</p>
+  <h3>3.7A Attention Implementation Boundaries: From Pedagogical Functions to Real Models</h3>
+  <p>A pedagogical version of attention can run with a few dozen lines of code, but attention in real models often fails due to boundary conditions, not the formula itself. Engineers need to know which parts can be simplified and which cannot: mask semantics, dtype, broadcasting, fully masked queries, mixed-precision sentinels, incremental decoding, and the API conventions of high-performance kernels.</p>
 
-  <h4>1. Mask 语义必须先固定</h4>
-  <p>不同库对 mask 的约定并不完全一致。课程作业约定 <code>True/1 = 可见</code>、<code>False/0 = 屏蔽</code>，并在 softmax 前把屏蔽位置写成很大的负数。某些 PyTorch API 或模型实现会使用 additive mask：可见位置加 <code>0</code>，屏蔽位置加 <code>-inf</code>。这两种写法等价，但不能混用。</p>
+  <h4>1. Mask Semantics Must Be Fixed First</h4>
+  <p>Different libraries do not have entirely consistent conventions for masks. The course assignment stipulates <code>True/1 = visible</code>, <code>False/0 = masked</code>, and sets masked positions to a large negative number before softmax. Some PyTorch APIs or model implementations use an additive mask: visible positions add <code>0</code>, masked positions add <code>-inf</code>. These two forms are equivalent but cannot be mixed.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>Mask 类型</th><th>形状</th><th>语义</th><th>常见错误</th></tr>
-      <tr><td>Causal mask</td><td><code>[T,T]</code></td><td>每个 query 只能看自己和过去 key</td><td>上三角/下三角方向写反，导致未来泄漏</td></tr>
-      <tr><td>Padding key mask</td><td><code>[B,T]</code> → <code>[B,1,T]</code></td><td>所有 query 都不能看 padding key</td><td>误把 padding query 行全清零，softmax 得到 NaN</td></tr>
-      <tr><td>Batch mask</td><td><code>[B,T,T]</code></td><td>不同样本有不同可见 key</td><td>广播维度放错，样本之间共享了错误 mask</td></tr>
-      <tr><td>Additive mask</td><td><code>[B,1,T,T]</code> 或可广播</td><td>直接加到 attention logits 上</td><td>把 bool mask 当作 additive mask 相加</td></tr>
+      <tr><th>Mask Type</th><th>Shape</th><th>Semantics</th><th>Common Error</th></tr>
+      <tr><td>Causal mask</td><td><code>[T,T]</code></td><td>Each query can only see itself and past keys</td><td>Upper/lower triangular direction reversed, causing future leakage</td></tr>
+      <tr><td>Padding key mask</td><td><code>[B,T]</code> → <code>[B,1,T]</code></td><td>All queries cannot see padding keys</td><td>Mistakenly zeroing out padding query rows entirely, softmax yields NaN</td></tr>
+      <tr><td>Batch mask</td><td><code>[B,T,T]</code></td><td>Different samples have different visible keys</td><td>Broadcast dimension placed incorrectly, samples share the wrong mask</td></tr>
+      <tr><td>Additive mask</td><td><code>[B,1,T,T]</code> or broadcastable</td><td>Added directly to attention logits</td><td>Adding a bool mask as if it were an additive mask</td></tr>
     </table>
   </div>
 
-  <h4>2. Mask 必须在 softmax 前进入 logits</h4>
-  <p>如果先 softmax 再把屏蔽位置权重乘 0，剩余可见位置的概率和会小于 1，输出尺度会随屏蔽数量变化。正确流程是：</p>
+  <h4>2. Mask Must Enter Logits Before Softmax</h4>
+  <p>If you apply softmax first and then multiply the weights of masked positions by 0, the sum of probabilities for the remaining visible positions will be less than 1, and the output scale will vary with the number of masked positions. The correct process is:</p>
   <div class="math-box"><div class="label">Masked attention logits</div>
     <div class="katex" data-expr="P=\mathrm{softmax}\left(\frac{QK^\top}{\sqrt{d_k}} + M\right),\quad M_{ij}=0\text{ if visible},\;-\infty\text{ if masked}" aria-label="P=softmax(QK^T/sqrt(d_k)+M), Mij=0 if visible and -infty if masked" role="img"></div>
   </div>
-  <p>这样 softmax 的分母只包含可见 key。Ch03 的 worked example 中，未来 token 的 value 即使很大也不会进入输出，因为它在 softmax 前已经被移出概率分布。</p>
+  <p>This way, the denominator of softmax only includes visible keys. In the worked example of Ch03, even if the value of a future token is very large, it will not enter the output because it has been removed from the probability distribution before softmax.</p>
 
-  <h4>3. 全屏蔽 query 要单独处理</h4>
-  <p>如果某一行 logits 全部是 <code>-inf</code> 或等价的大负数，softmax 的数学分母为 0，很多实现会得到 NaN。训练中最常见来源是 padding query 行：这个 query 本身是 padding，不应该产生 loss，但它仍经过 attention 前向。课程作业选择只屏蔽 padding key，不把 padding query 行全清零，就是为了避免这个问题。</p>
-  <p>生产实现通常会用两层机制处理：</p>
+  <h4>3. Fully Masked Queries Need Separate Handling</h4>
+  <p>If a row of logits is entirely <code>-inf</code> or an equivalent large negative number, the mathematical denominator of softmax is 0, and many implementations will produce NaN. The most common source in training is the padding query row: this query itself is padding and should not generate loss, but it still passes through the attention forward pass. The course assignment chooses to only mask padding keys, not to zero out the padding query rows entirely, precisely to avoid this problem.</p>
+  <p>Production implementations typically use a two-layer mechanism:</p>
   <ul>
-    <li><strong>attention mask：</strong>确保真实 query 不读取未来或 padding key。</li>
-    <li><strong>loss/output mask：</strong>确保 padding query 的输出不进入 loss、metric 或后续任务统计。</li>
+    <li><strong>Attention mask:</strong> Ensures real queries do not read future or padding keys.</li>
+    <li><strong>Loss/output mask:</strong> Ensures the output of padding queries does not enter the loss, metrics, or subsequent task statistics.</li>
   </ul>
 
-  <h4>4. 混合精度下的 sentinel 不是随便填</h4>
-  <p>教学代码常用 <code>-1e9</code>，但在 fp16/bf16、FlashAttention 或 fused SDPA kernel 中，推荐做法会因实现而异。关键原则是：屏蔽值必须足够小，使 <code>exp(masked_logit)</code> 在当前 dtype 下近似为 0；同时不能引入 NaN 或 dtype overflow。</p>
+  <h4>4. The Sentinel Value in Mixed Precision is Not Arbitrary</h4>
+  <p>Pedagogical code often uses <code>-1e9</code>, but in fp16/bf16, FlashAttention, or fused SDPA kernels, the recommended practice varies by implementation. The key principle is: the masked value must be small enough that <code>exp(masked_logit)</code> is approximately 0 in the current dtype; simultaneously, it must not introduce NaN or dtype overflow.</p>
   <div class="table-wrap">
     <table>
-      <tr><th>写法</th><th>优点</th><th>风险</th></tr>
-      <tr><td><code>masked_fill(~mask, -1e9)</code></td><td>教学直观，float32 中稳定</td><td>低精度或某些 kernel 中可能不合适</td></tr>
-      <tr><td><code>torch.finfo(dtype).min</code></td><td>按 dtype 选择最小有限值</td><td>全屏蔽行仍可能 NaN，需要额外处理</td></tr>
-      <tr><td>bool mask 交给 fused kernel</td><td>让库处理 sentinel 和 tiling</td><td>必须确认 API 中 True/False 的含义</td></tr>
+      <tr><th>Method</th><th>Advantage</th><th>Risk</th></tr>
+      <tr><td><code>masked_fill(~mask, -1e9)</code></td><td>Intuitive for teaching, stable in float32</td><td>May be unsuitable in low precision or certain kernels</td></tr>
+      <tr><td><code>torch.finfo(dtype).min</code></td><td>Selects the minimum finite value based on dtype</td><td>Fully masked rows may still produce NaN, requiring extra handling</td></tr>
+      <tr><td>Pass bool mask to fused kernel</td><td>Let the library handle sentinel and tiling</td><td>Must confirm the meaning of True/False in the API</td></tr>
     </table>
   </div>
 
-  <h4>5. 训练 attention 与增量解码 attention 的形状不同</h4>
-  <p>训练时通常一次处理完整序列，Q/K/V 形状类似 <code>[B,T,D]</code>，score 是 <code>[B,T,T]</code>。增量解码时每步只给一个新 query，Q 形状更像 <code>[B,1,D]</code>，K/V 来自历史 cache，形状是 <code>[B,T_cache,D]</code>，score 变成 <code>[B,1,T_cache]</code>。此时 causal mask 不再是完整 <code>[T,T]</code> 下三角，而是“当前 query 只能看已有 cache 和自己”。如果 position_ids、cache length 或 prefix cache 对不上，模型仍能输出 token，但相对位置和可见上下文已经错了。</p>
+  <h4>5. Shapes Differ Between Training Attention and Incremental Decoding Attention</h4>
+  <p>During training, a full sequence is usually processed at once; Q/K/V shapes are like <code>[B,T,D]</code>, and the score is <code>[B,T,T]</code>. During incremental decoding, only one new query is given per step; the Q shape is more like <code>[B,1,D]</code>, K/V come from the historical cache with shape <code>[B,T_cache,D]</code>, and the score becomes <code>[B,1,T_cache]</code>. At this point, the causal mask is no longer a complete <code>[T,T]</code> lower triangle, but rather "the current query can only see the existing cache and itself." If position_ids, cache length, or prefix cache do not match, the model can still output tokens, but the relative positions and visible context are already wrong.</p>
 
-  <h4>6. 高性能 API 的等价条件</h4>
-  <p>PyTorch 的 <code>scaled_dot_product_attention</code>、FlashAttention 和推理引擎 kernel 可以替代手写 attention，但只有在以下条件对齐时才等价：</p>
+  <h4>6. Equivalence Conditions for High-Performance APIs</h4>
+  <p>PyTorch's <code>scaled_dot_product_attention</code>, FlashAttention, and inference engine kernels can replace hand-written attention, but they are only equivalent when the following conditions are aligned:</p>
   <ul>
-    <li><strong>缩放一致：</strong>是否默认除以 <code>sqrt(d_k)</code>，有没有额外 scale。</li>
-    <li><strong>mask 一致：</strong>causal flag、padding mask、additive mask 的语义是否一致。</li>
-    <li><strong>dropout 一致：</strong>训练时 attention dropout 是否开启，推理时必须关闭。</li>
-    <li><strong>精度一致：</strong>softmax 是否在 fp32 accumulation 中完成，输出 dtype 如何回写。</li>
-    <li><strong>layout 一致：</strong>输入是 <code>[B,T,H,D]</code>、<code>[B,H,T,D]</code> 还是 packed varlen 格式。</li>
+    <li><strong>Scaling consistent:</strong> Whether it divides by <code>sqrt(d_k)</code> by default, and if there is any extra scale.</li>
+    <li><strong>Mask consistent:</strong> Whether the semantics of the causal flag, padding mask, and additive mask are consistent.</li>
+    <li><strong>Dropout consistent:</strong> Whether attention dropout is enabled during training; it must be disabled during inference.</li>
+    <li><strong>Precision consistent:</strong> Whether softmax is performed with fp32 accumulation, and how the output dtype is written back.</li>
+    <li><strong>Layout consistent:</strong> Whether the input is in <code>[B,T,H,D]</code>, <code>[B,H,T,D]</code>, or a packed varlen format.</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心判断：</strong>Attention 的公式只有一行，但可靠实现依赖 mask 语义、数值稳定和 shape 契约。能写出教学版 attention 是第一步；能判断它和 fused kernel、KV cache、padding batch 是否等价，才是工程能力。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Key Judgment:</strong> The formula for Attention is only one line, but a reliable implementation depends on mask semantics, numerical stability, and shape contracts. Being able to write a pedagogical version of attention is the first step; being able to judge whether it is equivalent to a fused kernel, KV cache, and padding batch is engineering capability.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 编程练习 6: 可视化 -->
+<!-- Programming Exercise 6: Visualization -->
 <!-- ================================================================ -->
 <section class="card" id="s3-8">
-  <h3>3.8 编程练习 6：注意力权重可视化</h3>
-  <p>理解注意力机制的<strong>行为</strong>和仅仅理解它的数学公式同样重要。在这个练习中，你将用 matplotlib 可视化注意力权重矩阵。</p>
+  <h3>3.8 Programming Exercise 6: Attention Weight Visualization</h3>
+  <p>Understanding the <strong>behavior</strong> of the attention mechanism is just as important as understanding its mathematical formula. In this exercise, you will use matplotlib to visualize the attention weight matrix.</p>
 
   <div class="coding-exercise">
-    <h4>🖥️ 练习 6：可视化注意力热力图</h4>
+    <h4>🖥️ Exercise 6: Visualizing Attention Heatmaps</h4>
     <div class="task">
-      <p><strong>任务：</strong>写一个函数，输入注意力权重矩阵 <code>(seq_len, seq_len)</code> 和 token 列表，绘制热力图。</p>
-      <p><strong>要求：</strong></p>
+      <p><strong>Task:</strong> Write a function that takes an attention weight matrix <code>(seq_len, seq_len)</code> and a list of tokens, and plots a heatmap.</p>
+      <p><strong>Requirements:</strong></p>
       <ul>
-        <li>使用 <code>plt.imshow</code> 或 <code>seaborn.heatmap</code></li>
-        <li>x 轴为 Key 位置，y 轴为 Query 位置</li>
-        <li>标注 token 文字</li>
-        <li>观察：causal mask 下热力图应该是下三角形状</li>
+        <li>Use <code>plt.imshow</code> or <code>seaborn.heatmap</code></li>
+        <li>x-axis is Key position, y-axis is Query position</li>
+        <li>Annotate with token text</li>
+        <li>Observation: Under a causal mask, the heatmap should be lower-triangular</li>
       </ul>
     </div>
-    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 def plot_attention(attn_weights, tokens, title="Attention Weights"):
-    """绘制注意力权重热力图
-    attn_weights: (seq_len, seq_len), 第i行是位置i对所有位置的注意力
-    tokens: list of str, 长度为 seq_len
+    """Plot attention weight heatmap
+    attn_weights: (seq_len, seq_len), row i is the attention of position i over all positions
+    tokens: list of str, length seq_len
     """
     fig, ax = plt.subplots(figsize=(10, 8))
     sns.heatmap(attn_weights.detach().numpy(),
                 xticklabels=tokens, yticklabels=tokens,
                 cmap='YlOrRd', annot=True, fmt='.2f',
                 vmin=0, vmax=1, ax=ax)
-    ax.set_xlabel('Key Position (被关注)')
-    ax.set_ylabel('Query Position (查询方)')
+    ax.set_xlabel('Key Position (Attended To)')
+    ax.set_ylabel('Query Position (Attending From)')
     ax.set_title(title)
     plt.tight_layout()
     plt.show()
 
-# 示例
+# Example
 tokens = ['&lt;s&gt;', 'The', 'cat', 'sat', 'on', 'the', 'mat']
 Q = K = V = torch.randn(1, 7, 64)
 _, attn = causal_attention(Q, K, V)
-plot_attention(attn[0], tokens, "Causal Attention 权重分布")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>观察目标：</strong>热力图应该是清晰的<strong>下三角形状</strong>——每个位置只关注自己和之前的 token。对角线通常最亮（token 倾向于关注自己），但也应该能看到明显的 off-diagonal 注意力。</p>
-    </div>
+plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>Observation Goal:</strong> The heatmap should be a clear <strong>lower-triangular shape</strong>—each position only attends to itself and previous tokens. The diagonal is usually the brightest (tokens tend to attend to themselves), but you should also see significant off-diagonal attention.</p>    </div>
   </div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.8A Attention 可解释性边界 -->
+<!-- 3.8A Attention Interpretability Boundaries -->
 <!-- ================================================================ -->
 <section class="card" id="s3-8a">
-  <h3>3.8A Attention Heatmap 的解释边界：权重不是因果解释</h3>
-  <p>注意力热力图是非常有用的诊断工具：它能告诉你某一层、某一头、某个 query 位置在聚合 value 时分配了多少权重。但在严谨分析中，<strong>attention weight 不能直接等同于“模型为什么这样回答”</strong>。原因是 Transformer 的最终输出不是单个注意力矩阵决定的，而是多层、多头、残差路径、MLP 和输出层共同作用的结果。</p>
+  <h3>3.8A Attention Heatmap Interpretation Boundaries: Weights Are Not Causal Explanations</h3>
+  <p>Attention heatmaps are very useful diagnostic tools: they can tell you how much weight a certain layer, head, or query position assigns when aggregating values. However, in rigorous analysis, <strong>attention weights cannot be directly equated with "why the model answered this way"</strong>. The reason is that the final output of a Transformer is not determined by a single attention matrix, but by the combined effect of multiple layers, multiple heads, residual paths, MLPs, and the output layer.</p>
 
-  <h4>为什么权重不等于解释</h4>
+  <h4>Why Weights Are Not Explanations</h4>
   <ul>
-    <li><strong>Value 才是被混合的信息。</strong>热力图显示的是 <span class="katex-inline" data-expr="\mathrm{softmax}(QK^\top/\sqrt{d_k})" aria-label="\mathrm{softmax}(QK^\top/\sqrt{d_k})" role="img"></span>，但真正进入下一层的是权重对 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的加权和。高权重位置的 value 未必携带最终预测所需的语义方向。</li>
-    <li><strong>多头与多层会重新组合信息。</strong>一个 head 的高亮区域可能只是局部模式；后续 head、残差连接和 MLP 可以放大、抵消或改写这部分信息。</li>
-    <li><strong>相同输出可能对应不同注意力分布。</strong>如果替换、扰动或重排部分注意力权重后 logits 几乎不变，就说明该热力图不是唯一的因果说明。</li>
-    <li><strong>自注意力只描述层内路由，不描述训练目标。</strong>模型学到的事实、偏见和能力主要来自训练数据与损失函数；单张 heatmap 不能说明这些知识如何形成。</li>
+    <li><strong>Values are the actual information being mixed.</strong> The heatmap shows <span class="katex-inline" data-expr="\mathrm{softmax}(QK^\top/\sqrt{d_k})" aria-label="\mathrm{softmax}(QK^\top/\sqrt{d_k})" role="img"></span>, but what actually enters the next layer is the weighted sum of <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span>. A high-weight position's value may not carry the semantic direction needed for the final prediction.</li>
+    <li><strong>Multiple heads and layers recombine information.</strong> The highlighted region of one head might just be a local pattern; subsequent heads, residual connections, and MLPs can amplify, cancel, or rewrite this information.</li>
+    <li><strong>The same output can correspond to different attention distributions.</strong> If logits remain nearly unchanged after replacing, perturbing, or rearranging some attention weights, it indicates that the heatmap is not a unique causal explanation.</li>
+    <li><strong>Self-attention only describes intra-layer routing, not the training objective.</strong> The facts, biases, and capabilities learned by the model primarily come from the training data and loss function; a single heatmap cannot explain how this knowledge was formed.</li>
   </ul>
 
-  <h4>Heatmap 能说明什么，不能单独说明什么</h4>
+  <h4>What Heatmaps Can and Cannot Explain Alone</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>观察</th><th>可以支持的分析</th><th>还需要什么比较</th></tr>
-      <tr><td>causal heatmap 是下三角</td><td>mask 方向大概率正确，未来 token 没被读取</td><td>改变未来 token，比较当前位置 logits 是否保持不变</td></tr>
-      <tr><td>某些头集中在分隔符、换行或句末</td><td>该头可能学习了结构边界或格式位置</td><td>遮蔽这些位置，比较 loss、logits 或下游指标变化</td></tr>
-      <tr><td>长距离位置获得较高权重</td><td>该层存在跨距离信息路由</td><td>检查对应 value、后续层激活以及最终 token 概率变化</td></tr>
-      <tr><td>回答相关词获得高权重</td><td>热力图与人类直觉一致</td><td>做 counterfactual prompt：替换相关词后观察预测是否系统变化</td></tr>
+      <tr><th>Observation</th><th>Supported Analysis</th><th>What Comparison Is Needed</th></tr>
+      <tr><td>Causal heatmap is lower triangular</td><td>Mask direction is likely correct; future tokens are not read</td><td>Change future tokens, compare if the current position's logits remain unchanged</td></tr>
+      <tr><td>Certain heads focus on separators, newlines, or sentence endings</td><td>That head may have learned structural boundaries or format positions</td><td>Mask these positions, compare changes in loss, logits, or downstream metrics</td></tr>
+      <tr><td>Long-distance positions receive high weight</td><td>Cross-distance information routing exists in this layer</td><td>Check the corresponding values, subsequent layer activations, and final token probability changes</td></tr>
+      <tr><td>Answer-related words receive high weight</td><td>Heatmap aligns with human intuition</td><td>Perform counterfactual prompt: replace the relevant word and observe if the prediction changes systematically</td></tr>
     </table>
   </div>
 
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>实践原则：</strong>把 attention heatmap 当作调试入口，而不是最终解释。严谨做法是结合 ablation、counterfactual prompt、logit attribution 或 activation patching，比较“改动前后模型行为是否真的变化”。</div></div>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>Practical Principle:</strong> Treat attention heatmaps as debugging entry points, not final explanations. Rigorous practice involves combining ablation, counterfactual prompts, logit attribution, or activation patching to compare whether "model behavior actually changes before and after the modification."</div></div>
 </section>
 
 <!-- ================================================================ -->
 <!-- 3.9 O(n²) + MLA -->
 <!-- ================================================================ -->
 <section class="card" id="s3-9">
-  <h3>3.9 注意力复杂度的代价与出路——从 O(n²) 到 MLA</h3>
-  <p>现在你对单头注意力有了完整的理解和实现，让我们诚实地面对它的最大问题。</p>
+  <h3>3.9 The Cost and Way Out of Attention Complexity—From O(n²) to MLA</h3>
+  <p>Now that you have a complete understanding and implementation of single-head attention, let's honestly confront its biggest problem.</p>
 
-  <h4>计算与内存瓶颈</h4>
-  <p>注意力分数矩阵 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> 的大小是 <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>，其中 n 是序列长度。当 n=128K（如 GPT-4 的上下文窗口）：</p>
+  <h4>Computational and Memory Bottlenecks</h4>
+  <p>The size of the attention score matrix <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> is <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>, where n is the sequence length. When n=128K (e.g., GPT-4's context window):</p>
   <ul>
-    <li>注意力矩阵：128K × 128K = <strong>16B 个元素</strong></li>
-    <li>FP16 下：32 GB 显存——仅为了存储注意力分数</li>
-    <li>这与嵌入层（d×n）和 FFN（4d²）的 O(n) 内存开销形成了鲜明对比</li>
+    <li>Attention matrix: 128K × 128K = <strong>16B elements</strong></li>
+    <li>Under FP16: 32 GB of VRAM—just to store the attention scores</li>
+    <li>This contrasts sharply with the O(n) memory cost of the embedding layer (d×n) and FFN (4d²)</li>
   </ul>
-  <p>作业函数 <code>attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes)</code> 对应 dense attention score 张量 <code>[B,H,T,T]</code> 的物化成本：<span class="katex-inline" data-expr="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" aria-label="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" role="img"></span>。它只估算 score 矩阵本身，不包含 Q/K/V、softmax 输出、dropout mask、activation checkpoint 或 FlashAttention 的重计算策略。</p>
+  <p>The homework function <code>attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes)</code> corresponds to the materialization cost of the dense attention score tensor <code>[B,H,T,T]</code>: <span class="katex-inline" data-expr="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" aria-label="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" role="img"></span>. It only estimates the score matrix itself, not Q/K/V, softmax output, dropout mask, activation checkpointing, or FlashAttention's recomputation strategy.</p>
 
-  <h4>FlashAttention：IO 感知的解决方案</h4>
-  <p>FlashAttention（Dao et al., 2022）的核心洞见：在许多实际 GPU 配置中，attention 的性能瓶颈不只是 FLOPs，还包括 HBM（高带宽显存）和 SRAM（片上缓存）之间的数据搬运。传统实现会物化完整注意力矩阵，而 FlashAttention 用 tiling 技术将计算切分为小块，在 SRAM 中完成 softmax——全程不将完整的注意力矩阵写入 HBM。</p>
-  <p>这不仅节省了显存（从 O(n²) 降到 O(n)），还因为减少了 HBM 读写次数而变得<strong>更快</strong>。</p>
+  <h4>FlashAttention: An IO-Aware Solution</h4>
+  <p>The core insight of FlashAttention (Dao et al., 2022): In many practical GPU configurations, the performance bottleneck of attention is not just FLOPs, but also the data movement between HBM (High Bandwidth Memory) and SRAM (on-chip cache). Traditional implementations materialize the full attention matrix, whereas FlashAttention uses tiling to split the computation into blocks, completing softmax within SRAM—without ever writing the full attention matrix to HBM.</p>
+  <p>This not only saves memory (from O(n²) to O(n)) but also becomes <strong>faster</strong> due to reduced HBM reads and writes.</p>
 
-  <h4>DeepSeek MLA：从"少算"到"少存"</h4>
-  <p>DeepSeek-V2 提出的 MLA（Multi-head Latent Attention）走了另一条路：不是优化 softmax 的计算方式，而是<strong>从根本上减少 KV Cache 的大小</strong>。</p>
-  <p>MLA 的核心思想：将多头 Q、K、V 的高维表示投影到一个<strong>低维潜在空间（latent space）</strong>中，推理时只缓存压缩后的潜在向量，使用时再解压。这使得 KV Cache 大小减少 93%——从每 token 需要存储 h 组 K、V 向量，变为只需存储一个低维向量。</p>
-  <p>我们将在第 4 章中深入实现 MLA。</p>
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) 是注意力长期存在的张力。</strong>FlashAttention 和 MLA 分别从"计算 I/O"和"KV 存储"两个维度缓解问题，但标准 dense attention 的 pairwise score 仍随序列长度二次增长。长上下文系统还会使用稀疏注意力、滑动窗口、全局 token、压缩注意力或外部检索等方法；任何具体收益都必须绑定模型、上下文长度、硬件、kernel 和评测任务。</div></div>
+  <h4>DeepSeek MLA: From "Less Compute" to "Less Storage"</h4>
+  <p>MLA (Multi-head Latent Attention), proposed by DeepSeek-V2, takes a different path: instead of optimizing the softmax computation, it <strong>fundamentally reduces the size of the KV Cache</strong>.</p>
+  <p>MLA's core idea: project the high-dimensional representations of multi-head Q, K, V into a <strong>low-dimensional latent space</strong>, cache only the compressed latent vectors during inference, and decompress them when used. This reduces the KV Cache size by 93%—from needing to store h sets of K and V vectors per token to storing just one low-dimensional vector.</p>
+  <p>We will delve into implementing MLA in Chapter 4.</p>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) is a persistent tension for attention.</strong> FlashAttention and MLA alleviate the problem from the "compute I/O" and "KV storage" dimensions respectively, but the pairwise score of standard dense attention still grows quadratically with sequence length. Long-context systems also use methods like sparse attention, sliding windows, global tokens, compressed attention, or external retrieval; any specific benefit must be tied to the model, context length, hardware, kernel, and evaluation task.</div></div>
 </section>
 
 <!-- ================================================================ -->
-<!-- 3.10 可微字典 -->
+<!-- 3.10 Differentiable Dictionary -->
 <!-- ================================================================ -->
 <section class="card" id="s3-10">
-  <h3>3.10 注意力作为可微字典查找——更深层的数学理解</h3>
-  <p>注意力机制有一个优雅的数学解释：它是一个<strong>可微的、软性的字典查找（Differentiable Dictionary Lookup）</strong>。</p>
+  <h3>3.10 Attention as a Differentiable Dictionary Lookup—A Deeper Mathematical Understanding</h3>
+  <p>The attention mechanism has an elegant mathematical explanation: it is a <strong>differentiable, soft dictionary lookup</strong>.</p>
 
-  <h4>类比：字典查找（Hash Table）</h4>
-  <p>传统字典查找：给定一个查询 key，去字典中找到<strong>完全相同</strong>的 key，返回对应的 value。这是硬匹配——要么匹配，要么不匹配。</p>
-  <p>注意力机制的字典查找：给定一个 query 向量，去和<strong>所有</strong> key 做<strong>软匹配</strong>（点积 + softmax），返回所有 value 的<strong>加权平均</strong>。这是软匹配——每个 value 都贡献一点，贡献大小由相似度决定。</p>
+  <h4>Analogy: Dictionary Lookup (Hash Table)</h4>
+  <p>Traditional dictionary lookup: Given a query key, find the <strong>exact same</strong> key in the dictionary and return the corresponding value. This is a hard match—either it matches, or it doesn't.</p>
+  <p>Attention mechanism's dictionary lookup: Given a query vector, perform a <strong>soft match</strong> (dot product + softmax) against <strong>all</strong> keys, and return the <strong>weighted average</strong> of all values. This is a soft match—every value contributes a bit, with the contribution determined by similarity.</p>
 
-  <h4>数学对应</h4>
+  <h4>Mathematical Correspondence</h4>
   <div class="table-wrap">
     <table>
-      <tr><th>概念</th><th>传统字典</th><th>注意力机制</th></tr>
-      <tr><td>查询</td><td>key (精确匹配)</td><td>Query vector Q (软匹配)</td></tr>
-      <tr><td>键</td><td>字典中的 key</td><td>Key vectors K (可学习表示)</td></tr>
-      <tr><td>值</td><td>字典中的 value</td><td>Value vectors V (实际内容)</td></tr>
-      <tr><td>匹配函数</td><td>key == stored_key</td><td>softmax(Q·K^T / √d_k)</td></tr>
-      <tr><td>输出</td><td>单一 value 或 null</td><td>所有 value 的加权和</td></tr>
+      <tr><th>Concept</th><th>Traditional Dictionary</th><th>Attention Mechanism</th></tr>
+      <tr><td>Query</td><td>key (exact match)</td><td>Query vector Q (soft match)</td></tr>
+      <tr><td>Key</td><td>key in dictionary</td><td>Key vectors K (learnable representation)</td></tr>
+      <tr><td>Value</td><td>value in dictionary</td><td>Value vectors V (actual content)</td></tr>
+      <tr><td>Match Function</td><td>key == stored_key</td><td>softmax(Q·K^T / √d_k)</td></tr>
+      <tr><td>Output</td><td>Single value or null</td><td>Weighted sum of all values</td></tr>
     </table>
   </div>
 
-  <h4>为什么"可微"是关键</h4>
-  <p>如果匹配是硬的（0 或 1），梯度无法传播——你不知道"稍微改变一下匹配度"会如何影响输出。Softmax 将匹配变为<strong>连续的概率分布</strong>，使得梯度可以流畅地从输出传播到 Q、K、V 的投影矩阵 <span class="katex-inline" data-expr="W^Q, W^K, W^V" aria-label="W^Q, W^K, W^V" role="img"></span>。这就是为什么注意力能被端到端训练的数学基础。</p>
+  <h4>Why "Differentiable" is Key</h4>
+  <p>If the match were hard (0 or 1), gradients could not propagate—you wouldn't know how "slightly changing the match degree" would affect the output. Softmax turns the match into a <strong>continuous probability distribution</strong>, allowing gradients to flow smoothly from the output to the projection matrices <span class="katex-inline" data-expr="W^Q, W^K, W^V" aria-label="W^Q, W^K, W^V" role="img"></span> of Q, K, V. This is the mathematical foundation for why attention can be trained end-to-end.</p>
 
-  <h4>与卷积的对比</h4>
-  <p><strong>卷积（Convolution）：</strong>每个位置只关注<strong>固定窗口</strong>内的邻居。窗口大小是预设的（如 3×3），不随内容改变。计算复杂度 O(n·k²)，k 是窗口大小。</p>
-  <p><strong>注意力（Attention）：</strong>每个位置可以关注<strong>任意距离</strong>的任意位置。信息路径长度恒为 O(1)，但代价是 O(n²) 的计算量。</p>
-  <p>这也解释了为什么 CV 领域在用 ViT 之后仍然保留了卷积的一些特性（如 Swin Transformer 的局部窗口注意力）——对于图像来说，局部性（locality）是一个很强的先验。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：</strong>注意力 = 可微字典查找 = 软性内容寻址。它不是"魔法"，而是<strong>一个优雅地将数据库检索操作变得可导的技巧</strong>。</div></div>
+  <h4>Comparison with Convolution</h4>
+  <p><strong>Convolution:</strong> Each position only attends to neighbors within a <strong>fixed window</strong>. The window size is predetermined (e.g., 3×3) and does not change with content. Computational complexity is O(n·k²), where k is the window size.</p>
+  <p><strong>Attention:</strong> Each position can attend to any position at <strong>any distance</strong>. The information path length is always O(1), but at the cost of O(n²) computation.</p>
+  <p>This also explains why, after adopting ViT, the CV field still retains some convolutional properties (e.g., Swin Transformer's local window attention)—locality is a strong prior for images.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Essence:</strong> Attention = Differentiable Dictionary Lookup = Soft Content Addressing. It is not "magic," but <strong>an elegant trick for making a database retrieval operation differentiable</strong>.</div></div>
 </section>
 
 
 <section class="card" id="s3-11">
-  <h3>3.11 本章总结：你实现了什么</h3>
-  <p>在这一章中，你从零构建了 LLM 的<strong>核心计算引擎</strong>：</p>
+  <h3>3.11 Chapter Summary: What You Implemented</h3>
+  <p>In this chapter, you built the <strong>core computational engine</strong> of an LLM from scratch:</p>
   <ul>
-    <li>✅ <strong>QKVProjection</strong> —— 将输入投影为查询、键、值三元组</li>
-    <li>✅ <strong>Scaled Dot-Product Attention</strong> —— 实现了"查询→匹配→聚合"的完整流程</li>
-    <li>✅ <strong>Causal Mask</strong> —— 确保了自回归生成的因果性约束</li>
-    <li>✅ <strong>Masked softmax 合约</strong> —— 理解 padding key、padding query 和 all-masked row 的数值风险</li>
-    <li>✅ <strong>注意力可视化</strong> —— 建立了对注意力行为的直观理解</li>
-    <li>✅ <strong>Attention Heatmap 的解释边界</strong> —— 知道它适合诊断路由模式，但不能单独当作因果解释</li>
-    <li>✅ <strong>深刻理解了 √dₖ</strong> —— 从方差分析和梯度视角掌握了缩放因子</li>
+    <li>✅ <strong>QKVProjection</strong> — Projects input into query, key, and value triples</li>
+    <li>✅ <strong>Scaled Dot-Product Attention</strong> — Implemented the complete "query → match → aggregate" pipeline</li>
+    <li>✅ <strong>Causal Mask</strong> — Ensured the causal constraint for autoregressive generation</li>
+    <li>✅ <strong>Masked softmax contract</strong> — Understood the numerical risks of padding keys, padding queries, and all-masked rows</li>
+    <li>✅ <strong>Attention Visualization</strong> — Built an intuitive understanding of attention behavior</li>
+    <li>✅ <strong>Attention Heatmap Interpretation Boundaries</strong> — Learned it is suitable for diagnosing routing patterns but cannot be used alone as a causal explanation</li>
+    <li>✅ <strong>Deep understanding of √dₖ</strong> — Mastered the scaling factor from variance analysis and gradient perspectives</li>
   </ul>
-  <p>这些代码加起来约 <strong>60 行</strong>，但它们是 GPT、Llama、Claude 等所有现代 LLM 的共同基础。在第 4 章中，我们将把单头注意力扩展为<strong>多头注意力</strong>，并深入实现 DeepSeek 的 MLA。</p>
-  <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
-    <a href="https://arxiv.org/abs/1706.03762" target="_blank">Vaswani et al. (2017) — Attention Is All You Need（§3.2）</a> ·
-    <a href="http://nlp.seas.harvard.edu/annotated-transformer/" target="_blank">The Annotated Transformer（哈佛 NLP 经典教程）</a> ·
+  <p>These pieces of code total about <strong>60 lines</strong>, but they are the common foundation for all modern LLMs like GPT, Llama, and Claude. In Chapter 4, we will extend single-head attention to <strong>multi-head attention</strong> and delve into implementing DeepSeek's MLA.</p>
+  <div class="info-box key"><span class="icon">📚</span><div><strong>Further Reading:</strong>
+    <a href="https://arxiv.org/abs/1706.03762" target="_blank">Vaswani et al. (2017) — Attention Is All You Need (§3.2)</a> ·
+    <a href="http://nlp.seas.harvard.edu/annotated-transformer/" target="_blank">The Annotated Transformer (Harvard NLP Classic Tutorial)</a> ·
     <a href="https://arxiv.org/abs/2205.14135" target="_blank">Dao et al. (2022) — FlashAttention</a> ·
-    <a href="https://arxiv.org/abs/2405.04434" target="_blank">DeepSeek-V2 — MLA 原始论文（§2.1 Multi-head Latent Attention）</a> ·
-    <a href="https://www.youtube.com/watch?v=kCc8FmEb1nY" target="_blank">Andrej Karpathy — Let's build GPT from scratch（YouTube）</a>
+    <a href="https://arxiv.org/abs/2405.04434" target="_blank">DeepSeek-V2 — MLA Original Paper (§2.1 Multi-head Latent Attention)</a> ·
+    <a href="https://www.youtube.com/watch?v=kCc8FmEb1nY" target="_blank">Andrej Karpathy — Let's build GPT from scratch (YouTube)</a>
   </div></div>
 </section>
 
-<!-- 概念练习 -->
+<!-- Conceptual Exercises -->
 <section class="card">
-  <h3>📝 概念练习巩固</h3>
+  <h3>📝 Conceptual Practice Exercises</h3>
 
-  <div class="exercise" data-answer="2" data-explain="点积的方差是 d_k ∏ Var(q_i)Var(k_i) = d_k。除以 √dₖ 将方差从 d_k 归一化到 1，从而保持梯度在有效范围内。">
-    <h4>练习 1：如果 d_k=256 且不用缩放因子，QK^T 的典型值标准差是多少？除以 √d_k 后呢？</h4>
+  <div class="exercise" data-answer="2" data-explain="The variance of the dot product is d_k ∏ Var(q_i)Var(k_i) = d_k. Dividing by √dₖ normalizes the variance from d_k to 1, thus keeping gradients in an effective range.">
+    <h4>Exercise 1: If d_k=256 and no scaling factor is used, what is the typical standard deviation of QK^T? What is it after dividing by √d_k?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q1" value="0"> A. 缩放到 1 / 缩放到 0</label>
+      <label><input type="radio" name="q1" value="0"> A. Scaled to 1 / Scaled to 0</label>
       <label><input type="radio" name="q1" value="1"> B. 256 / 1</label>
       <label><input type="radio" name="q1" value="2"> C. 16 / 1</label>
       <label><input type="radio" name="q1" value="3"> D. 256 / 16</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="3" data-explain="Q 和 K 决定'谁关注谁'（匹配过程），V 决定'关注什么内容'（聚合过程）。Q 和 K 的点积产生注意力权重，V 被这些权重加权求和形成输出。">
-    <h4>练习 2：在自注意力中，Q、K、V 的角色分别是什么？</h4>
+  <div class="exercise" data-answer="3" data-explain="Q and K determine 'who attends to whom' (the matching process), V determines 'what content is attended to' (the aggregation process). The dot product of Q and K produces attention weights, and V is weighted-summed by these weights to form the output.">
+    <h4>Exercise 2: In self-attention, what are the roles of Q, K, and V respectively?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q2" value="0"> A. Q=内容查询，K=位置编码，V=激活值</label>
-      <label><input type="radio" name="q2" value="1"> B. Q=查询向量，K=键向量，V=值向量，三者作用相同可以互换</label>
-      <label><input type="radio" name="q2" value="2"> C. Q 和 K 都用于计算注意力权重，V 存储被聚合的内容</label>
-      <label><input type="radio" name="q2" value="3"> D. Q 和 K 用于确定关注关系；V 是被加权聚合的实际内容，三者通过不同的投影矩阵学习不同角色</label>
-    </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+      <label><input type="radio" name="q2" value="0"> A. Q=Content Query, K=Position Encoding, V=Activation Value</label>
+      <label><input type="radio" name="q2" value="1"> B. Q=Query Vector, K=Key Vector, V=Value Vector, all three have the same role and are interchangeable</label>
+      <label><input type="radio" name="q2" value="2"> C. Q and K are both used to compute attention weights, V stores the content to be aggregated</label>
+      <label><input type="radio" name="q2" value="3"> D. Q and K are used to determine the attention relationship; V is the actual content being weighted and aggregated; the three learn different roles through different projection matrices</label>
+    </div>    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="softmax 的梯度正比于 p_i(1-p_i)，当分布极度尖锐（某个 p_i≈1）时梯度≈0。√dₖ 缩放防止了这种情况。这称为 softmax 的'梯度饱和'问题。">
-    <h4>练习 3：如果不使用 √dₖ 缩放，softmax 会出现什么具体问题？</h4>
+  <div class="exercise" data-answer="1" data-explain="The gradient of softmax is proportional to p_i(1-p_i). When the distribution is extremely sharp (some p_i≈1), the gradient ≈0. The √dₖ scaling prevents this. This is called the 'gradient saturation' problem of softmax.">
+    <h4>Exercise 3: What specific problem occurs with softmax if √dₖ scaling is not used?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q3" value="0"> A. 计算变慢</label>
-      <label><input type="radio" name="q3" value="1"> B. 梯度消失——softmax 输出过于 one-hot，梯度趋零</label>
-      <label><input type="radio" name="q3" value="2"> C. 注意力权重之和不为 1</label>
-      <label><input type="radio" name="q3" value="3"> D. Q/K/V 投影矩阵无法更新</label>
+      <label><input type="radio" name="q3" value="0"> A. Computation becomes slower</label>
+      <label><input type="radio" name="q3" value="1"> B. Gradient vanishing—softmax output becomes too one-hot, gradient approaches zero</label>
+      <label><input type="radio" name="q3" value="2"> C. Attention weights do not sum to 1</label>
+      <label><input type="radio" name="q3" value="3"> D. Q/K/V projection matrices cannot be updated</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="Causal Mask 是一个下三角矩阵（含对角线）：位置 i 只能看到位置 0..i。用 torch.tril 创建，mask==0 的位置在 softmax 前设为 -1e9。">
-    <h4>练习 4：Causal Mask 的数学形式是什么？为什么需要它？</h4>
+  <div class="exercise" data-answer="2" data-explain="The Causal Mask is a lower triangular matrix (including the diagonal): position i can only see positions 0..i. Created using torch.tril, positions where mask==0 are set to -1e9 before softmax.">
+    <h4>Exercise 4: What is the mathematical form of the Causal Mask? Why is it needed?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q4" value="0"> A. 全 1 矩阵；防止梯度爆炸</label>
-      <label><input type="radio" name="q4" value="1"> B. 对角矩阵；加速计算</label>
-      <label><input type="radio" name="q4" value="2"> C. 下三角（含对角线）为 0、上三角为 -∞ 的矩阵；防止模型"偷看"未来 token</label>
-      <label><input type="radio" name="q4" value="3"> D. 随机矩阵；增加模型鲁棒性</label>
+      <label><input type="radio" name="q4" value="0"> A. All-ones matrix; prevents gradient explosion</label>
+      <label><input type="radio" name="q4" value="1"> B. Diagonal matrix; accelerates computation</label>
+      <label><input type="radio" name="q4" value="2"> C. A matrix with 0 on the lower triangle (including diagonal) and -∞ on the upper triangle; prevents the model from 'peeking' at future tokens</label>
+      <label><input type="radio" name="q4" value="3"> D. Random matrix; increases model robustness</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="注意力矩阵的大小是 n×n=128K²=16G 个元素。FP16 下约 32GB。FlashAttention 通过 tiling 避免将完整矩阵写入 HBM，将显存从 O(n²) 降至 O(n)。">
-    <h4>练习 5：对于序列长度 n=128K、d_model=4096 的 LLM，注意力分数矩阵占多少显存（FP16）？FlashAttention 如何解决？</h4>
+  <div class="exercise" data-answer="0" data-explain="The size of the attention matrix is n×n=128K²=16G elements. Under FP16, this is approximately 32GB. FlashAttention avoids writing the full matrix to HBM through tiling, reducing memory from O(n²) to O(n).">
+    <h4>Exercise 5: For an LLM with sequence length n=128K and d_model=4096, how much memory (FP16) does the attention score matrix occupy? How does FlashAttention solve this?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q5" value="0"> A. ~32GB；用 tiling 在 SRAM 中分块计算 softmax，不写入完整矩阵</label>
-      <label><input type="radio" name="q5" value="1"> B. ~512MB；用更小的 d_k</label>
-      <label><input type="radio" name="q5" value="2"> C. ~4GB；用 INT8 量化</label>
-      <label><input type="radio" name="q5" value="3"> D. ~128GB；无解决方案</label>
+      <label><input type="radio" name="q5" value="0"> A. ~32GB; uses tiling to compute softmax in blocks within SRAM, without writing the full matrix</label>
+      <label><input type="radio" name="q5" value="1"> B. ~512MB; uses a smaller d_k</label>
+      <label><input type="radio" name="q5" value="2"> C. ~4GB; uses INT8 quantization</label>
+      <label><input type="radio" name="q5" value="3"> D. ~128GB; no solution</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="如果某个 query 行所有 key 都被 mask，softmax 分母为 0，很多实现会产生 NaN。训练中通常屏蔽 padding key，同时用 loss/output mask 跳过 padding query 的输出；不要简单把 padding query 行全部清零后直接 softmax。">
-    <h4>练习 6：为什么合成 causal mask 和 padding mask 时要特别避免 all-masked row？</h4>
+  <div class="exercise" data-answer="1" data-explain="If all keys for a certain query row are masked, the denominator of softmax becomes 0, and many implementations produce NaN. During training, padding keys are usually masked, and the output of padding query rows is skipped using loss/output masks; do not simply zero out the padding query row and then apply softmax directly.">
+    <h4>Exercise 6: Why is it particularly important to avoid an all-masked row when combining causal mask and padding mask?</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q6" value="0"> A. 因为 all-masked row 会让 attention 复杂度从 O(n²) 变成 O(n³)</label>
-      <label><input type="radio" name="q6" value="1"> B. 因为该行 softmax 没有任何可见 key，分母为 0，可能产生 NaN</label>
-      <label><input type="radio" name="q6" value="2"> C. 因为 padding query 必须关注所有未来 token 才能训练</label>
-      <label><input type="radio" name="q6" value="3"> D. 因为 mask 只能在 softmax 后应用</label>
+      <label><input type="radio" name="q6" value="0"> A. Because an all-masked row changes the attention complexity from O(n²) to O(n³)</label>
+      <label><input type="radio" name="q6" value="1"> B. Because that row's softmax has no visible keys, the denominator is 0, potentially producing NaN</label>
+      <label><input type="radio" name="q6" value="2"> C. Because padding queries must attend to all future tokens to be trained</label>
+      <label><input type="radio" name="q6" value="3"> D. Because the mask can only be applied after softmax</label>
     </div>
-    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">检查答案</button>
-    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q6')">Check Answer</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">Hint</button>
     <div class="feedback"></div>
   </div>
 </section></article>
 
 <nav class="chapter-nav">
-  <a href="ch02.html" class="btn btn-outline" rel="prev">← 上一章</a>
-  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
-  <a href="ch04.html" class="btn btn-outline" rel="next">下一章 →</a>
+  <a href="ch02.html" class="btn btn-outline" rel="prev">← Previous Chapter</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ Mark Complete</button>
+  <a href="ch04.html" class="btn btn-outline" rel="next">Next Chapter →</a>
 </nav>
 </main>
 

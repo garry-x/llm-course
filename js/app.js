@@ -1,21 +1,21 @@
 /* ================================================================
-   LLM 深度学习课程 — 共享应用逻辑
+   LLM Deep Learning Course — Shared Application Logic
    ================================================================ */
 (function(){
   'use strict';
 
   var CHAPTERS = [
-    {id:1, file:'ch01.html', title:'环境搭建与分词', desc:'BPE、多语 tokenizer、特殊 token 与模型接口契约', sections:19},
-    {id:2, file:'ch02.html', title:'嵌入层与位置编码', desc:'TokenEmbedding、word vectors、上下文化表示、RoPE、长上下文与 prompt 表示', sections:20},
-    {id:3, file:'ch03.html', title:'单头自注意力', desc:'Scaled Dot-Product Attention、mask、masked softmax、诊断账本与复杂度边界', sections:20},
-    {id:4, file:'ch04.html', title:'多头注意力与 MLA', desc:'MHA、GQA、MLA、KV Cache 预算与 checkpoint 转换', sections:18},
-    {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm、SwiGLU、资源估算、稳定性与 interpretability', sections:20},
-    {id:6, file:'ch06.html', title:'组装完整 GPT 模型', desc:'GPT-2 124M、MoE、权重加载、logit parity 与 checkpoint 兼容', sections:18},
-    {id:7, file:'ch07.html', title:'训练循环', desc:'数据管线、AdamW、checkpoint、分布式、MFU、工业训练系统 gate', sections:26},
-    {id:8, file:'ch08.html', title:'文本生成', desc:'采样、beam、reasoning/test-time compute、speculative 与结构化解码', sections:21},
-    {id:9, file:'ch09.html', title:'微调与对齐', desc:'SFT、合成蒸馏、偏好数据、LoRA、DPO、GRPO、RLVR 与能力保留', sections:24},
-    {id:10, file:'ch10.html', title:'推理优化与前沿', desc:'KV Cache、continuous batching、RAG、tool use、PD 解耦与推理引擎', sections:30},
-    {id:11, file:'ch11.html', title:'经典神经 NLP 与评测', desc:'RNN、Parsing、Seq2Seq、BERT、评测有效性与安全', sections:19}
+    {id:1, file:'ch01.html', title:'Environment Setup & Tokenization', desc:'BPE, multilingual tokenizer, special tokens & model interface contract', sections:19},
+    {id:2, file:'ch02.html', title:'Embedding Layer & Positional Encoding', desc:'TokenEmbedding, word vectors, contextualized representations, RoPE, long context & prompt representation', sections:20},
+    {id:3, file:'ch03.html', title:'Single-Head Self-Attention', desc:'Scaled Dot-Product Attention, mask, masked softmax, diagnostic ledger & complexity bounds', sections:20},
+    {id:4, file:'ch04.html', title:'Multi-Head Attention & MLA', desc:'MHA, GQA, MLA, KV Cache budget & checkpoint conversion', sections:18},
+    {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm, SwiGLU, resource estimation, stability & interpretability', sections:20},
+    {id:6, file:'ch06.html', title:'Assembling a Complete GPT Model', desc:'GPT-2 124M, MoE, weight loading, logit parity & checkpoint compatibility', sections:18},
+    {id:7, file:'ch07.html', title:'Training Loop', desc:'Data pipeline, AdamW, checkpoint, distributed, MFU, industrial training system gate', sections:26},
+    {id:8, file:'ch08.html', title:'Text Generation', desc:'Sampling, beam, reasoning/test-time compute, speculative & structured decoding', sections:21},
+    {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', desc:'SFT, synthetic distillation, preference data, LoRA, DPO, GRPO, RLVR & capability retention', sections:24},
+    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', desc:'KV Cache, continuous batching, RAG, tool use, PD separation & inference engine', sections:30},
+    {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, evaluation validity & safety', sections:19}
   ];
 
   // ---- State helpers (IndexedDB-backed) ----
@@ -51,7 +51,7 @@
     if(!nav) return;
     var html = '<a href="'+homeHref()+'" class="'+(currentCh===0?'active ':'')+'home-link"'+
       (currentCh===0?' aria-current="page"':'')+'>'+
-      '<span class="ch-num">⌂</span> 首页</a>';
+      '<span class="ch-num">⌂</span> Home</a>';
     CHAPTERS.forEach(function(ch){
       var cls = (ch.id===currentCh?'active ':'')+(completed.has(ch.id)?'completed ':'');
       html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'"'+
@@ -79,7 +79,7 @@
 
   function updateCompleteButton(){
     var btn = document.getElementById('mark-complete');
-    if(btn) btn.textContent = completed.has(currentCh) ? '✅ 已完成 (点击取消)' : '✓ 标记完成';
+    if(btn) btn.textContent = completed.has(currentCh) ? '✅ Completed (Click to undo)' : '✓ Mark Complete';
   }
 
   // ---- Mark chapter complete (toggle) ----
@@ -110,7 +110,7 @@
     var icon = document.getElementById('theme-icon');
     var label = document.getElementById('theme-label');
     if(icon) icon.textContent = next==='dark'?'☀️':'🌙';
-    if(label) label.textContent = next==='dark'?'浅色模式':'暗色模式';
+    if(label) label.textContent = next==='dark'?'Light Mode':'Dark Mode';
   }
   function initTheme(){
     var t = getTheme();
@@ -119,7 +119,7 @@
       var icon = document.getElementById('theme-icon');
       var label = document.getElementById('theme-label');
       if(icon) icon.textContent='☀️';
-      if(label) label.textContent='浅色模式';
+      if(label) label.textContent='Light Mode';
     }
   }
 
@@ -148,13 +148,13 @@
     var correctAns = exEl.getAttribute('data-answer');
     var explain = exEl.getAttribute('data-explain')||'';
     var selected = exEl.querySelector('input[name="'+groupName+'"]:checked');
-    if(!selected){ fb.className='feedback show wrong'; fb.innerHTML='请先选择一个选项'; return; }
+    if(!selected){ fb.className='feedback show wrong'; fb.innerHTML='Please select an option first'; return; }
     if(selected.value===correctAns){
       fb.className='feedback show correct';
-      fb.innerHTML='✅ 正确！ '+explain;
+      fb.innerHTML='✅ Correct! '+explain;
     } else {
       fb.className='feedback show wrong';
-      fb.innerHTML='❌ 不正确。 '+explain;
+      fb.innerHTML='❌ Incorrect. '+explain;
     }
   }
 
@@ -162,7 +162,7 @@
     var exEl = btn.closest('.exercise');
     var fb = exEl.querySelector('.feedback');
     fb.className='feedback show hint';
-    fb.innerHTML='💡 <strong>提示：</strong>'+exEl.getAttribute('data-explain');
+    fb.innerHTML='💡 <strong>Hint:</strong>'+exEl.getAttribute('data-explain');
   }
 
   // ---- Back to top ----
@@ -218,15 +218,14 @@
     if(sections.length < 3) return;
     var toc = document.createElement('div');
     toc.className = 'toc';
-    toc.innerHTML = '<h4>📑 本章目录</h4><ol>' +
+    toc.innerHTML = '<h4>📑 Table of Contents</h4><ol>' +
       Array.from(sections).map(function(s){
         var h3 = s.querySelector('h3');
         var title = h3 ? h3.textContent : s.id;
         return '<li><a href="#'+s.id+'">'+title+'</a></li>';
       }).join('') + '</ol>';
     var subtitle = chapter.querySelector('.reading-time');
-    if(subtitle) subtitle.after(toc);
-    // Highlight on scroll (throttled via rAF)
+    if(subtitle) subtitle.after(toc);    // Highlight on scroll (throttled via rAF)
     var tocLinks = toc.querySelectorAll('a');
     var _tocRaf = false;
     window.addEventListener('scroll', function(){
@@ -271,7 +270,7 @@
       wrap.appendChild(block);
       var btn = document.createElement('button');
       btn.className = 'copy-btn';
-      btn.title = '复制代码';
+      btn.title = 'Copy code';
       btn.innerHTML = '📋';
       btn.addEventListener('click', function(){
         var text = block.textContent;
@@ -332,7 +331,7 @@
     });
     if(matches.length===0){
       box.style.display='block';
-      box.innerHTML = '<div style="padding:6px 8px;opacity:.5;font-size:.72rem">未找到匹配章节</div>';
+      box.innerHTML = '<div style="padding:6px 8px;opacity:.5;font-size:.72rem">No matching chapters found</div>';
     } else {
       box.style.display='block';
       box.innerHTML = matches.map(function(m){
@@ -426,7 +425,7 @@
         '<span style="font-size:.65rem;opacity:.5">▼</span></button>';
     } else {
       area.innerHTML = '<button class="profile-btn" onclick="LLM.openProfileModal()" style="justify-content:center">'+
-        '👤 登录 / 创建账户</button>';
+        '👤 Login / Create Account</button>';
     }
   }
 
@@ -451,9 +450,8 @@
   function renderProfileModal(){
     var overlay = document.getElementById('profile-modal');
     if(!overlay) return;
-    var profiles = getProfiles();
-    var current = getActiveProfile();
-    var html = '<div class="modal"><h3>👤 用户账户</h3>';
+    var profiles = getProfiles();    var current = getActiveProfile();
+    var html = '<div class="modal"><h3>👤 User Account</h3>';
     if(profiles.length > 0){
       html += '<div class="profile-list">';
       profiles.forEach(function(p){
@@ -466,11 +464,11 @@
       });
       html += '</div>';
     }
-    html += '<div class="field"><label>新建账户</label>'+
-      '<input id="new-profile-name" placeholder="输入用户名..." maxlength="20"></div>'+
+    html += '<div class="field"><label>New Account</label>'+
+      '<input id="new-profile-name" placeholder="Enter username..." maxlength="20"></div>'+
       '<div class="actions">'+
-      '<button class="btn btn-outline" onclick="LLM.closeProfileModal()">关闭</button>'+
-      '<button class="btn btn-primary" onclick="LLM.createProfile()">+ 创建</button></div></div>';
+      '<button class="btn btn-outline" onclick="LLM.closeProfileModal()">Close</button>'+
+      '<button class="btn btn-primary" onclick="LLM.createProfile()">+ Create</button></div></div>';
     overlay.innerHTML = html;
   }
 
@@ -495,7 +493,7 @@
   }
 
   function deleteProfile(id){
-    if(!confirm('确定删除此账户及其所有笔记？此操作不可撤销。')) return;
+    if(!confirm('Are you sure you want to delete this account and all its notes? This action cannot be undone.')) return;
     var profiles = getProfiles().filter(function(p){ return p.id!==id });
     saveProfiles(profiles);
     // Clean up notes
@@ -516,17 +514,17 @@
     panel.className = 'notes-panel';
     panel.id = 'notes-panel';
     panel.innerHTML = '<div class="notes-panel-header" onclick="LLM.toggleNotes()">'+
-      '<span>📝</span><h4>我的笔记</h4><span class="note-count" id="note-count"></span></div>'+
+      '<span>📝</span><h4>My Notes</h4><span class="note-count" id="note-count"></span></div>'+
       '<div class="notes-panel-body" id="notes-list"></div>'+
       '<div class="notes-panel-input">'+
-      '<textarea id="note-input" placeholder="写笔记... (支持 Markdown)" onkeydown="if(event.key===\'Enter\'&&event.metaKey)LLM.addNote()"></textarea>'+
-      '<button class="btn btn-primary" onclick="LLM.addNote()" style="min-height:36px;padding:6px 12px;font-size:.8rem">保存</button></div>';
+      '<textarea id="note-input" placeholder="Write notes... (Markdown supported)" onkeydown="if(event.key===\'Enter\'&&event.metaKey)LLM.addNote()"></textarea>'+
+      '<button class="btn btn-primary" onclick="LLM.addNote()" style="min-height:36px;padding:6px 12px;font-size:.8rem">Save</button></div>';
     document.body.appendChild(panel);
 
     var toggleBtn = document.createElement('button');
     toggleBtn.className = 'note-toggle-btn';
     toggleBtn.id = 'note-toggle-btn';
-    toggleBtn.title = '笔记';
+    toggleBtn.title = 'Notes';
     toggleBtn.innerHTML = '📝';
     toggleBtn.addEventListener('click', function(){ LLM.toggleNotes(); });
     document.body.appendChild(toggleBtn);
@@ -545,7 +543,7 @@
       var count = document.getElementById('note-count');
       if(list){
         if(notes.length===0){
-          list.innerHTML = '<div style="font-size:.8rem;color:var(--text-secondary);padding:20px;text-align:center">暂无笔记，在下方输入框中写第一条笔记吧 ✍️</div>';
+          list.innerHTML = '<div style="font-size:.8rem;color:var(--text-secondary);padding:20px;text-align:center">No notes yet. Write your first note in the input box below ✍️</div>';
         } else {
           list.innerHTML = notes.map(function(n){
             var d = new Date(n.timestamp);
@@ -558,7 +556,7 @@
           }).join('');
         }
       }
-      if(count) count.textContent = notes.length + ' 条';
+      if(count) count.textContent = notes.length + ' notes';
     }
     if(toggleBtn) toggleBtn.classList.toggle('has-notes', hasNotes);
   }

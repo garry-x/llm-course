@@ -1,19 +1,19 @@
 # Python and PyTorch Review Session
 
-本 handout 用于 Week 1 Python Review Session 和 Week 2 PyTorch Tutorial Session。它和 [数学与 PyTorch 先修复习](math-prerequisites.md) 配套，帮助学生把 Python、张量 shape、autograd 和测试定位能力直接接到 Transformer 代码练习。
+This handout is used for Week 1 Python Review Session and Week 2 PyTorch Tutorial Session. It pairs with the [Math and PyTorch Prerequisite Review](math-prerequisites.md) to help students directly connect Python, tensor shape, autograd, and test debugging skills to Transformer code exercises.
 
-本课程在 Week 1 安排 Python Review Session，在 Week 2 安排 PyTorch Tutorial Session，并把两次 review 合并为可移植 handout：学生先确认环境和 Python helper，再进入 PyTorch tensor、`nn.Module`、loss、autograd 和作业提交日志。
+This course schedules a Python Review Session in Week 1 and a PyTorch Tutorial Session in Week 2, combining both reviews into a portable handout: students first confirm the environment and Python helpers, then proceed to PyTorch tensors, `nn.Module`, loss, autograd, and assignment submission logs.
 
-## Session 目标
+## Session Goals
 
-| Session | 时长 | 面向对象 | 通过产出 |
+| Session | Duration | Target Audience | Deliverable |
 |---------|:--:|----------|----------|
-| Python Review Session | 80-90 分钟 | Python 基础 Borderline、跨语言转入、未完成 Ch01 helper 的学生 | 能实现 pair counting、non-overlapping merge、文件读取和异常边界 |
-| PyTorch Tutorial Session | 80-90 分钟 | PyTorch 基础 Borderline、shape 推导不稳、未完成 Ch02 starter 的学生 | 能解释 `[B,T,D]` 到 logits，计算 next-token CE，并定位一个失败测试 |
+| Python Review Session | 80-90 minutes | Students borderline on Python basics, transitioning from another language, or who haven't completed Ch01 helper | Able to implement pair counting, non-overlapping merge, file reading, and exception boundaries |
+| PyTorch Tutorial Session | 80-90 minutes | Students borderline on PyTorch basics, unstable with shape derivation, or who haven't completed Ch02 starter | Able to explain `[B,T,D]` to logits, compute next-token CE, and locate a failing test |
 
-## 课前准备
+## Prerequisites
 
-从仓库根目录运行：
+Run from the repository root:
 
 ```bash
 .venv/bin/python -c "import sys, torch; print(sys.version.split()[0], torch.__version__, torch.cuda.is_available())"
@@ -22,64 +22,64 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch01_bpe/tests.py
 STUDENT_MODULE=starter .venv/bin/python assignments/ch02_embeddings/tests.py
 ```
 
-如果 `.venv/bin/python run_assignment_tests.py` 失败，先按 Environment and Reproducibility Guide 记录 `Python executable`、`PyTorch version`、`CUDA available` 和第一个失败项。
+If `.venv/bin/python run_assignment_tests.py` fails, first record `Python executable`, `PyTorch version`, `CUDA available`, and the first failing item according to the Environment and Reproducibility Guide.
 
-## Python Review Session 议程
+## Python Review Session Agenda
 
-| 时间 | 主题 | 活动 | 产出 |
+| Time | Topic | Activity | Deliverable |
 |------|------|------|------|
-| 0-10 分钟 | 环境 smoke test | 运行 `.venv/bin/python -c "import sys, torch; ..."` | 记录解释器、PyTorch 版本和工作目录 |
-| 10-25 分钟 | 函数与测试 | 阅读 `assignments/ch01_bpe/tests.py` 的 helper tests | 写出 `_get_stats` 的输入、输出和空边界 |
-| 25-45 分钟 | 字典与 pair counting | 手写 `count_pairs(tokens)` | 能处理空列表、单元素和重复 pair |
-| 45-65 分钟 | non-overlapping merge | 对 `[1,1,1]` 和 pair `(1,1)` 手算再实现 | 说明为什么不能重叠 merge |
-| 65-80 分钟 | 文件、异常和日志 | 读非空行，保留第一个失败 traceback | 提交最小 run log |
-| 80-90 分钟 | Exit ticket | 写一个仍不确定的问题 | 进入 office hours triage |
+| 0-10 min | Environment smoke test | Run `.venv/bin/python -c "import sys, torch; ..."` | Record interpreter, PyTorch version, and working directory |
+| 10-25 min | Functions and tests | Read helper tests in `assignments/ch01_bpe/tests.py` | Write input, output, and empty boundary for `_get_stats` |
+| 25-45 min | Dictionaries and pair counting | Hand-write `count_pairs(tokens)` | Handle empty list, single element, and duplicate pairs |
+| 45-65 min | Non-overlapping merge | Hand-calculate then implement for `[1,1,1]` and pair `(1,1)` | Explain why overlapping merge is not allowed |
+| 65-80 min | Files, exceptions, and logs | Read non-empty lines, preserve first failure traceback | Submit minimal run log |
+| 80-90 min | Exit ticket | Write one question you're still unsure about | Enter office hours triage |
 
 ### Python Drill
 
-学生应能在不看参考解的情况下解释：
+Students should be able to explain without reference solutions:
 
-- 为什么 `_get_stats([])` 和 `_get_stats([1])` 都返回空字典。
-- 为什么 `list.append(x)` 会原地修改，而 `list + [x]` 会创建新列表。
-- 为什么默认参数不写 `items=[]`。
-- 什么时候应该抛出 `ValueError` 或 `KeyError`，而不是静默返回空结果。
-- 为什么测试失败时要保留第一个 traceback，而不是只截最后一行。
+- Why `_get_stats([])` and `_get_stats([1])` both return an empty dictionary.
+- Why `list.append(x)` modifies in place, while `list + [x]` creates a new list.
+- Why default parameters should not be written as `items=[]`.
+- When to raise `ValueError` or `KeyError` instead of silently returning an empty result.
+- Why the first traceback should be preserved when a test fails, rather than only the last line.
 
-## PyTorch Tutorial Session 议程
+## PyTorch Tutorial Session Agenda
 
-| 时间 | 主题 | 活动 | 产出 |
+| Time | Topic | Activity | Deliverable |
 |------|------|------|------|
-| 0-10 分钟 | Tensor shape contract | 写出 `[B,T] -> [B,T,D] -> [B,T,V]` | shape trace |
-| 10-25 分钟 | Embedding lookup | 比较 `nn.Embedding` 和 `one_hot @ E` | 说明 lookup 等价关系 |
-| 25-40 分钟 | Linear projection | 给定 `x @ W` 推导 logits shape | 参数量和输出 shape |
-| 40-55 分钟 | next-token CE | flatten logits/labels 或使用等价实现 | loss 输入输出说明 |
-| 55-70 分钟 | autograd | 执行 forward、loss、backward，检查 `.grad` | 梯度流向说明 |
-| 70-85 分钟 | debug drill | 定位 dtype、device、contiguous、mask 或 shape 错误 | 第一个失败测试和修复假设 |
-| 85-90 分钟 | Exit ticket | 写出一个 PyTorch bug pattern | FAQ 或 office hours 记录 |
+| 0-10 min | Tensor shape contract | Write `[B,T] -> [B,T,D] -> [B,T,V]` | Shape trace |
+| 10-25 min | Embedding lookup | Compare `nn.Embedding` and `one_hot @ E` | Explain lookup equivalence |
+| 25-40 min | Linear projection | Derive logits shape given `x @ W` | Parameter count and output shape |
+| 40-55 min | Next-token CE | Flatten logits/labels or use equivalent implementation | Loss input/output explanation |
+| 55-70 min | Autograd | Execute forward, loss, backward; check `.grad` | Gradient flow explanation |
+| 70-85 min | Debug drill | Locate dtype, device, contiguous, mask, or shape errors | First failing test and fix hypothesis |
+| 85-90 min | Exit ticket | Write one PyTorch bug pattern | FAQ or office hours record |
 
 ### PyTorch Drill
 
-必会检查项：
+Mandatory checklist:
 
-- Shape trace: [B,T,D] 到 logits 的路径必须能用文字和张量维度同时说明。
-- `input_ids` dtype 应为 integer token ids；embedding 输出是 floating tensor。
-- logits `[B,T,V]` 和 labels `[B,T]` 计算 CE 时，batch/time 维度必须对齐。
-- `.reshape` 比 `.view` 更适合可能不连续的张量。
-- `model.train()` / `model.eval()` 会影响 dropout 或部分 normalization 行为。
-- `loss.backward()` 后应检查关键参数 `.grad is not None`，但不要把梯度值是否全相同当作正确性产出。
+- Shape trace: The path from [B,T,D] to logits must be explainable in both text and tensor dimensions.
+- `input_ids` dtype should be integer token ids; embedding output is a floating tensor.
+- When computing CE with logits `[B,T,V]` and labels `[B,T]`, the batch/time dimensions must align.
+- `.reshape` is more suitable than `.view` for potentially non-contiguous tensors.
+- `model.train()` / `model.eval()` affects dropout or some normalization behavior.
+- After `loss.backward()`, check that key parameters have `.grad is not None`, but do not treat identical gradient values as a correctness indicator.
 
-## 常见失败与处理
+## Common Failures and Handling
 
-| 失败模式 | 典型症状 | 处理 |
+| Failure Mode | Typical Symptom | Handling |
 |----------|----------|------|
-| 工作目录错误 | `FileNotFoundError` 或找不到 assignments | 回到仓库根目录运行命令 |
-| 模块选择错误 | 测试导入了错误文件 | 使用 `STUDENT_MODULE=starter` 或提交包要求的模块名 |
-| dtype 错误 | embedding 报 token ids 类型错误 | token ids 使用 integer tensor，logits/loss 使用 floating tensor |
-| shape 错误 | CE flatten 后 batch/time 错位 | 写出 `[B,T,V] -> [B*T,V]` 和 `[B,T] -> [B*T]` |
-| device 错误 | CPU/GPU tensor 混用 | 本课程公开测试默认 CPU；GPU 只作为扩展 |
-| 静默吞异常 | 测试失败但没有 traceback | 保留第一个失败 traceback 和命令 |
+| Wrong working directory | `FileNotFoundError` or cannot find assignments | Return to repository root to run commands |
+| Wrong module selection | Tests import the wrong file | Use `STUDENT_MODULE=starter` or the module name required by the submission package |
+| dtype error | Embedding reports token id type error | Use integer tensor for token ids, floating tensor for logits/loss |
+| Shape error | Batch/time misalignment after CE flatten | Write `[B,T,V] -> [B*T,V]` and `[B,T] -> [B*T]` |
+| Device error | CPU/GPU tensor mixing | Public tests in this course default to CPU; GPU is only for extension |
+| Silently swallowing exceptions | Test fails but no traceback | Preserve the first failure traceback and command |
 
-## 学生提交模板
+## Student Submission Template
 
 ```text
 Session:

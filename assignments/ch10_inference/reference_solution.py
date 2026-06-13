@@ -1184,8 +1184,8 @@ class SimpleRAG:
 
     def query(self, question):
         context_chunks = self.retrieve(question, top_k=3)
-        context = "\n\n".join(f"[文档 {i + 1}]: {chunk}" for i, (chunk, _score) in enumerate(context_chunks))
-        prompt = f"基于以下文档内容回答问题。\n\n文档内容：\n{context}\n\n问题：{question}\n回答："
+        context = "\n\n".join(f"[Document {i + 1}]: {chunk}" for i, (chunk, _score) in enumerate(context_chunks))
+        prompt = f"Answer the question based on the following document content.\n\nDocument content:\n{context}\n\nQuestion: {question}\nAnswer:"
         return self.llm.generate(prompt)
 
 

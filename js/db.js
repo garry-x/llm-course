@@ -1,7 +1,7 @@
 /* ================================================================
-   LLM Learner — IndexedDB 本地数据库
-   双写策略: localStorage 缓存(即时读写) + IndexedDB 持久化(备份)
-   启动时从 IndexedDB 恢复 localStorage
+   LLM Learner — IndexedDB Local Database
+   Dual-write strategy: localStorage cache (immediate read/write) + IndexedDB persistence (backup)
+   On startup, restore localStorage from IndexedDB
    ================================================================ */
 (function(){
   'use strict';

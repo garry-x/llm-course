@@ -1,12 +1,12 @@
 # Chapter 8 Assignment: Text Generation
 
-本作业对应第 8 章文本生成。目标是实现从 logits 到 token 的核心解码策略，包括概率截断、重复惩罚、约束解码、采样分布账本、搜索、多样性指标、reasoning 多样本聚合、test-time compute 预算 gate 和推测解码速度账本，并用小模型验证采样边界和生成行为。
+This assignment corresponds to Chapter 8 on Text Generation. The goal is to implement core decoding strategies from logits to tokens, including probability truncation, repetition penalty, constrained decoding, sampling distribution ledger, search, diversity metrics, reasoning multi-sample aggregation, test-time compute budget gate, and speculative decoding speedup ledger, and to verify sampling boundaries and generation behavior with small models.
 
 ## Files
 
-- `starter.py`: 学生起始代码。
-- `reference_solution.py`: 参考实现。
-- `tests.py`: 可运行测试。
+- `starter.py`: Student starter code.
+- `reference_solution.py`: Reference implementation.
+- `tests.py`: Runnable tests.
 
 ## Run
 
@@ -14,7 +14,7 @@
 .venv/bin/python assignments/ch08_generation/tests.py
 ```
 
-默认测试 `reference_solution.py`。测试学生代码时：
+By default, tests `reference_solution.py`. To test student code:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch08_generation/tests.py
@@ -22,25 +22,25 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch08_generation/tests.py
 
 ## Requirements
 
-- 贪心解码只使用最后一个位置的 logits，并选择 `argmax`。
-- `temperature=0` 必须退化为贪心，`temperature>0` 才能除以温度。
-- Top-K 必须只在最高 K 个 token 内采样，并处理 `k > vocab_size`。
-- Top-P 必须保留累计概率达到阈值的最小 nucleus，并重新归一化。
-- `apply_repetition_penalty` 必须在采样前调整已出现 token 的 logits：正 logit 除以 penalty，负 logit 乘以 penalty，且不能原地修改输入。
-- `apply_token_constraints` 必须把当前 grammar/schema 状态下不合法的 token logits 置为 `-inf`，支持 batch 内每行不同的合法 token 集合，并保证每行至少保留一个 token。
-- `decoding_distribution_report` 必须按顺序应用 repetition penalty、约束 mask、temperature 和 top-k/top-p 截断，返回处理后的 logits、最终候选集合、归一化概率、entropy 和当前最高概率 token。
-- Beam search 必须保留多个候选，累加 log probability，并支持长度归一化评分。
-- `pass_at_k` 应使用 `1 - C(n-c,k)/C(n,k)` 的采样成功率估计，连接代码/数学任务中的多样本评测。
-- `self_consistency_vote` 应从多条 reasoning 输出中抽取最终答案，按多数投票聚合，并报告样本数、票数占比和 token 成本。
-- `test_time_compute_budget_report` 应比较 greedy、self-consistency、best-of-N、verifier reranking 或 reasoning model 档位的 accuracy、samples、输出 token、延迟、成本和边际收益，输出是否适合上线的预算 gate。
-- `speculative_decoding_speedup` 应根据每轮接受草稿 token 数、实际写入输出 token 数、`gamma` 和 draft/target 成本比，报告 proposed、accepted、generated tokens、目标模型验证次数、草稿模型步数、粗略耗时和 speedup。
-- `Generator` 应提供统一生成接口，并能计算 distinct-n 多样性指标。
-- 简化推测解码应返回生成序列和接受率统计，便于比较 draft/target 一致性。
+- Greedy decoding only uses the logits at the last position and selects `argmax`.
+- `temperature=0` must degenerate to greedy, `temperature>0` must divide by temperature.
+- Top-K must only sample from the top K tokens, and handle `k > vocab_size`.
+- Top-P must retain the smallest nucleus whose cumulative probability reaches the threshold, and renormalize.
+- `apply_repetition_penalty` must adjust the logits of already appeared tokens before sampling: divide positive logits by penalty, multiply negative logits by penalty, and must not modify the input in place.
+- `apply_token_constraints` must set the logits of tokens invalid under the current grammar/schema state to `-inf`, support different valid token sets per row within a batch, and ensure at least one token remains per row.
+- `decoding_distribution_report` must apply repetition penalty, constraint mask, temperature, and top-k/top-p truncation in order, returning the processed logits, final candidate set, normalized probabilities, entropy, and the current highest probability token.
+- Beam search must retain multiple candidates, accumulate log probabilities, and support length-normalized scoring.
+- `pass_at_k` should use the sampling success rate estimate `1 - C(n-c,k)/C(n,k)`, connecting multi-sample evaluation in code/math tasks.
+- `self_consistency_vote` should extract final answers from multiple reasoning outputs, aggregate by majority vote, and report sample count, vote proportion, and token cost.
+- `test_time_compute_budget_report` should compare the accuracy, samples, output tokens, latency, cost, and marginal benefit of greedy, self-consistency, best-of-N, verifier reranking, or reasoning model tiers, and output a budget gate indicating whether it is suitable for deployment.
+- `speculative_decoding_speedup` should report proposed, accepted, and generated tokens, number of target model verifications, number of draft model steps, approximate time, and speedup based on the number of accepted draft tokens per round, actual written output tokens, `gamma`, and the draft/target cost ratio.
+- `Generator` should provide a unified generation interface and be able to compute distinct-n diversity metrics.
+- Simplified speculative decoding should return the generated sequence and acceptance rate statistics, facilitating comparison of draft/target consistency.
 
-## 评分 Rubric
+## Grading Rubric
 
-| 项目 | 分值 | 标准 |
+| Item | Points | Criteria |
 |------|:--:|------|
-| Written questions | 35 | 比较 greedy、beam、temperature、top-k、top-p、repetition penalty、CoT/self-consistency/best-of-N、verifier reranking、speculative decoding、生成评估指标和约束解码的适用边界 |
-| Programming parts | 55 | 实现 greedy/beam/temperature、top-k、top-p、repetition penalty、token constraints、decoding distribution report、pass@k、self-consistency vote、`test_time_compute_budget_report`、speculative decoding speedup accounting、Generator 指标和 speculative decoding |
-| Analysis / style | 10 | 解释质量、多样性、事实性、推理正确率、test-time compute、延迟、成本、边际收益、退化风险、参数 sweep 和采样参数边界 |
+| Written questions | 35 | Compare the applicability boundaries of greedy, beam, temperature, top-k, top-p, repetition penalty, CoT/self-consistency/best-of-N, verifier reranking, speculative decoding, generation evaluation metrics, and constrained decoding |
+| Programming parts | 55 | Implement greedy/beam/temperature, top-k, top-p, repetition penalty, token constraints, decoding distribution report, pass@k, self-consistency vote, `test_time_compute_budget_report`, speculative decoding speedup accounting, Generator metrics, and speculative decoding |
+| Analysis / style | 10 | Quality of explanation, diversity, factuality, reasoning correctness, test-time compute, latency, cost, marginal benefit, degeneration risk, parameter sweep, and sampling parameter boundaries |

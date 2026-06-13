@@ -1,12 +1,12 @@
 # Chapter 7 Assignment: Training Loop
 
-本作业对应第 7 章训练循环。目标是把 next-token 数据切片、数据重复/泄漏诊断、训练数据策展 gate、训练 token budget 估算、稳定交叉熵、logits 梯度、label smoothing、校准指标、global grad norm clipping、gradient accumulation step accounting、AdamW、warmup+cosine 调度轨迹、分布式训练策略账本、checkpoint/resume 完整性 gate、训练异常 runbook 和一个可复现的小训练循环串起来。
+This assignment corresponds to Chapter 7 on the training loop. The goal is to connect next-token data slicing, data repetition/leakage diagnostics, training data curation gate, training token budget estimation, stable cross-entropy, logits gradient, label smoothing, calibration metrics, global grad norm clipping, gradient accumulation step accounting, AdamW, warmup+cosine schedule trajectory, distributed training strategy ledger, checkpoint/resume integrity gate, training anomaly runbook, and a reproducible small training loop.
 
 ## Files
 
-- `starter.py`: 学生起始代码。
-- `reference_solution.py`: 参考实现。
-- `tests.py`: 可运行测试。
+- `starter.py`: Student starter code.
+- `reference_solution.py`: Reference implementation.
+- `tests.py`: Runnable tests.
 
 ## Run
 
@@ -14,7 +14,7 @@
 .venv/bin/python assignments/ch07_training/tests.py
 ```
 
-默认测试 `reference_solution.py`。测试学生代码时：
+By default, tests `reference_solution.py`. To test student code:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
@@ -22,29 +22,29 @@ STUDENT_MODULE=starter .venv/bin/python assignments/ch07_training/tests.py
 
 ## Requirements
 
-- `TextDataset[i]` 必须返回等长的 `x` 和 `y`，其中 `y` 是 `x` 右移一位的 next-token target。
-- `ngram_repetition_rate` 和 `ngram_overlap_rate` 必须能发现训练语料重复和 train/eval n-gram 重叠。
-- `training_data_curation_report` 必须把训练前数据源清单汇总成 size、dedup、quality filter、eval contamination、domain mixture 和 privacy gate，报告 weighted duplicate/quality/PII、domain token share、action items 和是否可以进入 training rehearsal。
-- `global_batch_tokens`、`training_steps_for_token_budget` 和 `dense_lm_training_flops` 必须能把 batch 设置、token 预算和 dense LM 近似训练 FLOPs 连起来。
-- `optimizer_state_memory_bytes` 必须区分参数、梯度、AdamW moments，并能粗估 ZeRO-style optimizer state sharding 后的单卡显存。
-- `distributed_training_strategy_report` 必须比较 DDP、ZeRO/FSDP 类策略的每卡参数/梯度/optimizer state、global batch tokens、通信模式、显存 gate 和可选 MFU gate，说明是否可以进入 scale rehearsal。
-- `checkpoint_resume_integrity_report` 必须检查 checkpoint 是否包含 model、optimizer、scheduler、global_step、RNG、sampler/data cursor、低精度 scaler/scale history 等训练状态，区分 resume checkpoint 与 model-only export，并检查 atomic write、step 单调性、分布式/sharded/DCP 格式的 reshard 能力、保存间隔和 checkpoint overhead/async save。
-- `cross_entropy_manual` 必须使用 log-sum-exp trick，并与 `torch.nn.functional.cross_entropy` 匹配。
-- `cross_entropy_logits_gradient` 必须返回 mean CE 对 logits 的梯度，并支持被 `ignore_index` 屏蔽的位置不贡献梯度。
-- `label_smoothed_cross_entropy` 必须把 hard target 分布改成平滑分布，并让 `ignore_index` 位置不进入平均。
-- `expected_calibration_error` 必须按置信度分桶，比较每个桶内 accuracy 与 mean confidence，并支持 `ignore_index`。
-- `clip_grad_norm` 必须按所有参数梯度的全局 L2 范数统一缩放梯度，不能逐参数单独裁剪。
-- `gradient_accumulation_step_accounting` 必须区分 micro-batch backward loss、optimizer step、scheduler step 和 consumed tokens。
-- `AdamW` 必须实现一阶/二阶动量、偏置修正和解耦权重衰减。
-- 调度器必须先 warmup 到 1，再 cosine decay 到 `min_lr_ratio`；`lr_schedule_trace` 必须能按 optimizer step 返回 lr multiplier、实际 lr 和累计 consumed tokens。
-- `train` 必须执行 `zero_grad -> forward -> loss -> backward -> clip -> step -> scheduler.step`，并记录 loss history。
-- 训练异常分析题必须能把 loss spike、NaN/Inf、resume 不连续和 tokens/s 下降分别归因到数据、数值精度、优化器状态、checkpoint 完整性或系统吞吐瓶颈。
-- `training_system_gate_report` 必须把训练 run 拆成 optimization、throughput、state/checkpoint 和 evaluation gate，输出 `overall_pass`、每个 gate 的信号和需要 debug 的 action items。
+- `TextDataset[i]` must return equal-length `x` and `y`, where `y` is the next-token target shifted right by one from `x`.
+- `ngram_repetition_rate` and `ngram_overlap_rate` must be able to detect repetition in the training corpus and train/eval n-gram overlap.
+- `training_data_curation_report` must summarize the pre-training data source inventory into size, dedup, quality filter, eval contamination, domain mixture, and privacy gate, reporting weighted duplicate/quality/PII, domain token share, action items, and whether it can enter training rehearsal.
+- `global_batch_tokens`, `training_steps_for_token_budget`, and `dense_lm_training_flops` must connect batch settings, token budget, and dense LM approximate training FLOPs.
+- `optimizer_state_memory_bytes` must distinguish parameters, gradients, AdamW moments, and be able to roughly estimate per-GPU memory after ZeRO-style optimizer state sharding.
+- `distributed_training_strategy_report` must compare DDP, ZeRO/FSDP-like strategies on per-card parameters/gradients/optimizer state, global batch tokens, communication pattern, memory gate, and optional MFU gate, indicating whether it can enter scale rehearsal.
+- `checkpoint_resume_integrity_report` must check whether the checkpoint contains model, optimizer, scheduler, global_step, RNG, sampler/data cursor, low-precision scaler/scale history, and other training states, distinguish resume checkpoint from model-only export, and check atomic write, step monotonicity, resharding capability for distributed/sharded/DCP formats, save interval, and checkpoint overhead/async save.
+- `cross_entropy_manual` must use the log-sum-exp trick and match `torch.nn.functional.cross_entropy`.
+- `cross_entropy_logits_gradient` must return the gradient of mean CE with respect to logits, and support positions masked by `ignore_index` not contributing to the gradient.
+- `label_smoothed_cross_entropy` must change the hard target distribution to a smoothed distribution, and ensure positions with `ignore_index` are not included in the average.
+- `expected_calibration_error` must bin by confidence, compare accuracy and mean confidence within each bin, and support `ignore_index`.
+- `clip_grad_norm` must uniformly scale gradients based on the global L2 norm of all parameter gradients, not clip per-parameter individually.
+- `gradient_accumulation_step_accounting` must distinguish micro-batch backward loss, optimizer step, scheduler step, and consumed tokens.
+- `AdamW` must implement first/second-order moments, bias correction, and decoupled weight decay.
+- The scheduler must first warmup to 1, then cosine decay to `min_lr_ratio`; `lr_schedule_trace` must be able to return lr multiplier, actual lr, and cumulative consumed tokens per optimizer step.
+- `train` must execute `zero_grad -> forward -> loss -> backward -> clip -> step -> scheduler.step`, and record loss history.
+- The training anomaly analysis question must attribute loss spikes, NaN/Inf, resume discontinuity, and tokens/s drops to data, numerical precision, optimizer state, checkpoint integrity, or system throughput bottlenecks respectively.
+- `training_system_gate_report` must break the training run into optimization, throughput, state/checkpoint, and evaluation gates, outputting `overall_pass`, signals for each gate, and action items requiring debugging.
 
-## 评分 Rubric
+## Grading Rubric
 
-| 项目 | 分值 | 标准 |
+| Item | Points | Criteria |
 |------|:--:|------|
-| Written questions | 35 | 推导交叉熵、CE 对 logits 的梯度、label smoothing、perplexity、ECE/calibration、global grad norm clipping、gradient accumulation loss scaling、global batch tokens、训练步数、dense LM 训练 FLOPs、optimizer state 显存、DDP/ZeRO/FSDP 分片差异、MFU、checkpoint resume state、DCP/sharded checkpoint 与 preemption loss、AdamW 偏置修正、warmup+cosine 边界与 token 进度、n-gram 泄漏诊断、data curation gate、grad clipping 的诊断意义、异常 runbook 和训练 gate 判定 |
-| Programming parts | 55 | 实现 dataset/dataloader、n-gram 重复/重叠率、`training_data_curation_report`、训练预算计算、optimizer state 显存估算、`distributed_training_strategy_report`、`checkpoint_resume_integrity_report`、稳定 cross entropy、CE logits 梯度、label-smoothed CE、ECE/calibration bins、global grad norm clipping、gradient accumulation step accounting、AdamW、scheduler、lr schedule trace、训练循环和 `training_system_gate_report` |
-| Analysis / style | 10 | 解释梯度如何回到 LM head/embedding，并用训练日志解释 loss spike、NaN、grad_norm、校准偏差、数据重复、train/val 分叉、数据质量/污染 gate、tokens/s、MFU、atomic checkpoint write、resharding、checkpoint overhead、resume parity、评测 gate 和最小修复实验 |
+| Written questions | 35 | Derive cross-entropy, CE gradient w.r.t. logits, label smoothing, perplexity, ECE/calibration, global grad norm clipping, gradient accumulation loss scaling, global batch tokens, training steps, dense LM training FLOPs, optimizer state memory, DDP/ZeRO/FSDP sharding differences, MFU, checkpoint resume state, DCP/sharded checkpoint and preemption loss, AdamW bias correction, warmup+cosine boundaries and token progress, n-gram leakage diagnosis, data curation gate, diagnostic significance of grad clipping, anomaly runbook, and training gate determination |
+| Programming parts | 55 | Implement dataset/dataloader, n-gram repetition/overlap rate, `training_data_curation_report`, training budget calculation, optimizer state memory estimation, `distributed_training_strategy_report`, `checkpoint_resume_integrity_report`, stable cross entropy, CE logits gradient, label-smoothed CE, ECE/calibration bins, global grad norm clipping, gradient accumulation step accounting, AdamW, scheduler, lr schedule trace, training loop, and `training_system_gate_report` |
+| Analysis / style | 10 | Explain how gradients flow back to LM head/embedding, and use training logs to explain loss spike, NaN, grad_norm, calibration bias, data repetition, train/val divergence, data quality/contamination gate, tokens/s, MFU, atomic checkpoint write, resharding, checkpoint overhead, resume parity, evaluation gate, and minimal fix experiments |

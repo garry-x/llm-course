@@ -1,6 +1,6 @@
 # ML Foundations Prerequisite Bridge
 
-This handout summarizes the college calculus, probability/statistics, and foundations of machine learning that will be used repeatedly throughout this course. It is not a standalone machine learning course, but rather maps the minimum concepts students need to bring into this course to LLM chapters, assignments, and written problems. Related review materials can be found in [Math and PyTorch Prerequisite Review](math-prerequisites.md), [Python and PyTorch Review Session](python-pytorch-review-session.md), and the [Weekly Reading List Handout](reading-list.md).
+This handout summarizes the college calculus, probability/statistics, and foundations of machine learning that will be used repeatedly throughout this course. It is not a standalone machine learning course, but rather maps the minimum concepts learners need to bring into this course to LLM chapters, assignments, and written problems. Related review materials can be found in [Math and PyTorch Prerequisite Review](math-prerequisites.md), [Python and PyTorch Review Session](python-pytorch-review-session.md), and the [Weekly Reading List Handout](reading-list.md).
 
 ## Coverage
 
@@ -16,7 +16,7 @@ This handout summarizes the college calculus, probability/statistics, and founda
 
 ## Diagnostic Add-on
 
-If a student has not taken a systematic ML course, they should complete the following short diagnostic in Week 0 / Week 1. It can serve as a supplementary sub-section of the Prerequisite Diagnostic.
+If a learner has not taken a systematic ML course, they should complete the following short diagnostic in Week 0 / Week 1. It can serve as a supplementary sub-section of the Prerequisite Diagnostic.
 
 | Module | Question | Passing Criteria |
 |------|------|----------|
@@ -27,11 +27,11 @@ If a student has not taken a systematic ML course, they should complete the foll
 | generalization | When train loss decreases and val loss increases, list 3 directions for investigation | Mention overfitting, data leakage, split, regularization, or early stopping |
 | evaluation | Select at least 3 metrics for a RAG QA project and explain the limitation of each metric | Covers at least two categories among retrieval, generation, and latency/safety |
 
-It is recommended to score as complete/incomplete. If a student passes fewer than 4 out of 6 questions, they should complete the remedial tasks in this handout before submitting the first graded programming assignment.
+It is recommended to score as complete/incomplete. If a learner passes fewer than 4 out of 6 questions, they should complete the remedial tasks in this handout before submitting the first graded programming assignment.
 
 ## Mini-Lecture: Calculus to Backprop
 
-Students do not need to hand-write large Jacobians, but they must understand how gradients propagate through a computation graph:
+Learners do not need to hand-write large Jacobians, but they must understand how gradients propagate through a computation graph:
 
 ```text
 y_hat = model(x; theta)
@@ -98,7 +98,7 @@ Training and inference projects must avoid treating a single result as a stable 
 | ablation | Remove one component to see its effect | LoRA rank, chunk size, cache on/off |
 | held-out evaluation | Data not used for training or hyperparameter tuning | validation set, hidden tests, final eval set |
 
-Student reports cannot simply state "the model works well." They must at least clearly state:
+Reports cannot simply state "the model works well." They must at least clearly state:
 
 - What the baseline is.
 - What the metric measures.

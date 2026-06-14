@@ -424,7 +424,7 @@ compute heads:    [A, A, A, B, B, B]  # aligns with 6 Q heads</div>
 
 <section class="card" id="s4-5b">
   <h3>4.5B Training Attention and Inference KV Cache Are Not the Same Layout Problem</h3>
-  <p>When students first implement MHA/GQA, they usually only care whether the <code>[B, H, T, D]</code> tensor can compute the correct output. However, training engineering and inference engineering use the same set of weights to solve two different problems: the training phase requires high-throughput processing of entire sequences, while the inference phase requires appending new tokens to the historical cache at each step. Understanding this distinction is key to explaining why GQA/MLA are particularly important for the decode phase.</p>
+  <p>When learners first implement MHA/GQA, they usually only care whether the <code>[B, H, T, D]</code> tensor can compute the correct output. However, training engineering and inference engineering use the same set of weights to solve two different problems: the training phase requires high-throughput processing of entire sequences, while the inference phase requires appending new tokens to the historical cache at each step. Understanding this distinction is key to explaining why GQA/MLA are particularly important for the decode phase.</p>
 
   <h4>1. Training Phase: Parallel Computation on Full Sequences</h4>
   <p>During the training or prefill phase, a complete sequence of length <code>T</code> is processed at once. The standard implementation projects Q/K/V into:</p>
@@ -620,7 +620,7 @@ class GroupedQueryAttention(nn.Module):
     <li>K can be directly dot-producted with the latent vector <span class="katex-inline" data-expr="\mathbf{c}_s^K" aria-label="\mathbf{c}_s^K" role="img"></span> without decompression</li>
     <li><strong>The KV Cache only needs to store the latent vector <span class="katex-inline" data-expr="\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}" aria-label="\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}" role="img"></span></strong></li>
   </ul>
-  <p>The <code>mla_absorbed_attention_scores(q, latent_kv, up_k_weight)</code> function in the Ch04 assignment requires students to verify this equivalence. The input <code>q</code> has shape <code>[B,H,T_q,D]</code>, the latent cache is <code>[B,T_k,L]</code>, and the K decompression matrix weight is <code>[H*D,L]</code>. The reference test first explicitly computes <code>K = W_{UK} c</code> and obtains <code>qK^T</code>, then reshapes <code>W_{UK}</code> by head into <code>[H,D,L]</code> and computes <code>(q W_{UK}) c^T</code>; the two must be element-wise equal. This step illustrates that MLA's cache savings come from the associativity of linear algebra, not from making K/V information "disappear for free."</p>
+  <p>The <code>mla_absorbed_attention_scores(q, latent_kv, up_k_weight)</code> function in the Ch04 assignment requires learners to verify this equivalence. The input <code>q</code> has shape <code>[B,H,T_q,D]</code>, the latent cache is <code>[B,T_k,L]</code>, and the K decompression matrix weight is <code>[H*D,L]</code>. The reference test first explicitly computes <code>K = W_{UK} c</code> and obtains <code>qK^T</code>, then reshapes <code>W_{UK}</code> by head into <code>[H,D,L]</code> and computes <code>(q W_{UK}) c^T</code>; the two must be element-wise equal. This step illustrates that MLA's cache savings come from the associativity of linear algebra, not from making K/V information "disappear for free."</p>
 
   <h4>Configuration in DeepSeek-V2/V3</h4>
   <div class="table-wrap">

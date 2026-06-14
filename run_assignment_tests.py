@@ -2,7 +2,7 @@
 
 Default behavior runs each assignment test suite against its bundled
 reference_solution.py. This proves the autograder-style tests are executable.
-Students can run a single suite against their own module by invoking that
+Learners can run a single suite against their own module by invoking that
 suite directly with STUDENT_MODULE=...
 """
 

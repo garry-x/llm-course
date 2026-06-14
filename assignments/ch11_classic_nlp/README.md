@@ -4,7 +4,7 @@ This supplemental assignment corresponds to the classic NLP topic handout and We
 
 ## Files
 
-- `starter.py`: Student starter code.
+- `starter.py`: Starter code.
 - `reference_solution.py`: Reference implementation.
 - `tests.py`: Runnable tests.
 
@@ -14,7 +14,7 @@ This supplemental assignment corresponds to the classic NLP topic handout and We
 .venv/bin/python assignments/ch11_classic_nlp/tests.py
 ```
 
-Default tests `reference_solution.py`. To test student code:
+Default tests `reference_solution.py`. To test your implementation:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch11_classic_nlp/tests.py

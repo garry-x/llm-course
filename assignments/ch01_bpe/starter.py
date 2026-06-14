@@ -1,6 +1,6 @@
 """Starter code for Chapter 1 BPE tokenizer assignment.
 
-Students should implement the TODO functions/classes and run:
+Learners should implement the TODO functions/classes and run:
 
     STUDENT_MODULE=student_solution .venv/bin/python assignments/ch01_bpe/tests.py
 """

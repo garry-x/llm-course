@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a student-facing static course site without inline reference solutions."""
+"""Build a learner-facing static course site without inline reference solutions."""
 
 from __future__ import annotations
 
@@ -171,7 +171,7 @@ def build_release(out_dir: Path) -> dict[str, object]:
         raise RuntimeError(f"assignment release builder emitted invalid JSON: {error}") from error
 
     manifest = {
-        "mode": "student-site",
+        "mode": "learner-site",
         "description": "Static course site with inline reference solutions removed.",
         "included_roots": INCLUDED_ROOTS,
         "root_pages": ROOT_PAGES,
@@ -189,13 +189,13 @@ def build_release(out_dir: Path) -> dict[str, object]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build a student-facing static course site release")
+    parser = argparse.ArgumentParser(description="Build a learner-facing static course site release")
     parser.add_argument("--out", required=True, type=Path, help="Output directory")
     parser.add_argument("--dry-run", action="store_true", help="Print release manifest without writing files")
     args = parser.parse_args()
 
     manifest = {
-        "mode": "student-site",
+        "mode": "learner-site",
         "included_roots": INCLUDED_ROOTS,
         "root_pages": ROOT_PAGES,
         "safe_docs": SAFE_DOCS,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build student-facing assignment release bundles.
+"""Build learner-facing assignment release bundles.
 
 The source tree keeps reference_solution.py for instructor validation and
 self-study. Formal course releases should exclude it.
@@ -32,9 +32,9 @@ EXCLUDED_FILES = ["reference_solution.py", "__pycache__"]
 TEST_DEFAULT_FROM = 'os.environ.get("STUDENT_MODULE", "reference_solution")'
 TEST_DEFAULT_TO = 'os.environ.get("STUDENT_MODULE", "student_solution")'
 RELEASE_NOTICE = """\
-## Student Release Notes
+## Learner Release Notes
 
-This student-facing release excludes instructor reference solutions and hidden tests.
+This learner-facing release excludes instructor reference solutions and hidden tests.
 
 ```bash
 cp starter.py student_solution.py
@@ -60,7 +60,7 @@ def assignment_manifest(name: str) -> dict[str, object]:
     }
 
 
-def rewrite_tests_for_student_release(text: str) -> str:
+def rewrite_tests_for_learner_release(text: str) -> str:
     if TEST_DEFAULT_FROM not in text:
         raise ValueError("tests.py does not contain expected STUDENT_MODULE default")
     text = text.replace(TEST_DEFAULT_FROM, TEST_DEFAULT_TO)
@@ -69,7 +69,7 @@ def rewrite_tests_for_student_release(text: str) -> str:
     return text
 
 
-def rewrite_readme_for_student_release(text: str) -> str:
+def rewrite_readme_for_learner_release(text: str) -> str:
     cleaned_lines: list[str] = []
     skip_fence = False
     for line in text.splitlines():
@@ -99,12 +99,12 @@ def build_assignment(name: str, out_dir: Path) -> dict[str, object]:
         target = dst / file_name
         if file_name == "tests.py":
             target.write_text(
-                rewrite_tests_for_student_release(source.read_text(encoding="utf-8")),
+                rewrite_tests_for_learner_release(source.read_text(encoding="utf-8")),
                 encoding="utf-8",
             )
         elif file_name == "README.md":
             target.write_text(
-                rewrite_readme_for_student_release(source.read_text(encoding="utf-8")),
+                rewrite_readme_for_learner_release(source.read_text(encoding="utf-8")),
                 encoding="utf-8",
             )
         else:            shutil.copy2(source, target)

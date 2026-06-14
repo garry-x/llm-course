@@ -1,15 +1,15 @@
 # Python and PyTorch Review Session
 
-This handout is used for Week 1 Python Review Session and Week 2 PyTorch Tutorial Session. It pairs with the [Math and PyTorch Prerequisite Review](math-prerequisites.md) to help students directly connect Python, tensor shape, autograd, and test debugging skills to Transformer code exercises.
+This handout is used for Week 1 Python Review Session and Week 2 PyTorch Tutorial Session. It pairs with the [Math and PyTorch Prerequisite Review](math-prerequisites.md) to help learners directly connect Python, tensor shape, autograd, and test debugging skills to Transformer code exercises.
 
-This course schedules a Python Review Session in Week 1 and a PyTorch Tutorial Session in Week 2, combining both reviews into a portable handout: students first confirm the environment and Python helpers, then proceed to PyTorch tensors, `nn.Module`, loss, autograd, and assignment submission logs.
+This course schedules a Python Review Session in Week 1 and a PyTorch Tutorial Session in Week 2, combining both reviews into a portable handout: you first confirm the environment and Python helpers, then proceed to PyTorch tensors, `nn.Module`, loss, autograd, and assignment submission logs.
 
 ## Session Goals
 
 | Session | Duration | Target Audience | Deliverable |
 |---------|:--:|----------|----------|
-| Python Review Session | 80-90 minutes | Students borderline on Python basics, transitioning from another language, or who haven't completed Ch01 helper | Able to implement pair counting, non-overlapping merge, file reading, and exception boundaries |
-| PyTorch Tutorial Session | 80-90 minutes | Students borderline on PyTorch basics, unstable with shape derivation, or who haven't completed Ch02 starter | Able to explain `[B,T,D]` to logits, compute next-token CE, and locate a failing test |
+| Python Review Session | 80-90 minutes | Learners who are close to the Python prerequisite boundary, transitioning from another language, or have not completed the Ch01 helper | Able to implement pair counting, non-overlapping merge, file reading, and exception boundaries |
+| PyTorch Tutorial Session | 80-90 minutes | Learners who are close to the PyTorch prerequisite boundary, unstable with shape derivation, or have not completed the Ch02 starter | Able to explain `[B,T,D]` to logits, compute next-token CE, and locate a failing test |
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ If `.venv/bin/python run_assignment_tests.py` fails, first record `Python execut
 
 ### Python Drill
 
-Students should be able to explain without reference solutions:
+Learners should be able to explain without reference solutions:
 
 - Why `_get_stats([])` and `_get_stats([1])` both return an empty dictionary.
 - Why `list.append(x)` modifies in place, while `list + [x]` creates a new list.
@@ -79,7 +79,7 @@ Mandatory checklist:
 | Device error | CPU/GPU tensor mixing | Public tests in this course default to CPU; GPU is only for extension |
 | Silently swallowing exceptions | Test fails but no traceback | Preserve the first failure traceback and command |
 
-## Student Submission Template
+## Submission Template
 
 ```text
 Session:

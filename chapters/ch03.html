@@ -506,7 +506,7 @@ combined mask:
  [1, 1, 0, 0],
  [1, 1, 1, 0],
  [1, 1, 1, 0]]</pre>
-      <p>Note that the last row can still "see" the first three real keys. This is because this function only masks the padding key columns; the actual training loss uses a label mask or attention/output mask to skip the padding query positions. Zeroing out the padding query rows entirely usually causes the entire row's softmax to be <code>-inf</code>, requiring extra handling. Therefore, the assignment first asks students to correctly implement the key-side padding mask.</p>
+      <p>Note that the last row can still "see" the first three real keys. This is because this function only masks the padding key columns; the actual training loss uses a label mask or attention/output mask to skip the padding query positions. Zeroing out the padding query rows entirely usually causes the entire row's softmax to be <code>-inf</code>, requiring extra handling. Therefore, the assignment first asks learners to correctly implement the key-side padding mask.</p>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 View Reference Solution</button>
     <div class="solution"><div class="code-block" data-lang="python">

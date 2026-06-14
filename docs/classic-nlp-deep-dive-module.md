@@ -2,11 +2,11 @@
 
 This module is used to expand the [Classic NLP Topic Handout](classic-nlp-handout.md) from a discussion session material into a 2-4 lecture topic that can be taught independently. It supplements the [Weekly Reading Material Handout](reading-list.md), [Written Derivation and Conceptual Problem Set](written-problem-set.md), and `assignments/ch11_classic_nlp/`.
 
-The goal is not to turn the course into a traditional full-coverage NLP course, but to ensure students can explain RNN/LSTM, structured prediction, encoder-decoder, and encoder-only representation learning within the classic neural NLP topics of this course.
+The goal is not to turn the course into a traditional full-coverage NLP course, but to ensure learners can explain RNN/LSTM, structured prediction, encoder-decoder, and encoder-only representation learning within the classic neural NLP topics of this course.
 
 ## Module Outcomes
 
-After completing this module, students should be able to:
+After completing this module, learners should be able to:
 
 | outcome_id | Learning Outcome | Learning Output |
 |------------|----------|------------|
@@ -17,7 +17,7 @@ After completing this module, students should be able to:
 | CL-NLP-5 | Construct BERT-style MLM inputs, labels, loss masks, extractive QA spans, and `[CLS]` no-answer outputs | Ch11 `build_mlm_example` and `select_extractive_qa_span` tests; written problems |
 | CL-NLP-6 | Determine what claims BLEU/ROUGE/EM/F1 and human evaluation can each support | Metric counterexamples; short answer explanations |
 
-Minimum passing standard: Students cannot just memorize terminology. For each topic, they must provide a computable example of a state/tensor/metric and explain what that example cannot prove.
+Minimum passing standard: Learners cannot just memorize terminology. For each topic, they must provide a computable example of a state/tensor/metric and explain what that example cannot prove.
 
 ## Suggested Lecture Split
 
@@ -30,7 +30,7 @@ Minimum passing standard: Students cannot just memorize terminology. For each to
 | 12-week extended version D | L18 | BERT/encoder-only and representation fine-tuning | MLM label mask drill |
 | 12-week extended version E | L19 | Evaluation failure cases and ethics | metric failure examples |
 
-If lecture time is limited, a comparison table of RNN/LSTM, dependency parsing, seq2seq, BERT, and decoder-only LM should still be retained; otherwise, students may easily misinterpret all NLP tasks as prompt-based generation.
+If lecture time is limited, a comparison table of RNN/LSTM, dependency parsing, seq2seq, BERT, and decoder-only LM should still be retained; otherwise, learners may easily misinterpret all NLP tasks as prompt-based generation.
 
 ## Dependency Parsing Deep Dive
 
@@ -96,13 +96,13 @@ Misconception boundary:
 - Greedy parsing is fast but accumulates errors; beam or dynamic oracle can mitigate this but increases complexity.
 - Attention heatmaps cannot automatically replace dependency trees.
 
-Ch11's `run_arc_standard_transitions` implements the action definitions from this section as a runnable state machine. It requires students to handle action legality, that a dependent can only have one head, and that the final parse must exhaust the buffer and assign a head to each token. This is closer to the structured prediction fundamentals required by this course than simply computing UAS/LAS.
+Ch11's `run_arc_standard_transitions` implements the action definitions from this section as a runnable state machine. It requires learners to handle action legality, that a dependent can only have one head, and that the final parse must exhaust the buffer and assign a head to each token. This is closer to the structured prediction fundamentals required by this course than simply computing UAS/LAS.
 
 ## RNN / LSTM Deep Dive
 
 ### Scalar RNN Recurrence
 
-The class first uses a scalar version to prevent students from being overwhelmed by matrix notation:
+The class first uses a scalar version to prevent learners from being overwhelmed by matrix notation:
 
 ```text
 h_t = tanh(w_x x_t + w_h h_{t-1})
@@ -110,7 +110,7 @@ o_t = W_o h_t
 p(x_{t+1} | x_{\le t}) = softmax(o_t)
 ```
 
-Given `x=[1.0, 0.5, -1.0]`, `w_x=0.8`, `w_h=0.4`, `h_0=0`, students should be able to compute by hand:
+Given `x=[1.0, 0.5, -1.0]`, `w_x=0.8`, `w_h=0.4`, `h_0=0`, learners should be able to compute by hand:
 
 ```text
 h_1 = tanh(0.8)
@@ -179,7 +179,7 @@ p(y_t | y_<t, x) = softmax(W [s_t; c_t] + b)
 
 Where `h_i` is the source encoder state, `s_t` is the decoder state, and `alpha_t` can serve as an alignment diagnostic.
 
-Ch11's `additive_attention_context` corresponds to this numerical computation. It makes three things clear to students: scores are unnormalized alignment logits; `alpha_{t,i}` is a probability distribution over source positions; the context vector `c_t` has the same dimension as the encoder state and is obtained by a weighted sum of source representations.
+Ch11's `additive_attention_context` corresponds to this numerical computation. It makes three things clear to learners: scores are unnormalized alignment logits; `alpha_{t,i}` is a probability distribution over source positions; the context vector `c_t` has the same dimension as the encoder state and is obtained by a weighted sum of source representations.
 
 Boundary:
 
@@ -279,9 +279,9 @@ Misconception boundary:
 
 ### Written Problem Templates
 
-1. RNN/LSTM: Given scalar recurrence and hidden states, ask students to compute BPTT gradient product and explain the role of LSTM gates.
-2. Dependency parsing: Given a sentence, gold arcs, and a transition system, ask students to write an action trace and explain an illegal action.
-3. Seq2Seq/NMT: Given source/target and a decoder step, ask students to write the dependencies of `p(y_t | y_<t, x)`, attention context, and exposure bias.
+1. RNN/LSTM: Given scalar recurrence and hidden states, ask learners to compute BPTT gradient product and explain the role of LSTM gates.
+2. Dependency parsing: Given a sentence, gold arcs, and a transition system, ask learners to write an action trace and explain an illegal action.
+3. Seq2Seq/NMT: Given source/target and a decoder step, ask learners to write the dependencies of `p(y_t | y_<t, x)`, attention context, and exposure bias.
 4. Beam search: Given candidate log probabilities, ask to compare rankings after unnormalized, length-normalized, and length penalty.
 5. BERT/MLM: Given tokens and mask positions, ask to write masked input, labels, loss mask, and compare with causal LM labels.
 6. Evaluation: Given a high BLEU/low human quality or low BLEU/high human quality example, ask to judge claim strength.
@@ -303,7 +303,7 @@ The minimum runnable output for this module is provided by `assignments/ch11_cla
 | `build_mlm_example` | MLM mask positions, labels, and ignore index |
 | `select_extractive_qa_span` | Encoder-only extractive QA start/end span selection |
 
-Optional extension: Have students implement a small beam search function that takes a step-level log probability table as input and outputs the top beam and length-normalized score. If the extension is added, hidden tests should cover EOS, empty beam, tie-breaking, and length penalty.
+Optional extension: Have learners implement a small beam search function that takes a step-level log probability table as input and outputs the top beam and length-normalized score. If the extension is added, hidden tests should cover EOS, empty beam, tie-breaking, and length penalty.
 
 ## Teaching Misconception Register
 

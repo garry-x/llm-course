@@ -6,11 +6,11 @@ This directory organizes the programming exercises from Chapter 4 into auto-grad
 
 | File | Purpose |
 |------|---------|
-| `starter.py` | Student starter code, contains TODOs to implement |
+| `starter.py` | Starter code with TODOs |
 | `reference_solution.py` | Instructor reference implementation, used to verify the tests themselves |
 | `tests.py` | `unittest` tests covering shape, mask, parameter count, KV head repeat, GQA head mapping, MLA latent score equivalence, cache compression ratio, and batch/layer/dtype memory budget |
 
-## Student Run Instructions
+## Run Instructions
 
 ```bash
 cp assignments/ch04_multihead/starter.py assignments/ch04_multihead/student_solution.py

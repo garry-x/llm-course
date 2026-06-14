@@ -36,7 +36,7 @@ Let the token IDs be `0=I, 1=saw, 2=her`, and the gold arcs be `saw -> I (nsubj)
 Classroom Check:
 
 - The head/dependent direction for `LEFT-ARC` and `RIGHT-ARC` cannot be guessed by the literal meaning of "left/right"; it depends on the system definition.
-- The `run_arc_standard_transitions` function in Ch11 executes the actions from this table and returns heads, labels, arcs, and the stack/buffer trace; students need to use code to check if each action satisfies the system constraints.
+- The `run_arc_standard_transitions` function in Ch11 executes the actions from this table and returns heads, labels, arcs, and the stack/buffer trace; learners need to use code to check if each action satisfies the system constraints.
 - If the predicted heads are `[1, -1, 1]` and labels are `["nsubj", "root", "obj"]`, both UAS and LAS are 1.0.
 - If the head of `her` is predicted to be `I`, but the label is still `obj`, both UAS and LAS will decrease; LAS is only counted when both the head and the label are correct.
 
@@ -45,7 +45,7 @@ Classroom Check:
 - **UAS**: Unlabeled Attachment Score, only checks if the head is correct.
 - **LAS**: Labeled Attachment Score, requires both the head and the dependency label to be correct.
 
-Course Purpose: Train students to decompose a structure prediction problem into states, actions, loss, and evaluation, rather than only looking at generative LLMs.
+Course Purpose: Train learners to decompose a structure prediction problem into states, actions, loss, and evaluation, rather than only looking at generative LLMs.
 
 ## 2. RNN / LSTM: From Recurrent Language Models to Attention
 
@@ -135,7 +135,7 @@ p(y_t | y_<t, x) = softmax(W_o [s_t; c_t])
 
 Here, `alpha_{t,i}` is the attention weight of the decoder at step `t` on the `i`-th token of the source. It can help diagnose omissions, repetitions, or mistranslations, but it cannot be directly treated as a strict causal explanation.
 
-The `additive_attention_context` function in Ch11 turns this set of formulas into a pure Python exercise: students need to first calculate the score for each source position, then perform softmax normalization, and finally use `alpha` to compute a weighted sum of the encoder states to get `c_t`. The focus of this exercise is not to train a translation system, but to translate the information flow of encoder-decoder attention from a diagram into a numerically reproducible calculation.
+The `additive_attention_context` function in Ch11 turns this set of formulas into a pure Python exercise: learners need to first calculate the score for each source position, then perform softmax normalization, and finally use `alpha` to compute a weighted sum of the encoder states to get `c_t`. The focus of this exercise is not to train a translation system, but to translate the information flow of encoder-decoder attention from a diagram into a numerically reproducible calculation.
 
 ### Core Issues
 
@@ -164,7 +164,7 @@ Classroom Check:
 - Attention alignment can be used as a translation diagnostic, but it cannot automatically prove a model's causal explanation.
 - BLEU's brevity penalty can only mitigate overly short outputs; it does not solve issues of semantically equivalent paraphrasing, factuality, or coreference errors.
 
-Course Purpose: Help students understand the encoder-decoder tradition before decoder-only LLMs, and why modern instruction models still use beam/search/rerank ideas.
+Course Purpose: Help learners understand the encoder-decoder tradition before decoder-only LLMs, and why modern instruction models still use beam/search/rerank ideas.
 
 ## 4. Encoder-only / BERT
 
@@ -179,7 +179,7 @@ BERT uses a bidirectional Transformer encoder and is pre-trained using Masked La
 | Output | token/CLS representation | next token logits |
 | Typical Tasks | Classification, extraction, sequence labeling | Generation, dialogue, code |
 
-Course Purpose: Connect the classic methods of representation learning and discriminative NLP to the task modeling in Ch11, allowing students to understand that not all NLP tasks are inherently suited for autoregressive generation.
+Course Purpose: Connect the classic methods of representation learning and discriminative NLP to the task modeling in Ch11, allowing learners to understand that not all NLP tasks are inherently suited for autoregressive generation.
 
 ### Worked Example: BERT-style MLM Tensor
 
@@ -208,11 +208,11 @@ Comparison with causal LM:
 
 Extractive QA assigns two scores to each token: `start_logit_i` and `end_logit_i`. The model selects a span that satisfies `start <= end` and does not exceed a maximum length, maximizing `start_logit_start + end_logit_end`. A no-answer option, like in SQuAD 2.0, is usually represented by the `[CLS]` start/end scores.
 
-The `select_extractive_qa_span` function in Ch11 lets students implement this step: enumerate valid spans, compare scores, and return an empty answer when the `[CLS]` score is higher. It emphasizes that encoder-only models can perform discriminative extraction, rather than generating a new piece of text.
+The `select_extractive_qa_span` function in Ch11 lets learners implement this step: enumerate valid spans, compare scores, and return an empty answer when the `[CLS]` score is higher. It emphasizes that encoder-only models can perform discriminative extraction, rather than generating a new piece of text.
 
 ## 4. Evaluation
 
-University-level NLP courses must enable students to distinguish between "optimization objectives" and "evaluation metrics".
+University-level NLP courses must enable learners to distinguish between "optimization objectives" and "evaluation metrics".
 
 | Metric | Applicable Task | Limitation |
 |------|----------|------|
@@ -310,7 +310,7 @@ It is recommended that project reports include a "Safety and Limitations" sectio
 
 ## Mini-Recitation Activities
 
-| Topic | Board artifact | Student action |
+| Topic | Board artifact | Learner action |
 |-------|----------------|----------------|
 | Dependency parsing | stack / buffer / arcs transition table | Write a valid action sequence and calculate UAS/LAS |
 | Seq2Seq / NMT | beam table with sum and normalized score | Explain length bias and length penalty |

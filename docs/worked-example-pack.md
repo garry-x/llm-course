@@ -1,6 +1,6 @@
 # Worked Example Pack
 
-This pack consolidates core concepts from chapter text, discussion sessions, written problems, and programming assignments into reproducible examples. Its purpose is to help students connect formulas, shapes, code, and common errors; supporting problems can be found in [Written Derivation and Concept Problem Bank](written-problem-set.md).
+This pack consolidates core concepts from chapter text, discussion sessions, written problems, and programming assignments into reproducible examples. Its purpose is to help learners connect formulas, shapes, code, and common errors; supporting problems can be found in [Written Derivation and Concept Problem Bank](written-problem-set.md).
 
 ## Core Worked Examples
 
@@ -112,7 +112,7 @@ This pack consolidates core concepts from chapter text, discussion sessions, wri
 
 | recitation_id | examples | activity | exit learning output |
 | --- | --- | --- | --- |
-| WE-R1-SHAPE | WE-CH02-ROPE, WE-CH03-ATTN | Students fill shape tables and identify where the mask or rotation enters. | one corrected shape trace |
-| WE-R2-SYSTEMS | WE-CH04-GQA, WE-CH10-KVCACHE | Students compute memory ratios and explain latency consequences. | one memory/latency calculation with units |
-| WE-R3-OBJECTIVES | WE-CH07-ADAMW, WE-CH09-DPO | Students compare optimizer and preference-objective failure modes. | one signed update explanation |
-| WE-R4-EVAL | WE-CH08-TOPP, WE-CH11-METRICS | Students explain why generation and evaluation choices change observed quality. | one metric or sampling boundary note |
+| WE-R1-SHAPE | WE-CH02-ROPE, WE-CH03-ATTN | Learners fill shape tables and identify where the mask or rotation enters. | one corrected shape trace |
+| WE-R2-SYSTEMS | WE-CH04-GQA, WE-CH10-KVCACHE | Learners compute memory ratios and explain latency consequences. | one memory/latency calculation with units |
+| WE-R3-OBJECTIVES | WE-CH07-ADAMW, WE-CH09-DPO | Learners compare optimizer and preference-objective failure modes. | one signed update explanation |
+| WE-R4-EVAL | WE-CH08-TOPP, WE-CH11-METRICS | Learners explain why generation and evaluation choices change observed quality. | one metric or sampling boundary note |

@@ -84,7 +84,7 @@ In this course, masks are applied before softmax or loss by default:
 
 ## Minimal Set of Linear Algebra
 
-Students need to be proficient in:
+Learners need to be proficient in:
 
 - Shape conventions for vectors, matrices, and tensors.
 - Dimension conditions for matrix multiplication `A @ B`.

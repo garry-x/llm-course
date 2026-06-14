@@ -83,7 +83,7 @@
 <p>Classroom Check:</p>
 <ul>
 <li>The head/dependent direction for <code>LEFT-ARC</code> and <code>RIGHT-ARC</code> cannot be guessed by the literal meaning of &quot;left/right&quot;; it depends on the system definition.</li>
-<li>The <code>run_arc_standard_transitions</code> function in Ch11 executes the actions from this table and returns heads, labels, arcs, and the stack/buffer trace; students need to use code to check if each action satisfies the system constraints.</li>
+<li>The <code>run_arc_standard_transitions</code> function in Ch11 executes the actions from this table and returns heads, labels, arcs, and the stack/buffer trace; learners need to use code to check if each action satisfies the system constraints.</li>
 <li>If the predicted heads are <code>[1, -1, 1]</code> and labels are <code>[&quot;nsubj&quot;, &quot;root&quot;, &quot;obj&quot;]</code>, both UAS and LAS are 1.0.</li>
 <li>If the head of <code>her</code> is predicted to be <code>I</code>, but the label is still <code>obj</code>, both UAS and LAS will decrease; LAS is only counted when both the head and the label are correct.</li>
 </ul>
@@ -92,7 +92,7 @@
 <li><strong>UAS</strong>: Unlabeled Attachment Score, only checks if the head is correct.</li>
 <li><strong>LAS</strong>: Labeled Attachment Score, requires both the head and the dependency label to be correct.</li>
 </ul>
-<p>Course Purpose: Train students to decompose a structure prediction problem into states, actions, loss, and evaluation, rather than only looking at generative LLMs.</p>
+<p>Course Purpose: Train learners to decompose a structure prediction problem into states, actions, loss, and evaluation, rather than only looking at generative LLMs.</p>
 <h3 id="2-rnn-lstm-from-recurrent-language-models-to-attention">2. RNN / LSTM: From Recurrent Language Models to Attention</h3>
 <p>Before Transformers, neural language models and sequence labeling commonly used RNNs, GRUs, or LSTMs. The core idea of an RNN is to use a hidden state to summarize the prefix that has been read:</p>
 <pre class="code-block" data-lang="text"><code>h_t = tanh(W_x x_t + W_h h_{t-1} + b)
@@ -132,7 +132,7 @@ alpha_{t,i} = softmax_i(score_{t,i})
 c_t = sum_i alpha_{t,i} h_i
 p(y_t | y_&lt;t, x) = softmax(W_o [s_t; c_t])</code></pre>
 <p>Here, <code>alpha_{t,i}</code> is the attention weight of the decoder at step <code>t</code> on the <code>i</code>-th token of the source. It can help diagnose omissions, repetitions, or mistranslations, but it cannot be directly treated as a strict causal explanation.</p>
-<p>The <code>additive_attention_context</code> function in Ch11 turns this set of formulas into a pure Python exercise: students need to first calculate the score for each source position, then perform softmax normalization, and finally use <code>alpha</code> to compute a weighted sum of the encoder states to get <code>c_t</code>. The focus of this exercise is not to train a translation system, but to translate the information flow of encoder-decoder attention from a diagram into a numerically reproducible calculation.</p>
+<p>The <code>additive_attention_context</code> function in Ch11 turns this set of formulas into a pure Python exercise: learners need to first calculate the score for each source position, then perform softmax normalization, and finally use <code>alpha</code> to compute a weighted sum of the encoder states to get <code>c_t</code>. The focus of this exercise is not to train a translation system, but to translate the information flow of encoder-decoder attention from a diagram into a numerically reproducible calculation.</p>
 <h4 id="core-issues">Core Issues</h4>
 <ul>
 <li><strong>Exposure bias</strong>: During training, the decoder sees the gold prefix; during inference, it sees the prefix it generated itself.</li>
@@ -151,12 +151,12 @@ p(y_t | y_&lt;t, x) = softmax(W_o [s_t; c_t])</code></pre>
 <li>Attention alignment can be used as a translation diagnostic, but it cannot automatically prove a model&#x27;s causal explanation.</li>
 <li>BLEU&#x27;s brevity penalty can only mitigate overly short outputs; it does not solve issues of semantically equivalent paraphrasing, factuality, or coreference errors.</li>
 </ul>
-<p>Course Purpose: Help students understand the encoder-decoder tradition before decoder-only LLMs, and why modern instruction models still use beam/search/rerank ideas.</p>
+<p>Course Purpose: Help learners understand the encoder-decoder tradition before decoder-only LLMs, and why modern instruction models still use beam/search/rerank ideas.</p>
 <h3 id="4-encoder-only-bert">4. Encoder-only / BERT</h3>
 <p>BERT uses a bidirectional Transformer encoder and is pre-trained using Masked Language Modeling (MLM) and Next Sentence Prediction. Unlike a causal LM, MLM can look at both left and right contexts, only predicting the masked positions.</p>
 <h4 id="differences-from-causal-lm">Differences from Causal LM</h4>
 <div class="table-wrap"><table><thead><tr><th>Dimension</th><th>BERT / Encoder-only</th><th>GPT / Decoder-only</th></tr></thead><tbody><tr><td>Attention</td><td>Bidirectional visibility</td><td>causal mask</td></tr><tr><td>Pre-training</td><td>MLM</td><td>next-token prediction</td></tr><tr><td>Output</td><td>token/CLS representation</td><td>next token logits</td></tr><tr><td>Typical Tasks</td><td>Classification, extraction, sequence labeling</td><td>Generation, dialogue, code</td></tr></tbody></table></div>
-<p>Course Purpose: Connect the classic methods of representation learning and discriminative NLP to the task modeling in Ch11, allowing students to understand that not all NLP tasks are inherently suited for autoregressive generation.</p>
+<p>Course Purpose: Connect the classic methods of representation learning and discriminative NLP to the task modeling in Ch11, allowing learners to understand that not all NLP tasks are inherently suited for autoregressive generation.</p>
 <h4 id="worked-example-bert-style-mlm-tensor">Worked Example: BERT-style MLM Tensor</h4>
 <p>Input tokens:</p>
 <pre class="code-block" data-lang="text"><code>[CLS] the cat sat [SEP]</code></pre>
@@ -170,9 +170,9 @@ p(y_t | y_&lt;t, x) = softmax(W_o [s_t; c_t])</code></pre>
 </ul>
 <h4 id="worked-example-extractive-qa-span">Worked Example: Extractive QA Span</h4>
 <p>Extractive QA assigns two scores to each token: <code>start_logit_i</code> and <code>end_logit_i</code>. The model selects a span that satisfies <code>start &lt;= end</code> and does not exceed a maximum length, maximizing <code>start_logit_start + end_logit_end</code>. A no-answer option, like in SQuAD 2.0, is usually represented by the <code>[CLS]</code> start/end scores.</p>
-<p>The <code>select_extractive_qa_span</code> function in Ch11 lets students implement this step: enumerate valid spans, compare scores, and return an empty answer when the <code>[CLS]</code> score is higher. It emphasizes that encoder-only models can perform discriminative extraction, rather than generating a new piece of text.</p>
+<p>The <code>select_extractive_qa_span</code> function in Ch11 lets learners implement this step: enumerate valid spans, compare scores, and return an empty answer when the <code>[CLS]</code> score is higher. It emphasizes that encoder-only models can perform discriminative extraction, rather than generating a new piece of text.</p>
 <h3 id="4-evaluation">4. Evaluation</h3>
-<p>University-level NLP courses must enable students to distinguish between &quot;optimization objectives&quot; and &quot;evaluation metrics&quot;.</p>
+<p>University-level NLP courses must enable learners to distinguish between &quot;optimization objectives&quot; and &quot;evaluation metrics&quot;.</p>
 <div class="table-wrap"><table><thead><tr><th>Metric</th><th>Applicable Task</th><th>Limitation</th></tr></thead><tbody><tr><td>Perplexity</td><td>Language model fit</td><td>Not directly equivalent to factual correctness or usefulness</td></tr><tr><td>Accuracy / F1</td><td>Classification, extraction</td><td>Label definitions and class imbalance can affect interpretation</td></tr><tr><td>Exact Match</td><td>QA, code, math</td><td>Too strict for equivalent expressions</td></tr><tr><td>BLEU</td><td>Machine translation</td><td>Unstable for semantic paraphrasing and single-sentence evaluation</td></tr><tr><td>ROUGE</td><td>Summarization</td><td>Biased towards lexical overlap</td></tr><tr><td>Human Eval</td><td>Open-ended tasks</td><td>High cost, difficult to ensure consistency</td></tr><tr><td>LLM-as-judge</td><td>Large-scale preference evaluation</td><td>Potential position bias, model bias, and contamination risk</td></tr></tbody></table></div>
 <p>Project reports should not only provide a single average score. They should at least include per-task results, failure cases, error types, and metric limitations.</p>
 <h4 id="computable-definitions-of-common-metrics">Computable Definitions of Common Metrics</h4>
@@ -227,7 +227,7 @@ F1 = 2 * precision * recall / (precision + recall)</code></pre>
 <li>Spend 20 minutes analyzing an agent trace, identifying the responsibility boundaries of tool schema, policy, state delta, side effect, latency, and final task success.</li>
 </ol>
 <h3 id="mini-recitation-activities">Mini-Recitation Activities</h3>
-<div class="table-wrap"><table><thead><tr><th>Topic</th><th>Board artifact</th><th>Student action</th></tr></thead><tbody><tr><td>Dependency parsing</td><td>stack / buffer / arcs transition table</td><td>Write a valid action sequence and calculate UAS/LAS</td></tr><tr><td>Seq2Seq / NMT</td><td>beam table with sum and normalized score</td><td>Explain length bias and length penalty</td></tr><tr><td>BERT / MLM</td><td>masked input + labels table</td><td>Distinguish MLM loss positions from causal LM labels</td></tr><tr><td>Evaluation</td><td>metric failure-case table</td><td>Determine which metric supports the conclusion and which metric fails</td></tr><tr><td>Agent evaluation</td><td>trace + state delta + tool call table</td><td>Determine if final success, trajectory quality, safety side effects, and cost all pass the gate simultaneously</td></tr><tr><td>Ethics / Safety</td><td>risk / trigger / mitigation table</td><td>Connect the failure case to data, model, system, or evaluation causes</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Topic</th><th>Board artifact</th><th>Learner action</th></tr></thead><tbody><tr><td>Dependency parsing</td><td>stack / buffer / arcs transition table</td><td>Write a valid action sequence and calculate UAS/LAS</td></tr><tr><td>Seq2Seq / NMT</td><td>beam table with sum and normalized score</td><td>Explain length bias and length penalty</td></tr><tr><td>BERT / MLM</td><td>masked input + labels table</td><td>Distinguish MLM loss positions from causal LM labels</td></tr><tr><td>Evaluation</td><td>metric failure-case table</td><td>Determine which metric supports the conclusion and which metric fails</td></tr><tr><td>Agent evaluation</td><td>trace + state delta + tool call table</td><td>Determine if final success, trajectory quality, safety side effects, and cost all pass the gate simultaneously</td></tr><tr><td>Ethics / Safety</td><td>risk / trigger / mitigation table</td><td>Connect the failure case to data, model, system, or evaluation causes</td></tr></tbody></table></div>
     </section>
   </article>
 </main>

@@ -1,16 +1,16 @@
 # Ch01 BPE Tokenizer Homework Test
 
-This directory organizes the programming exercises from Chapter 1 into an auto-gradable homework entry point. The goal is not to replace the chapter explanation, but to give students a submission standard similar to university course assignments.
+This directory organizes the programming exercises from Chapter 1 into an auto-gradable homework entry point. The goal is not to replace the chapter explanation, but to give learners a submission standard similar to university course assignments.
 
 ## File Description
 
 | File | Purpose |
 |------|---------|
-| `starter.py` | Student starter code, containing TODOs that need implementation |
+| `starter.py` | Starter code with TODOs |
 | `reference_solution.py` | Instructor reference implementation, used to verify the tests themselves |
 | `tests.py` | `unittest` tests, covering `_get_stats`, `_merge`, `train`, `encode`, `decode`, BPE merge trace, tokenizer statistics report, and grouped token cost comparison |
 
-## Student Run Instructions
+## Run Instructions
 
 ```bash
 cp assignments/ch01_bpe/starter.py assignments/ch01_bpe/student_solution.py

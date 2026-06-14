@@ -200,7 +200,7 @@ llm-course/
 │   ├── python-pytorch-review-session.md/.html
 │   ├── classic-nlp-handout.md/.html
 │   └── classic-nlp-deep-dive-module.md/.html
-├── assignments/              # Student starters, tests, READMEs, and reference solutions
+├── assignments/              # Starter code, tests, READMEs, and reference solutions
 │   └── ch01_bpe/ ... ch11_classic_nlp/
 ├── images/                   # SVG concept diagrams and favicon assets
 │   ├── bpe-pipeline.svg
@@ -217,8 +217,8 @@ llm-course/
 │   └── favicon.svg/.png/.ico
 ├── scripts/
 │   ├── render_docs_html.py          # Render docs/*.md to styled docs/*.html
-│   ├── build_assignment_release.py  # Create student assignment packages
-│   └── build_course_site_release.py # Create student-facing static site release
+│   ├── build_assignment_release.py  # Create public assignment packages
+│   └── build_course_site_release.py # Create the learner-facing static site release
 ├── run_assignment_tests.py    # Run all assignment tests
 ├── requirements.txt           # Python dependencies for local exercises
 ├── serve.sh                   # CLI: local static server
@@ -227,7 +227,7 @@ llm-course/
 
 ## Content Maintenance Principles
 
-The homepage and README only retain the course main line, chapter entry points, and how to run. Papers, technical reports, and tool documentation are not listed on the homepage; instead, they enter the corresponding chapters and the [weekly reading material handout](docs/reading-list.html), requiring students to map reading conclusions back to formulas, code, system metrics, or chapter judgments.
+The homepage and README only retain the course main line, chapter entry points, and how to run. Papers, technical reports, and tool documentation are not listed on the homepage; instead, they enter the corresponding chapters and the [weekly reading material handout](docs/reading-list.html), requiring learners to map reading conclusions back to formulas, code, system metrics, or chapter judgments.
 
 When extending course content in the future, prioritize following three rules:
 

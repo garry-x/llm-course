@@ -6,11 +6,11 @@ This directory organizes the programming exercises from Chapter 2 into automatic
 
 | File | Purpose |
 |------|---------|
-| `starter.py` | Student starter code, containing TODOs that need implementation |
+| `starter.py` | Starter code with TODOs |
 | `reference_solution.py` | Instructor reference implementation, used to verify the tests themselves |
 | `tests.py` | `unittest` tests, covering shape, one-hot lookup equivalence, co-occurrence counts, SGNS loss, SGNS center gradient, shifted PMI, GloVe loss, cosine similarity, 3CosAdd, buffer, norm preservation, and relative position properties |
 
-## Student Run Method
+## Run Instructions
 
 ```bash
 cp assignments/ch02_embeddings/starter.py assignments/ch02_embeddings/student_solution.py

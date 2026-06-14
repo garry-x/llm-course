@@ -4,7 +4,7 @@ This assignment corresponds to the complete GPT assembly exercise in Chapter 6. 
 
 ## Files
 
-- `starter.py`: Student starter code.
+- `starter.py`: Starter code.
 - `reference_solution.py`: Reference implementation.
 - `tests.py`: Runnable tests.
 
@@ -14,7 +14,7 @@ This assignment corresponds to the complete GPT assembly exercise in Chapter 6. 
 .venv/bin/python assignments/ch06_gpt/tests.py
 ```
 
-By default, tests `reference_solution.py`. To test student code:
+By default, tests `reference_solution.py`. To test your implementation:
 
 ```bash
 STUDENT_MODULE=starter .venv/bin/python assignments/ch06_gpt/tests.py

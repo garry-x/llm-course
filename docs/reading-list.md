@@ -10,7 +10,7 @@ After each reading, focus on answering three questions: What technical problem d
 
 ## Reading Method: From Papers to Course Competencies
 
-This course does not require students to memorize a list of papers, but rather to transform the technical choices in the papers into derivable, implementable, and evaluable competencies. When reading each piece of material, you should complete at least four steps:
+This course does not require learners to memorize a list of papers, but rather to transform the technical choices in the papers into derivable, implementable, and evaluable competencies. When reading each piece of material, you should complete at least four steps:
 
 1.  Problem Setting: Write down the input, output, training data, model assumptions, and target task.
 2.  Mathematical Object: Identify an objective function, probability decomposition, matrix operation, mask rule, complexity formula, or evaluation metric, and explain each variable.
@@ -19,7 +19,7 @@ This course does not require students to memorize a list of papers, but rather t
 
 Reading depth progresses through three levels:
 
-| Level | What Students Should Be Able to Do | Example |
+| Level | What Learners Should Be Able to Do | Example |
 |-------|------------------------------------|---------|
 | Conceptual Level | Rephrase the problem, method, results, and limitations in their own words | Why BPE alleviates OOV; why DPO requires a reference model |
 | Mathematical Level | Expand key formulas and complete a small numerical example | SGNS loss, attention scaling, next-token CE, DPO log-ratio |
@@ -29,7 +29,7 @@ Reading depth progresses through three levels:
 
 Corresponding Materials: Prerequisite Diagnostic, [Math and PyTorch Prerequisite Review](math-prerequisites.md), [ML Foundations Prerequisite Bridge](ml-foundations-prerequisite-bridge.md).
 
-This week's reading goal: Ensure students can translate basic ML language into objects repeatedly used in the LLM course, including loss, gradient, generalization, held-out evaluation, tensor shape, and PyTorch module. If the diagnosis reveals weaknesses, directly return to the "Prerequisite Skills/Internalization within Chapter/Acceptance Signal" of the relevant chapter to reinforce, rather than taking a separate independent course.
+This week's reading goal: Ensure learners can translate basic ML language into objects repeatedly used in the LLM course, including loss, gradient, generalization, held-out evaluation, tensor shape, and PyTorch module. If the diagnosis reveals weaknesses, directly return to the "Prerequisite Skills/Internalization within Chapter/Acceptance Signal" of the relevant chapter to reinforce, rather than taking a separate independent course.
 
 Required:
 
@@ -421,7 +421,7 @@ Optional Reading:
 
 Frontier Paper Reading Task:
 
-Each student needs to select 2 materials closest to the current chapter's problem: one methods or systems paper, and one model card, benchmark paper, or official technical report. The reading goal is not to pile up citations, but to place the training, inference, or evaluation judgments from the course into a clear technical coordinate system:
+For each chapter, choose 2 materials closest to the current problem: one methods or systems paper, and one model card, benchmark paper, or official technical report. The reading goal is not to pile up citations, but to place the training, inference, or evaluation judgments from the course into a clear technical coordinate system:
 
 | Paper Section | What You Need to Extract | How to Map to Chapter Content |
 |----------|----------------|---------------------|

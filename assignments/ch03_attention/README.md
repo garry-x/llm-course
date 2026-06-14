@@ -6,11 +6,11 @@ This directory organizes the programming exercises from Chapter 3 into automatic
 
 | File | Purpose |
 |------|---------|
-| `starter.py` | Student starter code, containing TODOs to be implemented |
+| `starter.py` | Starter code with TODOs |
 | `reference_solution.py` | Instructor reference implementation, used to verify the tests themselves |
 | `tests.py` | `unittest` tests, covering shape, scaling, mask, permutation equivariance, softmax Jacobian, attention logits gradient, Q/K/V gradients, attention entropy, attention score memory, causal constraints, padding key masking, and visualization return values |
 
-## Student Run Method
+## Run Instructions
 
 ```bash
 cp assignments/ch03_attention/starter.py assignments/ch03_attention/student_solution.py

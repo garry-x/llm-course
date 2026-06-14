@@ -2,7 +2,7 @@
 
 By default these tests run against reference_solution.py so the course
 repository can verify that the test suite itself is healthy. To test a
-student submission in the same directory:
+learner submission in the same directory:
 
     STUDENT_MODULE=student_solution .venv/bin/python assignments/ch01_bpe/tests.py
 """

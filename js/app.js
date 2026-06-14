@@ -5,17 +5,17 @@
   'use strict';
 
   var CHAPTERS = [
-    {id:1, file:'ch01.html', title:'Environment Setup & Tokenization', desc:'BPE, multilingual tokenizer, special tokens & model interface contract', sections:19},
-    {id:2, file:'ch02.html', title:'Embedding Layer & Positional Encoding', desc:'TokenEmbedding, word vectors, contextualized representations, RoPE, long context & prompt representation', sections:20},
-    {id:3, file:'ch03.html', title:'Single-Head Self-Attention', desc:'Scaled Dot-Product Attention, mask, masked softmax, diagnostic ledger & complexity bounds', sections:20},
-    {id:4, file:'ch04.html', title:'Multi-Head Attention & MLA', desc:'MHA, GQA, MLA, KV Cache budget & checkpoint conversion', sections:18},
-    {id:5, file:'ch05.html', title:'Transformer Block', desc:'RMSNorm, SwiGLU, resource estimation, stability & interpretability', sections:20},
-    {id:6, file:'ch06.html', title:'Assembling a Complete GPT Model', desc:'GPT-2 124M, MoE, weight loading, logit parity & checkpoint compatibility', sections:18},
-    {id:7, file:'ch07.html', title:'Training Loop', desc:'Data pipeline, AdamW, checkpoint, distributed, MFU, industrial training diagnostics', sections:26},
-    {id:8, file:'ch08.html', title:'Text Generation', desc:'Sampling, beam, thinking budget, speculative & structured decoding', sections:25},
-    {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', desc:'SFT, synthetic distillation, LoRA, DPO, GRPO, rollout systems & retention', sections:27},
-    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', desc:'KV Cache, sparse/linear attention, continuous batching, RAG & KV-aware orchestration', sections:38},
-    {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, agent workflow evaluation & safety', sections:20}
+    {id:1, file:'ch01.html', title:'Environment Setup & Tokenization', navTitle:'Tokenization', desc:'BPE, multilingual tokenizer, special tokens & model interface contract', sections:19},
+    {id:2, file:'ch02.html', title:'Embedding Layer & Positional Encoding', navTitle:'Embeddings & RoPE', desc:'TokenEmbedding, word vectors, contextualized representations, RoPE, long context & prompt representation', sections:20},
+    {id:3, file:'ch03.html', title:'Single-Head Self-Attention', navTitle:'Self-Attention', desc:'Scaled Dot-Product Attention, mask, masked softmax, diagnostic ledger & complexity bounds', sections:20},
+    {id:4, file:'ch04.html', title:'Multi-Head Attention & MLA', navTitle:'Multi-Head & MLA', desc:'MHA, GQA, MLA, KV Cache budget & checkpoint conversion', sections:18},
+    {id:5, file:'ch05.html', title:'Transformer Block', navTitle:'Transformer Block', desc:'RMSNorm, SwiGLU, resource estimation, stability & interpretability', sections:20},
+    {id:6, file:'ch06.html', title:'Assembling a Complete GPT Model', navTitle:'GPT Model', desc:'GPT-2 124M, MoE, weight loading, logit parity & checkpoint compatibility', sections:18},
+    {id:7, file:'ch07.html', title:'Training Loop', navTitle:'Training', desc:'Data pipeline, AdamW, checkpoint, distributed, MFU, industrial training diagnostics', sections:26},
+    {id:8, file:'ch08.html', title:'Text Generation', navTitle:'Generation', desc:'Sampling, beam, thinking budget, speculative & structured decoding', sections:25},
+    {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', navTitle:'Alignment', desc:'SFT, synthetic distillation, LoRA, DPO, GRPO, rollout systems & retention', sections:27},
+    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', navTitle:'Inference', desc:'KV Cache, sparse/linear attention, continuous batching, RAG & KV-aware orchestration', sections:38},
+    {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', navTitle:'NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, agent workflow evaluation & safety', sections:20}
   ];
 
   // ---- State helpers (localStorage-backed) ----
@@ -68,9 +68,9 @@
       '<span class="ch-num">⌂</span><span class="ch-label">Home</span></a>';
     CHAPTERS.forEach(function(ch){
       var cls = (ch.id===currentCh?'active ':'')+(completed.has(ch.id)?'completed ':'');
-      html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'"'+
+      html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'" title="'+ch.title+'"'+
         (ch.id===currentCh?' aria-current="page"':'')+'>'+
-        '<span class="ch-num">'+ch.id+'</span><span class="ch-label">'+ch.title+'</span></a>';
+        '<span class="ch-num">'+ch.id+'</span><span class="ch-label">'+ch.navTitle+'</span></a>';
     });
     nav.innerHTML = html;
   }
@@ -225,31 +225,58 @@
         return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
       });
     }
+    function compactTocTitle(title){
+      var compact = String(title).trim()
+        .replace(/^\d+(?:\.\d+)*[A-Z]?\s+/, '')
+        .replace(/^Programming Exercises?\s+([0-9-]+):\s*/i, 'Exercise $1: ')
+        .replace(/^Chapter Summary:\s*/i, 'Summary: ');
+      if(/^Exercise\s+[0-9-]+$/.test(compact)) return compact;
+      compact = compact.split(/\s*[—–]\s*|\s+-\s+|:\s+/)[0];
+      return compact
+        .replace(/^BPE as Data-Driven Compression$/, 'BPE Compression')
+        .replace(/^Detailed Analysis$/, 'Compression Heuristic')
+        .replace(/^Encoding and Decoding$/, 'Encoding & Decoding')
+        .replace(/^Comparison of Mainstream Tokenizers$/, 'Tokenizer Comparison')
+        .replace(/^Tokenizer is the Model Interface Contract$/, 'Tokenizer Contract')
+        .replace(/^Chat Template and Multimodal Interface Ledger$/, 'Chat & Multimodal Ledger')
+        .replace(/^Multilingual Tokenizer Training$/, 'Multilingual Tokenizer');
+    }
     var sectionItems = Array.from(sections).map(function(s){
-        var h3 = s.querySelector('h3');
-        var title = h3 ? h3.textContent : s.id;
-        var safeTitle = escapeHTML(title);
-        return '<li><a href="#'+s.id+'" title="'+safeTitle+'"><span class="toc-text">'+safeTitle+'</span></a></li>';
-      }).join('');
+      var h3 = s.querySelector('h3');
+      var title = h3 ? h3.textContent : s.id;
+      return {
+        id: s.id,
+        title: title,
+        compactTitle: compactTocTitle(title)
+      };
+    });
 
-    function buildToc(className, title){
+    function renderTocItems(compact){
+      return sectionItems.map(function(item){
+        var safeTitle = escapeHTML(item.title);
+        var label = escapeHTML(compact ? item.compactTitle : item.title);
+        return '<li><a href="#'+item.id+'" title="'+safeTitle+'"><span class="toc-text">'+label+'</span></a></li>';
+      }).join('');
+    }
+
+    function buildToc(className, title, compact){
       var toc = document.createElement('nav');
       toc.className = className;
       toc.setAttribute('aria-label', 'Chapter sections');
-      toc.innerHTML = '<h4>'+title+'</h4><ol>' + sectionItems + '</ol>';
+      toc.innerHTML = '<h4>'+title+'</h4><ol>' + renderTocItems(compact) + '</ol>';
       return toc;
     }
 
     document.body.classList.add('has-page-toc');
 
-    var inlineToc = buildToc('toc toc-inline', '📑 Table of Contents');
+    var inlineToc = buildToc('toc toc-inline', '📑 Table of Contents', false);
     var subtitle = chapter.querySelector('.reading-time');
     if(subtitle) subtitle.after(inlineToc);
 
     var sideToc = null;
     var main = document.querySelector('.main');
     if(currentCh >= 1 && main){
-      sideToc = buildToc('chapter-page-toc', 'On This Page');
+      sideToc = buildToc('chapter-page-toc', 'On This Page', true);
       main.appendChild(sideToc);
     }
 

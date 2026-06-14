@@ -74,6 +74,15 @@ banner() {
   echo ""
 }
 
+display_host() {
+  local host="$1"
+  if [ "$host" = "0.0.0.0" ] || [ "$host" = "::" ]; then
+    echo "127.0.0.1"
+  else
+    echo "$host"
+  fi
+}
+
 # ================================================================
 # Command Implementations
 # ================================================================
@@ -92,8 +101,15 @@ cmd_serve() {
   check_port "$port" && kill_port "$port"
 
   banner
+  local browser_host
+  browser_host="$(display_host "$host")"
   echo -e "  Mode:    ${GREEN}Local Development${NC}"
-  echo -e "  Address: ${GREEN}http://${host}:${port}${NC}"
+  echo -e "  Local:   ${GREEN}http://${browser_host}:${port}${NC}"
+  if [ "$host" = "0.0.0.0" ] || [ "$host" = "::" ]; then
+    echo -e "  Listen:  ${YELLOW}${host}:${port}${NC} (use your machine IP for LAN access)"
+  else
+    echo -e "  Listen:  ${YELLOW}${host}:${port}${NC}"
+  fi
   echo -e "  Directory: ${SCRIPT_DIR}"
   echo -e "  Stop:    ${YELLOW}Ctrl+C${NC}"
   echo ""

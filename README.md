@@ -115,9 +115,11 @@ If your goal is to become an LLM training engineer, the learning objective shoul
 ```bash
 git clone https://github.com/garry-x/llm-course.git && cd llm-course
 
-./serve.sh                    # Default 0.0.0.0:8080
+./serve.sh                    # Listen on 0.0.0.0:8080, open 127.0.0.1:8080 locally
 ./serve.sh serve -p 3000      # Specify port
 ```
+
+Open the printed local URL, usually `http://127.0.0.1:8080`. The server may listen on `0.0.0.0` so other devices on the LAN can connect, but `0.0.0.0` itself is not the browser URL.
 
 ### Running Assignment Tests
 

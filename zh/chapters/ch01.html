@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第 1 章 BPE Tokenizer - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body data-ch="1">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1><a href="../index.html">LLM Deep Learning</a></h1>
+    <p>中文版 · 从代码构建大语言模型</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
+    <a href="ch01.html" class="active" aria-current="page"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
+    <a href="ch02.html"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
+    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
+    <a href="ch04.html"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
+    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
+    <a href="ch06.html"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
+    <a href="ch07.html"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
+    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
+    <a href="ch09.html"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
+    <a href="ch10.html"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
+    <a href="ch11.html"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
+    <a href="../../chapters/ch01.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第 1 章 BPE Tokenizer</h2>
+  <p class="subtitle">从零实现 Byte Pair Encoding：LLM 的文本接口</p>
+  <div class="reading-time">预计阅读：120 分钟 · 17 小节 · 5 个编程练习 · 5 个概念题</div>
+
+  <section class="card">
+    <h3>怎么学这一章：先看文本怎样变成数字</h3>
+    <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者先抓三件事：</strong>什么是 token，为什么 BPE 会反复合并高频相邻对，为什么 encode/decode 可以可逆。信息论、Zipf 定律和 PMI 能帮你建立直觉，但第一遍不需要把它们全部推完。</div></div>
+    <ul>
+      <li><strong>前置要求：</strong>Python list、dict、字符串/bytes、简单循环。</li>
+      <li><strong>学习目标：</strong>解释 tokenization 的信息压缩取舍；推导 BPE 的训练、编码和解码流程；分析 vocab size 对序列长度、embedding 参数量和多语言成本的影响。</li>
+      <li><strong>本章产出：</strong>一个可以训练、编码、解码的最小 BPE Tokenizer。</li>
+      <li><strong>完成标准：</strong>你能说清一段文本怎样变成 token ID，以及 token ID 怎样还原成文本。</li>
+      <li><strong>练习产出：</strong>提交 tokenizer 代码、3 组混合文本测试、复杂度分析，以及不同 vocabulary size 下 token 数变化的实验记录。核心实现可用 <a href="../../assignments/ch01_bpe/" target="_blank">Ch01 BPE Assignment Tests</a> 检查。</li>
+    </ul>
+    <div class="dependency-note"><strong>前置技能：</strong>Python list/dict、bytes 与 string 的边界、循环不变量、基础复杂度、测试驱动实现。<br><strong>本章会内化：</strong>这些基础会直接用到 pair counting、non-overlapping merge、encode/decode 可逆性、special token 合约和 token 成本估算。<br><strong>验证信号：</strong>不看额外资料，也能解释本章代码里每个中间结构为什么存在，以及 tokenizer 改动会怎样传到 Ch02 embedding、Ch07 token budget 和 Ch10 serving cost。</div>
+    <p class="system-role"><strong>本章位置：</strong>Tokenizer 定义了 LLM 的文本接口合约。后面的 embedding、训练 token 预算、chat template、KV cache 和计费指标，都依赖同一串 token。因此，tokenization 不是预处理小工具，而是贯穿训练和推理的第一条工程边界。</p>
+  </section>
+
+  <section class="card" id="s1-1">
+    <h3>1.1 Tokenizer 的位置：从文本接口到工程成本</h3>
+    <p>Tokenizer 是 LLM 的第一层接口。它把原始字符串转成 token ID，同时决定序列长度、embedding 矩阵大小、上下文窗口利用率和服务计费口径。本章把 tokenization 当作训练和推理共同遵守的模型合约，而不是一个随手做掉的预处理步骤。</p>
+    <ul>
+      <li><strong>训练侧：</strong>改 tokenization 规则，会改 token 分布、batch token 数、embedding 参数量和数据质量诊断。</li>
+      <li><strong>推理侧：</strong>同一段文本的 token 数，会影响上下文容量、KV Cache 显存、延迟和调用成本。</li>
+      <li><strong>发布侧：</strong>checkpoint、chat template、special token 和 tokenizer 文件必须一起版本化，否则模型接口会错位。</li>
+    </ul>
+    <p>下面的实现只保留 BPE 最小、可解释的核心：统计相邻 pair 的频率，按优先级合并，保存 merge table，并在 encoding/decoding 时使用同一套规则。理解这条线之后，再比较 WordPiece、Unigram LM 和 byte-level tokenizer，就会变成工程取舍问题，而不是名词记忆。</p>
+  </section>
+
+  <section class="card" id="s1-2">
+    <h3>1.2 开发环境</h3>
+    <div class="code-block" data-lang="bash"># Python 3.10+
+python --version
+
+# 安装核心依赖
+pip install torch numpy tqdm
+
+# 验证
+python -c "import torch; print(torch.__version__)"</div>
+    <p>本课程代码可以在 CPU 上运行。开发环境推荐 Jupyter Notebook 或 VS Code。</p>
+  </section>
+
+  <section class="card" id="s1-3">
+    <h3>1.3 什么是 token：一个信息论视角</h3>
+    <p>LLM 不直接处理字符或字符串，而是处理 <strong>token</strong>。token 是模型看到的最小文本单元，每个 token 对应一个整数 ID。模型真正拿到的是整数序列，不是自然语言文本。</p>
+
+    <h4>从信息论看 tokenization</h4>
+    <p>假设一段文本包含的信息量是 <code>H</code> bit。如果用 <code>n</code> 个 token 表示它，每个 token 平均承载 <code>H/n</code> bit。Tokenizer 的目标可以粗略理解为：在 vocabulary size 为 <code>V</code> 的条件下，让一段文本需要的 token 数尽量少。这就是经典的压缩取舍。</p>
+    <ul>
+      <li><strong>更大的 vocabulary：</strong>每个 token 信息密度更高，序列更短，但 embedding 矩阵 <code>R^{V x d}</code> 参数更多。</li>
+      <li><strong>更小的 vocabulary：</strong>参数更少，但序列更长，训练计算和推理延迟都会上升。</li>
+    </ul>
+
+    <h4>为什么不直接用单词：Zipf 定律</h4>
+    <p>自然语言大致符合 Zipf 定律：第 <code>k</code> 高频词的频率和 <code>1/k</code> 成正比。这意味着大量词只出现很少次数。如果直接用“词”作为 vocabulary，长尾词会造成严重稀疏，未登录词（OOV）也无法处理。</p>
+    <p>Subword Tokenization 的思路是在字符和单词之间找一个中间粒度：常见词可以保留成完整 token，罕见词拆成更小的 subword，实在没有见过的词还能退回到字符或 byte 层面。</p>
+
+    <h4>BPE 的 byte-level 设计</h4>
+    <p>GPT 系列的 BPE tokenizer 通常工作在 <strong>byte</strong> 层面，基础 vocabulary 是 256 个 byte 值，而不是字符。英文、中文、阿拉伯语、emoji，底层都会先变成 UTF-8 byte 序列，再在 byte 序列上做合并。好处是：<strong>任何字符串都能被 tokenize，不会 OOV</strong>。</p>
+    <div class="info-box key"><span class="icon">🔑</span><div><strong>关键数据：</strong>GPT-4 的 <code>cl100k_base</code> vocabulary 大约 100K token，Llama 3 大约 128K token。中文、日文等 CJK 文本通常比英文更“费 token”：一个中文字符常常需要约 1.5-2 个 token，而英文 token 平均能覆盖约 3.3 个字符。</div></div>
+  </section>
+
+  <section class="card" id="s1-4">
+    <h3>1.4 把 BPE 看成数据驱动压缩：从频率归纳符号</h3>
+    <p>BPE（Byte Pair Encoding）最早由 Gage 在 1994 年作为通用数据压缩方法提出，后来由 Sennrich 等人在 2016 年引入神经机器翻译。它不是 NLP 专属技巧，而是把通用压缩策略改造成文本建模接口。</p>
+
+    <h4>核心观察：高频模式就是冗余</h4>
+    <p>在任何 byte 序列里，总会有一些相邻 byte pair 反复出现。比如英文里 <code>"t" + "h"</code> 很常见。BPE 的策略是把高频相邻 pair 合成一个新符号，让序列变短。每次合并都相当于发现一个重复模式，并把它抽象成更高层的 token。</p>
+
+    <h4>算法流程</h4>
+    <div class="code-block" data-lang="text">输入：文本 T，目标 vocabulary size V
+初始化：Vocab = 所有 byte 值 0..255
+for i in 1..(V - 256):
+    统计当前 token 序列中所有相邻 pair 的出现次数
+    选择出现次数最高的 pair (a, b)
+    新增 token c = a + b
+    把当前序列中所有不重叠的 (a, b) 替换成 c
+返回：vocabulary 和 merge rules</div>
+    <p>每次合并都会让序列长度减少，减少量大致等于这个 pair 的出现次数。做完 <code>V - 256</code> 次合并后，vocabulary 从 256 扩到 <code>V</code>，同时训练语料的 token 序列明显变短。</p>
+
+    <h4>为什么合并最高频 pair 是合理的</h4>
+    <p>从压缩角度看，当前步骤里合并最高频 pair，可以最大化这一步的序列长度下降。这是贪心启发式，不保证全局最优；效果还取决于语料、pre-tokenization 和 vocab budget。</p>
+    <p>从信息论角度看，经常相邻出现的符号对通常值得词汇化，但原始频率不等于互信息。高频 pair 可能只是两个高频单符号碰到了一起。所以更准确地说，BPE 优化的是<strong>局部压缩收益</strong>，不是 PMI 或语义关联的最优估计。</p>
+
+    <h4>一个具体例子</h4>
+    <div class="code-block" data-lang="text">Corpus: "low lower lowest"
+初始序列: l, o, w, _, l, o, w, e, r, _, l, o, w, e, s, t
+
+Round 1: "l"+"o" 出现 3 次 -> 合并成 token 256 ("lo")
+  序列: lo, w, _, lo, w, e, r, _, lo, w, e, s, t
+
+Round 2: "lo"+"w" 出现 3 次 -> 合并成 token 257 ("low")
+  序列: low, _, low, e, r, _, low, e, s, t
+
+Round 3: "e"+"r" 出现 2 次 -> 合并成 token 258 ("er")
+  序列: low, _, low, er, _, low, e, s, t</div>
+    <p><code>"e"+"r"</code> 到第 3 轮才合并，是因为前两轮 <code>"l"+"o"</code> 和 <code>"lo"+"w"</code> 的频率更高。合并顺序完全由频率和 tie-breaking 规则决定，这就是 BPE 的“学习信号”。</p>
+
+    <h4>每轮合并后必须重新统计 pair</h4>
+    <p>实现 BPE 最常见的错误，是第一轮统计完 pair 后一直复用旧计数。BPE 统计的对象不是原始字符串，而是<strong>当前 token 序列</strong>。一次合并会改变相邻关系，下一轮必须重新运行 <code>_get_stats</code>。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>阶段</th><th>当前序列</th><th>主要 pair 计数</th><th>下一步选择</th></tr>
+        <tr><td>初始</td><td><code>l o w _ l o w e r _ l o w e s t</code></td><td><code>(l,o)=3</code>, <code>(o,w)=3</code>, <code>(w,e)=2</code></td><td>按 tie-breaking 选择 <code>(l,o)</code></td></tr>
+        <tr><td>合并 <code>(l,o)->lo</code> 后</td><td><code>lo w _ lo w e r _ lo w e s t</code></td><td><code>(lo,w)=3</code>, <code>(w,e)=2</code></td><td>选择 <code>(lo,w)</code></td></tr>
+        <tr><td>合并 <code>(lo,w)->low</code> 后</td><td><code>low _ low e r _ low e s t</code></td><td><code>(_,low)=2</code>, <code>(low,e)=2</code></td><td>从新的最高频 pair 中选择</td></tr>
+      </table>
+    </div>
+    <p>第一轮后旧的 <code>(o,w)=3</code> 已经不存在，因为 <code>o</code> 被并进了 <code>lo</code>。如果继续按旧计数合并，代码要么找不到这个 pair，要么得到和当前 tokenization 不一致的 vocabulary。</p>
+  </section>
+
+  <section class="card">
+    <div class="svg-diagram" style="max-width:900px">
+      <img src="../../images/bpe-pipeline.svg?v=en-20260613b" alt="BPE 训练、编码和解码流程" style="width:100%">
+    </div>
+    <p class="diagram-caption">图 1-1：BPE Tokenizer 的训练、编码和解码流程</p>
+  </section>
+
+  <section class="card" id="s1-5">
+    <h3>1.5 编程练习 1：统计相邻 token pair 频率</h3>
+    <p>BPE 训练的第一步，是拿到当前 token 序列并统计所有相邻 pair 的出现次数。这个统计结果决定每一轮要合并哪个 pair。</p>
+    <div class="coding-exercise">
+      <h4>练习 1：实现 <code>_get_stats</code></h4>
+      <div class="task">
+        <p><strong>任务：</strong>实现 <code>_get_stats(ids)</code>。输入是一串整数 token ID，输出是所有相邻 pair 的频率字典。</p>
+        <ul>
+          <li>输入 <code>ids</code> 是 <code>list[int]</code>。</li>
+          <li>输出是 <code>dict[tuple[int, int], int]</code>。</li>
+          <li>对序列 <code>[1,2,3,4]</code>，统计 <code>(1,2)</code>、<code>(2,3)</code>、<code>(3,4)</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">assert _get_stats([1, 2, 3, 1, 2]) == {(1, 2): 2, (2, 3): 1, (3, 1): 1}
+assert _get_stats([]) == {}
+assert _get_stats([42]) == {}</div>
+      </div>
+      <div class="solution open"><div class="code-block" data-lang="python">from collections import Counter
+
+def _get_stats(ids):
+    """Count all adjacent token pairs."""
+    return dict(Counter(zip(ids, ids[1:])))</div></div>
+    </div>
+  </section>
+
+  <section class="card" id="s1-6">
+    <h3>1.6 细看：为什么频率选择是一种压缩启发式</h3>
+    <h4>压缩视角</h4>
+    <p>如果一个 pair 出现了 <code>f</code> 次，把它合成一个新 token，理论上可以让当前序列少 <code>f</code> 个位置。选择最高频 pair，就是在当前这一步拿到最大的局部压缩收益。</p>
+    <h4>和 Huffman Coding 的区别</h4>
+    <p>Huffman Coding 给已有符号分配不同长度的编码；BPE 则是在序列里归纳新的符号。Huffman 关心码长，BPE 关心把哪些相邻片段变成 token。两者都利用频率，但解决的问题不同。</p>
+    <h4>频率不等于互信息</h4>
+    <p>一个 pair 高频，并不说明它一定有强语义关系。BPE 的目标是让序列变短，不是发现语言学意义上的词。工程上这反而是优点：它简单、稳定、可复现，也容易和模型文件一起发布。</p>
+  </section>
+
+  <section class="card" id="s1-7">
+    <h3>1.7 编程练习 2：实现 pair 替换</h3>
+    <p>选出要合并的 pair 后，需要在当前序列里做<strong>不重叠替换</strong>。这一步非常关键：如果允许重叠，BPE 的训练和编码就会不一致。</p>
+    <div class="coding-exercise">
+      <h4>练习 2：实现 <code>_merge</code></h4>
+      <div class="task">
+        <p><strong>任务：</strong>实现 <code>_merge(ids, pair, idx)</code>，把序列中的目标 pair 替换成新 token ID。</p>
+        <div class="code-block" data-lang="python">assert _merge([1, 2, 1, 2, 3], (1, 2), 99) == [99, 99, 3]
+assert _merge([1, 1, 1], (1, 1), 99) == [99, 1]</div>
+      </div>
+      <div class="solution open"><div class="code-block" data-lang="python">def _merge(ids, pair, idx):
+    out = []
+    i = 0
+    while i < len(ids):
+        if i < len(ids) - 1 and (ids[i], ids[i + 1]) == pair:
+            out.append(idx)
+            i += 2
+        else:
+            out.append(ids[i])
+            i += 1
+    return out</div></div>
+    </div>
+  </section>
+
+  <section class="card" id="s1-8">
+    <h3>1.8 BPE 训练循环：从 byte 到 vocabulary</h3>
+    <p>训练 BPE 时，先把文本转成 UTF-8 bytes，再把每个 byte 当作初始 token ID。之后重复三步：统计当前序列的 pair，选择最高频 pair，合并成新 token。</p>
+    <div class="code-block" data-lang="python">def train(text, vocab_size):
+    ids = list(text.encode("utf-8"))
+    merges = {}
+    next_id = 256
+    for _ in range(vocab_size - 256):
+        stats = _get_stats(ids)
+        if not stats:
+            break
+        pair = max(stats, key=stats.get)
+        ids = _merge(ids, pair, next_id)
+        merges[pair] = next_id
+        next_id += 1
+    return merges</div>
+    <p>复杂度上，最简单实现每一轮都要重新扫描当前序列。如果目标 vocab 很大、语料很大，就需要增量统计和更复杂的数据结构。但教学实现保留全量重算，更容易看清循环不变量。</p>
+  </section>
+
+  <section class="card" id="s1-9">
+    <h3>1.9 编程练习 3：实现 BPE 训练函数</h3>
+    <p>这一练习把 <code>_get_stats</code> 和 <code>_merge</code> 串起来。你需要返回 merge table，并保证每一轮都基于当前 token 序列重新统计。</p>
+    <div class="coding-exercise">
+      <h4>练习 3：BPE Training Function</h4>
+      <div class="task">
+        <ul>
+          <li>输入文本先用 UTF-8 编成 bytes。</li>
+          <li>新 token ID 从 256 开始。</li>
+          <li>每轮合并最高频 pair；没有 pair 时提前停止。</li>
+          <li>保存 <code>pair -> new_id</code>，供 encode 使用。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s1-10">
+    <h3>1.10 编码和解码：从规则到完整 tokenizer</h3>
+    <h4>Decoding：简单且完全可逆</h4>
+    <p>解码时，只需要把每个 token ID 展开回它对应的 byte 序列，再把 bytes 按 UTF-8 解回字符串。只要 vocabulary 保存完整，decode 不需要搜索，也不需要模型。</p>
+    <h4>Encoding：按 merge rank 做确定性贪心合并</h4>
+    <p>编码不是重新统计输入文本里的频率，而是使用训练阶段学到的 merge rules。每次选择当前序列中 rank 最靠前的可合并 pair，直到不能再合并。这样同一个 tokenizer 对同一段文本会得到确定结果。</p>
+    <p>重点：训练时按频率学规则；编码时按规则的优先级应用规则。不要把这两件事混在一起。</p>
+  </section>
+
+  <section class="card" id="s1-11">
+    <h3>1.11 编程练习 4-5：实现完整 encode/decode</h3>
+    <div class="coding-exercise">
+      <h4>练习 4：实现 <code>decode</code></h4>
+      <p>把 token ID 序列展开成 bytes，再用 UTF-8 解码。遇到非法 byte 序列时，可以用 <code>errors="replace"</code> 保证函数不崩。</p>
+      <div class="code-block" data-lang="python">def decode(ids, vocab):
+    tokens = b"".join(vocab[i] for i in ids)
+    return tokens.decode("utf-8", errors="replace")</div>
+    </div>
+    <div class="coding-exercise">
+      <h4>练习 5：实现 <code>encode</code></h4>
+      <p>把文本转成 byte ID，然后反复查当前序列里哪个 pair 在 merge table 里 rank 最靠前，合并它。</p>
+      <div class="code-block" data-lang="python">def encode(text, merges):
+    ids = list(text.encode("utf-8"))
+    while len(ids) >= 2:
+        stats = _get_stats(ids)
+        pair = min(stats, key=lambda p: merges.get(p, float("inf")))
+        if pair not in merges:
+            break
+        ids = _merge(ids, pair, merges[pair])
+    return ids</div>
+    </div>
+  </section>
+
+  <section class="card" id="s1-12">
+    <h3>1.12 主流 tokenizer 对比</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>方法</th><th>核心思路</th><th>工程特点</th></tr>
+        <tr><td>BPE</td><td>反复合并高频相邻符号</td><td>简单、确定、可复现，常用于 GPT 系列</td></tr>
+        <tr><td>WordPiece</td><td>选择能提升似然的 subword</td><td>BERT 系列常见，和 masked LM 训练配套</td></tr>
+        <tr><td>Unigram LM</td><td>从候选 subword 集合中保留概率模型更偏好的片段</td><td>SentencePiece 常见，支持采样式分词</td></tr>
+        <tr><td>byte-level tokenizer</td><td>从 byte 出发保证覆盖所有字符串</td><td>没有 OOV，适合多语言、代码和符号混合输入</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="s1-12a">
+    <h3>1.12A 怎么评估一个 tokenizer</h3>
+    <h4>核心维度</h4>
+    <ul>
+      <li><strong>可逆性：</strong><code>decode(encode(x)) == x</code> 是否成立。</li>
+      <li><strong>token 成本：</strong>平均 token 数、P95 token 数、不同语言/领域的 token per character。</li>
+      <li><strong>参数成本：</strong>vocab size 对 embedding 矩阵大小的影响。</li>
+      <li><strong>公平性：</strong>中文、代码、emoji、少数语言是否被明显惩罚。</li>
+      <li><strong>接口稳定性：</strong>special token、chat role token、tool-call token 是否有清晰版本合约。</li>
+    </ul>
+    <h4>一个小实验</h4>
+    <p>准备英文、中文、代码、emoji 混合文本，分别用不同 vocab size 训练 tokenizer，记录 round-trip 是否成功、平均 token 数、P95 token 数和 embedding 参数量。不要只看一个全局平均值，必须按语言和领域拆开看。</p>
+  </section>
+
+  <section class="card" id="s1-12b">
+    <h3>1.12B Tokenizer 是模型接口合约</h3>
+    <h4>1. Special token 必须语义稳定</h4>
+    <p><code>BOS</code>、<code>EOS</code>、<code>PAD</code>、chat role token、tool-call token 都不是普通字符串。训练、推理、评估和发布必须对它们有同一套解释。</p>
+    <h4>2. Chat template 决定 SFT 的监督边界</h4>
+    <p>同样一段对话，template 不同，assistant mask 和 loss 位置就会不同。SFT 训练时必须明确哪些 token 参与 loss，哪些只是上下文。</p>
+    <h4>3. 改 vocabulary 等于改模型 shape</h4>
+    <p>vocab size 变化会改变 embedding 和 LM head 的形状。如果 checkpoint 和 tokenizer 不匹配，模型即使能加载，也会在语义上错位。</p>
+    <h4>4. Tokenizer 版本必须跟模型一起发布</h4>
+    <p>模型权重、tokenizer 文件、special token、chat template 和服务参数应该作为一个 release package 管理。</p>
+  </section>
+
+  <section class="card" id="s1-12c">
+    <h3>1.12C Chat Template 与多模态接口：一条消息，一份 token 合约</h3>
+    <p>真实系统里，一条消息不只是纯文本。它可能包含 role、tool call、image placeholder、audio segment、引用块或结构化输出约束。Tokenizer 和 template 必须一起定义这些内容怎样进入 token 序列。</p>
+    <ul>
+      <li><strong>训练和推理要一致：</strong>训练时看到的 role token、分隔符、工具调用格式，推理时也要一致。</li>
+      <li><strong>多模态占位要稳定：</strong>图像、音频或视频特征如何映射到 token/向量序列，要和模型配置一起发布。</li>
+      <li><strong>工具调用要可验证：</strong>工具名、参数、返回值边界最好有 schema 或明确 delimiter。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s1-12d">
+    <h3>1.12D 多语言 tokenizer 训练：从语料比例到 token 成本</h3>
+    <h4>1. 语料比例会改变 merge rules</h4>
+    <p>如果训练语料主要是英文，高频 merge 会优先服务英文。中文、代码或少数语言可能被拆得更碎，推理成本更高。</p>
+    <h4>2. 用 fertility 衡量不同语言的 token 负担</h4>
+    <p>可以用 <code>tokens_per_character</code> 或 <code>tokens_per_word</code> 衡量 token 负担。报告 tokenizer 质量时，不要只报全局平均，要按语言、领域和长度分组。</p>
+    <h4>3. Tokenizer 决策会传到训练和推理</h4>
+    <p>token 数变多，会影响训练 token budget、上下文长度、KV Cache 显存、延迟和计费。Tokenizer 是一个底层工程决策，不是前处理细节。</p>
+  </section>
+
+  <section class="card" id="s1-13">
+    <h3>1.13 本章小结：你实现了一个完整 BPE Tokenizer</h3>
+    <ul>
+      <li>文本先变成 UTF-8 bytes，再进入 byte-level BPE。</li>
+      <li>BPE 训练反复统计当前序列的相邻 pair，并合并最高频 pair。</li>
+      <li>每轮合并后必须重新统计 pair，不能复用旧计数。</li>
+      <li>编码使用训练好的 merge rules，按 rank 贪心应用；解码只需要查表展开 bytes。</li>
+      <li>Tokenizer 会影响模型 shape、训练预算、KV Cache 成本、chat template 和发布合约。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="practice">
+    <h3>概念练习</h3>
+    <ol>
+      <li>BPE 每一轮怎样选择要合并的 pair？为什么每轮合并后要重新统计？</li>
+      <li>从信息论角度看，subword tokenization 解决了什么工程取舍？</li>
+      <li>为什么 BPE decoding 不需要搜索，也不需要模型？</li>
+      <li>为什么同一个词，例如 <code>tokenization</code>，会被不同 BPE tokenizer 切成不同片段？</li>
+      <li>编码时，BPE 怎样决定下一步合并哪个 pair？它和训练时的频率统计有什么区别？</li>
+    </ol>
+  </section>
+</article>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+(function(){
+  function safeGet(key, fallback){
+    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+  }
+  function updateThemeLabel(theme){
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
+  }
+  window.LLM_ZH = {
+    toggleTheme: function(){
+      var html = document.documentElement;
+      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      safeSet('llm-theme', next);
+      updateThemeLabel(next);
+    }
+  };
+  var theme = safeGet('llm-theme', 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeLabel(theme);
+  window.addEventListener('scroll', function(){
+    var btn = document.getElementById('back-to-top');
+    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

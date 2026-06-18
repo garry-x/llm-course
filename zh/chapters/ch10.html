@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第 10 章 推理优化与前沿方向 - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body data-ch="10">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1><a href="../index.html">LLM Deep Learning</a></h1>
+    <p>中文版 · 从代码构建大语言模型</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
+    <a href="ch01.html"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
+    <a href="ch02.html"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
+    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
+    <a href="ch04.html"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
+    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
+    <a href="ch06.html"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
+    <a href="ch07.html"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
+    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
+    <a href="ch09.html"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
+    <a href="ch10.html" class="active" aria-current="page"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
+    <a href="ch11.html"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
+    <a href="../../chapters/ch10.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第 10 章 推理优化与前沿方向</h2>
+  <p class="subtitle">KV Cache、稀疏/线性注意力、量化、RAG、Agent、vLLM、模型路由与线上发布</p>
+  <div class="reading-time">预计阅读：235 分钟 · 38 小节 · 7 个编程练习 · 7 个概念题</div>
+
+  <section class="card">
+    <h3>怎么学这一章：先找瓶颈，再选优化</h3>
+    <div class="info-box tip"><span class="icon">💡</span><div><strong>第一遍别背名词：</strong>推理优化不是一堆技巧清单。KV Cache 省重复计算，量化省显存和带宽，FlashAttention 省 IO，RAG 把知识放到模型外，vLLM 提高服务吞吐。稀疏注意力、线性注意力、SSM、外部记忆、Triton、多模态和模型路由都要放回同一张资源账本里看。</div></div>
+    <ul>
+      <li><strong>前置要求：</strong>理解 Ch08 的 prefill/decode、采样、KV Cache、batch、TTFT、TPOT、P95/P99。</li>
+      <li><strong>学习目标：</strong>把推理问题拆成计算、显存、带宽、IO、调度、检索、工具、安全、发布和回滚问题。</li>
+      <li><strong>本章产出：</strong>KV Cache 实现、KV 显存估算、INT8 量化、最小 RAG、tool/MCP 校验、benchmark、SLO 与发布报告。</li>
+      <li><strong>完成标准：</strong>看到一个“慢、贵、容易炸显存”的服务，你能说清瓶颈在哪一段，以及该用哪类优化。</li>
+      <li><strong>练习产出：</strong>KV 显存计算、prefix cache 节省估计、continuous batching admission、量化误差实验、RAG 诊断、工具调用安全检查、压测报告。可选练习在 <a href="../../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
+    </ul>
+    <div class="dependency-note"><strong>本章统一框架：</strong>每个线上请求都可以拆成 prefill、decode、RAG/tool、流式输出、排队、准入控制、降级和回滚。不要只看平均延迟，也不要只看 tokens/s。</div>
+  </section>
+
+  <section class="card">
+    <div class="svg-diagram" style="max-width:860px">
+      <img src="../../images/gpu-memory.svg?v=en-20260613" alt="GPU Memory Hierarchy" style="width:100%">
+    </div>
+    <p class="diagram-caption">图 10-1：GPU 内存层级。推理优化很多时候是在减少 HBM 读写和常驻显存。</p>
+  </section>
+
+  <section class="card" id="s10-1">
+    <h3>10.1 推理瓶颈：用 Roofline 先判断受什么限制</h3>
+    <p>模型训练好之后，真正难的是把它稳定、便宜、低延迟地跑在线上。推理通常分两段：</p>
+    <ul>
+      <li><strong>Prefill：</strong>一次处理完整 prompt，大矩阵乘法多，容易并行，通常更接近 compute-bound。</li>
+      <li><strong>Decode：</strong>一次只生成一个 token，需要反复读权重和 KV，通常更接近 memory-bound。</li>
+    </ul>
+    <p>Roofline 模型把问题讲得很直白：横轴是 arithmetic intensity，也就是每读一个 byte 能做多少 FLOPs；纵轴是实际性能。prefill 的计算密度高，decode 的计算密度低，所以 decode 往往被显存带宽卡住。增大 batch、压缩 KV、量化权重、GQA/MLA 都是在提高有效计算密度或减少搬数据。</p>
+  </section>
+
+  <section class="card" id="s10-2">
+    <h3>10.2 KV Cache：别每步都重算历史 K/V</h3>
+    <p>自回归生成时，第 t 步只多了一个新 token。没有 KV Cache 时，模型会反复为历史 token 计算 K 和 V。KV Cache 的做法是把历史 K/V 存起来，新步只算新 token 的 K/V，再和缓存拼起来做 attention。</p>
+    <div class="math-box"><div class="label">KV Cache 更新</div>
+      <div class="katex" data-expr="K_{\text{cache}}=[K_{\text{cache}};K_{\text{new}}],\quad V_{\text{cache}}=[V_{\text{cache}};V_{\text{new}}]" aria-label="KV cache update" role="img"></div>
+    </div>
+    <p>代价也很明确：省计算，花显存。单请求 KV Cache 大小大致是 <code>2 * L * n_layers * n_kv_heads * d_head * bytes</code>。注意这里是 <code>n_kv_heads</code>，不是 query heads。GQA、MLA、KV quantization 的意义，就是把这笔常驻账压小。</p>
+  </section>
+
+  <section class="card" id="s10-3">
+    <h3>10.3 编程练习 1：实现带 KV Cache 的 Attention</h3>
+    <div class="coding-exercise">
+      <h4>练习 1：Self-Attention + KV Cache</h4>
+      <div class="task">
+        <p><strong>任务：</strong>实现 <code>AttentionWithCache.forward(x, cache=None)</code>，支持增量 decode。</p>
+        <ul>
+          <li>第一次没有 cache，正常计算当前序列 K/V 并缓存。</li>
+          <li>后续每步只输入一个 token，把新 K/V 拼到历史 K/V 后面。</li>
+          <li>返回 <code>(output, new_cache)</code>。</li>
+          <li>注意 causal mask：decode 时 <code>L_Q=1</code>，但 <code>L_KV=history+1</code>。</li>
+        </ul>
+      </div>
+      <button class="solution-toggle" onclick="this.nextElementSibling.classList.toggle('show')">查看参考实现</button>
+      <div class="solution"><div class="code-block" data-lang="python">class AttentionWithCache(nn.Module):
+    def forward(self, x, cache=None):
+        B, T, _ = x.shape
+        q = self.q_proj(x).view(B, T, self.n_heads, self.d_head).transpose(1, 2)
+        k = self.k_proj(x).view(B, T, self.n_heads, self.d_head).transpose(1, 2)
+        v = self.v_proj(x).view(B, T, self.n_heads, self.d_head).transpose(1, 2)
+
+        if cache is not None:
+            k = torch.cat([cache["k"], k], dim=2)
+            v = torch.cat([cache["v"], v], dim=2)
+
+        scores = q @ k.transpose(-2, -1) / math.sqrt(self.d_head)
+        mask = self.causal_mask(q_len=q.size(2), kv_len=k.size(2), device=x.device)
+        scores = scores.masked_fill(~mask, float("-inf"))
+        out = torch.softmax(scores, dim=-1) @ v
+        out = out.transpose(1, 2).contiguous().view(B, T, -1)
+        return self.o_proj(out), {"k": k, "v": v}</div></div>
+    </div>
+  </section>
+
+  <section class="card" id="s10-4">
+    <h3>10.4 编程练习 2：计算 KV Cache 显存</h3>
+    <p>KV 显存公式：</p>
+    <div class="math-box"><div class="label">KV Cache 显存估算</div>
+      <div class="katex" data-expr="\text{Cache}=2\times B\times L\times n_{\text{layers}}\times n_{\text{kv\_heads}}\times d_{\text{head}}\times \text{bytes}" aria-label="KV cache memory formula" role="img"></div>
+    </div>
+    <div class="coding-exercise">
+      <h4>练习 2：KV Cache Memory Analysis</h4>
+      <div class="task">
+        <p><strong>任务：</strong>实现 <code>kv_cache_memory_analysis</code>，分别输出每层 MB 和总 GB。</p>
+      </div>
+      <div class="code-block" data-lang="python">def kv_cache_memory_analysis(n_layers, n_kv_heads, d_head, seq_len,
+                             batch_size=1, dtype_bytes=2):
+    per_layer = batch_size * 2 * seq_len * n_kv_heads * d_head * dtype_bytes
+    total = per_layer * n_layers
+    return {
+        "cache_per_layer_mb": per_layer / 1024**2,
+        "total_cache_gb": total / 1024**3,
+    }</div>
+      <p>Llama 3 8B 风格配置：32 层、8 个 KV heads、<code>d_head=128</code>、8K 上下文、FP16，单请求约 1GB；batch=4 约 4GB。长上下文和高并发时，KV 往往比权重更先把服务顶爆。</p>
+    </div>
+  </section>
+
+  <section class="card" id="s10-5">
+    <h3>10.5 稀疏与压缩注意力：长上下文不是免费午餐</h3>
+    <p>MLA 主要压缩 KV Cache，但完整 attention 的计算仍然随上下文长度增长。长上下文系统常见两条路：</p>
+    <ul>
+      <li><strong>稀疏 attention：</strong>每个 query 只看 top-k 或窗口内的候选 token，把 <code>O(n^2)</code> 近似降到 <code>O(nk)</code>。</li>
+      <li><strong>压缩 attention：</strong>先把若干相邻 token 压成代表项，再在代表项上选择或做 dense attention。</li>
+    </ul>
+    <p>风险也要说清：压缩会丢细粒度证据，稀疏可能漏掉关键 token。代码定位、精确引用、表格单元格、多跳事实这类任务，最容易暴露问题。</p>
+  </section>
+
+  <section class="card" id="s10-5a">
+    <h3>10.5A 线性注意力、SSM 与混合序列架构</h3>
+    <p>另一条前沿路线不是“少看一些 token”，而是“不再为每层保存完整逐 token KV 表”。Linear Attention、Mamba/SSM、retention 类模型会把历史信息折叠进更紧凑的状态。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>架构</th><th>推理时保存什么</th><th>适合什么</th><th>主要风险</th></tr>
+        <tr><td>Full attention</td><td>所有历史 K/V</td><td>精确回忆、代码、引用</td><td>KV 和 attention 成本高</td></tr>
+        <tr><td>Sparse/compressed</td><td>窗口、top-k 或压缩摘要</td><td>多数 token 无关的长文档</td><td>重要证据被跳过或压没</td></tr>
+        <tr><td>Linear attention</td><td>递推状态 <code>S_t</code></td><td>流式、超长序列</td><td>任意内容寻址弱一些</td></tr>
+        <tr><td>SSM/Mamba</td><td>选择性 recurrent state</td><td>线性序列伸缩</td><td>kernel、训练配方和精确召回要单独验证</td></tr>
+        <tr><td>Hybrid</td><td>attention + linear/SSM + GQA/MLA + MoE</td><td>现代长上下文模型</td><td>组件多，回归面更大</td></tr>
+      </table>
+    </div>
+    <p>读这类论文或报告时，别只看“替代 Transformer”这种标题。要问三件事：保存了什么状态，还保留哪些精确 lookup 路径，在哪些任务切片上证明质量没掉。</p>
+  </section>
+
+  <section class="card" id="s10-6">
+    <h3>10.6 量化系统：权重、激活、KV Cache 和发布检查</h3>
+    <p>量化不是一个开关，而是一组针对不同瓶颈的低精度策略。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>量化目标</th><th>常见方案</th><th>主要收益</th><th>必须额外验证</th></tr>
+        <tr><td>Weight-only</td><td>INT8、INT4、GPTQ、AWQ、GGUF</td><td>权重显存、decode 读权重带宽、本地部署</td><td>代码/数学/中文/格式输出回归</td></tr>
+        <tr><td>权重 + 激活</td><td>W8A8、SmoothQuant、FP8 linear</td><td>矩阵乘吞吐、激活带宽</td><td>activation outlier、校准集覆盖、kernel 是否真走低精度</td></tr>
+        <tr><td>KV Cache</td><td>FP8/INT8 KV、cache compression</td><td>长上下文和高并发容量</td><td>needle、引用、长输出 TPOT 和位置鲁棒性</td></tr>
+        <tr><td>FP8/FP4</td><td>FP8、MXFP8、NVFP4、FP4 QAT/PTQ</td><td>硬件 tensor core、通信和存储宽度</td><td>scale 元数据、硬件代际、engine 版本、导出恢复</td></tr>
+      </table>
+    </div>
+    <p>校准集决定你在保护什么能力。不要只拿几十条英文短问答做校准，然后宣布线上 RAG、代码、中文、长上下文、JSON schema 都安全。发布报告至少要同时写：baseline、量化格式、group size、校准集、engine/kernel、峰值显存、tokens/s、TTFT/TPOT P95、任务分数、结构化输出通过率、RAG 引用召回、安全拒答和失败样例。</p>
+    <h4>编程练习 3：对称 per-channel INT8 量化</h4>
+    <div class="code-block" data-lang="python">def quantize_per_channel(x):
+    abs_max = x.abs().max(dim=-1, keepdim=True).values
+    scale = (abs_max / 127.0).clamp(min=1e-8)
+    q = torch.round(x / scale).clamp(-127, 127).to(torch.int8)
+    return q, scale.squeeze(-1)
+
+def dequantize(q, scale):
+    return q.float() * scale.unsqueeze(-1)</div>
+    <p>这个练习只让你看清 scale、round、clamp 和 dequantization 如何产生误差。真实上线还要看校准、kernel、任务回归和回滚策略。</p>
+  </section>
+
+  <section class="card" id="s10-7">
+    <h3>10.7 FlashAttention：不改数学，改数据搬运</h3>
+    <p>标准 attention 会把 <code>QK^T</code> 和 softmax 后的概率矩阵写进 HBM，再读回来继续算。长序列时，这个中间矩阵非常贵。FlashAttention 的核心是 IO-aware：用 tiling 把 Q/K/V 分块搬进片上 SRAM，用 online softmax 在块内累计统计量，避免把完整 <code>L * L</code> 注意力矩阵落到 HBM。</p>
+    <ul>
+      <li><strong>Tiling：</strong>分块进 SRAM 计算。</li>
+      <li><strong>Online softmax：</strong>按块更新 softmax 统计，不用先 materialize 全矩阵。</li>
+      <li><strong>Recomputation：</strong>训练反传时少存中间量，必要时重算。</li>
+    </ul>
+    <p>工程判断：FlashAttention 是 exact attention 的更好实现，不是近似注意力。实际加速取决于 GPU、dtype、head dim、序列长度和 kernel 支持。</p>
+  </section>
+
+  <section class="card" id="s10-8">
+    <h3>10.8 编程练习 4：实现最小 RAG</h3>
+    <p>RAG 解决的是模型知识过期、私有知识缺失和部分幻觉问题。它像开卷考试：先检索外部文档，再把证据塞进 prompt。但检索命中、上下文拼装、引用一致性和回答忠实度都要单独评估。</p>
+    <div class="coding-exercise">
+      <h4>练习 4：Retrieve + Generate</h4>
+      <div class="task">
+        <ul>
+          <li><code>add_document(text)</code>：切 chunk，计算 embedding。</li>
+          <li><code>retrieve(query, top_k=3)</code>：用 cosine similarity 找 top-k。</li>
+          <li><code>query(question)</code>：检索、拼上下文、让 LLM 基于证据回答。</li>
+        </ul>
+      </div>
+      <div class="code-block" data-lang="python">class SimpleRAG:
+    def retrieve(self, query, top_k=3):
+        q = self.embed_model.encode(query)
+        scores = (self.embeddings @ q) / (
+            np.linalg.norm(self.embeddings, axis=1) * np.linalg.norm(q)
+        )
+        ids = np.argsort(scores)[-top_k:][::-1]
+        return [(self.documents[i], scores[i]) for i in ids]
+
+    def query(self, question):
+        chunks = self.retrieve(question)
+        context = "\n\n".join([c for c, _ in chunks])
+        return self.llm.generate(f"基于以下资料回答，资料不足就说明不足：\n{context}\n\n问题：{question}")</div>
+    </div>
+  </section>
+
+  <section class="card" id="s10-8a">
+    <h3>10.8A RAG 评估：先判断错在哪一层</h3>
+    <p>RAG 答错时，不要马上怪模型。可能是 chunk 切坏了，embedding 没召回，reranker 排错，context packing 把关键证据截掉，或者 generation 没忠实使用证据。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>组件</th><th>要问的问题</th><th>常用指标</th><th>常见修法</th></tr>
+        <tr><td>Chunking</td><td>答案证据是否完整留在 chunk 里</td><td>answer coverage、长度分布</td><td>按标题/段落切、增大 overlap、保留 metadata</td></tr>
+        <tr><td>Embedding</td><td>query 和相关文档是否靠近</td><td>InfoNCE、Recall@k、MRR、nDCG</td><td>领域对比学习、query rewrite、BM25 hybrid</td></tr>
+        <tr><td>Retrieval</td><td>top-k 是否含足够证据</td><td>context recall、hit rate</td><td>调 top-k、去重、过滤低分</td></tr>
+        <tr><td>Rerank</td><td>最有用 chunk 是否排前面</td><td>nDCG@k、top-1 relevance</td><td>cross-encoder rerank</td></tr>
+        <tr><td>Context packing</td><td>证据是否真的进入 prompt</td><td>truncation rate、token usage</td><td>压缩上下文、按相关性和新鲜度排序</td></tr>
+        <tr><td>Generation</td><td>回答是否忠实于证据</td><td>accuracy、faithfulness、citation consistency</td><td>要求基于上下文回答，证据不足就说不足</td></tr>
+      </table>
+    </div>
+    <p>Recall@k 看有没有找回证据，MRR 看第一个有用证据排多早，nDCG 看高价值证据是否排在前面。线上还要看检索耗时、rerank 耗时、prompt token、answer token、用户追问率和人工接管率。</p>
+  </section>
+
+  <section class="card" id="s10-9">
+    <h3>10.9 Agent：从生成文本到执行动作</h3>
+    <p>Agent 不只是一次性回答，而是通过 plan、act、observe、reflect 的循环做多步任务。模型提出工具调用，系统负责解析、校验、执行并把观察结果返给模型。</p>
+    <ol>
+      <li><strong>Plan：</strong>把任务拆成步骤。</li>
+      <li><strong>Act：</strong>生成结构化工具调用。</li>
+      <li><strong>Observe：</strong>读取工具结果。</li>
+      <li><strong>Reflect：</strong>根据结果调整下一步。</li>
+    </ol>
+    <p>安全底线：最小权限、高风险操作需要确认、工具输出要当作不可信数据处理。</p>
+  </section>
+
+  <section class="card" id="s10-9a">
+    <h3>10.9A Tool / MCP 工程协议</h3>
+    <p>工具调用不是“模型想调就调”。模型输出只是候选动作，真正执行前必须过 schema、权限、预算、观察隔离和失败恢复。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>阶段</th><th>系统要做什么</th></tr>
+        <tr><td>Tool registry</td><td>声明工具名、用途、参数 schema、timeout、权限级别和返回格式。</td></tr>
+        <tr><td>Model proposal</td><td>模型基于上下文提出候选调用。</td></tr>
+        <tr><td>Schema validation</td><td>检查工具是否存在、字段是否齐全、类型和 enum 是否正确。</td></tr>
+        <tr><td>Policy check</td><td>按用户、租户、任务和风险级别判断是否允许执行。</td></tr>
+        <tr><td>Execution</td><td>带 timeout、重试、幂等和审计日志执行。</td></tr>
+        <tr><td>Observation injection</td><td>把结果作为不可信观察写回模型，而不是新指令。</td></tr>
+        <tr><td>Final answer</td><td>要求引用证据、说明不足、记录 trace。</td></tr>
+      </table>
+    </div>
+    <p>MCP 把外部工具、资源和 prompt 接进 AI 应用，也把数据泄露、远程工具信任、server-initiated sampling、越权文件范围这些风险带进来。工程上要有 allowlist、权限/同意、隐私脱敏、roots 限制、预算和 observation isolation。</p>
+    <div class="code-block" data-lang="python">report = validate_tool_call_plan(
+    registry,
+    [{"name": "search_docs", "arguments": {"query": "rag metrics", "top_k": 4}}],
+    budgets={"max_calls": 2, "allowed_risks": ["read_only"]},
+)
+assert report["decision"] == "execute_tool_calls"</div>
+  </section>
+
+  <section class="card" id="s10-9b">
+    <h3>10.9B Context Engineering：上下文是有限资源</h3>
+    <p>RAG、Agent、长对话、长文档问答都会把大量信息塞进 context。Context engineering 的核心不是写更长 prompt，而是决定哪些 token 进入当前窗口，哪些放外部存储，哪些压缩成摘要，哪些工具结果只保留引用句柄。</p>
+    <ul>
+      <li><strong>Token budget：</strong>分别统计 system、tool schema、history、retrieved context、observation、summary、output。</li>
+      <li><strong>Evidence retention：</strong>做 head/middle/tail、citation id 和 summary fidelity 检查。</li>
+      <li><strong>Cost / latency：</strong>比较长上下文、RAG packing、压缩、清理工具结果后的 P95 TTFT 和成本。</li>
+      <li><strong>Memory safety：</strong>跨会话记忆必须有来源、权限、更新时间、删除路径。</li>
+      <li><strong>Observation isolation：</strong>网页、文件、工具输出和 MCP resource 都是数据，不是系统指令。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s10-9c">
+    <h3>10.9C Prompt Injection 与工具数据边界</h3>
+    <p>RAG 文档、网页、邮件、上传文件、OCR、工具输出和 MCP resources 都会变成 token。模型本身分不清“可信指令”和“不可信内容”，所以系统必须在模型外建立边界。</p>
+    <p>实用规则：外部内容可以提供证据，但不能变成 policy；工具结果可以报告事实，但不能授权下一次高风险调用；工具描述可以说明接口，但不能偷要私有上下文。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>风险面</th><th>控制手段</th></tr>
+        <tr><td>检索内容带注入指令</td><td>标记为 untrusted data，回答时只引用事实，不继承指令。</td></tr>
+        <tr><td>工具输出诱导越权</td><td>下一步工具调用仍重新过权限和预算。</td></tr>
+        <tr><td>远程工具请求私密数据</td><td>脱敏、拒绝越界参数、需要用户确认。</td></tr>
+        <tr><td>模型生成危险动作</td><td>执行前 schema + policy + human approval。</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="s10-10">
+    <h3>10.10 编程练习 5：推理速度 Benchmark</h3>
+    <p>Benchmark 要分清 TTFT、TPOT、吞吐、并发、prompt/output 长度、P50/P95/P99。只报平均 tokens/s 没用，因为用户感受到的是排队、首 token、流式间隔和失败率。</p>
+    <div class="code-block" data-lang="python">def benchmark(generate_fn, prompts):
+    rows = []
+    for prompt in prompts:
+        t0 = time.perf_counter()
+        events = generate_fn(prompt, stream=True)
+        first, n = None, 0
+        for token in events:
+            now = time.perf_counter()
+            if first is None:
+                first = now
+            n += 1
+        t1 = time.perf_counter()
+        rows.append({
+            "ttft_ms": (first - t0) * 1000,
+            "total_ms": (t1 - t0) * 1000,
+            "tokens": n,
+            "tokens_per_s": n / max(t1 - first, 1e-6),
+        })
+    return rows</div>
+  </section>
+
+  <section class="card" id="s10-10a">
+    <h3>10.10A LLM 评估方法：一个数字不能代表模型</h3>
+    <p>评估链路至少要写清：任务是什么，数据切片是什么，指标代表什么，baseline 是谁，差异是否显著，失败样例是什么，结论能否推广到线上流量。平均分只能做摘要，不能替代按场景拆开的判断。</p>
+  </section>
+
+  <section class="card" id="s10-11">
+    <h3>10.11 vLLM：生产级推理引擎</h3>
+    <p>vLLM 的核心价值是把 LLM 推理当作服务系统来做，而不是只跑一个模型 forward。</p>
+    <ul>
+      <li><strong>PagedAttention：</strong>像虚拟内存一样管理 KV blocks，减少连续大块显存碎片。</li>
+      <li><strong>Continuous batching：</strong>请求动态进出 batch，避免 decode 阶段 GPU 空转。</li>
+      <li><strong>Prefix cache：</strong>相同系统 prompt、工具 schema、长前缀可以复用 prefill 结果。</li>
+      <li><strong>Admission control：</strong>不能只看并发数，还要看 active KV tokens、max batched tokens 和输出长度预算。</li>
+    </ul>
+    <p>读 vLLM 性能数据时，要看 prompt 长度分布、输出长度分布、并发、GPU 型号、dtype、模型、max_num_seqs、max_num_batched_tokens、cache 命中率和 P95/P99。</p>
+  </section>
+
+  <section class="card" id="s10-12">
+    <h3>10.12 推理引擎全景：vLLM / SGLang / TensorRT-LLM / llama.cpp</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>引擎</th><th>更适合什么</th><th>关注点</th></tr>
+        <tr><td>vLLM</td><td>通用 OpenAI-compatible 服务、高吞吐在线推理</td><td>PagedAttention、continuous batching、prefix cache</td></tr>
+        <tr><td>SGLang</td><td>结构化/多步生成、复杂 serving workflow</td><td>RadixAttention、程序化生成、调度</td></tr>
+        <tr><td>TensorRT-LLM</td><td>NVIDIA 生产优化、graph/kernel 深度优化</td><td>编译、量化、并行、特定硬件路径</td></tr>
+        <tr><td>llama.cpp</td><td>本地、消费级硬件、CPU/Metal/小显卡部署</td><td>GGUF、量化、易部署和硬件覆盖</td></tr>
+      </table>
+    </div>
+    <p>选择不是按名气，而是按硬件、模型格式、延迟目标、并发、长上下文、量化路径、运维团队能力来定。</p>
+  </section>
+
+  <section class="card" id="s10-12a">
+    <h3>10.12A MoE Serving：专家并行、负载均衡和 KV 账本</h3>
+    <p>MoE 推理不是“参数多但每次只激活一小部分”这么简单。线上还要处理专家分布不均、跨卡通信、expert parallelism、EPLB、router 热点、token dispatch 和 KV Cache 账本。评估 MoE 服务要同时看激活专家数、专家负载、通信时间、decode TPOT、tail latency 和 OOM 边界。</p>
+  </section>
+
+  <section class="card" id="s10-13">
+    <h3>10.13 生产推理服务蓝图：从模型到 OpenAI-compatible API</h3>
+    <p>一个可上线的推理服务不只是 <code>model.generate()</code>。至少要有：</p>
+    <ul>
+      <li><strong>API：</strong>支持 chat/completions、stream、tool calls、structured output、error code、request id。</li>
+      <li><strong>Observability：</strong>分层记录 metrics、traces 和必要内容样本，注意隐私和采样。</li>
+      <li><strong>SLO：</strong>TTFT、TPOT、total latency、availability、error rate、timeout、cost。</li>
+      <li><strong>Routing：</strong>不要所有请求都打最大模型；按难度、风险、成本和 SLO 做路由或 cascade。</li>
+      <li><strong>Capacity：</strong>按 prompt/output 分布、active KV tokens、GPU 显存、decode 速率做准入控制。</li>
+      <li><strong>Rollback：</strong>量化、LoRA、engine、prompt、tool schema 都要能回滚。</li>
+    </ul>
+    <p>上线检查要写出：模型版本、tokenizer、chat template、engine 参数、量化格式、最大上下文、fallback、灰度策略、监控指标、告警阈值和失败样例。</p>
+  </section>
+
+  <section class="card" id="s10-13a">
+    <h3>10.13A 推理压测报告：从 workload 到瓶颈归因</h3>
+    <ol>
+      <li><strong>描述 workload：</strong>prompt/output 长度、并发、到达率、RAG/tool 比例、长上下文比例。</li>
+      <li><strong>记录同一组指标：</strong>TTFT、TPOT、tokens/s、GPU 利用率、显存、active KV、queue time、error。</li>
+      <li><strong>用容量公式解释曲线：</strong>不要只贴图，要说为什么拐点出现。</li>
+      <li><strong>P/D 分离：</strong>prefill 和 decode 分到不同资源池时，要分别估算 worker pool 容量和 KV transfer 成本。</li>
+      <li><strong>把症状映射到动作：</strong>排队高、OOM、TPOT 高、TTFT 高、cache miss 高，对应不同优化。</li>
+    </ol>
+  </section>
+
+  <section class="card" id="s10-13b">
+    <h3>10.13B 模型发布包：从 checkpoint 到可回滚服务</h3>
+    <p>训练 checkpoint 和推理导出 checkpoint 是两回事。发布包至少要包含：base model、adapter/merge 说明、tokenizer、chat template、generation config、量化配置、engine 配置、评估报告、兼容性检查、灰度计划、回滚路径和负责人。</p>
+    <p>Canary 不是把离线分数好看的模型直接放大流量。灰度期间要看质量、延迟、错误、拒答、工具调用、成本和用户行为。发现过载前要主动降级：限流、缩短上下文、切小模型、关闭高成本工具或降低 top-k。</p>
+  </section>
+
+  <section class="card" id="s10-13c">
+    <h3>10.13C Prefill/Decode Disaggregation</h3>
+    <p>prefill 偏 compute-bound，decode 偏 memory-bound。高并发长上下文场景下，可以把 prefill 和 decode 拆成两个资源池。这样能提高资源匹配，但也引入新边界：KV Cache transfer、跨节点延迟、失败恢复、调度公平性和监控拆分。</p>
+    <p>报告必须分开写 prefill latency、KV transfer latency、decode TPOT 和总延迟，否则很容易把 transfer 问题误判成模型慢。</p>
+  </section>
+
+  <section class="card" id="s10-13d">
+    <h3>10.13D 集群级推理编排</h3>
+    <p>当服务扩大到多模型、多租户、多 GPU 池，问题会从“某个 engine 多快”变成“整个 serving fabric 如何调度”。控制面要处理模型副本、热更新、KV 位置、prefix cache 命中、租户配额、路由、fallback、灰度和隔离。</p>
+  </section>
+
+  <section class="card" id="s10-13e">
+    <h3>10.13E KV-aware Routing 与 Cache Hierarchy</h3>
+    <p>长上下文和 shared prompt 多的业务里，router 不能只看哪台 GPU 空。它还要知道 prefix/KV 在哪里、cache 是否命中、迁移成本是多少、请求是否能复用已有状态。Cache hierarchy 是成本模型，不只是存储功能。</p>
+    <p>如果业务 prompt 很短、重复前缀少、并发低，那么 KV-aware 基础设施可能不划算。先用数据证明 cache 命中和延迟收益，再上复杂控制面。</p>
+  </section>
+
+  <section class="card" id="s10-13f">
+    <h3>10.13F Model Router 与 Cascade Evaluation</h3>
+    <p>模型路由至少有四类问题：按任务选模型、按难度升级模型、按安全风险选路径、按成本/SLO 做降级。评估时必须和“全部走强模型”的 baseline 比，而不是只看小模型自己多便宜。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>结果</th><th>说明</th><th>动作</th></tr>
+        <tr><td>小模型答对</td><td>省成本且满足质量</td><td>保留路由规则</td></tr>
+        <tr><td>小模型不确定并升级</td><td>cascade 正常工作</td><td>优化不确定性判断</td></tr>
+        <tr><td>小模型自信答错</td><td>最危险</td><td>提高升级阈值或加 verifier</td></tr>
+        <tr><td>强模型也失败</td><td>不是路由问题</td><td>补数据、工具或产品约束</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="s10-14">
+    <h3>10.14 Triton：GPU Kernel 编程入门</h3>
+    <p>Triton 让工程师用 Python 风格写 block-level GPU kernel，介于纯 PyTorch 和手写 CUDA 之间。LLM 里很多性能问题来自 memory layout、fusion、tiling 和 dtype。Triton 的价值是快速写出适配特定 shape 的 kernel，比如 matmul、RMSNorm、activation、attention 辅助算子。</p>
+    <p>入门时先理解：program id 对应一个 block，block 内用向量化 load/compute/store；性能来自把数据块按合适方式搬进片上内存，并减少不必要的中间写回。</p>
+  </section>
+
+  <section class="card" id="s10-15">
+    <h3>10.15 GPU 内存层级：为什么需要 Triton</h3>
+    <p>GPU 很快，但 HBM 不是无限快。GEMM、attention、norm、activation 的性能经常取决于数据是否重复从 HBM 搬来搬去。Kernel fusion 把多个小操作合到一个 kernel，减少中间张量写回；tiling 把热数据留在 SRAM/register 里重复使用。Roofline 视角能帮助你判断问题是算力不够，还是内存带宽/IO 卡住。</p>
+  </section>
+
+  <section class="card" id="s10-16">
+    <h3>10.16 Engram：类海马体外部记忆案例</h3>
+    <p>外部记忆系统把部分长期信息放在模型上下文之外，需要时再检索回来。它和 RAG 类似，但更强调跨会话、事件、用户状态和可更新记忆。区别在于：RAG 多用于文档证据，外部记忆还要处理写入、遗忘、权限、新鲜度和污染。</p>
+  </section>
+
+  <section class="card" id="s10-17">
+    <h3>10.17 编程练习 6：实现 LSH Bucket Retrieval</h3>
+    <p>LSH 用随机超平面把向量映射到桶里，相似向量更可能落到同一桶。它适合建立近似检索直觉：少扫一些候选，换取可能漏召回的风险。</p>
+    <div class="code-block" data-lang="python">class RandomHyperplaneLSH:
+    def __init__(self, dim, n_planes):
+        self.planes = np.random.randn(n_planes, dim)
+        self.buckets = {}
+
+    def hash(self, x):
+        bits = (self.planes @ x > 0).astype(int)
+        return "".join(map(str, bits))
+
+    def add(self, item_id, vector):
+        key = self.hash(vector)
+        self.buckets.setdefault(key, []).append((item_id, vector))
+
+    def query(self, vector):
+        return self.buckets.get(self.hash(vector), [])</div>
+  </section>
+
+  <section class="card" id="s10-17a">
+    <h3>10.17A Speculative Decoding：什么时候值得开</h3>
+    <p>Speculative decoding 用小 draft model 先提出多个 token，再由大模型一次验证。它能减少大模型 decode 步数，但不是必赚。要看 draft 接受率、小模型成本、验证 kernel、batch 干扰、输出质量和工程复杂度。接受率低时，系统可能更慢。</p>
+  </section>
+
+  <section class="card" id="s10-18">
+    <h3>10.18 推理系统降本地图</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>成本来源</th><th>可选动作</th></tr>
+        <tr><td>权重显存/带宽</td><td>weight-only quantization、TensorRT-LLM、llama.cpp/GGUF</td></tr>
+        <tr><td>KV Cache</td><td>GQA/MLA、KV quantization、PagedAttention、prefix cache、上下文裁剪</td></tr>
+        <tr><td>Prefill</td><td>FlashAttention、prefix cache、chunked prefill、prompt 压缩</td></tr>
+        <tr><td>Decode</td><td>continuous batching、speculative decoding、合适 batch、量化权重</td></tr>
+        <tr><td>RAG/Tool</td><td>top-k 控制、rerank 预算、lazy tool schema、观察摘要</td></tr>
+        <tr><td>强模型调用</td><td>model routing、cascade、fallback、小模型先答</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="s10-19">
+    <h3>10.19 推理优化总结：你要能诊断什么</h3>
+    <ul>
+      <li>TTFT 高：看 prefill、queue、prefix cache、RAG/tool、network。</li>
+      <li>TPOT 高：看 decode、batch、权重带宽、KV 读写、speculative 接受率。</li>
+      <li>OOM：看 active KV tokens、batch、context、KV dtype、fragmentation。</li>
+      <li>P99 爆：看长尾请求、tool timeout、rerank、cache miss、调度饥饿。</li>
+      <li>成本高：看路由、量化、prompt token、输出长度、RAG top-k、工具 schema。</li>
+      <li>质量掉：按任务切片看量化、RAG 召回、上下文截断、模型路由和安全策略。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s10-20">
+    <h3>10.20 多模态 LLM：视觉和多模态输入</h3>
+    <p>常见架构是 vision encoder 把图像变成视觉 token，再通过 projection 接到 LLM。关键设计包括：图像分辨率、视觉 token 数、投影层、视觉信息进入语言模型的位置、训练阶段和数据混合。</p>
+    <ul>
+      <li><strong>两阶段训练：</strong>先做视觉-语言对齐，再做 instruction tuning。</li>
+      <li><strong>目标不同：</strong>alignment、instruction following、OCR、定位、推理、视频理解不是一回事。</li>
+      <li><strong>成本不同：</strong>高分辨率图像会带来大量视觉 token，直接影响 prefill 和显存。</li>
+      <li><strong>失败模式：</strong>幻觉物体、读错文字、空间关系错、图文证据不一致。</li>
+    </ul>
+    <p>多模态实验要按 OCR、图表、空间关系、细粒度识别、视频时序、跨模态引用分别报告，不能只用一个总分。</p>
+  </section>
+
+  <section class="card" id="s10-20a">
+    <h3>10.20A 实时多模态与长上下文服务</h3>
+    <p>实时语音/视频服务多了四类状态边界：音视频流状态、部分转写、低延迟回复、跨模态上下文。长上下文优化和实时优化不是一回事。长上下文关注 prefill、KV 和证据保留；实时关注端到端延迟、流式稳定、打断、同步和丢包恢复。</p>
+  </section>
+
+  <section class="card" id="practice">
+    <h3>概念练习</h3>
+    <ol>
+      <li>KV Cache 的核心作用是什么？它为什么会增加显存压力？</li>
+      <li>为什么 decode 阶段常被称为 memory-bound？batch 变大为什么可能改善它？</li>
+      <li>FlashAttention 加速的关键机制是什么？它是否改变 attention 数学结果？</li>
+      <li>RAG 主要解决 LLM 的哪些问题？为什么 RAG 仍然需要单独评估？</li>
+      <li>“压缩目标 -> 代表技术”怎样配对更合理：权重、激活、KV、上下文、模型调用分别对应什么？</li>
+      <li>为什么 LLM 服务不能只按“并发请求数”限流？active KV tokens 为什么重要？</li>
+      <li>为什么 Agent/tool use 不能只靠 prompt 约束？执行前系统必须检查什么？</li>
+    </ol>
+  </section>
+
+  <section class="card" id="summary">
+    <h3>10.21 本章小结</h3>
+    <ul>
+      <li>Prefill 和 decode 的瓶颈不同，优化前要先分段诊断。</li>
+      <li>KV Cache 用显存换计算，是推理系统的核心账本。</li>
+      <li>量化、GQA/MLA、PagedAttention、prefix cache 都是在改显存、带宽或复用率。</li>
+      <li>FlashAttention 是 IO-aware exact attention，不是近似算法。</li>
+      <li>RAG 的质量要拆成检索、排序、上下文拼装、引用和生成。</li>
+      <li>Agent/tool/MCP 必须有 schema、权限、预算、观察隔离和审计。</li>
+      <li>vLLM 这类引擎解决的是服务调度、KV 管理和吞吐，不只是模型 forward。</li>
+      <li>生产上线要把质量、延迟、成本、安全、回滚放进同一份发布报告。</li>
+      <li>多模态和实时服务把 token 成本、状态边界和评估切片进一步放大。</li>
+    </ul>
+  </section>
+</article>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+(function(){
+  function safeGet(key, fallback){
+    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+  }
+  function updateThemeLabel(theme){
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
+  }
+  window.LLM_ZH = {
+    toggleTheme: function(){
+      var html = document.documentElement;
+      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      safeSet('llm-theme', next);
+      updateThemeLabel(next);
+    }
+  };
+  var theme = safeGet('llm-theme', 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeLabel(theme);
+  window.addEventListener('scroll', function(){
+    var btn = document.getElementById('back-to-top');
+    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

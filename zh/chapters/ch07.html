@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第 7 章 训练循环 - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body data-ch="7">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1><a href="../index.html">LLM Deep Learning</a></h1>
+    <p>中文版 · 从代码构建大语言模型</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
+    <a href="ch01.html"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
+    <a href="ch02.html"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
+    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
+    <a href="ch04.html"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
+    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
+    <a href="ch06.html"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
+    <a href="ch07.html" class="active" aria-current="page"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
+    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
+    <a href="ch09.html"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
+    <a href="ch10.html"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
+    <a href="ch11.html"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
+    <a href="../../chapters/ch07.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第 7 章 训练循环</h2>
+  <p class="subtitle">从 MLE 到 AdamW/Muon、FP8/MXFP8/NVFP4 和 DualPipe：把模型真正训起来</p>
+  <div class="reading-time">预计阅读：150 分钟 · 21 小节 · 6 个编程练习 · 7 个概念题</div>
+
+  <section class="card">
+    <h3>怎么学这一章：先让 loss 下降，再研究训练优化</h3>
+    <div class="info-box tip"><span class="icon">💡</span><div><strong>第一遍抓四步：</strong>取一段 token，让模型预测下一个 token，用 cross entropy 算错多少，再反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练都是大规模优化主题，先知道它们解决什么问题。</div></div>
+    <ul>
+      <li><strong>前置要求：</strong>Ch06 的 <code>GPTModel</code>、cross entropy、optimizer 基础概念。</li>
+      <li><strong>学习目标：</strong>从 maximum likelihood 推导 next-token loss，搭一个可复现训练循环，并能解释数据诊断、PPL、calibration/ECE、AdamW、warmup、gradient clipping、mixed precision 和训练异常定位。</li>
+      <li><strong>本章产出：</strong>能训练小模型的 training loop，能观察 loss/PPL/calibration 变化，并写出数据质量和 contamination 证据。</li>
+      <li><strong>完成标准：</strong>你能清楚解释为什么输入 <code>x</code> 和目标 <code>y</code> 要右移一位。</li>
+      <li><strong>练习产出：</strong>训练脚本、固定 seed 的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算。配套作业在 <a href="../../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
+    </ul>
+    <div class="dependency-note"><strong>前置技能：</strong>自回归概率分解、cross entropy、optimizer state、随机性控制、train/val split、实验统计。<br><strong>本章会内化：</strong>data -> loss -> optimizer -> checkpoint -> report。<br><strong>验证信号：</strong>你不只是让 loss 下降，还能解释数据来源、过滤/去重、曲线方差、baseline、恢复点、token budget 和训练成本。</div>
+    <p class="system-role"><strong>本章位置：</strong>Ch06 给了模型对象，本章让它变成一次可复现训练 run。后面的生成、后训练、部署，都要依赖这里的 loss、checkpoint、评估和训练日志。</p>
+  </section>
+
+  <section class="card">
+    <div class="svg-diagram" style="max-width:920px">
+      <img src="../../images/training-loop.svg?v=en-20260613b" alt="LLM 训练循环" style="width:100%">
+    </div>
+    <p class="diagram-caption">图 7-1：LLM 训练循环：DataLoader -> forward -> loss -> backward -> optimizer update。</p>
+  </section>
+
+  <section class="card" id="s7-1">
+    <h3>7.1 语言建模就是最大似然估计 MLE</h3>
+    <p>LLM 的核心训练目标是 next-token prediction。统计上，它是在做 Maximum Likelihood Estimation (MLE)：让模型给真实训练序列更高概率。</p>
+    <h4>自回归分解</h4>
+    <div class="code-block" data-lang="text">p(x_1, ..., x_T) = product_t p(x_t | x_<t)</div>
+    <p>这不是近似，而是概率链式法则。自回归模型把联合概率拆成一连串“给定前缀预测当前 token”的条件概率。</p>
+    <h4>从 likelihood 到 cross entropy</h4>
+    <p>最大化训练数据的 log-likelihood，等价于最小化 negative log-likelihood：</p>
+    <div class="code-block" data-lang="text">NLL = - mean_t log p_theta(x_t | x_<t)</div>
+    <p>模型最后输出 vocabulary logits，再通过 softmax 参数化离散分布。工程实现里用 <code>F.cross_entropy</code>，它内部会稳定地做 <code>log_softmax</code>。</p>
+    <h4>KL 视角</h4>
+    <p>MLE、最小化 cross entropy、最小化 <code>KL(p_data || p_theta)</code> 是同一个目标的三种说法，因为数据分布的 entropy 对模型参数是常数。</p>
+  </section>
+
+  <section class="card" id="s7-2">
+    <h3>7.2 Perplexity</h3>
+    <p>Perplexity (PPL) 是 NLL 的指数：</p>
+    <div class="code-block" data-lang="text">PPL = exp(NLL)</div>
+    <p>可以粗略理解成模型在每个位置平均有多不确定。这个解释只是帮助记忆，不要把 PPL 当成候选 token 数、事实准确率或指令跟随能力。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>影响因素</th><th>为什么影响 PPL</th><th>报告时要写清</th></tr>
+        <tr><td>Tokenizer</td><td>token 粒度改变序列长度和平均 NLL</td><td>tokenizer 和 vocab size</td></tr>
+        <tr><td>Dataset/split</td><td>新闻、代码、对话、书籍难度不同</td><td>数据集、split、过滤规则</td></tr>
+        <tr><td>Context length</td><td>长上下文和截断策略会改变条件信息</td><td>窗口长度、stride、mask 规则</td></tr>
+        <tr><td>Eval 实现</td><td>BOS/EOS、padding、sliding window 会改变 loss</td><td>命令、seed、loss mask</td></tr>
+      </table>
+    </div>
+    <p>PPL 只能说明模型对给定 token 序列的概率拟合，不直接说明 factuality、安全性或生成质量。</p>
+  </section>
+
+  <section class="card" id="s7-3">
+    <h3>7.3 编程练习 1：实现 DataLoader</h3>
+    <p>训练的第一步是把文本变成模型能吃的 batch：</p>
+    <div class="code-block" data-lang="text">Text -> Tokenizer -> Token IDs -> fixed-length chunks -> Batch -> Model</div>
+    <p>每个样本返回 <code>(x, y)</code>，其中 <code>y</code> 是 <code>x</code> 右移一位的目标。</p>
+    <div class="coding-exercise">
+      <h4>练习 1：Building a DataLoader</h4>
+      <div class="task">
+        <ul>
+          <li><code>TextDataset.__init__</code> 读文件并一次性 tokenize 全语料。</li>
+          <li><code>__getitem__</code> 返回长度为 <code>block_size</code> 的 <code>x</code> 和右移一位的 <code>y</code>。</li>
+          <li><code>create_dataloader</code> 支持 <code>batch_size</code>、<code>shuffle</code>、<code>pin_memory</code>、<code>drop_last</code>。</li>
+          <li>不要在 <code>__getitem__</code> 里重复 tokenize。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class TextDataset(Dataset):
+    def __init__(self, data_path, tokenizer, block_size=1024):
+        text = open(data_path, "r", encoding="utf-8").read()
+        self.tokens = tokenizer.encode(text)
+        self.block_size = block_size
+
+    def __len__(self):
+        return (len(self.tokens) - 1) // self.block_size
+
+    def __getitem__(self, idx):
+        start = idx * self.block_size
+        end = start + self.block_size
+        x = torch.tensor(self.tokens[start:end], dtype=torch.long)
+        y = torch.tensor(self.tokens[start + 1:end + 1], dtype=torch.long)
+        return x, y</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s7-3a">
+    <h3>7.3A 数据配比、Token Budget 和 Scaling Laws</h3>
+    <p>真实预训练不是“跑几个 epoch”。LLM 通常用 token budget 描述训练量，因为语料巨大、样本会 pack 成连续 token 流，而且不同数据源按采样比例混合。</p>
+    <div class="code-block" data-lang="text">global_batch_tokens = micro_batch * seq_len * grad_accum * data_parallel
+training_steps = ceil(total_tokens / global_batch_tokens)</div>
+    <p>例如 <code>micro_batch=4</code>、<code>seq_len=2048</code>、<code>grad_accum=8</code>、<code>data_parallel=16</code>，每个 optimizer step 消耗 <code>1,048,576</code> tokens。训练 <code>20B</code> tokens 约需 <code>19,074</code> steps。</p>
+    <h4>AdamW 内存账</h4>
+    <p>训练内存不是只有参数。bf16 参数 2 bytes、bf16 gradient 2 bytes、AdamW 的 <code>m/v</code> fp32 各 4 bytes，合计每参数约 12 bytes。ZeRO-1 会 shard optimizer states，ZeRO-2 进一步 shard gradients，ZeRO-3/FSDP 会 shard 参数、梯度和 optimizer states。</p>
+    <h4>数据混合</h4>
+    <p>不同数据源的 token 质量不同。代码、数学、网页、书籍、论坛、合成数据的采样比例不是“数据量比例”，而是优化信号。比例调错，loss 仍然会下降，但模型能力会偏。</p>
+  </section>
+
+  <section class="card" id="s7-3b">
+    <h3>7.3B 预训练数据管线：质量、去重、隐私和采样比例</h3>
+    <p>数据管线通常是：raw corpus -> extract -> normalize -> filter -> deduplicate -> shard -> tokenize -> sample。每一步都可能改变模型能力。</p>
+    <ul>
+      <li><strong>过滤：</strong>去掉乱码、低质量页、重复模板、恶意内容，但不要把某些真实语域全过滤掉。</li>
+      <li><strong>去重：</strong>能减少 memorization 和 contamination，但过度去重会删除合法重复，例如代码模板、诗歌结构、法律条款。</li>
+      <li><strong>隐私和凭证：</strong>PII、API key、密码、私有仓库片段要进入训练 ledger，不能只靠“模型应该学不会”。</li>
+      <li><strong>版权风险：</strong>训练数据来源、许可、过滤规则和保留证据要可审计。</li>
+    </ul>
+    <p>数据清洗不是一次性任务，而是优化循环：看训练曲线、评估切片、bad cases 和 contamination 报告，再调整过滤和混合比例。</p>
+  </section>
+
+  <section class="card" id="s7-3c">
+    <h3>7.3C 合成数据和蒸馏：把生成变成可控训练信号</h3>
+    <p>合成数据在不同阶段作用不同：预训练可以补稀缺格式，SFT 可以扩 instruction coverage，RL/post-training 可以产生偏好或验证信号。它不是“越多越好”。</p>
+    <ul>
+      <li><strong>Rejection sampling：</strong>先生成多条，再用规则、模型或测试筛选，不是魔法监督。</li>
+      <li><strong>蒸馏：</strong>teacher 模型提供答案、reasoning trace 或偏好信号，student 学到的是 teacher 的行为分布和偏差。</li>
+      <li><strong>合成数据 ledger：</strong>要记录 generator、prompt 模板、采样参数、过滤器、通过率、版本和评估切片。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s7-4">
+    <h3>7.4 Cross-Entropy 的数值稳定性</h3>
+    <p>Cross entropy 直接算 softmax 容易 overflow，因为 <code>exp(logit)</code> 可能非常大。稳定写法是 log-sum-exp trick：</p>
+    <div class="code-block" data-lang="text">logsumexp(z) = m + log(sum(exp(z - m))), where m = max(z)</div>
+    <p><code>F.cross_entropy</code> 已经处理了这些细节。手写时不要先 softmax 再 log。</p>
+  </section>
+
+  <section class="card" id="s7-4a">
+    <h3>7.4A Cross-Entropy 梯度到底更新了什么</h3>
+    <p>对 logits 的梯度是：</p>
+    <div class="code-block" data-lang="text">dL/dz = softmax(z) - one_hot(target)</div>
+    <p>目标 token 的 logit 被推高，其他 token 的 logit 按模型当前概率被压低。若使用 <code>ignore_index</code>，被 mask 的位置梯度全为 0。</p>
+    <h4>Label smoothing 和 calibration</h4>
+    <p>Label smoothing 不把目标分布当成绝对 one-hot，可以减少过度自信。Calibration 关心模型说“90%”时，真实正确率是否接近 90%。ECE 会把预测按置信度分桶，比较每桶 confidence 和 accuracy 的差距。</p>
+  </section>
+
+  <section class="card" id="s7-5">
+    <h3>7.5 编程练习 2：手写 Cross-Entropy Loss</h3>
+    <div class="coding-exercise">
+      <h4>练习 2：Manual Cross-Entropy</h4>
+      <div class="task">
+        <ul>
+          <li>输入 logits <code>[B,T,V]</code> 和 targets <code>[B,T]</code>。</li>
+          <li>实现 stable log-softmax。</li>
+          <li>支持 <code>ignore_index=-100</code>。</li>
+          <li>输出 mean loss，并和 <code>F.cross_entropy</code> 对齐。</li>
+        </ul>
+        <div class="code-block" data-lang="python">def manual_cross_entropy(logits, targets, ignore_index=-100):
+    V = logits.size(-1)
+    flat_logits = logits.reshape(-1, V)
+    flat_targets = targets.reshape(-1)
+    valid = flat_targets != ignore_index
+    z = flat_logits[valid]
+    y = flat_targets[valid]
+    m = z.max(dim=-1, keepdim=True).values
+    log_probs = z - m - torch.log(torch.exp(z - m).sum(dim=-1, keepdim=True))
+    return -log_probs[torch.arange(y.numel(), device=y.device), y].mean()</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s7-6">
+    <h3>7.6 学习率调度：Warmup + Cosine Decay</h3>
+    <h4>为什么需要 warmup</h4>
+    <p>训练初期参数和 optimizer state 还不稳定，直接用大学习率容易让 loss spike 或 NaN。warmup 让学习率从 0 或很小值线性升到目标值。</p>
+    <h4>为什么常用 cosine decay</h4>
+    <p>训练后期需要更细的更新。cosine decay 比 step decay 更平滑，减少学习率突然跳变带来的曲线抖动。</p>
+    <div class="code-block" data-lang="text">lr(step) = max_lr * step / warmup_steps                       if step < warmup
+lr(step) = min_lr + 0.5*(max_lr-min_lr)*(1+cos(pi*progress)) otherwise</div>
+  </section>
+
+  <section class="card" id="s7-7">
+    <h3>7.7 编程练习 3：实现 AdamW</h3>
+    <p>AdamW 的关键是 decoupled weight decay：权重衰减不混进梯度的一阶/二阶矩估计里，而是单独作用在参数上。</p>
+    <div class="coding-exercise">
+      <h4>练习 3：AdamW Optimizer</h4>
+      <div class="task">
+        <ul>
+          <li>维护 <code>m</code> 和 <code>v</code>。</li>
+          <li>做 bias correction。</li>
+          <li>参数更新前后正确应用 decoupled weight decay。</li>
+        </ul>
+        <div class="code-block" data-lang="python">m = beta1 * m + (1 - beta1) * grad
+v = beta2 * v + (1 - beta2) * grad.pow(2)
+m_hat = m / (1 - beta1 ** step)
+v_hat = v / (1 - beta2 ** step)
+param.mul_(1 - lr * weight_decay)
+param.addcdiv_(m_hat, v_hat.sqrt().add(eps), value=-lr)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s7-8">
+    <h3>7.8 编程练习 4：实现 Warmup + Cosine Scheduler</h3>
+    <div class="coding-exercise">
+      <h4>练习 4：Learning Rate Scheduler</h4>
+      <div class="task">
+        <ul>
+          <li>warmup 阶段线性升高。</li>
+          <li>之后 cosine decay 到 <code>min_lr</code>。</li>
+          <li>训练日志里同时记录 <code>step</code>、<code>lr</code>、consumed tokens。</li>
+        </ul>
+        <div class="code-block" data-lang="python">def get_lr(step, warmup_steps, max_steps, max_lr, min_lr):
+    if step < warmup_steps:
+        return max_lr * step / warmup_steps
+    progress = (step - warmup_steps) / max(1, max_steps - warmup_steps)
+    progress = min(1.0, progress)
+    coeff = 0.5 * (1.0 + math.cos(math.pi * progress))
+    return min_lr + coeff * (max_lr - min_lr)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s7-9">
+    <h3>7.9 Muon Optimizer：矩阵正交化为什么有用</h3>
+    <p>Muon 的核心观察是：很多权重是矩阵，优化更新也可以按矩阵结构处理。对更新方向做近似正交化，可以让不同输出方向的更新更均衡，减少某些方向过度放大。</p>
+    <p>它不是 AdamW 的简单替代。比较时要看 loss、tokens/s、显存、稳定性、调参成本和任务切片。Muon 对矩阵参数更自然，对 embedding、bias、norm scale 这类参数通常还要用 AdamW 或特殊规则。</p>
+  </section>
+
+  <section class="card" id="s7-10">
+    <h3>7.10 FP8/FP4 混合精度训练</h3>
+    <p>低精度训练的目标是降低显存和带宽压力，提高吞吐，但不能把所有 tensor 都盲目降精度。</p>
+    <ul>
+      <li><strong>E4M3：</strong>mantissa 更长，精度更好，动态范围较小，适合部分 activation/weight。</li>
+      <li><strong>E5M2：</strong>动态范围更大，精度更低，适合 gradient 等范围更不稳定的 tensor。</li>
+      <li><strong>Block-wise scaling：</strong>按 block 记录 scale，让低精度值覆盖局部范围。</li>
+      <li><strong>FP4 QAT：</strong>更激进，需要量化感知训练和更严格验证。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s7-10a">
+    <h3>7.10A 低精度训练 ledger：FP8、MXFP8、NVFP4</h3>
+    <p>低精度选择不能只看 bit width，要看 tensor 角色、硬件支持和误差敏感度。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>内容</th><th>常见策略</th><th>原因</th></tr>
+        <tr><td>Matmul activations/weights</td><td>可用 FP8/MXFP8/NVFP4</td><td>吞吐和带宽收益最大</td></tr>
+        <tr><td>Norm 统计量</td><td>保留 fp32 或更高累计精度</td><td>均值/方差/RMS 对误差敏感</td></tr>
+        <tr><td>Softmax/logits</td><td>关键部分保高精度</td><td>防 overflow/underflow 和 NaN</td></tr>
+        <tr><td>Optimizer states</td><td>常保 fp32 或专门压缩</td><td>长期累计误差会影响收敛</td></tr>
+      </table>
+    </div>
+    <p>低精度验证要同时看质量、稳定性和吞吐：loss 曲线、eval PPL、NaN 率、gradient norm、tokens/s、MFU 和恢复能力都要记录。</p>
+  </section>
+
+  <section class="card" id="s7-11">
+    <h3>7.11 编程练习 5：完整训练循环</h3>
+    <div class="coding-exercise">
+      <h4>练习 5：Training Loop</h4>
+      <div class="task">
+        <ul>
+          <li>从 DataLoader 取 batch。</li>
+          <li>前向得到 logits，计算 cross entropy。</li>
+          <li>反向传播，做 gradient clipping。</li>
+          <li>optimizer step，scheduler 更新 lr。</li>
+          <li>记录 loss、PPL、lr、grad_norm、tokens/s。</li>
+          <li>定期保存完整 checkpoint。</li>
+        </ul>
+        <div class="code-block" data-lang="python">for step, (x, y) in enumerate(loader):
+    x, y = x.to(device), y.to(device)
+    with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=use_amp):
+        logits = model(x)
+        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), y.view(-1))
+    scaler.scale(loss).backward()
+    scaler.unscale_(optimizer)
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+    scaler.step(optimizer)
+    scaler.update()
+    optimizer.zero_grad(set_to_none=True)
+    lr = get_lr(step, warmup_steps, max_steps, max_lr, min_lr)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s7-11a">
+    <h3>7.11A 一个 optimizer step 的 ledger</h3>
+    <p>一次 step 至少要记录：global step、consumed tokens、micro batch、gradient accumulation、data shard、loss、lr、grad norm、tokens/s、显存峰值、checkpoint id。没有这些信息，resume 后曲线跳了也很难判断原因。</p>
+  </section>
+
+  <section class="card" id="s7-11b">
+    <h3>7.11B 怎样读训练日志</h3>
+    <p>先区分三类问题：</p>
+    <ul>
+      <li><strong>优化问题：</strong>loss spike、grad norm 爆、lr 不合适、初始化或精度错误。</li>
+      <li><strong>数据问题：</strong>重复、污染、编码错误、数据切片质量差。</li>
+      <li><strong>系统问题：</strong>tokens/s 降、dataloader 卡、通信等待、checkpoint 写入阻塞。</li>
+    </ul>
+    <p><code>grad_norm</code> 偶尔有尖峰不一定坏，但持续升高、和 loss spike 同步、或 resume 后突然换分布，都要查。</p>
+  </section>
+
+  <section class="card" id="s7-11c">
+    <h3>7.11C 训练异常 Runbook</h3>
+    <ol>
+      <li>先定位异常发生在哪个 step、哪个 token 区间、哪个 data shard。</li>
+      <li>把 loss spike 分成一次性数据异常、可恢复优化震荡、不可恢复 NaN/Inf。</li>
+      <li>NaN/Inf 最短路径：查 logits、loss、grad、norm 输出、mask、lr、AMP scaler。</li>
+      <li>resume 后曲线不连续，先查 checkpoint 是否包含 model、optimizer、scheduler、scaler、RNG、dataloader state。</li>
+      <li>throughput 下降不等于模型变慢，先拆 dataloader、通信、checkpoint、thermal throttling。</li>
+      <li>每个修复都要做最小实验，不要同时改三四个变量。</li>
+    </ol>
+  </section>
+
+  <section class="card" id="s7-12">
+    <h3>7.12 编程练习 6：在 Shakespeare 上训练并生成文本</h3>
+    <p>这个练习把本章主线收束到一个端到端小实验：下载 Shakespeare 文本，训练小 GPT，保存 loss 曲线，最后用 Ch08 的生成方法采样文本。</p>
+    <div class="coding-exercise">
+      <h4>练习 6：End-to-End Training + Text Generation</h4>
+      <div class="task">
+        <ul>
+          <li>固定随机 seed。</li>
+          <li>划分 train/val split。</li>
+          <li>训练小模型并每隔固定 step eval。</li>
+          <li>保存 checkpoint 和 loss curve。</li>
+          <li>训练后用 prompt 生成文本，观察是否学到基本格式和局部语言模式。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s7-13">
+    <h3>7.13 DualPipe Pipeline Parallelism：减少 pipeline bubbles</h3>
+    <p>传统 pipeline parallelism 会把模型层切到不同设备上，但 micro-batch 在流水线里有填充和排空阶段，设备会等待，这叫 pipeline bubble。</p>
+    <p>DualPipe 通过双向调度，把 forward/backward 的不同阶段更紧密地交错，减少等待时间。它解决的是大规模训练调度效率问题，不改变模型数学函数。判断它是否值得用，要看模型深度、micro-batch 数、通信拓扑、activation memory 和实现复杂度。</p>
+  </section>
+
+  <section class="card" id="s7-14">
+    <h3>7.14 单机训练主线小结</h3>
+    <ul>
+      <li>实现 DataLoader：切 chunk、batch、target 右移一位。</li>
+      <li>实现 Cross-Entropy：用 log-sum-exp 保数值稳定。</li>
+      <li>实现 AdamW：momentum、adaptive lr、decoupled weight decay。</li>
+      <li>实现 Warmup + Cosine Decay。</li>
+      <li>实现完整训练循环：forward、backward、AMP、clipping、logging、checkpoint。</li>
+      <li>完成 Shakespeare 小实验：端到端训练、生成、画曲线。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s7-15">
+    <h3>7.15 分布式训练：从单 GPU 到千卡集群</h3>
+    <p>先问两个问题：模型和训练状态是否放得下？放得下以后，硬件是否跑得高效？</p>
+    <h4>每卡显存账</h4>
+    <p>参数通常不是唯一大头。要同时算 parameters、gradients、optimizer states、activations、temporary buffers、communication buffers 和 fragmentation。</p>
+    <h4>四类并行</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>策略</th><th>做什么</th><th>主要代价</th></tr>
+        <tr><td>Data Parallel</td><td>每卡一份模型，分 batch</td><td>梯度 AllReduce</td></tr>
+        <tr><td>Tensor Parallel</td><td>切矩阵乘法</td><td>层内通信</td></tr>
+        <tr><td>Pipeline Parallel</td><td>按层切模型</td><td>pipeline bubble 和调度复杂度</td></tr>
+        <tr><td>Expert Parallel</td><td>MoE experts 分布到不同设备</td><td>token dispatch/combine 和负载倾斜</td></tr>
+      </table>
+    </div>
+    <h4>ZeRO 和 FSDP</h4>
+    <p>ZeRO/FSDP 的核心是 shard 模型状态。ZeRO-1 shard optimizer states，ZeRO-2 再 shard gradients，ZeRO-3/FSDP 进一步 shard parameters。省显存的同时，会引入 ReduceScatter、AllGather 等通信成本。</p>
+    <h4>MFU</h4>
+    <p>Model FLOPs Utilization 衡量训练系统是否真正用上了硬件算力。tokens/s 下降时，要拆解是计算、通信、dataloader、checkpoint 还是调度问题。</p>
+  </section>
+
+  <section class="card" id="s7-15a">
+    <h3>7.15A Training Run Plan：把实验变成可恢复工程过程</h3>
+    <ol>
+      <li>先定义训练目标：预训练、继续训练、领域适配，还是后训练前的 warm start。</li>
+      <li>用 token progress 管理训练，不用“epoch 口号”。</li>
+      <li>checkpoint 保存训练状态，不只是模型权重。</li>
+      <li>eval cadence 服务决策，不要为了频繁 eval 打断训练吞吐。</li>
+      <li>分阶段扩容：单卡 sanity -> 小规模多卡 -> 全量集群。</li>
+      <li>failure recovery 也要算进成本模型。</li>
+    </ol>
+  </section>
+
+  <section class="card" id="s7-15b">
+    <h3>7.15B 工业训练系统检查</h3>
+    <ul>
+      <li><strong>数据：</strong>来源、过滤、去重、隐私、污染、采样比例要可追溯。</li>
+      <li><strong>并行策略：</strong>必须绑定模型结构和集群拓扑，不是随便选 DDP/FSDP/TP/PP。</li>
+      <li><strong>Checkpoint：</strong>同时覆盖恢复和发布，能证明 resume 后曲线连续。</li>
+      <li><strong>评估：</strong>决定继续训练、调数据、降学习率、回滚还是停止。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="practice">
+    <h3>概念练习</h3>
+    <ol>
+      <li>语言模型的 cross-entropy loss 和 MLE 是什么关系？</li>
+      <li>AdamW 和标准 Adam 的关键区别是什么？为什么叫 decoupled weight decay？</li>
+      <li>PPL 的数学定义是什么？为什么不同 tokenizer 下不能直接横向比较？</li>
+      <li>Muon optimizer 的核心机制是什么？它为什么更适合矩阵参数？</li>
+      <li>FP8 训练中 E4M3 和 E5M2 分别适合什么角色？哪些计算通常要保高精度？</li>
+      <li>当参数、梯度和 AdamW states 放不下一张卡时，最直接的并行化策略是什么？</li>
+      <li>resume 后 loss 曲线突然跳，第一批应该检查哪些训练状态？</li>
+    </ol>
+  </section>
+</article>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+(function(){
+  function safeGet(key, fallback){
+    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+  }
+  function updateThemeLabel(theme){
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
+  }
+  window.LLM_ZH = {
+    toggleTheme: function(){
+      var html = document.documentElement;
+      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      safeSet('llm-theme', next);
+      updateThemeLabel(next);
+    }
+  };
+  var theme = safeGet('llm-theme', 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeLabel(theme);
+  window.addEventListener('scroll', function(){
+    var btn = document.getElementById('back-to-top');
+    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

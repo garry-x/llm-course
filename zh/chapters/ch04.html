@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第 4 章 多头注意力与 MLA - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body data-ch="4">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1><a href="../index.html">LLM Deep Learning</a></h1>
+    <p>中文版 · 从代码构建大语言模型</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
+    <a href="ch01.html"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
+    <a href="ch02.html"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
+    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
+    <a href="ch04.html" class="active" aria-current="page"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
+    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
+    <a href="ch06.html"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
+    <a href="ch07.html"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
+    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
+    <a href="ch09.html"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
+    <a href="ch10.html"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
+    <a href="ch11.html"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
+    <a href="../../chapters/ch04.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第 4 章 多头注意力与 MLA</h2>
+  <p class="subtitle">从 MHA 到 GQA，再到 DeepSeek MLA：注意力为什么要压缩 KV Cache</p>
+  <div class="reading-time">预计阅读：100 分钟 · 12 小节 · 5 个编程练习 · 5 个概念题</div>
+
+  <section class="card">
+    <h3>怎么学这一章：先学 MHA，再把 GQA/MLA 看成压缩方案</h3>
+    <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者先抓主线：</strong>多头注意力就是把一个大向量拆成多个小 head，并行做第 3 章的 attention。GQA 和 MLA 不是换了一套魔法，而是在推理时少存 K/V，降低长上下文的显存和带宽压力。</div></div>
+    <ul>
+      <li><strong>前置要求：</strong>Ch03 的 Q/K/V、<code>reshape</code>、<code>transpose</code>、causal mask。</li>
+      <li><strong>学习目标：</strong>解释为什么 MHA 参数量不变但表达能力更强；定量比较 MHA、MQA、GQA、MLA 的 KV Cache 成本和质量取舍。</li>
+      <li><strong>本章产出：</strong><code>MultiHeadAttention</code>、GQA 和简化 MLA。</li>
+      <li><strong>完成标准：</strong>你能画出“Q head 很多，但 K/V head 更少”时 cache 如何变小。</li>
+      <li><strong>练习产出：</strong>实现 MHA/GQA/MLA，写出参数量和 KV Cache 大小对比表，并说明不同 head 配置的 ablation 该怎么做。核心实现可用 <a href="../../assignments/ch04_multihead/" target="_blank">Ch04 Multi-Head Attention Assignment Tests</a> 检查。</li>
+    </ul>
+    <div class="dependency-note"><strong>前置技能：</strong>单头 attention、head 维度拆分、参数量统计、KV cache 字节估算。<br><strong>本章会内化：</strong>MHA、MQA、GQA 和 MLA 都可以拆成 Q/K/V projection、head layout、RoPE 位置通道和 cache accounting。<br><strong>验证信号：</strong>给你一个 attention layer 配置，你能手算参数量、K/V cache 大小和 decode 阶段的带宽压力。</div>
+    <p class="system-role"><strong>本章位置：</strong>Ch03 讲的是一次可微检索；本章把它扩展到多个表示子空间，并第一次把模型结构直接接到推理显存上。Ch10 讲 KV cache、decode bandwidth 和 serving capacity 时，会反复用到这里的计算。</p>
+  </section>
+
+  <section class="card">
+    <div class="svg-diagram" style="max-width:940px">
+      <img src="../../images/mha-gqa-mla.svg?v=en-20260613b" alt="MHA、GQA、MLA 对比" style="width:100%">
+    </div>
+    <p class="diagram-caption">图 4-1：MHA、GQA、MLA 的 KV Cache 压缩路径和数量级差异</p>
+  </section>
+
+  <section class="card" id="s4-1">
+    <h3>4.1 从单头到多头：为什么一个 head 不够</h3>
+    <p>Ch03 的单头 self-attention 只有一个 <code>d_k</code> 维 Q/K/V 空间，所有匹配规则都挤在同一个 similarity function 里。但语言关系不是单一维度。一个 token 往往要同时处理语法、语义和位置线索。</p>
+    <p>比如句子 <em>The cat sat on the mat because it was comfortable.</em>。处理 <em>it</em> 时，模型至少要问三件事：</p>
+    <ul>
+      <li><strong>语法：</strong><em>it</em> 是单数代词，先行词通常也要在语法上匹配。</li>
+      <li><strong>语义：</strong>到底是 cat 舒服，还是 mat 舒服，要看事件关系。</li>
+      <li><strong>位置：</strong>mat 更近，cat 更远，位置差异不能丢。</li>
+    </ul>
+    <p>单头 attention 只能用一个空间同时编码这些规则，容易互相挤占。Multi-Head Attention (MHA) 的做法是把 <code>d_model</code> 维表示拆成 <code>n_heads</code> 个小空间，每个 head 单独做 attention，最后把所有 head 的结果拼回去，再用 <code>W_o</code> 混合。</p>
+    <div class="code-block" data-lang="text">head_i = Attention(X W_Qi, X W_Ki, X W_Vi)
+MultiHead(X) = Concat(head_1, ..., head_h) W_o</div>
+    <h4>参数量为什么没变</h4>
+    <p>如果 <code>d_k = d_model / n_heads</code>，每个 head 的 Q/K/V projection 更小，所有 head 加起来仍然是 <code>3 * d_model * d_model</code>。MHA 的优势不是“堆了更多参数”，而是把同一份参数预算拆到多个可学习子空间里。</p>
+    <div class="worked-example">
+      <h4>例子：2 个 head 不等于 2 倍参数</h4>
+      <p>设 <code>d_model=8</code>、<code>n_heads=2</code>，每个 head 的 <code>d_k=4</code>。单头 Q/K/V 投到 8 维，参数量是 <code>3 * 8 * 8 = 192</code>。两个 head 各自投到 4 维，总参数量是 <code>2 * 3 * 8 * 4 = 192</code>。</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>方案</th><th>投影空间</th><th>QKV 参数量</th><th>attention score</th></tr>
+          <tr><td>单头</td><td>1 个 8 维空间</td><td><code>192</code></td><td><code>[T,T]</code></td></tr>
+          <tr><td>2-head MHA</td><td>2 个 4 维空间</td><td><code>192</code></td><td><code>[2,T,T]</code></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="info-box key"><span class="icon">🔑</span><div><strong>记法：</strong>MHA 是固定参数预算下的表示分解。不同 head 可以学不同匹配模式，<code>W_o</code> 负责把这些子空间的信息重新混合。</div></div>
+  </section>
+
+  <section class="card">
+    <div class="svg-diagram" style="max-width:800px">
+      <img src="../../images/transformer-arch.svg?v=en-20260613b" alt="Decoder-only Transformer 架构" style="width:100%">
+    </div>
+    <p class="diagram-caption">图 4-2：Decoder-only Transformer 架构预览。第 6 章会把 attention、FFN、Norm 和输出头完整组起来。</p>
+  </section>
+
+  <section class="card" id="s4-2">
+    <h3>4.2 编程练习 1：实现 MultiHeadAttention</h3>
+    <p>实际实现里通常不会给每个 head 单独写三组 Linear，而是用一个 fused QKV projection：<code>nn.Linear(d_model, 3 * d_model)</code>，再 reshape 成 head 结构。</p>
+    <div class="coding-exercise">
+      <h4>练习 1：MultiHeadAttention Module</h4>
+      <div class="task">
+        <ul>
+          <li>输入 <code>x: [batch, seq_len, d_model]</code>。</li>
+          <li>用一个 <code>W_qkv</code> 得到 fused Q/K/V。</li>
+          <li>reshape 成 <code>[B,T,3,H,Dh]</code>，再拆成 Q、K、V。</li>
+          <li>把 head 维移到 batch 后面：<code>[B,H,T,Dh]</code>。</li>
+          <li>实现 scaled dot-product attention，支持可选 mask。</li>
+          <li>拼回 <code>[B,T,D]</code>，经过 <code>W_o</code> 输出。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model, n_heads, dropout=0.1):
+        super().__init__()
+        assert d_model % n_heads == 0
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_k = d_model // n_heads
+        self.W_qkv = nn.Linear(d_model, 3 * d_model, bias=False)
+        self.W_o = nn.Linear(d_model, d_model, bias=False)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, mask=None):
+        B, T, _ = x.shape
+        qkv = self.W_qkv(x)                         # [B,T,3D]
+        qkv = qkv.reshape(B, T, 3, self.n_heads, self.d_k)
+        q, k, v = qkv.unbind(dim=2)                 # each [B,T,H,Dh]
+        q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
+
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float("-inf"))
+        weights = torch.softmax(scores, dim=-1)
+        weights = self.dropout(weights)
+        out = torch.matmul(weights, v)              # [B,H,T,Dh]
+
+        out = out.transpose(1, 2).contiguous().reshape(B, T, self.d_model)
+        return self.W_o(out), weights</div>
+      </div>
+    </div>
+    <p>这里最容易错的是 <code>transpose</code> 后忘记 <code>contiguous()</code>。如果 tensor 的内存布局不连续，直接 <code>view</code> 可能报错或得到错误解释；教学代码里用 <code>reshape</code> 更稳，但你仍然要知道 layout 发生了变化。</p>
+  </section>
+
+  <section class="card" id="s4-3">
+    <h3>4.3 多个 head 为什么会学到不同子空间</h3>
+    <p>MHA 没有手工规定“第 1 个 head 学语法，第 2 个 head 学位置”。分化来自训练过程本身。</p>
+    <ul>
+      <li><strong>初始化不同：</strong>每个 head 的 Q/K/V 权重随机初始化不同，一开始看到的相似度空间就不同。</li>
+      <li><strong>梯度不同：</strong>不同 head 的 attention map 不同，取回的 V 不同，反向传播时收到的梯度也不同。</li>
+      <li><strong><code>W_o</code> 会选择性使用 head：</strong>下游 loss 会奖励有用的 head 输出，没用或重复的 head 权重会被压低。</li>
+    </ul>
+    <p>从数学上看，每个 head 都有自己的 <code>W_Qi</code> 和 <code>W_Ki</code>。attention score 近似是 <code>x_a^T W_Qi W_Ki^T x_b</code>。不同 head 的 <code>W_Qi W_Ki^T</code> 不同，就相当于不同的双线性匹配函数。</p>
+    <h4>如果所有 head 学成一样会怎样</h4>
+    <p>如果多个 head 完全重复，MHA 会退化成“同一张 attention map 的复制”。这不会让模型崩掉，但浪费 head 预算。真实大模型里确实会出现 head 冗余，这也是后面 GQA、head pruning 和 MLA 能成立的一部分原因。</p>
+  </section>
+
+  <section class="card" id="s4-3a">
+    <h3>4.3A 多头不是简单 ensemble</h3>
+    <p>多头 attention 看起来像“多个小模型投票”，但它不是普通 ensemble。普通 ensemble 通常是多个独立模型各自输出预测，再做平均；MHA 的 head 共享同一层输入，输出会被 concat，然后由 <code>W_o</code> 学习混合。</p>
+    <p>这种结构的表达力来自两点：</p>
+    <ul>
+      <li>每个 head 有自己的 Q/K/V 投影，能形成不同 attention pattern。</li>
+      <li><code>W_o</code> 不是平均，而是一个可训练线性混合，可以把不同 head 的 value 信息重新组合。</li>
+    </ul>
+    <p>head 之间既可以分工，也可能冗余。GQA 和 MLA 的压缩思路正是利用这个观察：Q 的多样性很重要，但 K/V 的独立份数不一定必须和 Q head 一样多。</p>
+  </section>
+
+  <section class="card" id="s4-4">
+    <h3>4.4 编程练习 2：验证参数量等价</h3>
+    <p>这一节的目标不是背公式，而是用代码证明：在 <code>n_heads * d_k = d_model</code> 时，多头拆分不会增加 QKV 参数量。</p>
+    <div class="coding-exercise">
+      <h4>练习 2：Parameter Count Checker</h4>
+      <div class="task">
+        <ul>
+          <li>写一个函数，输入 <code>d_model</code> 和 <code>n_heads</code>。</li>
+          <li>计算单头 QKV 参数量：<code>3 * d_model * d_model</code>。</li>
+          <li>计算 MHA QKV 参数量：<code>n_heads * 3 * d_model * (d_model // n_heads)</code>。</li>
+          <li>再加上 output projection：<code>d_model * d_model</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">def mha_param_count(d_model, n_heads):
+    assert d_model % n_heads == 0
+    d_k = d_model // n_heads
+    single_qkv = 3 * d_model * d_model
+    mha_qkv = n_heads * 3 * d_model * d_k
+    output_proj = d_model * d_model
+    return {
+        "single_qkv": single_qkv,
+        "mha_qkv": mha_qkv,
+        "output_proj": output_proj,
+        "total_attention": mha_qkv + output_proj,
+    }</div>
+      </div>
+    </div>
+    <p>注意：很多实现把 Q/K/V 融合成一个 <code>W_qkv: [d_model, 3*d_model]</code>。这只是计算更高效，参数量和三组 Linear 一样。</p>
+  </section>
+
+  <section class="card" id="s4-5">
+    <h3>4.5 MHA、MQA、GQA：KV Cache 的演化</h3>
+    <p>训练时，我们通常一次处理整段序列。推理 decode 时，每步只来一个新 query，但它要看所有历史 token 的 K/V。为了避免每步重复算历史 token 的 K/V，系统会把它们存进 KV Cache。</p>
+    <p>问题是：KV Cache 会随 <code>batch_size * n_layers * seq_len * n_kv_heads * d_k</code> 增长。长上下文和大 batch 下，decode 阶段常常不是算力先满，而是显存和带宽先满。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>机制</th><th>Q heads</th><th>K/V heads</th><th>cache 特点</th><th>常见取舍</th></tr>
+        <tr><td>MHA</td><td><code>H</code></td><td><code>H</code></td><td>每个 Q head 有自己的 K/V</td><td>质量强，cache 最大</td></tr>
+        <tr><td>MQA</td><td><code>H</code></td><td><code>1</code></td><td>所有 Q head 共享一组 K/V</td><td>cache 最小，K/V 多样性损失大</td></tr>
+        <tr><td>GQA</td><td><code>H</code></td><td><code>G</code></td><td>一组 Q heads 共享一组 K/V</td><td>在质量和 cache 之间折中</td></tr>
+      </table>
+    </div>
+    <p>MQA 是 GQA 的特例：<code>n_kv_heads=1</code>。MHA 可以看成 <code>n_kv_heads=n_heads</code>。GQA 把中间档补上了，例如 64 个 Q heads 只保留 8 个 K/V heads。</p>
+  </section>
+
+  <section class="card" id="s4-5a">
+    <h3>4.5A 例子：GQA 映射和 cache 计算</h3>
+    <p>设 <code>d_model=4096</code>、<code>n_heads=32</code>，则 <code>d_k=128</code>。MHA 每个 token 每层要缓存：</p>
+    <div class="code-block" data-lang="text">K: 32 * 128
+V: 32 * 128
+total = 2 * 32 * 128 = 8192 floats</div>
+    <p>如果用 GQA，<code>n_kv_heads=8</code>，每 4 个 Q heads 共享一个 K/V head：</p>
+    <div class="code-block" data-lang="text">K: 8 * 128
+V: 8 * 128
+total = 2 * 8 * 128 = 2048 floats</div>
+    <p>cache 直接缩小 4 倍。decode 时仍然有 32 个 Q heads，但 K/V cache 只存 8 组。实现上常见做法是把 K/V 在计算 attention 前 repeat 到 Q head 数，或让 kernel 直接理解 Q/KV head ratio。</p>
+    <div class="code-block" data-lang="python">def repeat_kv(x, n_rep):
+    # x: [B, n_kv_heads, T, Dh]
+    B, G, T, Dh = x.shape
+    x = x[:, :, None, :, :].expand(B, G, n_rep, T, Dh)
+    return x.reshape(B, G * n_rep, T, Dh)</div>
+  </section>
+
+  <section class="card" id="s4-5b">
+    <h3>4.5B 训练 attention 和推理 KV Cache 不是同一个 layout 问题</h3>
+    <p>训练阶段关心的是一次 forward 里怎么高效构造 <code>[B,H,T,T]</code> 的 attention。推理 decode 阶段关心的是历史 K/V 怎么存、怎么追加、怎么被新 query 读取。</p>
+    <ul>
+      <li><strong>训练：</strong>Q/K/V 都来自当前 batch 的完整序列，shape 通常是 <code>[B,H,T,Dh]</code>。</li>
+      <li><strong>prefill：</strong>输入一段 prompt，计算并写入整段 K/V cache。</li>
+      <li><strong>decode：</strong>每步只有 <code>T_q=1</code> 的新 query，读取历史 <code>T_cache</code> 的 K/V。</li>
+    </ul>
+    <p>所以 GQA/MLA 的价值主要体现在推理 cache 和 decode bandwidth，而不是把训练 attention 的 <code>O(T^2)</code> 直接改成线性。</p>
+  </section>
+
+  <section class="card" id="s4-5c">
+    <h3>4.5C 把 MHA checkpoint 转成 GQA</h3>
+    <p>如果已经有一个 MHA checkpoint，可以通过合并 K/V heads 得到 GQA 初始化。常见做法是把每组里的 K/V projection 权重做平均，Q 和 <code>W_o</code> 保持不变，然后继续 finetune。</p>
+    <div class="code-block" data-lang="text">MHA K heads:  [H, D, Dh]
+group size:   H / G
+GQA K heads:  mean over each group -> [G, D, Dh]</div>
+    <p>这不是无损转换。平均会丢掉部分 K/V 多样性，所以通常需要额外训练把质量拉回来。GQA 论文里的核心经验也是：直接从头训练或转换后继续训练，质量会明显好于粗暴共享。</p>
+  </section>
+
+  <section class="card" id="s4-6">
+    <h3>4.6 编程练习 3：实现 GQA</h3>
+    <p>GQA 和 MHA 的主要区别是：Q 有 <code>n_heads</code> 个 head，K/V 只有 <code>n_kv_heads</code> 个 head。要求 <code>n_heads % n_kv_heads == 0</code>。</p>
+    <div class="coding-exercise">
+      <h4>练习 3：GroupedQueryAttention</h4>
+      <div class="task">
+        <ul>
+          <li><code>W_q</code> 输出 <code>n_heads * d_k</code>。</li>
+          <li><code>W_k</code> 和 <code>W_v</code> 输出 <code>n_kv_heads * d_k</code>。</li>
+          <li>attention 计算前，把 K/V repeat 到 Q head 数，或让 kernel 支持 GQA。</li>
+          <li>返回 <code>out</code> 和 <code>attn_weights</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class GroupedQueryAttention(nn.Module):
+    def __init__(self, d_model, n_heads, n_kv_heads, dropout=0.1):
+        super().__init__()
+        assert d_model % n_heads == 0
+        assert n_heads % n_kv_heads == 0
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.n_kv_heads = n_kv_heads
+        self.d_k = d_model // n_heads
+        self.n_rep = n_heads // n_kv_heads
+        self.W_q = nn.Linear(d_model, n_heads * self.d_k, bias=False)
+        self.W_k = nn.Linear(d_model, n_kv_heads * self.d_k, bias=False)
+        self.W_v = nn.Linear(d_model, n_kv_heads * self.d_k, bias=False)
+        self.W_o = nn.Linear(d_model, d_model, bias=False)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, mask=None):
+        B, T, _ = x.shape
+        q = self.W_q(x).reshape(B, T, self.n_heads, self.d_k).transpose(1, 2)
+        k = self.W_k(x).reshape(B, T, self.n_kv_heads, self.d_k).transpose(1, 2)
+        v = self.W_v(x).reshape(B, T, self.n_kv_heads, self.d_k).transpose(1, 2)
+        k = repeat_kv(k, self.n_rep)
+        v = repeat_kv(v, self.n_rep)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float("-inf"))
+        weights = torch.softmax(scores, dim=-1)
+        out = torch.matmul(self.dropout(weights), v)
+        out = out.transpose(1, 2).contiguous().reshape(B, T, self.d_model)
+        return self.W_o(out), weights</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s4-7">
+    <h3>4.7 DeepSeek MLA：把 KV 压到 latent space</h3>
+    <p>GQA 减少 K/V head 数，但每个 token 仍然要缓存显式 K 和 V。Multi-head Latent Attention (MLA) 更进一步：先把输入压到一个低维 latent 向量 <code>c^KV</code>，cache 里只存这个 latent；需要 K/V 时再通过上投影矩阵还原。</p>
+    <div class="code-block" data-lang="text">c_t^KV = W_DKV x_t
+k_t = W_UK c_t^KV
+v_t = W_UV c_t^KV</div>
+    <p>如果 <code>d_model=7168</code>、<code>n_heads=64</code>、<code>d_k=112</code>，MHA 每 token 要缓存 <code>2 * 64 * 112 = 14336</code> 个 float。若 MLA 的 <code>d_latent=512</code>，每 token 只缓存 512 个 float，元素数约缩小 28 倍。</p>
+    <h4>低秩分解的核心</h4>
+    <p>MLA 可以理解成对 K/V projection 做低秩分解：先降维，再升维。降维后的 latent 是实际缓存内容，升维矩阵是模型参数，不随 sequence length 增长。</p>
+    <h4>Matrix absorption：为什么推理时不一定要显式还原 K</h4>
+    <p>如果 attention score 是 <code>q^T k</code>，而 <code>k = W_UK c</code>，那么：</p>
+    <div class="code-block" data-lang="text">q^T (W_UK c) = (W_UK^T q)^T c</div>
+    <p>也就是说，K 的上投影可以吸收到 Q 侧。推理时可以让 query 先乘上吸收后的矩阵，再直接和 latent cache 做点积，避免每步把所有历史 latent 显式展开成完整 K。</p>
+    <h4>为什么需要 decoupled RoPE</h4>
+    <p>RoPE 是依赖位置的旋转变换，通常不能随便和固定的上投影矩阵交换顺序。内容部分可以走 latent compression 和 matrix absorption；位置旋转部分要单独保留。DeepSeek 的做法是把 K 拆成 content part 和 RoPE part：content part 可压缩，RoPE part 单独投影、单独参与点积。</p>
+    <div class="info-box key"><span class="icon">🔑</span><div><strong>别把 MLA 理解成免费午餐：</strong>它显著减少 KV Cache，但会增加结构复杂度，对 kernel 支持、RoPE 处理和训练稳定性都有要求。它解决的是长上下文推理里的存储和带宽问题。</div></div>
+  </section>
+
+  <section class="card" id="s4-8">
+    <h3>4.8 编程练习 4：实现简化 MLA</h3>
+    <p>教学版先忽略 decoupled RoPE，只实现“KV 压缩成一个共享 latent，再还原成 K/V”的主流程。</p>
+    <div class="coding-exercise">
+      <h4>练习 4：Simplified Multi-head Latent Attention</h4>
+      <div class="task">
+        <ul>
+          <li><code>W_q</code> 正常生成 Q。</li>
+          <li><code>W_dkv</code> 把输入压成 <code>d_latent</code>。</li>
+          <li><code>W_uk</code> 和 <code>W_uv</code> 从同一个 latent 还原 K 和 V。</li>
+          <li><code>forward</code> 返回 <code>(output, attn_weights, latent)</code>，其中 <code>latent</code> 模拟 KV Cache 内容。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class MLA(nn.Module):
+    def __init__(self, d_model, n_heads, d_latent, dropout=0.1):
+        super().__init__()
+        assert d_model % n_heads == 0
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_k = d_model // n_heads
+        self.d_latent = d_latent
+        self.W_q = nn.Linear(d_model, n_heads * self.d_k, bias=False)
+        self.W_dkv = nn.Linear(d_model, d_latent, bias=False)
+        self.W_uk = nn.Linear(d_latent, n_heads * self.d_k, bias=False)
+        self.W_uv = nn.Linear(d_latent, n_heads * self.d_k, bias=False)
+        self.W_o = nn.Linear(d_model, d_model, bias=False)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, mask=None):
+        B, T, _ = x.shape
+        q = self.W_q(x).reshape(B, T, self.n_heads, self.d_k).transpose(1, 2)
+        latent = self.W_dkv(x)  # [B,T,d_latent]，这就是要缓存的内容
+        k = self.W_uk(latent).reshape(B, T, self.n_heads, self.d_k).transpose(1, 2)
+        v = self.W_uv(latent).reshape(B, T, self.n_heads, self.d_k).transpose(1, 2)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float("-inf"))
+        weights = torch.softmax(scores, dim=-1)
+        out = torch.matmul(self.dropout(weights), v)
+        out = out.transpose(1, 2).contiguous().reshape(B, T, self.d_model)
+        return self.W_o(out), weights, latent</div>
+      </div>
+    </div>
+    <p>真实 MLA 会把 K 上投影吸收到 Q 侧，并单独处理 RoPE 通道。这里显式还原 K/V，是为了让压缩和还原关系更容易看清。</p>
+  </section>
+
+  <section class="card" id="s4-9">
+    <h3>4.9 编程练习 5：比较 MHA、GQA、MLA 的 KV Cache</h3>
+    <p>这一节把结构差异落到数字上。只比较“每 token 每层的 cache 元素数”时：</p>
+    <div class="code-block" data-lang="text">MHA: 2 * n_heads * d_k
+GQA: 2 * n_kv_heads * d_k
+MLA: d_latent</div>
+    <div class="coding-exercise">
+      <h4>练习 5：KV Cache Size Analyzer</h4>
+      <div class="task">
+        <ul>
+          <li>输入 <code>d_model, n_heads, n_kv_heads, d_latent, seq_len</code>。</li>
+          <li>输出 MHA/GQA/MLA 的 per-token floats 和总字节数。</li>
+          <li>扩展版再乘上 <code>batch_size * n_layers * dtype_bytes</code>，避免把 per-layer 数字误当整机显存。</li>
+        </ul>
+        <div class="code-block" data-lang="python">def compute_kv_cache_size(d_model, n_heads, n_kv_heads, d_latent, seq_len, dtype_bytes=4):
+    d_k = d_model // n_heads
+    mha_per_token = 2 * n_heads * d_k
+    gqa_per_token = 2 * n_kv_heads * d_k
+    mla_per_token = d_latent
+
+    def gb(elements):
+        return elements * seq_len * dtype_bytes / (1024 ** 3)
+
+    return {
+        "MHA": (mha_per_token, gb(mha_per_token)),
+        "GQA": (gqa_per_token, gb(gqa_per_token)),
+        "MLA": (mla_per_token, gb(mla_per_token)),
+        "GQA_vs_MHA": mha_per_token / gqa_per_token,
+        "MLA_vs_MHA": mha_per_token / mla_per_token,
+    }
+
+stats = compute_kv_cache_size(
+    d_model=7168, n_heads=64, n_kv_heads=8,
+    d_latent=512, seq_len=131072
+)</div>
+      </div>
+    </div>
+    <p>按上面的配置，MHA 每 token 是 <code>14336</code> floats，GQA 是 <code>1792</code> floats，MLA 是 <code>512</code> floats。128K context、float32、单层估算大约是：MHA 7.0 GB，GQA 0.9 GB，MLA 0.25 GB。</p>
+  </section>
+
+  <section class="card" id="s4-10">
+    <h3>4.10 本章小结</h3>
+    <ul>
+      <li>MHA 把一个表示空间拆成多个 head，参数量基本不变，但多了多个可学习的匹配子空间。</li>
+      <li>多个 head 会因为初始化、attention pattern、梯度和 <code>W_o</code> 混合而自然分化；但真实模型里也会出现 head 冗余。</li>
+      <li>MHA、MQA、GQA 的关键差异是 K/V head 数。GQA 在质量和 KV Cache 之间做折中。</li>
+      <li>训练 attention 的 layout 和推理 KV Cache 的 layout 是两个问题。GQA/MLA 主要优化 decode 阶段的 cache 和带宽。</li>
+      <li>MLA 把 K/V 压成共享 latent cache，通过低秩分解和 matrix absorption 减少显式 K/V 存储。</li>
+      <li>RoPE 是位置相关变换，不能简单吸收到同一套低秩矩阵里，所以真实 MLA 需要 decoupled RoPE。</li>
+    </ul>
+    <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
+      <a href="https://arxiv.org/abs/1706.03762" target="_blank">Attention Is All You Need</a> ·
+      <a href="https://arxiv.org/abs/1911.02150" target="_blank">Fast Transformer Decoding (MQA)</a> ·
+      <a href="https://arxiv.org/abs/2305.13245" target="_blank">GQA</a> ·
+      <a href="https://arxiv.org/abs/2405.04434" target="_blank">DeepSeek-V2 MLA</a> ·
+      <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3</a>
+    </div></div>
+  </section>
+
+  <section class="card" id="practice">
+    <h3>概念练习</h3>
+    <ol>
+      <li>MHA 的参数量为什么和单头 attention 的 QKV 参数量相同？写出 <code>d_model=768, n_heads=12</code> 的计算过程。</li>
+      <li>GQA 和 MQA 的区别是什么？为什么说 MQA 是 GQA 的特例？</li>
+      <li>如果 <code>d_model=4096, n_heads=32, n_kv_heads=8</code>，GQA 的 KV Cache 比 MHA 小几倍？</li>
+      <li>MLA 为什么只缓存一个 <code>d_latent</code> 向量，而不是分别缓存低维 K 和低维 V？</li>
+      <li>为什么 RoPE 需要 decoupled design？它和 matrix absorption 的冲突在哪里？</li>
+    </ol>
+  </section>
+</article>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+(function(){
+  function safeGet(key, fallback){
+    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+  }
+  function updateThemeLabel(theme){
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
+  }
+  window.LLM_ZH = {
+    toggleTheme: function(){
+      var html = document.documentElement;
+      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      safeSet('llm-theme', next);
+      updateThemeLabel(next);
+    }
+  };
+  var theme = safeGet('llm-theme', 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeLabel(theme);
+  window.addEventListener('scroll', function(){
+    var btn = document.getElementById('back-to-top');
+    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

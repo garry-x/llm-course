@@ -121,6 +121,8 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 
 Open the printed local URL, usually `http://127.0.0.1:8080`. The server may listen on `0.0.0.0` so other devices on the LAN can connect, but `0.0.0.0` itself is not the browser URL.
 
+Chinese materials are available as standalone HTML pages starting at [zh/index.html](zh/index.html).
+
 ### Running Assignment Tests
 
 This repository recommends using `.venv` in the root directory to run local code; if you have already activated an equivalent virtual environment, you can also replace `.venv/bin/python` with `python`. First confirm PyTorch is importable:

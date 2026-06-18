@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第 2 章 Embedding 层与位置编码 - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body data-ch="2">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1><a href="../index.html">LLM Deep Learning</a></h1>
+    <p>中文版 · 从代码构建大语言模型</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
+    <a href="ch01.html"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
+    <a href="ch02.html" class="active" aria-current="page"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
+    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
+    <a href="ch04.html"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
+    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
+    <a href="ch06.html"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
+    <a href="ch07.html"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
+    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
+    <a href="ch09.html"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
+    <a href="ch10.html"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
+    <a href="ch11.html"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
+    <a href="../../chapters/ch02.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第 2 章：Embedding 层与位置编码</h2>
+  <p class="subtitle">实现 TokenEmbedding、Sinusoidal Encoding 和 RoPE：表示语义与顺序</p>
+  <div class="reading-time">预计阅读：120 分钟 · 19 小节 · 4 个编程练习 · 6 个概念题</div>
+
+  <section class="card">
+    <h3>怎么学这一章：先抓住查表和位置信息</h3>
+    <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者先这样看：</strong>先把 <code>nn.Embedding</code> 理解成“用 token id 查一行向量”；再理解为什么 Transformer 自己不知道顺序，所以必须加入位置编码。RoPE 的矩阵推导可以第二遍再细抠。</div></div>
+    <ul>
+      <li><strong>前置要求：</strong>tensor shape、矩阵查表、sin/cos 基本概念。</li>
+      <li><strong>学习目标：</strong>从 one-hot 推到可训练 embedding；理解 distributional hypothesis；区分静态词向量和上下文化表示；说明位置编码为什么必需；证明 RoPE 的点积只依赖相对位置。</li>
+      <li><strong>本章产出：</strong><code>TokenEmbedding</code>、Sinusoidal 位置编码和 RoPE。</li>
+      <li><strong>完成标准：</strong>你能完整追踪 <code>[batch, seq]</code> 到 <code>[batch, seq, d_model]</code> 的 shape 变化。</li>
+      <li><strong>练习产出：</strong>提交 embedding/position encoding 实现、RoPE 相对位置数值验证，以及一页关于长上下文外推失败模式的短报告。核心实现可用 <a href="../../assignments/ch02_embeddings/" target="_blank">Ch02 Assignment Tests</a> 检查。</li>
+    </ul>
+    <div class="dependency-note"><strong>前置技能：</strong>矩阵查表、向量点积、sin/cos 周期性、二维旋转、tensor shape 跟踪。<br><strong>本章会内化：</strong>one-hot 乘 embedding 矩阵会改写成查表；点积和旋转矩阵会用于证明 RoPE 中“attention score 只依赖相对位置”；shape 纪律会贯穿 token embedding、position id、batch/seq 维度和长上下文实验。<br><strong>验证信号：</strong>你能从 <code>[B,T]</code> 追到 <code>[B,T,D]</code>，并说明位置编码 bug 为什么会影响 Ch03 attention score 和 Ch10 prefix cache。</div>
+    <p class="system-role"><strong>本章位置：</strong>第 1 章把文本变成 token ID；本章把离散 ID 接到连续向量空间，并给每个位置一个可计算的几何含义。后续 Ch03 的 attention 相似度、Ch08 的长上下文生成、Ch10 的 prefix cache 位置一致性，都依赖这里的表示。</p>
+  </section>
+
+  <section class="card">
+    <div class="svg-diagram" style="max-width:900px">
+      <img src="../../images/rope-rotation.svg?v=en-20260613b" alt="RoPE 旋转位置编码原理" style="width:100%">
+    </div>
+    <p class="diagram-caption">图 2-1：RoPE 旋转位置编码的工作方式、核心性质和实现思路</p>
+  </section>
+
+  <section class="card" id="s2-1">
+    <h3>2.1 从 One-Hot 到 Dense Embedding：为什么需要分布式表示</h3>
+    <p>第 1 章把文本变成 token 序列 <code>[t_1, t_2, ..., t_n]</code>，每个 <code>t_i</code> 是一个整数 ID。下一步的问题是：怎样把这个整数变成神经网络能处理的向量。</p>
+    <h4>One-Hot 编码的问题</h4>
+    <p>最直接的方式是 one-hot：vocabulary size 为 <code>V</code>，token <code>t</code> 就是长度为 <code>V</code> 的向量，第 <code>t</code> 位为 1，其余为 0。比如 vocab size 为 5，token 3 可以写成 <code>[0,0,0,1,0]</code>。</p>
+    <p>问题也很明显：</p>
+    <ul>
+      <li><strong>维度太高：</strong>常见 vocabulary 动辄 50K，batch 里显式存 one-hot 会非常浪费。</li>
+      <li><strong>语义太平：</strong>任意两个不同 one-hot 向量的 cosine similarity 都是 0，<code>king</code> 和 <code>queen</code> 并不比 <code>king</code> 和 <code>apple</code> 更近。</li>
+      <li><strong>计算没有必要：</strong>one-hot 乘以 <code>V x d</code> 矩阵，本质就是取矩阵第 <code>t</code> 行。既然如此，直接查表就行。</li>
+    </ul>
+    <h4>Dense Embedding 的核心突破</h4>
+    <p>标准做法是使用可训练的 dense embedding 矩阵 <code>E ∈ R^{V x d}</code>，其中 <code>d</code> 远小于 <code>V</code>。token <code>t</code> 的向量就是 <code>E[t, :]</code>。这就是 <code>nn.Embedding</code> 做的事：不是把 ID 变成巨大的 one-hot，而是用 ID 查一行可训练向量。</p>
+    <h4>Distributional Hypothesis</h4>
+    <p>分布式表示的直觉来自一句经典说法：一个词的意思，可以从它经常和谁一起出现看出来。上下文相似的词，应该有相似的向量。word2vec/GloVe 这类静态词向量，就是把这种语料统计变成向量空间结构。</p>
+    <div class="info-box key"><span class="icon">🔑</span><div><strong>参数量：</strong>Embedding 参数量是 <code>V * d</code>。GPT-2 124M 中，<code>V=50257</code>、<code>d=768</code>，embedding 层约 3860 万参数。很多模型会把 embedding 矩阵和 LM head 共享，也就是 weight tying。</div></div>
+  </section>
+
+  <section class="card" id="s2-1a">
+    <h3>2.1A 从 word2vec/GloVe 到 LLM Token Embedding</h3>
+    <p>课程先讲词向量，是因为它能说明一个核心思想：语义不是手写规则，而是可以从上下文统计里学出来。现代 LLM 的 <code>nn.Embedding</code> 不再是单独训练好的静态词向量，但它仍然面对同一个表示学习问题：怎样把离散 token 映射到可微、可比较、可组合的连续空间。</p>
+    <h4>Skip-gram with Negative Sampling</h4>
+    <p>word2vec 的 skip-gram 目标是：给定中心词，预测窗口里的上下文词。Negative sampling 版本把真实上下文当正样本，把随机采样词当负样本，用二分类式 loss 来训练向量。</p>
+    <div class="math-box"><div class="label">SGNS 思路</div><div class="code-block" data-lang="text">让 center 和真实 context 的 dot product 变大；
+让 center 和 negative samples 的 dot product 变小。</div></div>
+    <p>Ch02 作业中的 <code>build_cooccurrence_matrix</code>、<code>skipgram_negative_sampling_loss</code> 和 <code>sgns_center_gradient</code>，就是把“上下文统计变成训练信号”写成可运行代码。</p>
+    <h4>PMI 与 shifted PMI</h4>
+    <p>如果 <code>X_ij</code> 是中心词 <code>i</code> 和上下文词 <code>j</code> 的共现次数，PMI 可以写成：</p>
+    <div class="code-block" data-lang="text">PMI(i,j) = log( X_ij * X_** / (X_i* * X_*j) )
+SPMI(i,j) = PMI(i,j) - log(K)</div>
+    <p>SGNS 学到的 dot product 和 shifted PMI 有紧密关系。负样本数 <code>K</code> 越大，目标 dot product 的零点会整体下移。这里的重点不是背公式，而是理解：词向量空间来自共现统计和训练目标。</p>
+    <h4>GloVe：从全局共现矩阵学习</h4>
+    <p>GloVe 直接从全局 co-occurrence matrix 出发，用加权最小二乘拟合 <code>log X_ij</code>。它和 skip-gram 的入口不同，但都在利用语料里的共现结构。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>维度</th><th>word2vec/GloVe</th><th>LLM Token Embedding</th></tr>
+        <tr><td>训练方式</td><td>常常先独立训练，再给下游任务用</td><td>和 Transformer、LM head、loss 一起端到端训练</td></tr>
+        <tr><td>表示对象</td><td>词或 subword 的静态向量</td><td>token 的初始向量，后续层会生成上下文化表示</td></tr>
+        <tr><td>多义词</td><td>一个词通常只有一个向量</td><td>同一 token 初始向量相同，但上下文 hidden state 会不同</td></tr>
+        <tr><td>评估方式</td><td>常看相似词和 analogy</td><td>更关注多层上下文化计算后的任务表现</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="s2-1b">
+    <h3>2.1B 例子：从共现计数到 PMI、SGNS 和 analogy</h3>
+    <p>假设只有三个词：<code>king</code>、<code>queen</code>、<code>apple</code>。滑动窗口统计得到的共现表里，<code>king</code> 和 <code>queen</code> 经常互为上下文，而 <code>king</code> 和 <code>apple</code> 几乎只是偶然碰到。</p>
+    <p>PMI 衡量的是：两个词一起出现的频率，是否高于随机独立情况下的预期。SGNS 则把这个共现关系变成一个个正负样本，让真实上下文 dot product 变大，让噪声样本 dot product 变小。</p>
+    <p>analogy 里的 <code>v_king - v_man + v_woman</code> 是在检查向量空间里是否形成了稳定的线性方向。它是一个诊断工具，不是“模型理解性别、王权和语义关系”的充分证明。</p>
+  </section>
+
+  <section class="card" id="s2-1c">
+    <h3>2.1C Embedding 空间诊断：相似度、各向异性和频率效应</h3>
+    <p>训练出 embedding 矩阵后，不要因为 loss 降了就默认表示空间没问题。向量空间由训练目标和数据分布共同塑造，也会带着频率、tokenizer 和初始化带来的偏差。</p>
+    <h4>1. 行范数不等于语义强度</h4>
+    <p>高频 token 被更新得更多，row norm 往往更大。special token、空格、标点和常见 subword 也可能形成特殊簇。范数大不等于“更重要”，它混合了频率、优化历史和输出层梯度。</p>
+    <h4>2. cosine similarity 需要先处理尺度</h4>
+    <p>cosine similarity 会消掉向量模长的影响，适合看局部邻居和 analogy。但它只能说明初始 embedding 空间里的相近关系，不能证明模型在上下文中会把两个词当同义词。</p>
+    <h4>3. 各向异性会污染最近邻</h4>
+    <p>高维 embedding 空间可能出现 common direction，导致任意两个 token 的 cosine 都偏高，nearest neighbor 被频率或格式支配。工程上可以看非对角 cosine 分布，判断空间是否被某些公共方向主导。</p>
+    <h4>4. LLM embedding 的工程检查点</h4>
+    <ul>
+      <li>新增 token 是否真的被训练到，梯度和范数是否合理。</li>
+      <li>PAD token 是否被 loss 错误更新，mask 是否泄漏。</li>
+      <li>少数语言、代码、特殊符号是否被 tokenizer 切得过碎。</li>
+      <li>weight tying 前后，输入 embedding 和输出分类空间是否一致。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s2-1d">
+    <h3>2.1D 从静态词向量到上下文化表示：为什么同一个 token 可以有不同语义</h3>
+    <p>word2vec 和 GloVe 学到的是静态向量：vocabulary 里的每个词或 subword 通常只有一个固定向量。现代 Transformer 的输入 embedding 也是固定查表矩阵，但模型真正用于预测、分类或生成的表示，不是这个初始行向量，而是多层 attention 和 FFN 之后的 hidden state。</p>
+    <p>给定序列 <code>x_1,...,x_T</code>，第 0 层表示可以写成 <code>h_i^{0} = E[x_i] + p_i</code>。经过多层 Transformer 后，<code>h_i^{l}</code> 会依赖上下文、位置、attention pattern 和前面层的计算。</p>
+    <h4>例子：两个语境里的 bank</h4>
+    <div class="code-block" data-lang="text">S1: I deposited money at the bank.
+S2: I sat near the river bank.</div>
+    <p>如果两个 <code>bank</code> 被映射到同一个 token ID，那么查表得到的 <code>E[bank]</code> 完全相同。差异来自上下文：<code>money</code>、<code>deposited</code> 会把金融语义写进 hidden state；<code>river</code>、<code>near</code> 会把河岸语义写进去。</p>
+    <div class="info-box key"><span class="icon">🔑</span><div><strong>工程结论：</strong>静态词向量回答“这个词在语料统计里像谁”；上下文化表示回答“当前位置在当前上下文里扮演什么角色”。不要用 input embedding 的最近邻，直接判断整个 LLM 是否理解多义词或推理关系。</div></div>
+  </section>
+
+  <section class="card" id="s2-2">
+    <h3>2.2 编程练习 1：实现 TokenEmbedding</h3>
+    <p>PyTorch 的 <code>nn.Embedding(V, d)</code> 本质是一个可训练查表操作。如果 embedding 矩阵是 <code>E ∈ R^{V x d}</code>，token ID <code>i</code> 的 one-hot 向量乘以 <code>E</code>，等价于直接取 <code>E[i]</code>。</p>
+    <div class="coding-exercise">
+      <h4>练习 1：TokenEmbedding Module</h4>
+      <div class="task">
+        <p><strong>任务：</strong>实现 <code>TokenEmbedding</code>，并写一个 <code>embedding_lookup_as_matmul</code>，用显式 one-hot 矩阵乘法复现 <code>embedding_weight[token_ids]</code>。</p>
+        <ul>
+          <li>输入 shape：<code>[batch, seq_len]</code>。</li>
+          <li>输出 shape：<code>[batch, seq_len, d_model]</code>。</li>
+          <li>内部使用 <code>nn.Embedding(vocab_size, d_model)</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class TokenEmbedding(nn.Module):
+    def __init__(self, vocab_size, d_model):
+        super().__init__()
+        self.embed = nn.Embedding(vocab_size, d_model)
+        self.d_model = d_model
+
+    def forward(self, x):
+        return self.embed(x) * math.sqrt(self.d_model)</div>
+      </div>
+    </div>
+    <p>本章练习采用乘以 <code>sqrt(d_model)</code> 的缩放约定，用来显式观察 embedding 数值尺度怎样进入后续层。真实模型会把初始化、LayerNorm、残差缩放和训练稳定性一起设计，不是所有 decoder-only 模型都必须这么写。</p>
+  </section>
+
+  <section class="card" id="s2-2a">
+    <h3>2.2A 例子：embedding lookup、缩放和 tied LM head</h3>
+    <p>设 vocabulary size 为 3，embedding dim 为 2：</p>
+    <div class="code-block" data-lang="text">E = [[1, 0],
+     [0, 2],
+     [3, 4]]
+
+token_ids = [[0, 2], [1, 0]]
+E[token_ids] = [[[1,0], [3,4]],
+                [[0,2], [1,0]]]</div>
+    <p>显式 one-hot 乘法完全等价：<code>one_hot(token_ids)</code> 的 shape 是 <code>[2,2,3]</code>，乘以 <code>E[3,2]</code> 后得到 <code>[2,2,2]</code>。实际模型不会构造巨大 one-hot，因为查表更省显存和带宽。</p>
+    <p>如果 input embedding 和 output LM head 共享权重，hidden state <code>h</code> 的 logits 就是 <code>h E^T</code>。这能减少大 vocabulary 下的参数量，也让输入 token 空间和输出分类空间共享同一组向量。</p>
+  </section>
+
+  <section class="card" id="s2-3">
+    <h3>2.3 置换等变性：为什么必须有位置编码</h3>
+    <p>Embedding 层只给每个 token 一个向量。没有位置编码时，<code>dog bite</code> 和 <code>bite dog</code> 用的是同一组 token 向量，只是顺序换了。Self-Attention 只看内容之间的相似度，本身不知道谁在前、谁在后。</p>
+    <p>更准确地说，Self-Attention 具有 permutation equivariance：输入 token 顺序被同样置换，输出也会同样置换。它不是完全不变，但它没有额外信号区分绝对位置或相对顺序。</p>
+    <ul>
+      <li>“I hit you”和“You hit me”包含同一批词，但语义完全不同。</li>
+      <li>第 1 个 token 和第 1000 个 token 如果没有位置信号，会缺少位置差异。</li>
+      <li>语序是句法核心信号，模型必须拿到它。</li>
+    </ul>
+    <p>解决方法是给 token representation 加入位置：可以加一个位置向量，也可以像 RoPE 一样在 attention 的 Q/K 上编码位置。</p>
+  </section>
+
+  <section class="card" id="s2-4">
+    <h3>2.4 Sinusoidal 位置编码：多尺度频率直觉</h3>
+    <p>原始 Transformer 使用固定的 Sinusoidal Positional Encoding。它用不同频率的 sin/cos 函数，为每个位置生成一个固定向量。</p>
+    <div class="code-block" data-lang="text">PE[pos, 2i]   = sin(pos / 10000^(2i/d))
+PE[pos, 2i+1] = cos(pos / 10000^(2i/d))</div>
+    <p>低维使用较高频率，变化快，适合区分相邻位置；高维使用较低频率，变化慢，适合承载更长距离的位置变化。这个设计类似 Fourier features：用多种频率的基函数表示位置。</p>
+    <p>当 <code>d_model=4</code> 时，维度 0/1 使用 <code>sin(pos)</code> 和 <code>cos(pos)</code>，维度 2/3 使用 <code>sin(pos/100)</code> 和 <code>cos(pos/100)</code>。位置 0 的偶数维为 0，奇数维为 1，这正是很多实现测试会检查的性质。</p>
+    <p>Sinusoidal 没有可训练参数，也可以对任意长度计算。不过“函数定义得出来”不等于模型一定能在训练长度之外稳定工作，长上下文外推还要看训练数据、attention 机制和评估证据。</p>
+  </section>
+
+  <section class="card" id="s2-5">
+    <h3>2.5 编程练习 2：实现 Sinusoidal Positional Encoding</h3>
+    <div class="coding-exercise">
+      <h4>练习 2：SinusoidalEncoding Module</h4>
+      <div class="task">
+        <ul>
+          <li>继承 <code>nn.Module</code>，内部没有可训练参数。</li>
+          <li>生成 <code>[max_len, d_model]</code> 的位置编码矩阵。</li>
+          <li>用 <code>register_buffer</code> 保存，使它进入 checkpoint，也能跟着模型移动到 GPU。</li>
+          <li><code>forward(x)</code> 返回 <code>x + pe[:, :seq_len, :]</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class SinusoidalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=8192):
+        super().__init__()
+        pe = torch.zeros(max_len, d_model)
+        pos = torch.arange(max_len, dtype=torch.float).unsqueeze(1)
+        i = torch.arange(0, d_model, 2).float()
+        div_term = torch.exp(i * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(pos * div_term)
+        pe[:, 1::2] = torch.cos(pos * div_term)
+        self.register_buffer("pe", pe.unsqueeze(0))
+
+    def forward(self, x):
+        return x + self.pe[:, :x.size(1), :]</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s2-6">
+    <h3>2.6 深入 RoPE：用旋转编码相对位置</h3>
+    <p>RoPE（Rotary Position Embedding）是 Llama、Mistral、DeepSeek 等模型常用的位置编码方式。它不把位置向量加到 embedding 上，而是在 attention 层对 Q 和 K 做旋转，让点积天然带上相对位置信息。</p>
+    <h4>问题设定</h4>
+    <p>设位置 <code>m</code> 的 query 是 <code>q_m</code>，位置 <code>n</code> 的 key 是 <code>k_n</code>。我们希望 attention score 依赖 <code>m-n</code>，也就是相对位置，而不是只看绝对位置。</p>
+    <h4>核心：旋转矩阵</h4>
+    <p>RoPE 把向量每两个维度看成一组二维平面，然后按位置给它旋转。位置越大，旋转角越大；不同维度组使用不同频率。</p>
+    <div class="code-block" data-lang="text">q'_m = R_m q_m
+k'_n = R_n k_n
+
+(q'_m)^T k'_n = q_m^T R_m^T R_n k_n = q_m^T R_{n-m} k_n</div>
+    <p>关键一步是 <code>R_m^T R_n = R_{n-m}</code>。旋转矩阵的转置等于反向旋转，所以先反转 <code>m</code> 再旋转 <code>n</code>，等价于旋转 <code>n-m</code>。因此 RoPE 的点积自然依赖相对位置。</p>
+    <h4>RoPE 的几个性质</h4>
+    <ul>
+      <li><strong>相对位置：</strong>点积里出现的是 <code>n-m</code>。</li>
+      <li><strong>范数保持：</strong>旋转矩阵是正交矩阵，不改变向量 L2 norm。</li>
+      <li><strong>只作用于 Q/K：</strong>RoPE 改变“谁 attend 谁”，不直接改变被读出的 V 内容。</li>
+      <li><strong>不等于无限外推：</strong>RoPE 给了相对位置归纳偏置，但长上下文稳定性仍需要训练和评估证据。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s2-7">
+    <h3>2.7 编程练习 3：实现 RoPE</h3>
+    <div class="coding-exercise">
+      <h4>练习 3：RoPE Module</h4>
+      <div class="task">
+        <ul>
+          <li>输入 Q/K shape：<code>[batch, n_heads, seq_len, d_head]</code>。</li>
+          <li>预先计算 cos/sin table，并能 broadcast 到 Q/K。</li>
+          <li>按二维 pair 做旋转：<code>[x1*cos - x2*sin, x1*sin + x2*cos]</code>。</li>
+          <li>返回 <code>q_rot, k_rot</code>，shape 不变。</li>
+        </ul>
+        <div class="code-block" data-lang="python">def apply_rope(x, cos, sin):
+    x1 = x[..., 0::2]
+    x2 = x[..., 1::2]
+    out = torch.empty_like(x)
+    out[..., 0::2] = x1 * cos - x2 * sin
+    out[..., 1::2] = x1 * sin + x2 * cos
+    return out</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s2-8">
+    <h3>2.8 验证：RoPE 的相对位置性质</h3>
+    <p>理论上，RoPE 旋转后的点积只依赖相对距离。实验上可以构造两组位置 <code>(m,n)</code> 和 <code>(m+k,n+k)</code>，它们的相对距离相同。把同一组 q/k 向量旋转到这两个位置后，点积应该近似相等。</p>
+    <div class="code-block" data-lang="python">score_1 = dot(rope(q, pos=m), rope(k, pos=n))
+score_2 = dot(rope(q, pos=m+k), rope(k, pos=n+k))
+assert torch.allclose(score_1, score_2, atol=1e-5)</div>
+    <p>这个实验检查的是位置机制的数学性质，不是模型长上下文能力。长上下文能力还需要真实任务、训练长度、cache 实现和服务端位置 ID 一起验证。</p>
+  </section>
+
+  <section class="card" id="s2-9">
+    <h3>2.9 编程练习 4：验证 RoPE 相对位置性质</h3>
+    <p>这一练习要求你写一个小测试：固定 q/k 内容，选择不同绝对位置但相同相对距离，比较旋转后的 dot product。通过测试后，你应该能解释为什么关键等式是 <code>R_m^T R_n = R_{n-m}</code>。</p>
+  </section>
+
+  <section class="card" id="s2-9a">
+    <h3>2.9A 位置编码工程选择：训练长度、外推和服务成本</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>机制</th><th>位置进入方式</th><th>优点</th><th>风险</th></tr>
+        <tr><td>Learned absolute PE</td><td>查表加到 embedding</td><td>简单，训练内长度效果稳定</td><td>长度外推差，max length 固定</td></tr>
+        <tr><td>Sinusoidal</td><td>固定函数加到 embedding</td><td>无参数，可计算任意位置</td><td>不保证长上下文任务稳定</td></tr>
+        <tr><td>RoPE</td><td>旋转 Q/K</td><td>点积天然含相对位置，主流 LLM 常用</td><td>长上下文 scaling 需要额外验证</td></tr>
+        <tr><td>ALiBi</td><td>给 attention score 加距离 bias</td><td>外推直觉强，简单</td><td>表达能力和训练设置有关</td></tr>
+      </table>
+    </div>
+    <p>服务端还要处理 position id 和 KV cache：prefill 阶段写入每个 token 的 K/V，decode 阶段新 token 必须使用正确的下一个 position。如果 position id 和 cache 长度错位，模型会读到“看起来存在但位置语义不对”的缓存。</p>
+  </section>
+
+  <section class="card" id="s2-9b">
+    <h3>2.9B RoPE Scaling 与长上下文发布</h3>
+    <p>RoPE scaling 不是把配置里的最大长度改大就完事。不同方法会改变位置到相位的映射方式，比如 NTK-aware scaling、YARN、LongRoPE 等。它们要和 continued training 数据、评估集、服务引擎和发布报告一起绑定。</p>
+    <ul>
+      <li><strong>配置要清楚：</strong>base、scaling factor、max position、训练长度和推理长度不能只写一个“支持 128K”。</li>
+      <li><strong>数据要匹配：</strong>如果 continued training 没有长上下文样本，配置外推很难单独支撑能力声明。</li>
+      <li><strong>评估要分层：</strong>区分短上下文保持、长距离检索、多跳推理、长文摘要、代码仓库级任务。</li>
+      <li><strong>服务要验证：</strong>position id、prefix cache、sliding window、chunked prefill 都会影响结果。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s2-10">
+    <h3>2.10 本章小结</h3>
+    <ul>
+      <li>Embedding 是用 token ID 查可训练向量，不需要显式构造 one-hot。</li>
+      <li>word2vec/GloVe 说明了“上下文统计可以塑造语义空间”。</li>
+      <li>LLM 的 input embedding 只是 layer-0 表示，真正语义来自上下文化 hidden state。</li>
+      <li>Self-Attention 本身没有顺序信号，位置编码是必需的。</li>
+      <li>Sinusoidal 用多尺度 sin/cos 函数表示位置；RoPE 用旋转 Q/K 让点积依赖相对位置。</li>
+      <li>长上下文能力不能只靠改配置声明，必须绑定训练、评估和服务实现证据。</li>
+    </ul>
+  </section>
+
+  <section class="card" id="s2-11">
+    <h3>2.11 In-Context Learning 入门：为什么 prompt 会影响生成</h3>
+    <p>Decoder-only LM 看到的是 token 序列，输出的是下一个 token 的条件分布。prompt 的作用，是改变当前上下文里的 token 序列，从而改变模型在每个位置的 hidden state 和 logits。</p>
+    <h4>Zero-shot、Few-shot 和 In-Context Learning</h4>
+    <p>Zero-shot 是直接给任务描述；few-shot 是在 prompt 里放几个示例；in-context learning 是模型在不更新参数的情况下，根据上下文里的模式调整输出。这里没有发生梯度更新，变化来自上下文计算。</p>
+    <h4>长上下文中的位置问题</h4>
+    <p>示例放在哪里、目标问题离示例多远、位置编码是否稳定、KV cache 是否一致，都会影响生成质量。这也是为什么本章的位置表示会一路影响到 Ch08 生成和 Ch10 推理服务。</p>
+  </section>
+
+  <section class="card" id="practice">
+    <h3>概念练习</h3>
+    <ol>
+      <li><code>nn.Embedding(V, d)</code> 创建的 embedding matrix shape 是什么？输入 <code>[B,T]</code> 后输出 shape 是什么？</li>
+      <li>没有位置编码时，为什么 Transformer 难以区分 “I hit you” 和 “you hit me”？</li>
+      <li>RoPE 和 Sinusoidal encoding 的核心区别是什么？</li>
+      <li>RoPE 旋转后，为什么向量 <code>q</code> 的 L2 norm 不变？</li>
+      <li>为什么不能只看 input embedding 最近邻，就判断 LLM 是否理解多义词？</li>
+      <li>证明 RoPE 点积只依赖相对位置时，最关键的一步是什么？</li>
+    </ol>
+  </section>
+</article>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+(function(){
+  function safeGet(key, fallback){
+    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+  }
+  function updateThemeLabel(theme){
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
+  }
+  window.LLM_ZH = {
+    toggleTheme: function(){
+      var html = document.documentElement;
+      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      safeSet('llm-theme', next);
+      updateThemeLabel(next);
+    }
+  };
+  var theme = safeGet('llm-theme', 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeLabel(theme);
+  window.addEventListener('scroll', function(){
+    var btn = document.getElementById('back-to-top');
+    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

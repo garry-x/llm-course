@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>第 6 章 组装完整 GPT 模型 - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body data-ch="6">
+
+<button class="menu-toggle" aria-label="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1><a href="../index.html">LLM Deep Learning</a></h1>
+    <p>中文版 · 从代码构建大语言模型</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
+    <a href="ch01.html"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
+    <a href="ch02.html"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
+    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
+    <a href="ch04.html"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
+    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
+    <a href="ch06.html" class="active" aria-current="page"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
+    <a href="ch07.html"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
+    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
+    <a href="ch09.html"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
+    <a href="ch10.html"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
+    <a href="ch11.html"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
+    <a href="../../chapters/ch06.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
+      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+<article class="chapter">
+  <h2>第 6 章 组装完整 GPT 模型</h2>
+  <p class="subtitle">从零搭 GPT-2 124M，并理解 DeepSeekMoE 的稀疏激活</p>
+  <div class="reading-time">预计阅读：110 分钟 · 12 小节 · 5 个编程练习 · 5 个概念题</div>
+
+  <section class="card">
+    <h3>怎么学这一章：先跑通完整 forward</h3>
+    <div class="info-box tip"><span class="icon">💡</span><div><strong>第一遍先别陷进历史细节：</strong>本章最重要的是把前面几章的组件串成 <code>token ids -> logits</code>。DeepSeekMoE 是容量扩展案例，建议先完成 GPTModel 主线，再回头看 router 和 load balancing。</div></div>
+    <ul>
+      <li><strong>前置要求：</strong>token embedding、position embedding、causal self-attention、GPT-2 style block、LM head。</li>
+      <li><strong>学习目标：</strong>把 tokenizer、embedding、block、LM head 串成完整 GPT forward，并能分析参数量、初始化、weight tying、label shift、checkpoint 加载和 MoE routing。</li>
+      <li><strong>本章产出：</strong>一个能接收 token sequence 并输出 next-token logits 的 <code>GPTModel</code>。</li>
+      <li><strong>完成标准：</strong>你能解释为什么语言模型最终输出是 <code>logits.shape == [batch, seq, vocab_size]</code>。</li>
+      <li><strong>练习产出：</strong>GPTModel forward test、参数量明细、weight tying 验证、logits sanity check、MoE router。配套作业在 <a href="../../assignments/ch06_gpt/">assignments/ch06_gpt/</a>。</li>
+    </ul>
+    <div class="dependency-note"><strong>前置技能：</strong>token id、embedding、attention block、LM head、label shift、<code>state_dict</code>、dtype/device/contiguous、模块注册。<br><strong>本章会内化：</strong><code>[B,T]</code> 到 <code>[B,T,D]</code> 到 <code>[B,T,V]</code>，再到 next-token loss、causal test、checkpoint loading 和 MoE routing ledger。<br><strong>验证信号：</strong>遇到 load failure、shape mismatch 或未来信息泄漏时，你能定位是哪一层契约被破坏。</div>
+    <p class="system-role"><strong>本章位置：</strong>这是课程从组件走向完整模型的整合点。只有把 token、position、block、LM head、MoE 和 checkpoint shape 串起来，Ch07 的训练 loss、Ch08 的生成 logits、Ch10 的发布包才会指向同一个模型对象。</p>
+  </section>
+
+  <section class="card" id="s6-1">
+    <h3>6.1 GPT-2 架构总览：从 token id 到 logits</h3>
+    <p>前 5 章把零件都做出来了，现在把它们组成 GPT-2 small (124M)。完整数据流可以分三段：</p>
+    <ol>
+      <li><strong>Embedding 阶段：</strong>Token Embedding + Position Embedding，把离散 token id 变成连续向量。</li>
+      <li><strong>计算阶段：</strong>堆叠 12 层 Transformer Block，逐层变换表示。</li>
+      <li><strong>输出阶段：</strong>Final LayerNorm + LM Head，把 hidden state 映射到 vocabulary logits。</li>
+    </ol>
+    <div class="svg-diagram" style="max-width:900px">
+      <img src="../../images/gpt-params.svg?v=en-20260613c" alt="GPT-2 124M 参数拆解" style="width:100%">
+    </div>
+    <p class="diagram-caption">图 6-1：GPT-2 small (124M) 的参数拆解。Embedding 在小模型里占比很高。</p>
+    <h4>GPT-2 和现代 decoder-only 模型的差异</h4>
+    <ul>
+      <li><strong>位置编码：</strong>GPT-2 用可学习 absolute position embedding，长度表是 <code>1024 x 768</code>；Llama/DeepSeek 常用 RoPE。</li>
+      <li><strong>Norm：</strong>GPT-2 用带 bias 的 LayerNorm；很多现代模型用 RMSNorm。</li>
+      <li><strong>FFN：</strong>GPT-2 用 GELU MLP；很多现代模型用 SwiGLU。</li>
+      <li><strong>Weight tying：</strong>GPT-2 共享 token embedding 和 LM head 权重。</li>
+    </ul>
+    <p>所以如果目标是复现 GPT-2 124M 参数量，就不能直接拿 Ch05 的 RMSNorm/SwiGLU/Llama 风格 Block 替换。</p>
+  </section>
+
+  <section class="card" id="s6-2">
+    <h3>6.2 编程练习 1：定义 GPTConfig</h3>
+    <p>先把超参数集中到配置类里。这能让实验、复现、checkpoint 加载和模型尺寸切换更清楚。</p>
+    <div class="coding-exercise">
+      <h4>练习 1：GPTConfig Data Class</h4>
+      <div class="task">
+        <ul>
+          <li><code>vocab_size=50257</code>：GPT-2 BPE 词表大小。</li>
+          <li><code>max_seq_len=1024</code>：最大上下文长度。</li>
+          <li><code>d_model=768</code>、<code>n_heads=12</code>、<code>n_layers=12</code>。</li>
+          <li><code>d_ff=None</code>：默认 <code>4*d_model</code>。</li>
+          <li><code>dropout=0.1</code>、<code>bias=True</code>、<code>tie_weights=True</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class GPTConfig:
+    vocab_size: int = 50257
+    max_seq_len: int = 1024
+    d_model: int = 768
+    n_heads: int = 12
+    n_layers: int = 12
+    d_ff: Optional[int] = None
+    dropout: float = 0.1
+    attn_dropout: float = 0.1
+    bias: bool = True
+    tie_weights: bool = True</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="s6-3">
+    <h3>6.3 编程练习 2：组装完整 GPTModel</h3>
+    <p>现在用 <code>GPTConfig</code> 和 GPT-2 style 组件组装完整模型。结构是：Embedding -> Blocks x 12 -> Final Norm -> LM Head。</p>
+    <div class="coding-exercise">
+      <h4>练习 2：GPTModel Assembly</h4>
+      <div class="task">
+        <ul>
+          <li><code>token_embedding = nn.Embedding(vocab_size, d_model)</code>。</li>
+          <li><code>pos_embedding = nn.Embedding(max_seq_len, d_model)</code>。</li>
+          <li><code>blocks = nn.ModuleList([...])</code>，包含 <code>n_layers</code> 个 <code>GPT2Block</code>。</li>
+          <li><code>norm = nn.LayerNorm(d_model)</code>。</li>
+          <li><code>lm_head = nn.Linear(d_model, vocab_size, bias=False)</code>。</li>
+          <li>如果 <code>tie_weights=True</code>，令 <code>lm_head.weight = token_embedding.weight</code>。</li>
+          <li>Linear 和 Embedding 用 <code>N(0, 0.02)</code> 初始化，bias 初始化为 0。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class GPTModel(nn.Module):
+    def __init__(self, config: GPTConfig):
+        super().__init__()
+        self.config = config
+        self.token_embedding = nn.Embedding(config.vocab_size, config.d_model)
+        self.pos_embedding = nn.Embedding(config.max_seq_len, config.d_model)
+        self.dropout = nn.Dropout(config.dropout)
+        self.blocks = nn.ModuleList([GPT2Block(config) for _ in range(config.n_layers)])
+        self.norm = nn.LayerNorm(config.d_model, bias=config.bias)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        self.apply(self._init_weights)
+        if config.tie_weights:
+            self.lm_head.weight = self.token_embedding.weight
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
+    def forward(self, input_ids, mask=None):
+        B, T = input_ids.shape
+        assert T <= self.config.max_seq_len
+        pos_ids = torch.arange(T, device=input_ids.device).unsqueeze(0)
+        x = self.token_embedding(input_ids) + self.pos_embedding(pos_ids)
+        x = self.dropout(x)
+        for block in self.blocks:
+            x = block(x, mask=mask)
+        x = self.norm(x)
+        return self.lm_head(x)  # [B,T,V]</div>
+      </div>
+    </div>
+    <p>最小验收：随机输入 <code>[2,64]</code> 后，输出必须是 <code>[2,64,50257]</code>，并且一个标量 loss 能反向传播到所有参数。</p>
+  </section>
+
+  <section class="card" id="s6-3a">
+    <h3>6.3A 从 logits 到语言模型目标：为什么输出是 [batch, seq, vocab]</h3>
+    <p>GPTModel 输出 logits 还不是训练目标。自回归语言模型在位置 <code>t</code> 用当前 hidden state 预测下一个 token <code>x_{t+1}</code>。也就是说，<code>logits[:, t, :]</code> 预测的是下一位，不是当前位置 token。</p>
+    <div class="code-block" data-lang="python"># tokens: [BOS, The, cat, sat, EOS]
+inputs = tokens[:, :-1]   # [BOS, The, cat, sat]
+labels = tokens[:, 1:]    # [The, cat, sat, EOS]
+logits = model(inputs)
+loss = F.cross_entropy(logits.reshape(-1, vocab), labels.reshape(-1))</div>
+    <p>如果直接让 <code>logits[:, t, :]</code> 预测 <code>input_ids[:, t]</code>，训练目标会退化成“复读当前 token”，不是 causal LM。</p>
+    <h4>Teacher forcing 和并行训练</h4>
+    <p>训练时不会让模型一步步生成再喂回去，而是用真实前缀并行预测所有 next tokens，这叫 teacher forcing。推理时不同，只能使用已经生成出来的 token。</p>
+    <h4>softmax 只应该放在 loss 里</h4>
+    <p><code>F.cross_entropy</code> 内部已经稳定地做了 log-softmax 和 NLL。模型 forward 里不要先 softmax，否则数值稳定性和梯度都会变差。</p>
+    <h4>未来信息泄漏检查</h4>
+    <p>固定前缀，只改未来 token，前缀位置的 logits 不应该变化：</p>
+    <div class="code-block" data-lang="python">a = torch.tensor([[10, 20, 30, 40]])
+b = torch.tensor([[10, 20, 99, 88]])
+assert torch.allclose(model(a)[:, :2], model(b)[:, :2], atol=1e-5)</div>
+  </section>
+
+  <section class="card" id="s6-3b">
+    <h3>6.3B 手算 label shift 和 loss 分母</h3>
+    <p>假设一个 batch 有两个样本，padding 后长度都是 5。<code>PAD</code> 对应的 label 设为 <code>-100</code>，传给 <code>F.cross_entropy(..., ignore_index=-100)</code> 跳过。</p>
+    <div class="code-block" data-lang="text">sample 1 input_ids: [BOS, I,   like, NLP, EOS]
+sample 2 input_ids: [BOS, GPT, EOS,  PAD, PAD]
+
+logits used: positions 0..3
+sample 1 labels: [I,   like, NLP, EOS]
+sample 2 labels: [GPT, EOS,  -100, -100]</div>
+    <p>这个 batch 的平均 loss 分母是 6 个有效预测位置，不是 <code>2*4=8</code>，也不是原始长度 <code>2*5=10</code>。最后一个输入位置没有“下一个 token”标签，padding 位置也不是有效语言建模目标。</p>
+  </section>
+
+  <section class="card" id="s6-4">
+    <h3>6.4 Weight Tying：哪些模型用，为什么用</h3>
+    <p>Weight tying 让输入侧 token embedding 和输出侧 LM Head 共享同一个矩阵。输入时，第 <code>i</code> 行是 token <code>i</code> 的向量；输出时，hidden state 和每个 token row 做点积得到 vocabulary logits。</p>
+    <div class="code-block" data-lang="text">W_lm_head = W_token_embedding  # [vocab_size, d_model]</div>
+    <h4>参数量影响</h4>
+    <p>GPT-2 small 的词表是 50257，<code>d_model=768</code>，embedding 参数量是 <code>50257 * 768 = 38,597,376</code>，约占 124M 的 31%。共享权重后，这 38.6M 只算一次。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>模型</th><th>是否常用 tying</th><th>原因</th></tr>
+        <tr><td>GPT-2 small</td><td>是</td><td>embedding 占比高，节省明显</td></tr>
+        <tr><td>GPT-3 / Llama / DeepSeek 大模型</td><td>常见为否</td><td>embedding 占总参数比例变小，不共享能让输入表示和输出分类器分开学习</td></tr>
+      </table>
+    </div>
+    <h4>反向传播影响</h4>
+    <p>共享权重时，embedding 矩阵有两条梯度来源：输入 lookup 路径，以及输出 softmax 分类路径。它不仅是“省参数”，也是一个几何约束：输入 token 空间和输出 token classifier 共享同一组向量。</p>
+  </section>
+
+  <section class="card" id="s6-4a">
+    <h3>6.4A 例子：tied LM Head 和 next-token loss 怎么接上</h3>
+    <p>设词表大小 <code>|V|=4</code>，hidden 维度 <code>d=2</code>，embedding 矩阵 <code>E: [4,2]</code>。Transformer 输出 hidden states <code>H: [3,2]</code>，则 tied LM Head 的 logits 是：</p>
+    <div class="code-block" data-lang="text">Z = H @ E.T  # [3,4]</div>
+    <p>输入序列 <code>[0,1,2]</code> 只有两个 next-token 监督项：<code>Z[0]</code> 预测 1，<code>Z[1]</code> 预测 2。<code>Z[2]</code> 在训练样本里没有下一位标签，但推理时可以用来预测下一个 token。</p>
+  </section>
+
+  <section class="card" id="s6-5">
+    <h3>6.5 编程练习 3：逐层核对 124M 参数量</h3>
+    <p>参数量不是背出来的，是架构 ledger 算出来的。GPT-2 small 默认配置是 <code>V=50257, T_max=1024, d=768, L=12, d_ff=3072</code>。</p>
+    <div class="coding-exercise">
+      <h4>练习 3：Parameter Counter</h4>
+      <div class="task">
+        <ul>
+          <li>遍历 <code>model.named_parameters()</code>。</li>
+          <li>按 Token Embedding、Position Embedding、每层 Attention、每层 MLP、Final Norm 分组打印。</li>
+          <li>验证总量为 <code>124,439,808</code>。</li>
+          <li>确认 embedding 约占 <code>38.6M / 124.4M = 31%</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">def count_parameters(model):
+    total = 0
+    for name, param in model.named_parameters():
+        n = param.numel()
+        total += n
+        print(f"{name:<40} {n:>12,}")
+    print(f"Total: {total:,}")
+    assert total == 124_439_808
+    return total</div>
+      </div>
+    </div>
+    <p>如果总数不对，优先检查：LM head 是否真的 tied、GPT-2 Block 是否用了 LayerNorm/GELU/bias、position embedding 是否是 <code>1024 x 768</code>。</p>
+  </section>
+
+  <section class="card" id="s6-6">
+    <h3>6.6 预训练前完整性检查：Forward Pass Test</h3>
+    <p>训练前先确认 forward 链路本身可靠：</p>
+    <ul>
+      <li><strong>shape：</strong><code>[B,T]</code> 到 <code>[B,T,V]</code> 没断。</li>
+      <li><strong>数值：</strong>随机初始化下 logits 没有 NaN/Inf，均值和标准差在合理范围。</li>
+      <li><strong>梯度：</strong>从标量 loss 能反向传播到所有参数。</li>
+      <li><strong>共享权重：</strong><code>lm_head.weight is token_embedding.weight</code> 为 True。</li>
+    </ul>
+    <p>GPT-2 使用 <code>std=0.02</code> 初始化不是随便选的。初始化太大时，残差流方差会在 12 层里不断累积，低精度训练更容易溢出。建议把 <code>test_forward_pass()</code> 放进最小 CI，每次改模型结构后先跑它。</p>
+  </section>
+
+  <section class="card" id="s6-6a">
+    <h3>6.6A 工程视角：完整 GPT 实现要同时满足什么</h3>
+    <h4>1. Tensor contract</h4>
+    <div class="code-block" data-lang="text">input_ids:       [B,T]
+token + pos emb: [B,T,d_model]
+blocks output:   [B,T,d_model]
+logits:          [B,T,vocab_size]</div>
+    <p>训练 loss 的对齐是：</p>
+    <div class="code-block" data-lang="python">shift_logits = logits[:, :-1, :]
+shift_labels = input_ids[:, 1:]
+loss = F.cross_entropy(
+    shift_logits.reshape(-1, vocab_size),
+    shift_labels.reshape(-1),
+    ignore_index=-100,
+)</div>
+    <h4>2. Parameter ledger</h4>
+    <div class="code-block" data-lang="text">token embedding:     V * d
+position embedding:  T_max * d
+per block attention: d * 3d + 3d bias + d * d + d bias
+per block MLP:       d * 4d + 4d bias + 4d * d + d bias
+per block LayerNorm: 4d
+final LayerNorm:     2d
+LM head:             0 if tied, V * d if untied</div>
+    <h4>3. Causal mask</h4>
+    <p>训练时 teacher forcing 让整段序列同时进入模型，但每个位置仍然只能 attend 到过去和自己。mask 方向错时，loss 可能下降得很漂亮，但推理时质量会崩。</p>
+    <h4>4. GPT-2 公式不要和 Llama 公式混用</h4>
+    <p>GPT-2 是 learned absolute position + LayerNorm + GELU + bias + <code>N(0,0.02)</code>。Llama/DeepSeek 常见是 RoPE + RMSNorm + SwiGLU + bias-free。两者都是 decoder-only，但参数量公式、权重加载和稳定性细节不同。</p>
+  </section>
+
+  <section class="card" id="s6-6b">
+    <h3>6.6B Checkpoint 兼容性：state_dict 不是一袋 tensor</h3>
+    <p>完成 <code>GPTModel.forward()</code> 后，下一步不是简单保存 <code>model.state_dict()</code>。checkpoint 是一个架构契约，必须把配置、参数名、tensor shape、tokenizer、数值精度和 forward 语义绑在一起。</p>
+    <h4>可交付包至少包含什么</h4>
+    <div class="code-block" data-lang="text">config.json
+model.safetensors
+tokenizer.json / vocab.json / merges.txt
+generation_config.json
+training_args.json  # 可选，用于继续训练或审计</div>
+    <h4>常见对齐问题</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>维度</th><th>常见问题</th><th>处理方式</th></tr>
+        <tr><td>参数命名</td><td>自定义 <code>blocks.0...</code> 和 HF <code>transformer.h.0...</code> 不同</td><td>写显式 mapping，不靠模糊替换</td></tr>
+        <tr><td>tensor 方向</td><td>GPT-2 HF <code>Conv1D</code> 和 <code>nn.Linear</code> 权重方向相反</td><td>逐项确认是否需要 <code>.t()</code></td></tr>
+        <tr><td>fused QKV</td><td>一边融合，一边拆开</td><td>按实现选择 split 或 concat，保持 Q/K/V 顺序</td></tr>
+        <tr><td>shared weights</td><td><code>wte.weight</code> 和 <code>lm_head.weight</code> 可能是一份或两份</td><td>加载后重新绑定对象 identity</td></tr>
+        <tr><td>mode</td><td>dropout 没关导致 logits 不一致</td><td>比较前使用 <code>eval()</code> 和 <code>torch.no_grad()</code></td></tr>
+      </table>
+    </div>
+    <p>做 logit parity 时，从 tokenizer、config、eval mode、missing/unexpected keys 开始，再逐层比较 embedding、block、final norm、lm head，找到第一个误差变大的位置。</p>
+  </section>
+
+  <section class="card" id="s6-6c">
+    <h3>6.6C 现代 Decoder 架构 ledger：怎样读模型报告</h3>
+    <p>GPT-2 是清晰的教学基线。现代工业模型报告通常还会混合 dense/MoE、RoPE/GQA/MLA、total vs active params、多模态 token、thinking budget、量化和导出约束。不要只看“参数更多”。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>报告里的说法</th><th>工程含义</th><th>比较前要问什么</th></tr>
+        <tr><td>total parameters</td><td>checkpoint 和权重驻留成本</td><td>expert 是常驻、分片还是 offload？</td></tr>
+        <tr><td>active parameters</td><td>每个 token 实际计算路径</td><td>是否包含 shared experts、attention、embedding、output head？</td></tr>
+        <tr><td>context length</td><td>position 机制和 KV budget 的上限</td><td>是训练得到、扩展得到，还是只外推？</td></tr>
+        <tr><td>thinking budget</td><td>推理时允许额外 reasoning tokens</td><td>质量、延迟、成本和停止条件怎么一起报？</td></tr>
+      </table>
+    </div>
+    <p>成熟的 release ledger 至少要给出：config、tokenizer、参数账、训练目标、serving 语义、支持的 decoding modes、context 策略、量化格式、评测边界和回滚方式。</p>
+  </section>
+
+  <section class="card" id="s6-7">
+    <h3>6.7 编程练习 4：加载 HuggingFace GPT-2 权重并验证一致性</h3>
+    <p>最严格的验证方式，是把官方 GPT-2 small 权重加载到自己的实现里，用同一批 <code>input_ids</code> 比较 logits。</p>
+    <div class="coding-exercise">
+      <h4>练习 4：HuggingFace Weight Loading and Verification</h4>
+      <div class="task">
+        <ul>
+          <li>用 <code>transformers.GPT2LMHeadModel.from_pretrained("gpt2")</code> 加载官方权重。</li>
+          <li>建立命名映射：例如 <code>transformer.h.0.attn.c_attn.weight</code> 到 <code>blocks.0.attn.c_attn.weight</code>。</li>
+          <li>HF GPT-2 的 <code>Conv1D</code> 权重常需要转置后拷贝到 <code>nn.Linear</code>。</li>
+          <li>你的实现必须使用 GPT-2 的 LayerNorm + GELU + bias，而不是 RMSNorm/SwiGLU。</li>
+          <li>同一输入下 logits 最大差异应小于 <code>1e-4</code>。</li>
+        </ul>
+        <div class="code-block" data-lang="python">def copy_linear_from_hf(linear, hf_weight, hf_bias=None, transpose=True):
+    src = hf_weight.t() if transpose else hf_weight
+    assert linear.weight.shape == src.shape
+    linear.weight.data.copy_(src)
+    if hf_bias is not None:
+        assert linear.bias.shape == hf_bias.shape
+        linear.bias.data.copy_(hf_bias)</div>
+      </div>
+    </div>
+    <p>转置不能只靠名字判断，要看两边的 shape 和 forward 公式。误差如果从 attention 后才变大，优先检查 QKV 顺序、mask 方向、head reshape 和 projection transpose。</p>
+  </section>
+
+  <section class="card" id="s6-8">
+    <h3>6.8 MoE 架构：把容量和每 token 计算解耦</h3>
+    <p>Mixture of Experts (MoE) 把每层 FFN 换成多个 expert，并且每个 token 只激活其中少数几个。这叫 sparse activation：模型可以有很大的总参数量，但单次 forward 的计算主要由被激活的专家决定。</p>
+    <h4>DeepSeekMoE 风格的核心结构</h4>
+    <ul>
+      <li><strong>Routed Experts：</strong>router 为每个 token 选择 top-k experts。</li>
+      <li><strong>Shared Experts：</strong>所有 token 都经过少量 shared experts，保留通用变换路径。</li>
+      <li><strong>Fine-grained Experts：</strong>单个 expert 往往比 dense FFN 小，但 expert 数更多。</li>
+      <li><strong>核心账本：</strong>总参数决定容量上限，激活 expert 数决定每 token 计算，load balancing 决定吞吐稳定性。</li>
+    </ul>
+    <div class="worked-example">
+      <h4>例子：MoE 参数预算和动态 bias</h4>
+      <p>设 <code>d_model=16</code>、<code>d_ff=32</code>、8 个 routed experts、<code>top_k=2</code>、1 个 shared expert。每个 bias-free SwiGLU expert 参数量是 <code>3 * 16 * 32 = 1536</code>。</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>项目</th><th>计算</th><th>结果</th></tr>
+          <tr><td>总 expert 参数</td><td><code>(8+1)*1536</code></td><td>13,824</td></tr>
+          <tr><td>router 参数</td><td><code>16*8</code></td><td>128</td></tr>
+          <tr><td>每 token 激活 expert 参数</td><td><code>(2+1)*1536</code></td><td>4,608</td></tr>
+          <tr><td>容量/计算比</td><td><code>13,824/4,608</code></td><td>3.0</td></tr>
+        </table>
+      </div>
+      <p>如果 4 个 experts 的 token counts 是 <code>[80,10,5,5]</code>，理想负载是 <code>0.25</code>。动态 bias 更新 <code>bias += lr * (target_load - load_ratio)</code> 会降低过载 expert 的 bias，提高欠载 expert 的 bias。</p>
+    </div>
+    <h4>Top-k 权重要重新归一化</h4>
+    <p>router softmax 后只保留 top-k experts，被丢掉的概率质量不再参与输出，所以保留的权重必须重新归一化：</p>
+    <div class="code-block" data-lang="text">alpha_i = p_i / sum_{j in TopK(p)} p_j
+y = sum_i alpha_i * E_i(x)</div>
+    <p>否则不同 token 的 expert 输出会因为残余概率质量不同而改变 residual stream 尺度。</p>
+    <h4>容量、dispatch 和负载倾斜</h4>
+    <p>MoE 还要把 token dispatch 到 experts。若某个 expert 收到太多 token，就会成为整层延迟瓶颈；如果实现选择丢弃超容量 token，还会直接影响质量。所以 MoE 的“每 token 激活参数少”不自动等于训练或推理更快。</p>
+  </section>
+
+  <section class="card" id="s6-9">
+    <h3>6.9 编程练习 5：实现 DeepSeekMoE Router</h3>
+    <div class="coding-exercise">
+      <h4>练习 5：Top-K Gating + Aux-Loss-Free Dynamic Bias</h4>
+      <div class="task">
+        <ul>
+          <li><code>moe_parameter_budget</code>：用 <code>3*d_model*expert_hidden</code> 计算 bias-free SwiGLU expert 参数量。</li>
+          <li><code>MoERouter</code>：用 <code>nn.Linear(d_model, n_experts)</code> 得到 logits，再 softmax + topk。</li>
+          <li>返回 <code>(top_weights, top_indices)</code>，shape 是 <code>[B,T,top_k]</code>。</li>
+          <li>top-k 权重要重新归一化，保证最后一维和为 1。</li>
+          <li><code>AuxLossFreeBalancer</code>：维护每个 expert 的动态 bias，过载降 bias，欠载升 bias。</li>
+        </ul>
+        <div class="code-block" data-lang="python">class MoERouter(nn.Module):
+    def __init__(self, d_model, n_experts=256, top_k=8):
+        super().__init__()
+        self.n_experts = n_experts
+        self.top_k = top_k
+        self.gate = nn.Linear(d_model, n_experts, bias=False)
+
+    def forward(self, x, bias=None):
+        logits = self.gate(x)
+        if bias is not None:
+            logits = logits + bias.view(1, 1, -1)
+        probs = F.softmax(logits, dim=-1)
+        top_weights, top_indices = torch.topk(probs, self.top_k, dim=-1)
+        top_weights = top_weights / top_weights.sum(dim=-1, keepdim=True)
+        return top_weights, top_indices
+
+class AuxLossFreeBalancer:
+    def __init__(self, n_experts, bias_update_rate=0.01, bias_clip=0.1):
+        self.n_experts = n_experts
+        self.bias_update_rate = bias_update_rate
+        self.bias_clip = bias_clip
+        self.bias = torch.zeros(n_experts)
+
+    def update(self, token_counts):
+        total = token_counts.sum().float()
+        if total == 0:
+            return
+        load_ratio = token_counts / total
+        target = 1.0 / self.n_experts
+        self.bias += self.bias_update_rate * (target - load_ratio)
+        self.bias.clamp_(-self.bias_clip, self.bias_clip)</div>
+      </div>
+    </div>
+    <p>Dynamic bias 不走反向传播，是在 forward 里直接调整 routing logits。它减少了 auxiliary loss 权重的调参负担，但不同模型和数据上仍要实测负载、质量和吞吐。</p>
+  </section>
+
+  <section class="card" id="s6-10">
+    <h3>6.10 本章小结</h3>
+    <ul>
+      <li>你把 token embedding、position embedding、12 层 GPT-2 Block、final norm 和 LM head 组成了完整 <code>GPTModel</code>。</li>
+      <li>完整 GPT 的 forward contract 是 <code>[B,T]</code> -> <code>[B,T,D]</code> -> <code>[B,T,V]</code>。</li>
+      <li><code>logits[:, t, :]</code> 预测下一位 token，训练时必须做 label shift，并用 <code>ignore_index</code> 跳过 padding。</li>
+      <li>GPT-2 的 weight tying 在小模型里节省大量参数；在大模型里是否共享要看词表、hidden size、总参数和模型族设计。</li>
+      <li>GPT-2 small 的 <code>124,439,808</code> 参数来自明确的 architecture ledger，不是一个孤立数字。</li>
+      <li>HF 权重加载要处理命名映射、tensor 转置、fused QKV、shared weights、eval mode 和 tokenizer 一致性。</li>
+      <li>MoE 用更多总参数换容量，用 top-k sparse activation 控制每 token 计算，但带来 router、负载均衡、dispatch 和通信成本。</li>
+      <li>DeepSeekMoE 风格的 dynamic bias 通过调节 router logits 平衡 expert 负载，不通过辅助损失反向传播。</li>
+    </ul>
+    <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
+      <a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf" target="_blank">GPT-2</a> ·
+      <a href="https://github.com/karpathy/nanoGPT" target="_blank">nanoGPT</a> ·
+      <a href="https://arxiv.org/abs/1708.02182" target="_blank">Weight Tying</a> ·
+      <a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3 Technical Report</a>
+    </div></div>
+  </section>
+
+  <section class="card" id="practice">
+    <h3>概念练习</h3>
+    <ol>
+      <li>GPT-2 使用哪种位置编码？它和 RoPE 的工程差异是什么？</li>
+      <li>为什么 <code>logits[:, t, :]</code> 应该预测 <code>input_ids[:, t+1]</code>，而不是当前位置 token？</li>
+      <li>GPT-2 small 里单个参数量最大的组件是什么？为什么小模型里 weight tying 很有价值？</li>
+      <li>加载 HuggingFace GPT-2 权重时，为什么 <code>Conv1D</code> 到 <code>nn.Linear</code> 常要转置？</li>
+      <li>一个 MoE 层有 256 个 routed experts、<code>top_k=8</code>、1 个 shared expert，每个 token 激活几条 expert 路径？</li>
+      <li>Aux-Loss-Free dynamic bias 怎样调整过载和欠载 experts？它为什么不能替代实际负载监控？</li>
+    </ol>
+  </section>
+</article>
+</main>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+(function(){
+  function safeGet(key, fallback){
+    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+  }
+  function updateThemeLabel(theme){
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
+  }
+  window.LLM_ZH = {
+    toggleTheme: function(){
+      var html = document.documentElement;
+      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      safeSet('llm-theme', next);
+      updateThemeLabel(next);
+    }
+  };
+  var theme = safeGet('llm-theme', 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeLabel(theme);
+  window.addEventListener('scroll', function(){
+    var btn = document.getElementById('back-to-top');
+    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

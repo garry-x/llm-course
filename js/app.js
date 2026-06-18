@@ -87,6 +87,20 @@
     if(btn) btn.textContent = completed.has(currentCh) ? '✅ Completed (Click to undo)' : '✓ Mark Complete';
   }
 
+  function renderHomeChapterList(){
+    if(document.body.getAttribute('data-page') !== 'home') return;
+    var list = document.getElementById('chapter-list');
+    if(!list) return;
+    var done = new Set(safeGet('llm-done',[]));
+    list.innerHTML = chaptersWithHref().map(function(ch){
+      var isDone = done.has(ch.id);
+      return '<a href="'+ch.file+'" class="chapter-item'+(isDone?' completed':'')+'">'+
+        '<span class="ch-num-big">'+(isDone?'✓':ch.id)+'</span>'+
+        '<span class="ch-info"><h4>Chapter '+ch.id+' '+ch.title+'</h4><p>'+ch.desc+'</p></span>'+
+        '<span class="ch-meta">'+ch.sections+' sections</span></a>';
+    }).join('');
+  }
+
   // ---- Mark chapter complete (toggle) ----
   function markComplete(){
     if(completed.has(currentCh)) completed.delete(currentCh);
@@ -111,20 +125,18 @@
     var next = isDark?'light':'dark';
     html.setAttribute('data-theme', next);
     safeSet('llm-theme', next);
+    updateThemeLabel(next);
+  }
+  function updateThemeLabel(theme){
     var icon = document.getElementById('theme-icon');
     var label = document.getElementById('theme-label');
-    if(icon) icon.textContent = next==='dark'?'☀️':'🌙';
-    if(label) label.textContent = next==='dark'?'Light Mode':'Dark Mode';
+    if(icon) icon.textContent = theme==='dark'?'☀️':'🌙';
+    if(label) label.textContent = theme==='dark'?'Light Mode':'Dark Mode';
   }
   function initTheme(){
     var t = getTheme();
     document.documentElement.setAttribute('data-theme', t);
-    if(t==='dark'){
-      var icon = document.getElementById('theme-icon');
-      var label = document.getElementById('theme-label');
-      if(icon) icon.textContent='☀️';
-      if(label) label.textContent='Light Mode';
-    }
+    updateThemeLabel(t);
   }
 
   // ---- Font size ----
@@ -381,6 +393,7 @@
     initFontSize();
     initHomeLinks();
     renderSidebar();
+    renderHomeChapterList();
     updateCompleteButton();
     initBackToTop();
     initKeyboardNav();
@@ -432,7 +445,8 @@
     markComplete: markComplete,
     setFontSize: setFontSize,
     toggleSolution: function(btn){ btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('open'); },
-    getChapters: chaptersWithHref
+    getChapters: chaptersWithHref,
+    renderHomeChapterList: renderHomeChapterList
   };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);

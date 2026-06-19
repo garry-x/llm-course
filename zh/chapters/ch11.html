@@ -2,415 +2,690 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
-<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+  <link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第 11 章 经典神经 NLP 与评估 - LLM Deep Learning 中文版</title>
+<title>第 11 章：经典神经 NLP 与评估 - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../../css/style.css">
 </head>
 <body data-ch="11">
 
 <button class="menu-toggle" aria-label="菜单">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <h1><a href="../index.html">LLM Deep Learning</a></h1>
-    <p>中文版 · 从代码构建大语言模型</p>
-  </div>
-  <nav class="sidebar-nav">
-    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
-    <a href="ch01.html"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
-    <a href="ch02.html"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
-    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
-    <a href="ch04.html"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
-    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
-    <a href="ch06.html"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
-    <a href="ch07.html"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
-    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
-    <a href="ch09.html"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
-    <a href="ch10.html"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
-    <a href="ch11.html" class="active" aria-current="page"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
-    <a href="../../chapters/ch11.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
-  </nav>
-  <div class="sidebar-footer">
-    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
-      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
-    </button>
-  </div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>中文版 · 从代码构建大语言模型</p></div>
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
-  <h2>第 11 章 经典神经 NLP 与评估</h2>
-  <p class="subtitle">RNN、依存句法、Seq2Seq、BERT：把经典 NLP 接回现代 LLM 工程</p>
-  <div class="reading-time">预计阅读：145 分钟 · 15 小节 · 5 个可运行练习 · 5 个概念题</div>
-
-  <section class="card">
-    <h3>怎么学这一章：看模型边界，不是背历史</h3>
-    <div class="info-box key"><span class="icon">🔑</span><div><strong>工程重点：</strong>现代 LLM 课程不能只停在 decoder-only GPT。真实系统里仍然大量使用 encoder-only 表示、cross-encoder reranker、抽取式 QA、序列标注和结构化预测。本章补的是模型家族、可见性、目标函数、输出空间和评估指标。</div></div>
-    <ul>
-      <li><strong>前置要求：</strong>Ch03 attention、Ch08 beam search、Ch10 RAG rerank 与检索评估。</li>
-      <li><strong>学习目标：</strong>区分 recurrent、structured prediction、encoder-decoder、encoder-only、decoder-only 的建模假设。</li>
-      <li><strong>本章产出：</strong>RNN 梯度路径、arc-standard parsing trace、seq2seq additive attention、MLM mask、BERT QA span、NER span F1、BLEU/ROUGE/UAS/LAS/EM/F1。</li>
-      <li><strong>完成标准：</strong>给定一个 NLP/LLM 任务，你能选择 BERT fine-tuning、seq2seq、decoder-only prompting 或 structured parser，并说明理由。</li>
-      <li><strong>练习产出：</strong>RNN 梯度、句法转移、seq2seq attention、MLM masking、BERT QA span、NER span F1、评估总结。可选练习在 <a href="../../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>。</li>
-    </ul>
-    <div class="dependency-note"><strong>本章统一框架：</strong>先判断任务类型，再选择模型家族、输出空间和指标。很多生产问题不该直接变成“让大模型自由生成”。</div>
-  </section>
-
-  <section class="card" id="s11-1">
-    <h3>11.1 为什么 LLM 课程还要学经典 NLP</h3>
-    <p>跳过中间模型，很容易误以为所有 NLP 问题都应该写成 prompt generation。真实系统通常是混合的：bi-encoder 做向量召回，cross-encoder 做 rerank，BERT/DeBERTa 做分类和抽取式 QA，decoder-only LLM 做生成、解释和复杂推理。</p>
-    <p>本章不要求背旧模型名，而是抓住三件稳定的事：</p>
-    <ul>
-      <li><strong>Inductive bias：</strong>RNN 按时间递推，parser 输出树，seq2seq 区分源序列和目标序列，BERT 双向看上下文。</li>
-      <li><strong>Objective：</strong>Causal LM 预测下一个 token，MLM 只在 mask 位置算 loss，seq2seq 最大化条件生成概率，parser 最大化结构动作或 head/label 概率。</li>
-      <li><strong>Metric：</strong>BLEU、ROUGE、EM/F1、UAS/LAS、retrieval metrics 回答的是不同问题，不能被一个总分替代。</li>
-    </ul>
-  </section>
-
-  <section class="card" id="s11-2">
-    <h3>11.2 RNN 与梯度路径</h3>
-    <p>RNN 的隐藏状态递推是：</p>
-    <div class="math-box"><div class="label">RNN recurrence</div>
-      <div class="katex" data-expr="h_t=\tanh(W_xx_t+W_hh_{t-1}+b)" aria-label="RNN recurrence" role="img"></div>
+  <h2>第11章 经典神经NLP与评估</h2>
+  <p class="subtitle">RNN、依存分析、Seq2Seq和BERT——将经典神经NLP与现代LLM连接起来</p>
+  <div class="reading-time">⏱ 预计阅读时间：145分钟 · 15节 · 5个可运行练习 · 5个概念练习</div>
+  <div class="font-controls"><span>字号：</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
+  </div><section class="card">
+  <h3>如何学习本章：关注模型族界限，而非历史</h3>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>一门现代的大语言模型课程不能止步于decoder-only的GPT。实际工业界NLP系统仍然大量使用encoder-only表示、cross-encoder重排序器、抽取式问答、序列标注和结构化预测。本章将补齐这些模型族的目标函数、可见性约束和评估指标。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>第3章注意力机制、第8章束搜索、第10章RAG重排序与检索评估。</li>
+    <li><strong>学习目标：</strong>区分循环、结构化预测、encoder-decoder、encoder-only和decoder-only架构的建模假设。</li>
+    <li><strong>本章输出：</strong>RNN梯度路径、arc-standard句法分析轨迹、seq2seq加性注意力、MLM掩码、BERT问答跨度、NER跨度F1、以及BLEU/ROUGE/UAS/LAS/EM/F1指标。</li>
+    <li><strong>完成标准：</strong>你能针对给定任务选择BERT微调、seq2seq、decoder-only提示或结构化解析器，并解释选择的理由。</li>
+    <li><strong>实践素材：</strong>RNN梯度、句法分析轨迹、seq2seq注意力、MLM掩码、BERT问答跨度、NER跨度F1和评估摘要的可运行示例。可选练习文件位于 <a href="../../assignments/ch11_classic_nlp/">assignments/ch11_classic_nlp/</a>。</li>
+  </ul>
+  <div class="dependency-note"><strong>前置技能：</strong>序列建模、teacher forcing、encoder/decoder可见性、结构化预测、BLEU/ROUGE/EM/F1、大语言模型作为评判者（LLM-as-judge）以及置信区间。<br><strong>本章内化要点：</strong>RNN、seq2seq、BERT、CRF、跨度问答、评估指标将在本章中作为工程选择工具嵌入，而非独立的历史话题：它们帮助判断任务应该使用开放式生成、检索排序、抽取、分类还是结构化解码。<br><strong>验证信号：</strong>你能将NLP/大语言模型任务映射到合适的模型族、解码方法和指标，并解释传统指标与现代大语言模型评估各自的适用范围边界。</div>
+  <p class="system-role"><strong>本章定位：</strong>本章不是历史课，而是补全现代大语言模型工程中的任务边界和评估语言。许多生产问题不适合自由形式的生成；理解encoder-only模型、结构化预测和传统指标对于决定何时使用大语言模型、何时使用更小更稳定的模型族是必要的。</p>
+  <div class="foundation-map">
+    <h4>学习者思维导图：先要知道什么 / 本章教什么 / 接下来读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第11章知识地图：本章之前，理解序列建模、可见性、结构化输出和指标；本章学习NLP任务边界和评估；之后阅读大语言模型作为评判者和可靠评估。">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-11" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第 11 章 NLP 任务</tspan><tspan class="dep-sub" x="430" dy="22">任务边界与评估</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">前置：模型可见性</tspan><tspan class="dep-sub" x="129" dy="18">encoder / decoder / MLM</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">前置：评估基础</tspan><tspan class="dep-sub" x="129" dy="18">F1 / EM / judge</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">后续：结构化任务</tspan><tspan class="dep-sub" x="731" dy="18">CRF / span QA / rerank</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">后续：可靠评估</tspan><tspan class="dep-sub" x="731" dy="18">LLM-as-judge / CI</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：task type -> model family -> output space -> metric</tspan></text>
+      </svg>
     </div>
-    <p>它把任意长度序列压进一个状态向量。优点是有强序列偏置，缺点是长距离依赖困难。如果 loss 在最后一步，早期输入的梯度要穿过很多局部 Jacobian：</p>
-    <div class="math-box"><div class="label">BPTT gradient path</div>
-      <div class="katex" data-expr="\frac{\partial L}{\partial h_t}=\frac{\partial L}{\partial h_T}\prod_{i=t+1}^{T}\frac{\partial h_i}{\partial h_{i-1}}" aria-label="BPTT gradient path" role="img"></div>
-    </div>
-    <p>这些因子持续小于 1，梯度消失；持续大于 1，梯度爆炸。LSTM/GRU 用门控和近似线性记忆路径缓解问题。Transformer self-attention 把任意两点之间的路径缩短到一次 attention，但付出了二次 attention 矩阵和显存/带宽成本。</p>
-  </section>
-
-  <section class="card" id="s11-3">
-    <h3>11.3 依存句法：结构化预测不是 attention 热力图</h3>
-    <p>Dependency parsing 为每个 token 预测 head 和 dependency label，输出一棵有向树。Attention 是连续权重，可以做诊断；dependency tree 是离散结构，必须满足单 root、无环、每个词一个 head 等约束。</p>
-    <div class="table-wrap">
+    <div class="table-wrap foundation-table">
       <table>
-        <tr><th>动作</th><th>前提</th><th>效果</th></tr>
-        <tr><td>SHIFT</td><td>buffer 非空</td><td>把 buffer 第一个 token 推入 stack</td></tr>
-        <tr><td>LEFT_ARC(label)</td><td>stack 至少两个元素</td><td>让栈顶成为次栈顶的 head，并移除次栈顶</td></tr>
-        <tr><td>RIGHT_ARC(label)</td><td>stack 至少两个元素</td><td>让次栈顶成为栈顶的 head，并移除栈顶</td></tr>
-        <tr><td>ROOT(label)</td><td>只剩一个 root 候选</td><td>把它接到 ROOT</td></tr>
+        <tr><th>学习前需要了解</th><th>本章将阐明</th><th>扩展阅读材料/知识点</th></tr>
+        <tr><td>可见性</td><td>比较RNN、encoder、decoder、encoder-decoder、MLM、causal LM的输入/输出可见范围。</td><td><strong>材料：</strong>BERT、T5、encoder-only重排序器、causal LM流水线。<br><strong>知识点：</strong>任务选择、可见性约束、混合NLP流水线。</td></tr>
+        <tr><td>结构化输出空间</td><td>将标签、跨度、弧、JSON schema和受约束解码视为输出空间设计问题。</td><td><strong>材料：</strong>CRF、跨度问答、结构化输出、语法解码。<br><strong>知识点：</strong>基于schema的评估、受约束解码、结构化抽取。</td></tr>
+        <tr><td>指标定义</td><td>区分BLEU、ROUGE、F1、EM、UAS/LAS、人工评估和LLM-as-judge的适用范围边界。</td><td><strong>材料：</strong>机器翻译/摘要/问答/NLI基准、LLM-as-judge指南。<br><strong>知识点：</strong>评分标准设计、成对评估、评判者校准。</td></tr>
+        <tr><td>不确定性与污染</td><td>需要置信区间、bootstrap、提示设置、样本切片和污染检测。</td><td><strong>材料：</strong>Bootstrap置信区间、基准污染研究、评估框架。<br><strong>知识点：</strong>基于切片的评估、置信区间、评估可复现性。</td></tr>
       </table>
     </div>
-    <h4>例子：解析 <code>I saw her</code></h4>
-    <p>目标树是 <code>saw -> I (nsubj)</code>、<code>saw -> her (obj)</code>、<code>ROOT -> saw (root)</code>。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>step</th><th>stack</th><th>buffer</th><th>action</th><th>new arc</th></tr>
-        <tr><td>0</td><td><code>[]</code></td><td><code>[I, saw, her]</code></td><td>SHIFT</td><td>-</td></tr>
-        <tr><td>1</td><td><code>[I]</code></td><td><code>[saw, her]</code></td><td>SHIFT</td><td>-</td></tr>
-        <tr><td>2</td><td><code>[I, saw]</code></td><td><code>[her]</code></td><td>LEFT_ARC(nsubj)</td><td><code>saw -> I</code></td></tr>
-        <tr><td>3</td><td><code>[saw]</code></td><td><code>[her]</code></td><td>SHIFT</td><td>-</td></tr>
-        <tr><td>4</td><td><code>[saw, her]</code></td><td><code>[]</code></td><td>RIGHT_ARC(obj)</td><td><code>saw -> her</code></td></tr>
-        <tr><td>5</td><td><code>[saw]</code></td><td><code>[]</code></td><td>ROOT(root)</td><td><code>ROOT -> saw</code></td></tr>
-      </table>
-    </div>
-    <p>评估常用 UAS 和 LAS：</p>
-    <div class="math-box"><div class="label">Attachment scores</div>
-      <div class="katex" data-expr="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n},\quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i\land \hat l_i=l_i\}}{n}" aria-label="UAS and LAS" role="img"></div>
-    </div>
-    <p>UAS 高但 LAS 低，说明 head 找对了，关系类型错了。这会影响信息抽取、问答证据和语义角色分析。</p>
-  </section>
-
-  <section class="card" id="s11-4">
-    <h3>11.4 Seq2Seq 与 Additive Attention</h3>
-    <p>Encoder-decoder 明确区分 source sequence 和 target sequence。机器翻译、摘要、语音识别都常用这种条件生成形式：</p>
-    <div class="math-box"><div class="label">Conditional generation</div>
-      <div class="katex" data-expr="P(y_{1:n}\mid x_{1:m})=\prod_{t=1}^{n}P(y_t\mid y_{<t},x_{1:m})" aria-label="conditional generation objective" role="img"></div>
-    </div>
-    <p>Additive attention 在 decoder 每一步给 source positions 打分：</p>
-    <div class="math-box"><div class="label">Bahdanau attention</div>
-      <div class="katex" data-expr="e_{t,i}=v^\top\tanh(W_ss_t+W_hh_i),\quad \alpha_{t,i}=\text{softmax}(e_{t,i}),\quad c_t=\sum_i\alpha_{t,i}h_i" aria-label="additive attention formula" role="img"></div>
-    </div>
-    <p>训练时 teacher forcing 喂 gold prefix；推理时只能喂模型自己生成的 prefix，会出现 exposure bias。Beam search 能缓解搜索错误，但会带来长度偏置，所以要配合长度归一化和任务指标。</p>
-  </section>
-
-  <section class="card" id="s11-4a">
-    <h3>11.4A 手算 additive attention</h3>
-    <p>假设当前 decoder state 是 <code>s_t=[1,0]</code>，source hidden states 是 <code>h1=[1,1]</code>、<code>h2=[0,2]</code>，参数为：</p>
-    <div class="code-block" data-lang="text">W_s = [[1, 0]]
+    <p><strong>本章覆盖范围：</strong>本章已将传统NLP模型族、结构化预测和现代大语言模型评估放回到工程选择的语境中；后续延伸应聚焦于LLM-as-judge校准、数据污染检测和针对业务切片的可靠评估，而不是罗列历史模型。</p>
+  </div>
+</section><section class="card" id="s11-1">
+  <h3>11.1 为什么大语言模型课程仍需要学习经典的自然语言处理</h3>
+  <p>本课程的经典神经自然语言处理主题从词向量、RNN、依存句法分析、seq2seq注意力机制、Transformer 和 BERT 一路延伸到大型语言模型。跳过中间模型会导致一个常见误解：所有 NLP 问题都应改写为基于 prompt 的生成。实际上，许多生产系统会组合不同的模型族：用 BERT 或 DeBERTa 做重排序，用双编码器做检索嵌入，用仅编码器模型做抽取式问答，用仅解码器大语言模型做答案生成。</p>
+  <p>本章的重点不是记忆旧的模型名称，而是掌握三个稳定的概念：</p>
+  <ul>
+    <li><strong>归纳偏置 (Inductive Bias)：</strong>RNN 按时间递归，句法分析器输出树结构，seq2seq 将源序列和目标序列分离，BERT 双向读取上下文。</li>
+    <li><strong>目标函数 (Objective Functions)：</strong>因果语言模型预测下一个 token，MLM 仅在掩码位置计算损失，seq2seq 最大化条件生成概率，句法分析器最大化结构动作或头/标签概率。</li>
+    <li><strong>评估指标 (Evaluation Metrics)：</strong>BLEU、ROUGE、EM/F1、UAS/LAS 以及检索指标各自回答不同的问题，它们不能被单一的汇总分数所取代。</li>
+  </ul>
+</section><section class="card" id="s11-2">
+  <h3>11.2 RNN 与梯度路径</h3>
+  <p>RNN 的隐藏状态循环公式为：</p>
+  <div class="math-box"><div class="label">公式 11.1 RNN 循环</div>
+    <div class="katex" data-expr="h_t = \tanh(W_x x_t + W_h h_{t-1} + b)" aria-label="h_t = \tanh(W_x x_t + W_h h_{t-1} + b)" role="img"></div>
+  </div>
+  <p>它将任意长度的序列压缩为单个状态向量。这种设计赋予了模型强大的时序偏置，但也导致了对长程依赖建模的困难。若损失函数作用于最后一步，则早期输入的梯度必须穿过许多局部 Jacobian 矩阵：</p>
+  <div class="math-box"><div class="label">公式 11.2 反向传播路径</div>
+    <div class="katex" data-expr="\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_T} \prod_{i=t+1}^{T} \frac{\partial h_i}{\partial h_{i-1}}" aria-label="\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_T} \prod_{i=t+1}^{T} \frac{\partial h_i}{\partial h_{i-1}}" role="img"></div>
+  </div>
+  <p>如果这些因子的谱范数持续小于 1，梯度就会消失；如果持续大于 1，梯度就会爆炸。LSTM/GRU 通过门控和近似线性记忆路径缓解了这一问题。Transformer 的自注意力机制将任意两个位置之间的路径缩短为单次注意力操作，但代价是产生了二次规模的注意力矩阵以及内存/带宽压力。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div>一个标量 RNN 的前向传播和循环梯度因子计算可以直观地展示这个连乘过程，将“梯度消失”从一句口号转变为一系列可测量的乘数。</div></div>
+</section><section class="card" id="s11-3">
+  <h3>11.3 依存句法分析：结构化预测并非注意力热力图</h3>
+  <p>依存句法分析为每个 token 预测一个中心词和一个依存标签，输出一棵有向树。它与注意力热力图的重要区别在于：注意力是连续权重，可用于诊断；而依存树是离散结构，必须满足单一根节点、无环、每个词只有一个中心词等约束。</p>
+  <p>Arc-standard 转移系统通过 <code>stack</code>、<code>buffer</code> 和 <code>arcs</code> 构建依存树：</p>
+  <table>
+    <tr><th>动作</th><th>前置条件</th><th>效果</th></tr>
+    <tr><td>SHIFT</td><td>缓冲区非空</td><td>将缓冲区第一个 token 压入栈顶</td></tr>
+    <tr><td>LEFT_ARC(label)</td><td>栈中至少有两个元素</td><td>将栈中第二个元素设为栈顶元素的依存，然后移除第二个元素</td></tr>
+    <tr><td>RIGHT_ARC(label)</td><td>栈中至少有两个元素</td><td>将栈顶元素设为栈中第二个元素的依存，然后移除栈顶元素</td></tr>
+    <tr><td>ROOT(label)</td><td>只剩一个根候选</td><td>将该根候选连接到 ROOT</td></tr>
+  </table>
+  <h4>示例：<code>I saw her</code> 的 Arc-standard 分析</h4>
+  <p>目标依存树为 <code>saw -> I (nsubj)</code>、<code>saw -> her (obj)</code>，最后是 <code>ROOT -> saw (root)</code>。使用 Arc-standard 转移系统，可按如下步骤构建：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>步骤</th><th>栈</th><th>缓冲区</th><th>动作</th><th>新弧</th></tr>
+      <tr><td>0</td><td><code>[]</code></td><td><code>[I, saw, her]</code></td><td><code>SHIFT</code></td><td>-</td></tr>
+      <tr><td>1</td><td><code>[I]</code></td><td><code>[saw, her]</code></td><td><code>SHIFT</code></td><td>-</td></tr>
+      <tr><td>2</td><td><code>[I, saw]</code></td><td><code>[her]</code></td><td><code>LEFT_ARC(nsubj)</code></td><td><code>saw -> I</code></td></tr>
+      <tr><td>3</td><td><code>[saw]</code></td><td><code>[her]</code></td><td><code>SHIFT</code></td><td>-</td></tr>
+      <tr><td>4</td><td><code>[saw, her]</code></td><td><code>[]</code></td><td><code>RIGHT_ARC(obj)</code></td><td><code>saw -> her</code></td></tr>
+      <tr><td>5</td><td><code>[saw]</code></td><td><code>[]</code></td><td><code>ROOT(root)</code></td><td><code>ROOT -> saw</code></td></tr>
+    </table>
+  </div>
+  <p>这个例子说明句法分析不是独立地对每个 token 进行分类：一个动作的合法性取决于当前栈/缓冲区的状态，错误的动作会破坏最终的树结构。转移轨迹应返回每个 token 的中心词、标签、弧以及栈/缓冲区状态，以便逐步审查树的构建过程。</p>
+  <p>评估通常使用 UAS 和 LAS：</p>
+  <div class="math-box"><div class="label">公式 11.3 依存关系得分</div>
+    <div class="katex" data-expr="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" aria-label="\text{UAS}=\frac{\#\{i:\hat h_i=h_i\}}{n}, \quad \text{LAS}=\frac{\#\{i:\hat h_i=h_i \land \hat l_i=l_i\}}{n}" role="img"></div>
+  </div>
+  <p>高 UAS 但低 LAS 表示模型找到了正确的中心词，但关系类型判断错误；这在信息抽取、问答证据和语义角色分析中可能改变结论。</p>
+</section><section class="card" id="s11-4">
+  <h3>11.4 Seq2Seq 与加性注意力</h3>
+  <p>编码器-解码器模型明确区分源序列 <span class="katex-inline" data-expr="x_{1:m}" aria-label="x_{1:m}" role="img"></span> 和目标序列 <span class="katex-inline" data-expr="y_{1:n}" aria-label="y_{1:n}" role="img"></span>。机器翻译、摘要生成和语音识别长期以来一直使用这种条件生成形式：</p>
+  <div class="math-box"><div class="label">公式 11.4 条件生成目标</div>
+    <div class="katex" data-expr="P(y_{1:n}\mid x_{1:m})=\prod_{t=1}^{n}P(y_t\mid y_{<t}, x_{1:m})" aria-label="P(y_{1:n}\mid x_{1:m})=\prod_{t=1}^{n}P(y_t\mid y_{<t}, x_{1:m})" role="img"></div>
+  </div>
+  <p>加性注意力为每个解码步骤对源位置进行评分：</p>
+  <div class="math-box"><div class="label">公式 11.5 Bahdanau 式注意力</div>
+    <div class="katex" data-expr="e_{t,i}=v^\top \tanh(W_s s_t + W_h h_i), \quad \alpha_{t,i}=\text{softmax}(e_{t,i}), \quad c_t=\sum_i \alpha_{t,i}h_i" aria-label="e_{t,i}=v^\top \tanh(W_s s_t + W_h h_i), \quad \alpha_{t,i}=\text{softmax}(e_{t,i}), \quad c_t=\sum_i \alpha_{t,i}h_i" role="img"></div>
+  </div>
+  <p>在教师强制训练中，将 gold 前缀馈入解码器；推理时，只能馈入模型自身生成的前缀，这导致曝光偏差。束搜索减轻了搜索错误，但也引入了长度偏差，因此来自第8章的长度归一化分数与第11章中的 seq2seq 评估属于同一内容脉络。</p>
+</section><section class="card" id="s11-4a">
+  <h3>11.4A 动手练习：手动计算加性注意力</h3>
+  <p>假设当前解码器状态为 <span class="katex-inline" data-expr="s_t=[1,0]" aria-label="s_t=[1,0]" role="img"></span>，源序列有两个编码器隐藏状态：<span class="katex-inline" data-expr="h_1=[1,1]" aria-label="h_1=[1,1]" role="img"></span>、<span class="katex-inline" data-expr="h_2=[0,2]" aria-label="h_2=[0,2]" role="img"></span>。使用一组极简的加性注意力参数：</p>
+  <div class="code-block" data-lang="text">
+W_s = [[1, 0]]
 W_h = [[0.5, 0.5]]
 v   = [1]</div>
-    <p>两个位置的 score 都是 <code>tanh(2)≈0.964</code>，softmax 后权重为 <code>[0.5, 0.5]</code>，所以 context vector 是：</p>
-    <div class="math-box"><div class="label">Context vector</div>
-      <div class="katex" data-expr="c_t=0.5[1,1]+0.5[0,2]=[0.5,1.5]" aria-label="context vector" role="img"></div>
-    </div>
-    <p>这说明 cross-attention 的 K/V 来自源序列，不来自 decoder 已生成 prefix。decoder 下一步预测依赖 <code>y_{<t}</code> 和源侧 context 的组合。</p>
-  </section>
+  <p>首先，将解码器状态和每个源状态投影到相同的注意力隐藏维度，然后用 <code>tanh</code> 计算得分：</p>
+  <div class="math-box"><div class="label">加性注意力得分</div>
+    <div class="katex" data-expr="e_{t,1}=\tanh(1+0.5+0.5)=\tanh(2)\approx0.964,\quad e_{t,2}=\tanh(1+0+1)=\tanh(2)\approx0.964" aria-label="e_t1=tanh(2), e_t2=tanh(2)" role="img"></div>
+  </div>
+  <p>两个得分完全相同，因此对齐权重为 <code>[0.5, 0.5]</code>。上下文向量是源隐藏状态的加权和：</p>
+  <div class="math-box"><div class="label">上下文向量</div>
+    <div class="katex" data-expr="c_t=0.5[1,1]+0.5[0,2]=[0.5,1.5]" aria-label="c_t=0.5[1,1]+0.5[0,2]=[0.5,1.5]" role="img"></div>
+  </div>
+  <p>这表明 cross-attention 的 K/V 来自源序列，而非解码器已生成的前缀。如果 <code>h_2</code> 变为更匹配当前解码器状态的表示，softmax 权重将偏向第二个源位置，<code>c_t</code> 也会相应改变；解码器下一步的预测取决于 <code>y_{<t}</code> 和这个源侧上下文的组合。</p>
+</section><section class="card" id="s11-5">
+  <h3>11.5 BERT / 仅编码器：MLM、分类和抽取式问答</h3>
+  <p>BERT风格的编码器可以双向看到输入的左右上下文；它不是自回归生成器。它的预训练目标之一是掩码语言建模：交叉熵仅计算在掩码位置，未掩码的token使用忽略索引。MLM诊断应返回掩码token的损失、准确率和导致损失的贡献位置，有助于区分“输入中的哪些token是可见的”和“哪些位置对训练目标有贡献”。</p>
+  <table>
+    <tr><th>维度</th><th>仅编码器 / BERT</th><th>仅解码器 / GPT</th></tr>
+    <tr><td>可见性</td><td>双向自注意力</td><td>因果掩码，仅能看到左侧前缀</td></tr>
+    <tr><td>预训练目标</td><td>MLM：预测掩码位置</td><td>下一个token预测</td></tr>
+    <tr><td>典型用途</td><td>分类、重排序、嵌入、token分类、跨度问答</td><td>开放生成、代码、对话、推理</td></tr>
+    <tr><td>输出约束</td><td>通常固定标签或输入跨度</td><td>生成新token序列</td></tr>
+  </table>
+  <p>抽取式问答通常将输入组织为 <code>[CLS] question [SEP] passage [SEP]</code>，模型预测每个位置的logits作为答案起点和终点。有效跨度的分数为：</p>
+  <div class="math-box"><div class="label">公式 11.6 抽取式问答跨度分数</div>
+    <div class="katex" data-expr="\text{score}(i,j)=s_i+e_j,\quad 0\le i\le j,\quad j-i+1\le L_{\max}" aria-label="\text{score}(i,j)=s_i+e_j,\quad 0\le i\le j,\quad j-i+1\le L_{\max}" role="img"></div>
+  </div>
+  <p>如果 <code>[CLS]</code> 的无答案分数最高，模型应返回空答案。这与仅解码器LLM生成“我不知道”不同：BERT问答的答案必须绑定到输入token跨度。</p>
+  <h4>BIO序列标注</h4>
+  <p>NER、槽位填充和token分类通常将每个token标注为 <code>B-TYPE</code>、<code>I-TYPE</code> 或 <code>O</code>。<code>B-ORG I-ORG</code> 表示一个连续的组织实体，<code>O</code> 表示实体外部。BIO解码器将token级标签转换为跨度级输出；例如，<code>["B-LOC", "I-LOC"]</code> 对应一个LOC跨度。如果一个序列以 <code>I-LOC</code> 开头，许多评估脚本会将其容忍为新实体的开始；严格的系统也可选择直接报告错误，但这必须在数据协议中明确说明。</p>
+  <p>实体识别通常使用 <strong>跨度级F1</strong>，而不仅仅是token准确率。只有当预测实体的 <code>type</code>、<code>start</code> 和 <code>end</code> 全部与黄金跨度完全匹配时，才视为真正例；边界差一个token或类型错误计为假正例，而对应的黄金跨度仍为假负例。跨度级评估应将这一定义转换为可计算的TP/FP/FN、精确率、召回率和F1。</p>
+  <h4>Viterbi结构化解码</h4>
+  <p>逐token的argmax忽略了标签之间的约束：例如，<code>B-ORG</code> 后面跟着 <code>I-ORG</code> 通常比跳回 <code>O</code> 更合理，直接 <code>O</code> 后跟 <code>I-PER</code> 通常应受到惩罚。线性链CRF或类似结构化解码方法将路径分数公式化为发射分数和转移分数之和：</p>
+  <div class="math-box"><div class="label">公式 11.7 线性链路径分数</div>
+    <div class="katex" data-expr="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" aria-label="s(y_{1:T})=\sum_{t=1}^{T} e_t(y_t)+\sum_{t=2}^{T} A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" role="img"></div>
+  </div>
+  <p>Viterbi动态规划在每个步骤 <code>t</code> 保存“以某个标签结束的最佳路径分数”和回溯指针，复杂度为 <code>O(TK^2)</code>。手动实现这一解码过程可以清楚地看到结构化预测如何将局部分类器的输出转换为全局一致的标签序列。</p>
+  <p>训练CRF还需要在所有可能路径上进行归一化，而不仅仅是最优路径。前向算法将Viterbi中的 <code>max</code> 替换为 <code>logsumexp</code> 来计算对数配分函数：</p>
+  <div class="math-box"><div class="label">公式 11.8 CRF对数配分函数</div>
+    <div class="katex" data-expr="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" aria-label="\log Z(x)=\log\sum_{y_{1:T}}\exp(s(y_{1:T},x)), \quad \mathcal{L}_{\text{CRF}}=-s(y^*,x)+\log Z(x)" role="img"></div>
+  </div>
+  <p>对数空间前向DP计算这个归一化项，而CRF负对数似然计算黄金路径分数并返回 <code>log_partition - gold_score</code>。它具有与Viterbi相同的状态形状，但语义不同：Viterbi用于预测最优路径，而CRF NLL在训练期间用于将黄金路径与所有竞争路径进行比较。</p>
+</section><section class="card" id="s11-5a">
+  <h3>11.5A 实例：MLM损失、掩码Token准确率与抽取式问答Span</h3>
+  <p>在训练和预测仅编码器模型时，一个常见误区是将“所有输入token都可见”等同于“所有位置都对损失有贡献”。BERT的自注意力可以双向看到整个句子，但MLM损失只在掩码位置计算。</p>
 
-  <section class="card" id="s11-5">
-    <h3>11.5 BERT / Encoder-only：MLM、分类和抽取式 QA</h3>
-    <p>BERT-style encoder 能双向看输入上下文，不是自回归生成器。MLM 只在 masked positions 上计算 cross-entropy，未 mask 位置通常设为 ignore index。不要把“输入里所有 token 可见”和“所有位置都参与 loss”混在一起。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>维度</th><th>Encoder-only / BERT</th><th>Decoder-only / GPT</th></tr>
-        <tr><td>可见性</td><td>双向 self-attention</td><td>Causal mask，只看左侧 prefix</td></tr>
-        <tr><td>预训练目标</td><td>MLM，预测被 mask 的位置</td><td>Next-token prediction</td></tr>
-        <tr><td>常见用途</td><td>分类、rerank、embedding、token classification、span QA</td><td>开放生成、代码、对话、推理</td></tr>
-        <tr><td>输出约束</td><td>固定标签或输入 span</td><td>生成新 token 序列</td></tr>
-      </table>
-    </div>
-    <p>抽取式 QA 通常把输入组织为 <code>[CLS] question [SEP] passage [SEP]</code>，模型分别预测 answer start 和 end。合法 span 要满足 <code>start <= end</code> 且长度不超过上限：</p>
-    <div class="math-box"><div class="label">Extractive QA span score</div>
-      <div class="katex" data-expr="\text{score}(i,j)=s_i+e_j,\quad 0\le i\le j,\quad j-i+1\le L_{\max}" aria-label="extractive QA span score" role="img"></div>
-    </div>
-    <h4>BIO 序列标注</h4>
-    <p>NER、slot filling、token classification 常用 <code>B-TYPE</code>、<code>I-TYPE</code>、<code>O</code> 标注。实体评估通常看 span-level F1：只有 type、start、end 都完全匹配才算 TP。边界错一个 token，token accuracy 可能还高，但实体抽取已经错了。</p>
-    <h4>Viterbi 结构化解码</h4>
-    <p>逐 token argmax 会忽略标签转移约束。Linear-chain CRF 把路径分数写成 emission + transition：</p>
-    <div class="math-box"><div class="label">Linear-chain path score</div>
-      <div class="katex" data-expr="s(y_{1:T})=\sum_{t=1}^{T}e_t(y_t)+\sum_{t=2}^{T}A_{y_{t-1},y_t}+s_{\text{start}}(y_1)+s_{\text{end}}(y_T)" aria-label="linear chain path score" role="img"></div>
-    </div>
-    <p>Viterbi 用动态规划找最高分路径，复杂度 <code>O(TK^2)</code>。CRF 训练不是只看最高分路径，还要用 Forward algorithm 对所有路径做 logsumexp 归一化。</p>
-  </section>
-
-  <section class="card" id="s11-5a">
-    <h3>11.5A MLM loss 与抽取式 QA span</h3>
-    <p>例子：输入 <code>[CLS] the cat sat [SEP]</code>，mask 位置是 2 和 3：</p>
-    <div class="code-block" data-lang="text">masked input: [CLS] the [MASK] [MASK] [SEP]
+  <h4>MLM：仅对掩码位置求平均</h4>
+  <p>令输入token为<code>[CLS] the cat sat [SEP]</code>，掩码位置为<code>[2, 3]</code>。则模型输入和标签为：</p>
+  <div class="code-block" data-lang="text">
+masked input: [CLS] the [MASK] [MASK] [SEP]
 labels:       None  None cat    sat    None</div>
-    <p>MLM loss 只在两个 masked positions 上平均。若 position 2 预测对 cat，position 3 错预测 dog，masked-token accuracy 就是 <code>1/2</code>。未 mask token 参与上下文编码，但不进入 loss denominator。</p>
-    <p>BERT QA 也是受约束输出。若问题是 <code>who founded OpenAI</code>，passage 里有 <code>Sam Altman founded OpenAI</code>，模型通过 start/end logits 选择 <code>Sam Altman</code> 这个输入 span；如果 <code>[CLS]</code> 的 no-answer 分数最高，就返回无答案。这和 decoder-only LLM 生成解释不是同一类问题。</p>
-  </section>
+  <p>假设词表只有三个候选：<code>[cat, sat, dog]</code>。掩码位置处的logits为：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>位置</th><th>真实标签</th><th>logits for [cat, sat, dog]</th><th>argmax</th></tr>
+      <tr><td>2</td><td>cat</td><td><code>[4.0, 0.0, 0.0]</code></td><td>cat</td></tr>
+      <tr><td>3</td><td>sat</td><td><code>[0.0, 1.0, 3.0]</code></td><td>dog</td></tr>
+    </table>
+  </div>
+  <p>该样本的MLM损失是两个掩码位置的平均交叉熵：</p>
+  <div class="math-box"><div class="label">MLM loss denominator</div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{MLM}}=\frac{1}{2}\left[-\log p(\text{cat}\mid x_{\setminus 2,3})-\log p(\text{sat}\mid x_{\setminus 2,3})\right]" aria-label="MLM损失 = 1/2 * [ -log p(cat) - log p(sat) ]" role="img"></div>
+  </div>
+  <p>掩码Token准确率为<code>1/2</code>，因为位置2预测正确，而位置3被预测为<code>dog</code>。非掩码token <code>[CLS]</code>、<code>the</code>和<code>[SEP]</code>参与上下文编码，但不计入损失分母或MLM准确率。这个定义对应于课后作业函数<code>masked_lm_loss_from_logits</code>返回的<code>num_masked</code>、<code>positions</code>和<code>accuracy</code>。</p>
 
-  <section class="card" id="s11-5b">
-    <h3>11.5B Viterbi 解码和 CRF 训练不是一回事</h3>
-    <p>一个长度为 2 的 NER toy 例子，标签是 <code>O</code> 和 <code>B-PER</code>。emission 和 transition 如下：</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th></th><th>token 1</th><th>token 2</th></tr>
-        <tr><td><code>O</code></td><td>1.2</td><td>0.3</td></tr>
-        <tr><td><code>B-PER</code></td><td>0.4</td><td>1.1</td></tr>
-      </table>
+  <h4>抽取式问答：从起始/结束logits中选择有效Span</h4>
+  <p>BERT风格的问答头不生成自由文本，而是从输入段落中选取一个连续片段。令输入为<code>[CLS] who founded OpenAI [SEP] Sam Altman founded OpenAI [SEP]</code>。候选答案必须来自段落的token位置。起始/结束logits最高的组合可能如下：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Token</th><th>位置</th><th>起始logit</th><th>结束logit</th></tr>
+      <tr><td><code>[CLS]</code></td><td>0</td><td>1.0</td><td>1.0</td></tr>
+      <tr><td><code>Sam</code></td><td>5</td><td>4.0</td><td>0.2</td></tr>
+      <tr><td><code>Altman</code></td><td>6</td><td>0.5</td><td>3.5</td></tr>
+      <tr><td><code>OpenAI</code></td><td>8</td><td>0.2</td><td>1.8</td></tr>
+    </table>
+  </div>
+  <p>有效的span必须满足<code>start <= end</code>且长度不超过<code>max_answer_len</code>。如果<code>max_answer_len >= 2</code>，那么<code>Sam Altman</code>的得分为<code>4.0 + 3.5 = 7.5</code>，高于无答案<code>[CLS]</code>的得分<code>1.0 + 1.0 = 2.0</code>，因此返回这个span。如果<code>[CLS]</code>得分最高，系统将返回无答案。这与仅解码器LLM生成解释不同；这是一个受输入span约束的预测问题。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>统一视角：</strong>MLM、Token分类、CRF和抽取式问答都将编码器输出连接到不同的预测头。它们的共同优势是受控的输出空间；共同局限是无法自然生成输入中不存在的新文本。</div></div>
+</section><section class="card" id="s11-5b">
+  <h3>11.5B 实战示例：维特比解码和CRF训练不是一回事</h3>
+  <p>考虑一个长度为2的示例NER序列，标签集为 <code>O</code> 和 <code>B-PER</code>。模型给出的发射分数如下，转移分数只考虑从第1个token到第2个token的转移：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th></th><th>token 1</th><th>token 2</th></tr>
+      <tr><td><code>O</code></td><td>1.2</td><td>0.3</td></tr>
+      <tr><td><code>B-PER</code></td><td>0.4</td><td>1.1</td></tr>
+    </table>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <tr><th>转移</th><th>到 <code>O</code></th><th>到 <code>B-PER</code></th></tr>
+      <tr><td>从 <code>O</code></td><td>0.2</td><td>0.6</td></tr>
+      <tr><td>从 <code>B-PER</code></td><td>-0.1</td><td>0.1</td></tr>
+    </table>
+  </div>
+
+  <h4>维特比：找到得分最高的路径</h4>
+  <p>第1步的最佳得分就是发射得分：<code>O=1.2</code>，<code>B-PER=0.4</code>。对于第2步，如果它以 <code>O</code> 结尾，我们比较两个可能的来源：</p>
+  <div class="math-box"><div class="label">Viterbi 步到 O</div>
+    <div class="katex" data-expr="\max(1.2+0.2+0.3,\;0.4-0.1+0.3)=1.7" aria-label="\max(1.2+0.2+0.3,\;0.4-0.1+0.3)=1.7" role="img"></div>
+  </div>
+  <p>如果它以 <code>B-PER</code> 结尾：</p>
+  <div class="math-box"><div class="label">Viterbi 步到 B-PER</div>
+    <div class="katex" data-expr="\max(1.2+0.6+1.1,\;0.4+0.1+1.1)=2.9" aria-label="\max(1.2+0.6+1.1,\;0.4+0.1+1.1)=2.9" role="img"></div>
+  </div>
+  <p>因此，最优路径是 <code>O, B-PER</code>，得分为2.9。注意，这个结果并不是逐 token 的 argmax 简单拼接；它利用了转移分数，倾向于从 <code>O</code> 到 <code>B-PER</code> 的路径。</p>
+
+  <h4>CRF NLL：将金标准路径与所有路径比较</h4>
+  <p>如果金标准路径也是 <code>O, B-PER</code>，则金标准得分为 <code>1.2 + 0.6 + 1.1 = 2.9</code>。CRF训练还需要计算所有路径的对数配分函数：</p>
+  <div class="math-box"><div class="label">四条路径的分数</div>
+    <div class="katex" data-expr="\begin{aligned}s(O,O)&=1.2+0.2+0.3=1.7\\s(O,B)&=1.2+0.6+1.1=2.9\\s(B,O)&=0.4-0.1+0.3=0.6\\s(B,B)&=0.4+0.1+1.1=1.6\end{aligned}" aria-label="s(O,O)=1.7, s(O,B)=2.9, s(B,O)=0.6, s(B,B)=1.6" role="img"></div>
+  </div>
+  <div class="math-box"><div class="label">CRF 负对数似然</div>
+    <div class="katex" data-expr="\mathcal{L}=\log\left(e^{1.7}+e^{2.9}+e^{0.6}+e^{1.6}\right)-2.9" aria-label="\mathcal{L}=\log(e^{1.7}+e^{2.9}+e^{0.6}+e^{1.6})-2.9" role="img"></div>
+  </div>
+  <p>这个损失函数推动金标准路径相对于所有竞争路径的分数上升，而不仅仅是让当前的Viterbi预测正确。如果模型已经预测正确，但第二好路径的分数非常接近，CRF NLL仍然会产生非零梯度；这就是结构化训练比“检查解码是否正确”更精细的地方。</p>
+</section><section class="card" id="s11-6">
+  <h3>11.6 评估：BLEU、ROUGE、EM/F1 与结构指标</h3>
+  <p>评估指标必须与任务结构匹配。BLEU 常用于翻译，ROUGE 用于摘要，Exact Match 和 token 级 F1 用于抽取式问答，UAS/LAS 用于依存句法分析。它们中没有一个是“语言质量”的完整度量。</p>
+  <table>
+    <tr><th>指标</th><th>核心计算</th><th>适用任务</th><th>主要局限</th></tr>
+    <tr><td>BLEU</td><td>裁剪的 n-gram 精确度 + 简短惩罚</td><td>机器翻译</td><td>对改写和语义等价不敏感</td></tr>
+    <tr><td>ROUGE-L</td><td>最长公共子序列的精确度/召回率/F1</td><td>摘要、生成比较</td><td>偏向词汇重叠，不能保证事实一致性</td></tr>
+    <tr><td>EM/F1</td><td>答案标准化后的精确匹配或 token 重叠</td><td>抽取式问答、简短回答</td><td>需要额外处理多个答案、别名和基于推理的答案</td></tr>
+    <tr><td>UAS/LAS</td><td>head 是否正确，以及标签是否也正确</td><td>依存句法分析</td><td>仅评估句法结构，不相当于下游任务成功</td></tr>
+  </table>
+  <div class="worked-example">
+    <h4>实例讲解：BLEU 裁剪与 ROUGE-L</h4>
+    <p>BLEU 不是简单统计候选句子中有多少单词出现在参考句子中。令候选句为 <code>the the the the</code>，参考句为 <code>the cat is here</code>。只看一元组，<code>the</code> 在候选句中出现了 4 次，但在参考句中最多出现 1 次，因此裁剪后的匹配只能计为 1：</p>
+    <div class="math-box"><div class="label">BLEU-1 裁剪精确度</div>
+      <div class="katex" data-expr="p_1=\frac{\min(4,1)}{4}=0.25" aria-label="p_1=\frac{\min(4,1)}{4}=0.25" role="img"></div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <tr><th>transition</th><th>to O</th><th>to B-PER</th></tr>
-        <tr><td>from O</td><td>0.2</td><td>0.6</td></tr>
-        <tr><td>from B-PER</td><td>-0.1</td><td>0.1</td></tr>
-      </table>
+    <p>这一步防止模型通过重复高频词来夸大精确度。如果候选句是 <code>cat sat</code>，参考句是 <code>cat sat on mat</code>，则一元组精确度为 1，但候选句长度（2）小于参考句长度（4），所以需要简短惩罚：</p>
+    <div class="math-box"><div class="label">简短惩罚</div>
+      <div class="katex" data-expr="\text{BP}=\exp(1-r/c)=\exp(1-4/2)=e^{-1}\approx 0.368" aria-label="\text{BP}=\exp(1-r/c)=\exp(1-4/2)=e^{-1}\approx 0.368" role="img"></div>
     </div>
-    <p>Viterbi 会发现最佳路径是 <code>O, B-PER</code>，分数 <code>1.2 + 0.6 + 1.1 = 2.9</code>。CRF NLL 则要比较 gold path 和所有路径：</p>
-    <div class="math-box"><div class="label">CRF NLL</div>
-      <div class="katex" data-expr="\mathcal{L}=\log(e^{1.7}+e^{2.9}+e^{0.6}+e^{1.6})-2.9" aria-label="CRF negative log likelihood" role="img"></div>
+    <p>因此，短句不能仅仅因为每个词都匹配就得到完美分数。ROUGE-L 关注最长公共子序列。如果候选句是 <code>a b c d</code>，参考句是 <code>a x b c</code>，则最长公共子序列是 <code>a b c</code>，长度为 3；精确度 = 3/4，召回率 = 3/4，F1 = 0.75。Ch11 作业中的 <code>sentence_bleu</code> 和 <code>rouge_l_f1</code> 函数将这些定义实现为可运行的函数。</p>
+  </div>
+  <div class="worked-example">
+    <h4>实例讲解：为什么 QA 的 EM/F1 需要先做答案标准化</h4>
+    <p>抽取式问答通常有多个黄金答案。评估时，先进行标准化：转小写、去除标点、去除冠词、合并空白。如果预测结果是 <code>The quick brown fox</code>，黄金答案是 <code>quick brown fox</code> 和 <code>slow turtle</code>，那么标准化后预测与第一个黄金完全匹配，因此 <code>Exact Match = 1</code> 且 token F1 也为 1。</p>
+    <p>如果预测结果是 <code>quick fox</code>，黄金答案是 <code>quick brown fox</code>，那么 token 重叠为 <code>{quick, fox}</code>，精确度 = <code>2/2 = 1</code>，召回率 = <code>2/3</code>，因此：</p>
+    <div class="math-box"><div class="label">QA token F1</div>
+      <div class="katex" data-expr="F_1=\frac{2PR}{P+R}=\frac{2\cdot1\cdot(2/3)}{1+2/3}=0.8" aria-label="F_1=\frac{2PR}{P+R}=\frac{2\cdot1\cdot(2/3)}{1+2/3}=0.8" role="img"></div>
     </div>
-    <p>即使当前 Viterbi 已经预测对，只要第二名路径分数很接近，CRF NLL 仍然会给梯度。这就是结构化训练比“预测对没对”更细的地方。</p>
-  </section>
+    <p>这个例子说明了为什么 EM 和 F1 要一起报告：EM 严格要求精确字符串匹配，而 F1 允许部分重叠。对于开放式的、基于推理的或别名答案，依赖单个黄金字符串可能会低估正确输出；因此，问答数据集通常提供多个参考并取最高的 EM/F1。</p>
+  </div>
+  <p>因此，评估报告不能只说“BLEU 高”或“ROUGE 高”。它必须指明任务结构、候选输出、参考答案集和指标局限；否则，一个单独的分数很容易被误解为对语言质量的完整判断。</p>
+</section><section class="card" id="s11-6a">
+  <h3>11.6A 现代 LLM 评估协议：从单一分数到可复现结论</h3>
+  <p>BLEU、ROUGE、EM/F1 和 UAS/LAS 适用于定义明确的传统任务；现代 LLM 还需要评估开放式回答、长上下文、工具调用、RAG、拒答行为、安全性和多轮对话。最常见的错误是将单一基准分数、单一 LLM-as-judge 胜率或一组人类偏好解读为“该模型更好”。一门课程的评估应首先定义任务、样本、推理设置和评判标准，然后再讨论结论。</p>
 
-  <section class="card" id="s11-6">
-    <h3>11.6 评估：BLEU、ROUGE、EM/F1 和结构指标</h3>
-    <p>指标必须匹配任务结构。它们都不是“语言质量总分”。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>指标</th><th>核心计算</th><th>适用任务</th><th>主要限制</th></tr>
-        <tr><td>BLEU</td><td>clipped n-gram precision + brevity penalty</td><td>机器翻译</td><td>不理解改写和语义等价</td></tr>
-        <tr><td>ROUGE-L</td><td>最长公共子序列的 P/R/F1</td><td>摘要、生成比较</td><td>偏词面重叠，不保证事实正确</td></tr>
-        <tr><td>EM/F1</td><td>答案归一化后的精确匹配或 token overlap</td><td>抽取 QA、短答案</td><td>别名、多答案、推理答案要额外处理</td></tr>
-        <tr><td>UAS/LAS</td><td>head 是否正确，label 是否也正确</td><td>依存句法</td><td>只评估句法结构，不等于下游成功</td></tr>
-      </table>
+  <h4>评估协议的最低组成部分</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>组成部分</th><th>需要明确的问题</th><th>常见失败模式</th></tr>
+      <tr><td>数据</td><td>样本来源、训练/开发/测试集划分、是否去重、是否可能出现在训练语料或提示示例中</td><td>数据污染虚增分数；开发集经过反复调优后不再代表泛化能力</td></tr>
+      <tr><td>推理设置</td><td>模型版本、提示模板、系统提示、温度、top-p、最大 token 数、工具/RAG 配置</td><td>使用不同提示或采样参数比较两个模型是不公平的</td></tr>
+      <tr><td>指标</td><td>自动指标、人工评分、LLM-as-judge、系统指标和安全指标各自衡量什么？</td><td>使用单一平均分掩盖了事实性、格式、延迟或拒答方面的问题</td></tr>
+      <tr><td>统计</td><td>样本量、重复运行、置信区间、成对检验、错误类型分布</td><td>小样本胜率波动很大，却被当作稳定结论</td></tr>
+      <tr><td>边界</td><td>从这组结果中可以推断出什么，不能推断出什么？是否仅适用于特定领域、语言、长度或负载？</td><td>将单一任务的结果泛化到通用能力或生产可靠性</td></tr>
+    </table>
+  </div>
+  <h4>LLM-as-judge 需要校准</h4>
+  <p>LLM-as-judge 可以降低评估开放式输出的成本，但它存在位置偏差、长度偏差、风格偏差和模型同质偏差。更稳健的设置是成对盲比：隐藏模型名称，随机交换 A/B 顺序，让判断者决定哪个响应更符合评分标准，并记录平局。</p>
+  <p>工业评估在使用判断者分数之前还需要进行可靠性审计。OpenAI 的评估指南建议在使用模型评分器进行优化之前，先使其与人类标签对齐；MT-Bench / Chatbot Arena 等工作也警告说，成对判断者会受到位置、冗长和风格偏差的影响。因此，本课程不允许报告单一胜率。至少必须回答四个问题：交换 A/B 顺序后是否选择相同的候选者、判断者是否对第一个位置有异常偏好、是否对较长的响应有异常偏好、以及与一小批人工黄金标签的一致率是否足够。</p>
+  <div class="code-block" data-lang="python">
+audit = judge_reliability_audit(
+    [
+        {"comparison_id": "q1", "winner": "A", "response_a_id": "strong", "response_b_id": "weak", "response_a_tokens": 80, "response_b_tokens": 120, "gold_winner": "strong"},
+        {"comparison_id": "q1", "winner": "B", "response_a_id": "weak", "response_b_id": "strong", "response_a_tokens": 120, "response_b_tokens": 80, "gold_winner": "strong"},
+    ],
+    thresholds={"min_swapped_consistency": 0.8, "max_position_bias": 0.1},
+)
+assert audit["overall_pass"]</div>
+  <p>此审计并非要否定 LLM-as-judge，而是防止将不稳定的评估器作为部署依据。如果位置偏差或交换一致性失败，首先随机化/交换候选顺序、修改判断者提示或更换判断者模型；如果黄金标签一致率失败，则补充人工标注和错误分析，而不是继续使用该判断者进行自动超参数调优。</p>
+  <div class="math-box"><div class="label">带平局的成对胜率</div>
+    <div class="katex" data-expr="\text{win rate}=\frac{W+0.5T}{W+L+T}" aria-label="\text{win rate}=\frac{W+0.5T}{W+L+T}" role="img"></div>
+  </div>
+  <p>如果模型 A 与模型 B 的结果是 <code>W=42</code>、<code>L=35</code>、<code>T=23</code>，则胜率为 <code>(42+11.5)/100=53.5%</code>。仅凭此数字不能证明 A 在生产环境中更好；还必须检查样本量是否充足、问题分布是否代表目标场景、失败类别是什么、以及延迟和成本是否恶化。</p>
+
+  <h4>安全评估必须区分拒答和过度拒答</h4>
+  <p>安全性并非“拒绝越多越好”。样本至少应分为有害请求、良性敏感请求和普通任务三类，并分别统计：</p>
+  <ul>
+    <li><strong>攻击成功率：</strong>模型对有害请求提供不安全帮助的比例；越低越好。</li>
+    <li><strong>拒答率：</strong>模型拒绝请求的比例；需要对有害/良性类别分别查看。</li>
+    <li><strong>过度拒答率：</strong>本应提供帮助但被错误拒绝的良性请求比例。</li>
+    <li><strong>任务效用：</strong>在普通任务上的准确率、有用性或完成质量，以防止安全优化牺牲可用性。</li>
+  </ul>
+  <p>例如，模型 X 在有害集上的拒答率为 95%，但在良性医疗摘要集上的拒答率也为 60%。这不能简单说是“更安全”，而是严重的过度拒答。第 09 章的对齐评估和第 10 章的部署 SLO 应与本节一起解读：安全性、质量、延迟和成本都必须达到各自的目标。</p>
+
+  <h4>将现代评估编写为可运行的诊断程序</h4>
+  <p>一份现代评估报告应当可以简化为可运行的诊断程序。成对判断摘要计算原始胜率、平局调整胜率和按任务分组的胜率，显示同一个模型可能在问答任务上获胜，而在数学任务上持平或失败。判断者可靠性审计检查样本量、位置偏差、长度偏差、交换一致性和人类标签一致率。安全指标将样本分为有害、良性敏感和普通三类，然后报告攻击成功率、有害拒答率、过度拒答率和任务效用。基准摘要将任务、样本量、指标、模型、提示、温度、失败类型和不可外推范围组织成结构化结论。</p>
+  <p>这些诊断程序共享一个目的：防止单一平均分被误认为是完整的工程结论。训练工程师用它们来判断对齐是否损害了能力；推理工程师用它们来判断质量、安全性、延迟和成本是否共同满足部署要求。</p>
+
+  <h4>实例：如何从相同结果写出合格的结论</h4>
+  <p>欠严谨的写法：<code>Model A is 8% better than Model B.</code></p>
+  <p>更严谨的写法：在 <code>n=300</code> 中文客服 QA 样本上，使用固定系统提示、temperature=0、最大输出 512，模型 A 相对于模型 B 的成对胜率为 <code>58%</code>。主要改进来自格式遵循和引用完整性；事实错误率从 <code>11%</code> 降至 <code>8%</code>，但 P95 TTFT 从 <code>720ms</code> 增加到 <code>980ms</code>。此外，此结果不涵盖英文、代码、多轮工具调用或高并发负载。因此，它支持“在此中文客服 RAG 工作负载下，A 值得进入金丝雀实验”，但不支持“A 是一个普遍更强的模型”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>课程标准：</strong>评估答案不是一份分数列表，而是一个受条件约束的工程结论。你必须明确任务、样本、推理设置、指标、失败类型、统计不确定性和不可外推范围。</div></div>
+</section><section class="card" id="s11-6b">
+  <h3>11.6B 基准测试有效性：污染、置信区间与消融实验</h3>
+  <p>现代大语言模型评估的难点不仅在于“该选哪个基准测试”，更在于判断分数能否支撑工程决策。一个模型胜出，可能是因为其训练数据已经见过考题、它的 prompt 更合适、它的输出更长、它使用了更多采样轮次，或者评判者更喜欢它的风格。课程级别的报告必须厘清这些因素；否则，基准测试就变成了排行榜截图，而非科学比较。</p>
+
+  <h4>1. 数据污染与数据划分泄露不是同一个问题</h4>
+  <p><strong>数据划分泄露</strong>通常发生在自身的数据流水线内：同一份文档、用户会话、题库或近似改写文本同时进入了训练/开发/测试集。可以通过文档级划分、URL/题目ID去重、n-gram重叠检查、embedding最近邻搜索以及人工抽查来缓解。<strong>基准测试污染</strong>则更为宽泛：公开的测试题、答案解析、讨论帖或代码仓库可能已经混入了预训练或SFT数据。它并不总能被完全消除，因此报告中必须说明数据来源、发布日期、去重方法以及对高相似度样本的处理方式。</p>
+  <p>公开基准测试也有其生命周期。一个在刚发布时很有用的基准测试，经过几个月的排行榜优化后，可能会饱和、被反复 prompt 调优或者被污染。OpenAI 在2026年关于 <a href="https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/" target="_blank">SWE-bench Verified</a> 的讨论是一个不错的例子：即使是一个经过人工验证的公开基准测试，一旦模型、智能体和训练数据都适应了它，它就可能不再衡量前沿水平。在课程报告中，旧的公开基准测试通常应作为回归测试，而私有保留集和在线/canary评估则为部署决策提供更有力的证据。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>现象</th><th>可能原因</th><th>应执行的检查</th><th>结论边界</th></tr>
+      <tr><td>测试集分数远高于新问题集</td><td>训练时见过基准测试题，或 prompt 针对旧问题进行了优化</td><td>按发布日期划分，检查精确/近似重复，构建保留的新问题集</td><td>旧基准测试仅能作为回归测试，不能证明泛化能力</td></tr>
+      <tr><td>开发集随每次调优提升，测试集却无变化</td><td>开发集被反复优化，逐渐变成了训练信号</td><td>冻结最终测试集，维护一个影子评估集，仅在里程碑节点运行</td><td>开发集分数仅代表开发进度，不代表最终能力</td></tr>
+      <tr><td>RAG QA 引用正确但答案错误</td><td>检索命中不能保证生成忠实性，或标准答案过于狭窄</td><td>分别统计检索召回率、引用精确率和答案准确率</td><td>不能使用端到端准确率直接定位瓶颈</td></tr>
+      <tr><td>LLM 评判者偏好新模型但人类不认同</td><td>长度、语气、格式或同质性模型偏差</td><td>随机化 A/B 顺序，控制输出长度，抽样进行人工审查</td><td>评判者胜率仅是一个辅助信号</td></tr>
+    </table>
+  </div>
+
+  <h4>评估生命周期：从公开基准测试到在线证据</h4>
+  <p>现代评估应被视为一个运营生命周期，而非最终的排行榜快照。公开基准测试适用于粗略的比较和回归检查，但前沿模型和智能体系统变化很快：任务会饱和、prompt 会变得优化、公开解决方案会泄露到数据中、产品工作流会发生偏移。因此，一个严肃的评估程序应使用多个证据层，这些层具有不同的所有权、刷新频率和决策权限。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>证据层</th><th>用途</th><th>主要风险</th><th>工程控制</th></tr>
+      <tr><td>公开基准测试</td><td>外部可比性，在已知任务上的回归测试，广泛能力快照</td><td>饱和、prompt调优、污染、基准测试特有行为</td><td>用作回归信号；报告模型、日期、prompt、scaffold和版本；避免仅凭其声称可投入生产</td></tr>
+      <tr><td>私有保留集</td><td>针对目标领域和产品工作流的部署决策</td><td>内部重复调优会逐渐使其变成开发集</td><td>冻结最终测试集，限制访问，轮换影子集，记录每次评估运行</td></tr>
+      <tr><td>日志挖掘评估</td><td>真实用户分布、重复故障模式以及长尾工作流变化</td><td>隐私风险、反馈偏差、标签陈旧、缺乏负例</td><td>对样本去标识化，按工作负载切片，要求审核标签，保留失败轨迹</td></tr>
+      <tr><td>LLM作为评判者/评分器</td><td>对开放式回答、智能体和推理轨迹进行可扩展评分</td><td>位置偏差、冗长偏差、评分标准漂移、与人类一致性弱</td><td>对照人工标签校准，交换 A/B 顺序，控制长度，跟踪不一致的切片</td></tr>
+      <tr><td>Canary / 在线评估</td><td>真实流量下的质量、延迟、成本、安全性和工具行为</td><td>若发布范围过广或回滚不明确，存在业务风险</td><td>使用小流量、版本化路由、在线监控、回滚演练和故障阈值</td></tr>
+    </table>
+  </div>
+  <p>工程结论应指明每个主张依赖哪个证据层。<code>Model A wins on a public benchmark</code> 仅支持粗略比较；<code>Model A reduces citation errors on a private customer-service slice without increasing P95 latency or unsafe completions during a canary</code> 支持部署决策。混淆这些层级是过度声称的常见来源。</p>
+
+  <h4>2. 小样本改进必须包含不确定性</h4>
+  <p>如果模型 A 在 100 道题中答对 61 道，模型 B 答对 56 道，我们不能简单地写“A 提升了 5%”。5 个样本的差异可能源于题目采样的波动。最简单的近似是将准确率视为二项比例，并使用标准误差估计置信区间：</p>
+  <div class="math-box"><div class="label">准确率标准误差</div>
+    <span class="katex-block" data-expr="\text{SE}(\hat p)=\sqrt{\frac{\hat p(1-\hat p)}{n}},\qquad \text{CI}_{95}\approx \hat p \pm 1.96\cdot \text{SE}" aria-label="SE(p hat)=sqrt(p hat(1-p hat)/n), 95%置信区间约等于 p hat 加减 1.96乘以SE" role="img"></span>
+  </div>
+  <p>当 <code>n=100</code>，<code>p=0.61</code>，标准误差约为 <code>0.049</code>，95% 置信区间大致是 <code>61% ± 9.6%</code>。这表明在此样本量下，61% 和 56% 很难支撑有力结论。如果使用同一问题集评估两个模型，优先进行配对比较：即 A 答对但 B 答错的题目，反之亦然，因为题目难度是共享的。对于开放式生成或 RAG 任务，通常对样本使用 Bootstrap 重采样来估计胜率、准确率或错误率的区间。</p>
+
+  <h4>3. 消融实验一次回答一个问题</h4>
+  <p>消融实验不是“多跑几个配置”。它必须使单一设计变量的效果可解释。如果你同时更改了基座模型、prompt、检索器、重排序器、温度参数和上下文长度，即使分数提高了，你也不可能知道是哪个改动贡献的。一个严谨的 LLM 系统消融实验通常按以下顺序组织：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>问题</th><th>保持恒定</th><th>仅改变</th><th>同时报告</th></tr>
+      <tr><td>RAG 有用吗？</td><td>模型、prompt、解码参数、样本集</td><td>是否注入检索上下文</td><td>准确率、引用精确率、输入 token 数、P95 延迟</td></tr>
+      <tr><td>重排序器有用吗？</td><td>检索器候选、LLM、上下文预算</td><td>候选排序策略</td><td>Recall@k, nDCG, 最终答案准确率, 重排序延迟</td></tr>
+      <tr><td>DPO 能改进对齐吗？</td><td>SFT 基座、评估集、prompt、温度参数</td><td>DPO 检查点</td><td>有用性、安全拒绝率、长度分布、KL 或行为漂移</td></tr>
+      <tr><td>更长的推理值得吗？</td><td>模型、问题、评分规则</td><td>最大 token 数、采样次数或推理预算</td><td>pass@k, 平均输出 token 数, 成本, TTFT/TPOT</td></tr>
+    </table>
+  </div>
+
+  <h4>示例：将“3% 的改进”改写成可判断的结论</h4>
+  <p>不充分的写法：<code>Adding a reranker improved the benchmark from 72% to 75%, the effect is better.</code></p>
+  <p>更严谨的写法：在同一组 <code>n=500</code> 中文监管 QA 样本上，使用固定的生成模型、prompt、temperature=0、最大输出=384 token 和上下文预算=1800 token，仅将 top-8 稠密检索改为稠密检索+交叉编码器重排序。端到端准确率从 <code>72.0%</code> 提升至 <code>75.0%</code>，该差异的 bootstrap 95% CI 约为 <code>[0.4%, 5.8%]</code>；检索 Recall@8 保持不变，但引用精确率从 <code>68%</code> 提升至 <code>79%</code>；P95 延迟增加了 <code>140ms</code>，平均输入 token 数未变。这一结论支持“重排序器为此监管 QA 工作负载改进了上下文排序，值得进行一次 canary 测试”，但不支持“所有 RAG 任务都应包含重排序器”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>一个可信的基准测试结论必须经受住至少四个问题：数据是否干净？比较是否公平？差异是否稳定？消融实验能否解释改进的来源？缺少任何一环，分数就只能作为线索。</div></div>
+</section><section class="card" id="s11-6c">
+  <h3>11.6C 安全与社交影响：风险分类、触发条件与工程缓解措施</h3>
+  <p>一门 NLP/LLM 工程课程不能把安全当作部署前的附录来处理。模型风险源于数据、训练目标、推理接口、应用场景和用户群体的组合；同一个模型在闲聊、医疗摘要、金融建议、教育辅导和代码执行等场景中的错误成本差异巨大。工程师必须能够将“模型可能有害”这一笼统问题分解为可讨论、可衡量、可缓解的风险类别。</p>
+
+  <h4>1. 风险并非单一维度</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>风险类别</th><th>典型触发条件</th><th>工程中应优先检查什么</th><th>常见缓解措施</th></tr>
+      <tr><td>幻觉与错误信息</td><td>开放式问答、RAG 召回不足、模型被要求给出确定答案</td><td>事实错误率、引用覆盖率、无法回答时的表达方式</td><td>带引用的检索、表达不确定性、抽取式约束、高风险场景的人工审核</td></tr>
+      <tr><td>隐私与个人信息</td><td>训练数据包含个人身份信息、日志存储用户输入、RAG 索引包含敏感文档</td><td>数据来源、日志保留期、访问权限、输出是否泄露个人信息</td><td>个人身份信息过滤、最小化日志记录、租户隔离、权限感知的检索</td></tr>
+      <tr><td>偏见与代表性不足</td><td>语料库按语言/地区/人群分布不均、标注者偏好单一群体</td><td>按语言、地区、人群和任务划分的错误率</td><td>数据重平衡、分片评估、多样化标注规范、失败案例分析</td></tr>
+      <tr><td>滥用与越狱</td><td>请求危险操作、多轮绕过、工具调用或代码执行权限</td><td>有害内容完成率、越狱成功率、工具权限边界</td><td>能力分层、工具沙箱化、拒绝策略、敏感操作的二次确认</td></tr>
+      <tr><td>过度拒绝</td><td>安全数据比例过高、策略将良性敏感请求视为危险</td><td>良性敏感集上的误拒率</td><td>纳入安全但可回答的样本、分别训练拒绝与有用性</td></tr>
+      <tr><td>版权与归属</td><td>训练或 RAG 语料来源不明、输出包含大段近乎逐字复制的段落</td><td>数据许可、引用链、输出相似度、来源归属</td><td>使用授权数据、注明来源、避免长段落逐字复制、保留可追溯的文档 ID</td></tr>
+      <tr><td>自动化依赖</td><td>用户直接使用模型输出做决策、系统缺少人工确认环节</td><td>错误成本、用户是否了解模型局限性、是否有申诉或降级路径</td><td>明确界定使用范围、人在回路中、保守默认值、关键决策需人工确认</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 安全评估必须针对场景编写，而非空喊口号</h4>
+  <p>“模型安全”不能脱离应用场景。医疗问答的核心风险是误导性建议、隐私和不确定性表达；代码 agent 的核心风险是执行权限、供应链和数据泄露；教育辅导的风险是错误反馈、过度依赖写作和学习依赖。一份安全报告应首先清晰描述目标场景、用户、模型权限和错误成本，然后再选择样本和指标。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>场景</th><th>必须覆盖的样本切片</th><th>不充分的评估方法</th></tr>
+      <tr><td>医学教育问答</td><td>一般教育性问题、紧急症状、用药、私人信息、应建议就医的问题</td><td>只检查回答是否流畅或是否拒绝</td></tr>
+      <tr><td>企业级 RAG</td><td>权限内文档、权限外文档、过时文档、冲突文档、缺少引用</td><td>只看最终答案准确性，忽略权限和引用</td></tr>
+      <tr><td>代码 Agent</td><td>只读任务、文件写入任务、网络任务、危险命令、依赖安装</td><td>只看通过率，忽略工具调用边界</td></tr>
+      <tr><td>多模态文档理解</td><td>小字、表格、签名、人脸、身份证件、图表数值</td><td>用通用 VQA 分数代表文档安全性</td></tr>
+    </table>
+  </div>
+
+  <h4>示例分析：RAG 医疗问答的风险分解</h4>
+  <p>假设一个团队想推出一款面向患者的医学教育 RAG 系统。一种不充分的方法仅仅是测试“答案看起来是否专业”。一种更合理的工程分解方式是：</p>
+  <ol>
+    <li><strong>检索风险：</strong>是否召回了相关指南，过时文档是否被引入上下文，引用是否指向了正确的段落。</li>
+    <li><strong>生成风险：</strong>模型是否将检索内容外推到诊断结论，捏造了药物剂量，或在信息不足时给出了确定性的建议。</li>
+    <li><strong>隐私风险：</strong>用户输入和日志是否包含姓名、电话号码、病历号或其他可识别信息。</li>
+    <li><strong>拒绝边界：</strong>一般教育性问题应予以回答，而涉及紧急情况、自残或处方调整的请求应转介给专业人士。</li>
+    <li><strong>可用性：</strong>安全策略不能拒绝所有医疗问题，否则系统将无法服务于真实用户任务。</li>
+  </ol>
+  <p>因此，该系统至少应报告检索召回率、引用准确率、事实错误率、有害建议率、一般医学教育完成率、紧急转介率、个人身份信息日志处理方式以及用户界面中的局限性描述。目标不是创建更多的表格，而是用同一种工程语言来描述模型行为、数据来源、用户风险和部署边界。</p>
+
+  <h4>3. 安全、对齐、评估与提供服务是同一流水线</h4>
+  <p>第 9 章讨论了如何使用 SFT/DPO/GRPO 改变模型行为，第 10 章讨论了如何将模型转变为可服务的系统，而本节讨论的是这些行为在真实场景下的风险边界。一个模型可能在无害性上有所提升，同时对良性的敏感问题过度拒绝；它也可能在离线安全集上表现良好，但由于工具权限过大而在 Agent 场景中失效。一份可信的结果表应在质量、延迟和成本旁边包含安全切片，而不是仅仅在结论中写上“已考虑安全性”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>社会影响不是抽象的道德讨论，也不是单一的安全分数。LLM 工程师必须能够将风险映射到数据、目标函数、接口权限、用户场景和评估切片上，并解释每项缓解措施会牺牲哪些能力、延迟或成本。</div></div>
+</section><section class="card" id="s11-6d">
+  <h3>11.6D Agent 与工作流评估：最终答案、轨迹、状态与成本</h3>
+  <p>Agent 评估比单轮答案评估更严格，因为模型可以搜索、编辑文件、调用工具、写入数据库，并在多轮交互中与用户沟通。仅有正确的最终句子是不够的：轨迹可能使用了禁止的工具、修改了错误的状态、泄露了隐私数据，或者花费了不可接受的时间和金钱。最近的基准测试使这一边界更加清晰。<a href="https://openai.com/index/introducing-swe-bench-verified/" target="_blank">SWE-bench Verified</a> 通过隐藏测试和人工过滤来验证软件工程任务。<a href="https://github.com/sierra-research/tau2-bench" target="_blank">tau2-bench</a> 结合领域策略、工具使用、用户模拟和最终状态来评估客服 Agent。<a href="https://openai.com/index/browsecomp/" target="_blank">BrowseComp</a> 专注于难以找到但简短且可验证的浏览答案，明确以开放的逼真性换取评分可靠性。</p>
+
+  <div class="foundation-graph" role="img" aria-label="Agent工作流评估证据图">
+    <svg viewBox="0 0 930 330">
+      <defs>
+        <marker id="agent-eval-arrow-11" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .ae-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .ae-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .ae-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#agent-eval-arrow-11)}
+        .ae-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .ae-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="ae-core" x="34" y="126" width="142" height="78" rx="10"/>
+      <text text-anchor="middle" x="105" y="154"><tspan class="ae-title">Task Contract</tspan><tspan class="ae-sub" x="105" dy="20">goal, policy, SLO</tspan><tspan class="ae-sub" x="105" dy="17">allowed tools</tspan></text>
+      <path class="ae-line" d="M176 165 H242"/>
+      <rect class="ae-node" x="242" y="38" width="146" height="70" rx="10"/>
+      <text text-anchor="middle" x="315" y="66"><tspan class="ae-title">Final Output</tspan><tspan class="ae-sub" x="315" dy="18">answer or patch</tspan></text>
+      <rect class="ae-node" x="242" y="130" width="146" height="70" rx="10"/>
+      <text text-anchor="middle" x="315" y="158"><tspan class="ae-title">Trajectory</tspan><tspan class="ae-sub" x="315" dy="18">search, tool calls</tspan></text>
+      <rect class="ae-node" x="242" y="222" width="146" height="70" rx="10"/>
+      <text text-anchor="middle" x="315" y="250"><tspan class="ae-title">State Delta</tspan><tspan class="ae-sub" x="315" dy="18">files, database</tspan></text>
+      <path class="ae-line" d="M388 73 H470"/>
+      <path class="ae-line" d="M388 165 H470"/>
+      <path class="ae-line" d="M388 257 H470"/>
+      <rect class="ae-core" x="470" y="96" width="170" height="138" rx="10"/>
+      <text text-anchor="middle" x="555" y="128"><tspan class="ae-title">Evaluator</tspan><tspan class="ae-sub" x="555" dy="24">tests / state check</tspan><tspan class="ae-sub" x="555" dy="18">policy checker</tspan><tspan class="ae-sub" x="555" dy="18">judge audit</tspan><tspan class="ae-sub" x="555" dy="18">cost trace</tspan></text>
+      <path class="ae-line" d="M640 165 H716"/>
+      <rect class="ae-node" x="716" y="68" width="170" height="64" rx="10"/>
+      <text text-anchor="middle" x="801" y="94"><tspan class="ae-title">Pass / Fail</tspan><tspan class="ae-sub" x="801" dy="18">with failure type</tspan></text>
+      <rect class="ae-node" x="716" y="154" width="170" height="64" rx="10"/>
+      <text text-anchor="middle" x="801" y="180"><tspan class="ae-title">Reliability</tspan><tspan class="ae-sub" x="801" dy="18">pass@k, variance</tspan></text>
+      <rect class="ae-node" x="716" y="240" width="170" height="64" rx="10"/>
+      <text text-anchor="middle" x="801" y="266"><tspan class="ae-title">Deployment Risk</tspan><tspan class="ae-sub" x="801" dy="18">cost, safety, rollback</tspan></text>
+    </svg>
+  </div>
+
+  <h4>不同 Agent 基准测试实际衡量什么</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>基准测试系列</th><th>主要能力</th><th>评估信号</th><th>你必须说明的边界</th></tr>
+      <tr><td>SWE-bench / SWE-bench Verified</td><td>在真实仓库中解决软件问题</td><td>补丁通过隐藏的 FAIL_TO_PASS 和 PASS_TO_PASS 测试；Verified 筛选出可解决且规格明确的任务</td><td>不覆盖所有生产编码工作流：需求发现、代码审查、安全审查、CI 不稳定性和长期维护可能不在任务范围内</td></tr>
+      <tr><td>tau / tau2 风格基准测试</td><td>在领域策略和模拟用户交互下进行对话式工具使用</td><td>最终数据库或环境状态、策略遵守情况、工具调用正确性、重复试验可靠性</td><td>用户模拟器质量、领域覆盖、策略完整性和工具环境现实性限制了泛化能力</td></tr>
+      <tr><td>BrowseComp</td><td>持久性网络搜索，寻找难以找到、简短、可验证的答案</td><td>基于浏览证据的精确或近似精确的简短答案</td><td>它有意偏向可验证的简短答案，不代表所有开放式研究或综合任务</td></tr>
+      <tr><td>内部生产评估</td><td>你产品的真实工作流</td><td>任务成功、状态正确性、安全事件、延迟、成本、人工升级、回滚行为</td><td>必须随着产品数据、工具、策略和用户行为的变化而维护</td></tr>
+    </table>
+  </div>
+
+  <h4>Agent 评估必须保留轨迹</h4>
+  <p>对于 Agent 任务，要存储完整的轨迹，而不仅仅是最终答案。至少记录：模型版本、提示/模板、用户轮次、工具 schema、工具参数、工具返回值、检索到的文档、文件补丁、环境状态（变更前/后）、延迟、token 用量、错误以及最终评估者决策。这是区分“答案错误是因为检索遗漏了证据”与“答案正确但 Agent 违反了策略”或“补丁有效但破坏了无关测试”的唯一方法。OpenAI 的评估指南将评估定义为任务特定、有日志记录、经过校准且持续进行的，而非一次性的排行榜检查；这对 Agent 尤其重要，因为工具和环境会随时间漂移。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>证据维度</th><th>要回答的问题</th><th>示例指标或检查</th></tr>
+      <tr><td>最终结果</td><td>用户可见的目标完成了吗？</td><td>精确答案、隐藏测试、最终状态差异、人工评分标准</td></tr>
+      <tr><td>轨迹合法性</td><td>中间动作是否被允许？</td><td>工具白名单、权限边界、无禁止命令、无不安全外部调用</td></tr>
+      <tr><td>状态完整性</td><td>Agent 是否只修改了预期的对象？</td><td>数据库差异、文件差异、PASS_TO_PASS 测试、回滚检查</td></tr>
+      <tr><td>可靠性</td><td>相同任务在随机生成下能否重复成功？</td><td>pass@k、重复试验方差、按任务类型的失败聚类</td></tr>
+      <tr><td>成本与延迟</td><td>在生产 SLO 下成功是否可承受？</td><td>token、工具调用、挂钟延迟、每解决任务成本、超时率</td></tr>
+      <tr><td>安全与隐私</td><td>工作流是否暴露了敏感数据或产生了不安全的副作用？</td><td>PII 泄露检查、prompt injection 成功率、副作用审计、升级率</td></tr>
+    </table>
+  </div>
+
+  <p>因此，资深工程师应避免在无上下文的情况下写出“Agent 得分 62%”。一个可用的结论更接近：“在 500 个经过人工验证的软件问题（含隐藏测试）上，使用模型 X、脚手架 Y、最大步骤 Z 和固定环境镜像，Agent 解决了 62% 的任务；未解决的任务集中在跨文件推理和环境设置上；平均成本为 A，P95 挂钟时间为 B，PASS_TO_PASS 回归数为 C。这支持将 Agent 用于低风险问题分类（需人工审查），但不支持自主合并权限。”</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>Agent 评估是一次工作流审计。它必须证明最终任务成功、轨迹合法、状态变更正确、可重复性、成本可控以及可接受的安全风险。基准测试可以揭示能力的一个侧面，但生产就绪需要一个可追溯的评估框架，与实际工具和策略绑定。</div></div>
+</section><section class="card" id="s11-7">
+  <h3>11.7 任务选择：何时不应使用 Decoder-only 大语言模型</h3>
+  <p>选择模型系列时，首先考虑输出空间和错误代价：</p>
+  <ul>
+    <li><strong>固定标签分类：</strong>仅编码器微调或小型模型分类器通常更便宜且更稳定。</li>
+    <li><strong>RAG 重排序：</strong>Cross-encoder 可以同时查看 query 和文档来对候选进行排序；decoder-only 大语言模型重排序成本高且格式不稳定。</li>
+    <li><strong>抽取式答案：</strong>如果答案必须来自原始文档，Span QA 比自由生成更可控。</li>
+    <li><strong>结构化输出：</strong>依存分析、NER、槽位填充等任务可以使用结构化 head 或约束解码，不应默认采用开放生成。</li>
+    <li><strong>开放生成与推理：</strong>当输出需要新文本、代码、解释或多步推理时，decoder-only 大语言模型更自然。</li>
+  </ul>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>常见错误：</strong>把 BERT 和 GPT 描述为“只是不同的 mask”。它们的注意力可见性、训练目标、微调 head、输出空间和服务成本都不同。</div></div>
+</section><section class="card" id="s11-7a">
+  <h3>11.7A 工程选择案例研究：将任务分解为训练目标、输出空间和服务成本</h3>
+  <p>大语言模型工程师经常面临的问题不是“哪个模型最大”，而是“这个任务应该建模为分类、抽取、排序、结构化预测，还是开放生成？”同一个业务目标可以有多种建模方法，而训练数据、推理路径、评估指标和部署成本都会随之改变。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>任务</th><th>推荐模型家族</th><th>训练信号</th><th>推理形式</th><th>主要风险</th></tr>
+      <tr><td>文档相关性</td><td>双编码器 / 交叉编码器重排序器</td><td>查询-文档正负样本、点击数据或人工相关性</td><td>向量召回后的重排序</td><td>召回遗漏答案，重排序器太慢</td></tr>
+      <tr><td>答案必须来自原文</td><td>仅编码器抽取式问答</td><td>起始/结束跨度标签或无答案标签</td><td>从输入中选择一个有效跨度</td><td>无法生成摘要，跨度边界错误</td></tr>
+      <tr><td>实体、槽位、字段抽取</td><td>BIO 标注器 / CRF / 受限解码</td><td>token 级别的 BIO 或跨度标签</td><td>输出结构化跨度</td><td>token 准确率高但实体边界错误</td></tr>
+      <tr><td>客服回答、解释、代码</td><td>仅解码器 LLM / RAG + LLM</td><td>SFT、偏好数据、检索上下文和任务反馈</td><td>自回归生成</td><td>幻觉、格式漂移、延迟和成本</td></tr>
+      <tr><td>翻译、摘要</td><td>编码器-解码器或仅解码器指令模型</td><td>源语言-目标语言配对数据</td><td>条件生成，可使用束搜索或采样</td><td>长度偏差、事实遗漏、指标与人工偏好不匹配</td></tr>
+    </table>
+  </div>
+
+  <h4>案例 1：客服知识库问答</h4>
+  <p>如果业务要求“答案必须引用原始知识库文本”，直接让仅解码器 LLM 自由回答风险很高。更稳健的做法通常是三阶段流水线：双编码器用于候选文档召回、交叉编码器重排序器用于精细排序、抽取式问答或受限生成用于答案跨度及引用。只有当问题需要跨段落综合、改写或解释时，才应让仅解码器 LLM 基于检索上下文生成自然语言答案。</p>
+  <p>此类系统的训练目标也是分层的：检索器使用对比学习或点击数据，重排序器使用相关性排序标签，问答头使用跨度标签，生成器使用 SFT/偏好优化。将所有错误归咎于“LLM 不够强”会掩盖真正的瓶颈：可能是召回遗漏、重排序错误、分块破坏了答案、提示未限制引用，或是生成阶段没有忠实地使用上下文。</p>
+
+  <h4>案例 2：合同字段抽取</h4>
+  <p>从合同中抽取甲方、乙方、金额和日期等字段的输出空间是有限的。如果使用开放生成，模型可能会改写金额格式、补全不存在的字段或混淆多个日期。更合适的基线是仅编码器的 token 分类或跨度分类，然后对金额、日期和实体类型进行基于规则的验证。</p>
+  <p>在训练工程中，应关注跨度级别的 F1，而不是 token 准确率。如果一个日期实体 <code>June 8, 2026</code> 少了一天，token 准确率可能仍然很高，但字段抽取却是错误的。在推理工程中，应关注批量吞吐量和长文档分块：如果每份合同有几十页，使用交叉编码器处理全文的成本可能无法接受，需要先分块召回候选段落，再进行细粒度抽取。</p>
+
+  <h4>案例 3：开放式推理答案</h4>
+  <p>数学问题、代码修复和复杂规划通常无法用固定标签或跨度覆盖，需要仅解码器 LLM 生成中间推理过程和最终答案。此时，经典的 NLP 指标已不再足够；BLEU/ROUGE 可能会惩罚合理的改写，或奖励错误但词汇相似的答案。更合适的指标是任务成功率、单元测试/pass@k、自一致性、人工或 LLM-as-judge 分层评估，以及第 10 章中的延迟/成本指标。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>模型家族的选择应从输出约束出发。固定标签优先用分类，答案来自原文优先用抽取，结构化字段优先用跨度/CRF/受限解码，开放式解释和推理优先用仅解码器生成。这能确保训练目标、评估指标和推理成本相互对齐。</div></div>
+</section><section class="card" id="s11-8">
+  <h3>11.8 实验结论：从指标到可判定的判断</h3>
+  <p>本节将代码输出、手动推导、阅读材料和实验指标组织成可判定的结论。核心不是“成功跑通demo”，而是回答一个清晰的技术问题，并让读者能够判断结论在什么条件下成立。</p>
+
+  <h4>1. 将问题表述为可检验的命题</h4>
+  <p>一个好的技术问题应该能被数据和实验证伪。例如：</p>
+  <ul>
+    <li><strong>训练工程：</strong>在固定token预算下，<code>seq_len=128</code>相比<code>seq_len=64</code>是否降低了验证PPL？其代价（tokens/s和step时间）是多少？</li>
+    <li><strong>对齐工程：</strong>DPO是否在维持基础任务准确率和拒绝边界的同时，提高了偏好胜率？KL、输出长度和失败类型如何变化？</li>
+    <li><strong>推理工程：</strong>将RAG top-k从3增加到8是否提高了通过率？它对P95 TTFT、prompt tokens、context packing miss率和成本有何影响？</li>
+    <li><strong>服务工程：</strong>当并发从1增加到8时，P95/P99延迟是否仍然满足SLO？瓶颈是排队、prefill、decode、检索还是后处理？</li>
+  </ul>
+  <p>这些问题都有基线、变更项、指标和结论边界。相比之下，“构建一个聊天机器人”或“训练一个小模型”不是一个定义良好的技术命题，因为它无法解释什么变化导致了什么效果。</p>
+
+  <h4>2. 结论结构应覆盖建模、系统与评估</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>部分</th><th>训练/对齐结论应回答</th><th>推理/服务结论应回答</th></tr>
+      <tr><td>问题</td><td>训练或对齐的更改旨在改善什么现象</td><td>服务旨在满足什么工作负载和SLO</td></tr>
+      <tr><td>基线</td><td>默认数据、模型、lr、batch tokens、seed</td><td>默认API、无RAG或默认并发</td></tr>
+      <tr><td>方法</td><td>数据处理、优化器、调度器、检查点策略</td><td>RAG/工具/JSON、batching、容量、降级策略</td></tr>
+      <tr><td>指标</td><td>训练/验证损失、PPL、grad_norm、tokens/s、断点续训一致性</td><td>通过率、P50/P95/P99、TTFT、TPOT、错误率、成本</td></tr>
+      <tr><td>消融</td><td>每次只改变lr、seq_len、batch、dropout或数据源</td><td>每次只改变top-k、并发、上下文、JSON/重试或容量假设</td></tr>
+      <tr><td>失败分析</td><td>loss spike、NaN、训练/验证发散、吞吐量下降、断点不连续</td><td>检索miss、格式/工具错误、安全拒绝、尾延迟、429/5xx</td></tr>
+      <tr><td>决策</td><td>是否继续训练、回滚、扩缩、更改数据或调整目标</td><td>是否部署、灰度发布、降级、限流或继续优化</td></tr>
+    </table>
+  </div>
+
+  <h4>3. 负面结果也是有力的结论</h4>
+  <p>实验并不要求每个方法都“提升”某些指标。如果某个消融没有带来显著改进，只要实验设计清晰，它仍然是一个有价值的结论。例如：<code>seq_len=128</code>仅将验证PPL降低了<code>0.03</code>，但tokens/s下降了<code>35%</code>，且三个seed上的波动约为<code>0.05</code>。那么合理的结论是“当前设置不足以证明采用更长序列是合理的”。这比只挑选最优数字更加严谨。</p>
+
+  <h4>4. 将结论与复现命令和局限性绑定</h4>
+  <p>结论必须指定复现路径：数据版本、commit、运行命令、seed、硬件、模型配置、检查点或服务配置、评估集、压力测试参数。还必须指出外推无效的方面：一个小型语料库不能代表万亿token训练，本地MockEngine不能代表真实GPU服务，小型知识库RAG不能代表企业知识库，单一安全测试集不能代表所有用户风险。</p>
+
+  <p>读者应该能够回答三个问题：第一，问题是否清晰？第二，实验是否足以支撑结论？第三，如果系统扩展到更大的模型、更大的数据或真实服务，哪些假设会首先失效？</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>训练方向必须证明过程是可复现、可恢复且可解释的；推理方向必须证明在目标工作负载下服务质量、延迟、成本和风险是可判定的。没有基线、消融、失败分析和结论边界的实验不能支持工程决策。</div></div>
+</section><section class="card" id="s11-9">
+  <h3>11.9 可运行诊断图 (Runnable Diagnostics Map)</h3>
+  <p>可运行诊断将本章的概念转化为具体的检查项：</p>
+  <table>
+    <tr><th>函数</th><th>对应概念</th><th>应解释的问题</th></tr>
+    <tr><td><code>scalar_rnn_forward</code>, <code>recurrent_gradient_factors</code></td><td>RNN 循环与 BPTT</td><td>为什么长距离梯度会消失或爆炸</td></tr>
+    <tr><td><code>run_arc_standard_transitions</code>, <code>attachment_scores</code></td><td>依存句法分析与 UAS/LAS</td><td>结构化预测与注意力诊断有何不同</td></tr>
+    <tr><td><code>additive_attention_context</code></td><td>Seq2Seq 对齐</td><td>解码器步如何读取源序列</td></tr>
+    <tr><td><code>build_mlm_example</code>, <code>masked_lm_loss_from_logits</code></td><td>BERT MLM 标签掩码与损失</td><td>为什么未掩码位置不包含在损失分母中</td></tr>
+    <tr><td><code>bio_tags_to_spans</code> / <code>span_f1</code></td><td>BIO 序列标注</td><td>如何将 token 分类输出转换为实体跨度并在实体级别评估</td></tr>
+    <tr><td><code>viterbi_decode</code></td><td>线性链结构化解码</td><td>为什么最优标签路径不等于逐 token 的 argmax</td></tr>
+    <tr><td><code>linear_chain_log_partition</code></td><td>CRF 前向算法</td><td>如何对所有标签路径执行 logsumexp 归一化</td></tr>
+    <tr><td><code>linear_chain_crf_nll</code></td><td>CRF 训练目标</td><td>为什么结构化训练目标是 logZ 减去黄金路径分数</td></tr>
+    <tr><td><code>select_extractive_qa_span</code></td><td>BERT 跨度抽取</td><td>如何选择有效的答案跨度并处理无答案情况</td></tr>
+    <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP 评估</td><td>为什么度量选择可以改变结论</td></tr>
+    <tr><td><code>summarize_pairwise_judgments</code></td><td>LLM 作为评判者 (LLM-as-judge)</td><td>如何计算平局调整的胜率并按任务分解胜/负</td></tr>
+    <tr><td><code>judge_reliability_audit</code></td><td>评判者可靠性审计</td><td>如何检查位置偏差、长度偏差、交换一致性和人工标注一致率</td></tr>
+    <tr><td><code>safety_evaluation_metrics</code></td><td>安全评估</td><td>为什么必须同时报告攻击成功率、拒绝率、过度拒绝率和任务实用性</td></tr>
+    <tr><td><code>benchmark_result_summary</code></td><td>基准报告</td><td>如何将度量转化为包含样本、推理设置、失败类型和边界的工程结论</td></tr>
+  </table>
+</section><section class="card" id="s11-10">
+  <h3>11.10 总结</h3>
+  <ul>
+    <li>RNN/LSTM 解释了序列循环、BPTT 和长距离依赖问题。</li>
+    <li>依存句法分析是离散结构预测，并不等同于注意力热力图。</li>
+    <li>Seq2Seq 注意力分别建模源序列和目标前缀，构成了基本的编码器-解码器结构。</li>
+    <li>BERT/仅编码器模型适用于分类、重排序、嵌入、词元分类和抽取式问答。</li>
+    <li>BLEU、ROUGE、EM/F1、span F1、UAS/LAS 各自衡量不同的任务结构；现代 LLM 评估还必须描述数据、推理设置、评判者偏差、安全拒绝、统计不确定性和结论边界。</li>
+  </ul>
+</section><section class="card" id="s11-11">
+  <h3>11.11 概念检查</h3>
+  <div class="exercise" data-answer="2" data-explain="依存句法分析输出的是一个满足树约束的离散 head/label 结构；注意力热图是模型内部的连续权重，不能自动解释为句法树。">
+    <h4>练习 1：为什么注意力热图不能直接当作依存句法树？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q1" value="0"> A. 因为注意力只能用于 decoder-only 模型</label>
+      <label><input type="radio" name="q1" value="1"> B. 因为依存句法分析不需要输入 token</label>
+      <label><input type="radio" name="q1" value="2"> C. 因为句法分析输出的是离散的树结构，而注意力是一种连续的权重诊断</label>
+      <label><input type="radio" name="q1" value="3"> D. 因为注意力没有数学定义</label>
     </div>
-    <p>BLEU 会裁剪重复词：candidate 是 <code>the the the the</code>，reference 是 <code>the cat is here</code>，unigram 里 <code>the</code> 最多只能算 1 次，所以 precision 是 <code>1/4</code>。ROUGE-L 看最长公共子序列。QA 的 EM/F1 要先做 lower、去标点、去冠词、合并空格，再和多个 gold answers 取最高分。</p>
-  </section>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
 
-  <section class="card" id="s11-6a">
-    <h3>11.6A 现代 LLM 评估协议：从单分数到可复现结论</h3>
-    <p>现代 LLM 还要评估开放回答、长上下文、工具调用、RAG、拒答、安全和多轮对话。最常见错误是把一个 benchmark score、一个 LLM-as-judge win rate 或几条人工偏好写成“模型更好”。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>组成部分</th><th>要讲清什么</th><th>常见失败</th></tr>
-        <tr><td>Data</td><td>样本来源、train/dev/test、去重、是否可能污染</td><td>污染抬高分数，dev 被反复调参后不再代表泛化</td></tr>
-        <tr><td>Inference settings</td><td>模型版本、prompt、temperature、top-p、max tokens、RAG/tool 配置</td><td>两个模型用不同 prompt 或采样参数比较</td></tr>
-        <tr><td>Metrics</td><td>自动指标、人评、judge、系统指标、安全指标各测什么</td><td>平均分掩盖事实性、格式、延迟和拒答问题</td></tr>
-        <tr><td>Statistics</td><td>样本量、重复运行、置信区间、pairwise test、错误类型</td><td>小样本 win rate 波动被当成稳定结论</td></tr>
-        <tr><td>Boundary</td><td>结果能外推到哪里，不能外推到哪里</td><td>从单任务推到通用能力或生产可靠性</td></tr>
-      </table>
+  <div class="exercise" data-answer="1" data-explain="MLM 只在被遮盖的位置计算损失；未遮盖的位置通常设置为 ignore_index。Causal LM 在每个位置预测下一个 token。">
+    <h4>练习 2：BERT 风格的 MLM 和 causal LM 在标签上的主要区别是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q2" value="0"> A. MLM 不需要 token embedding</label>
+      <label><input type="radio" name="q2" value="1"> B. MLM 只在被遮盖的位置计算损失，而 causal LM 预测下一个 token</label>
+      <label><input type="radio" name="q2" value="2"> C. MLM 只能用于机器翻译</label>
+      <label><input type="radio" name="q2" value="3"> D. Causal LM 能同时看到左右上下文</label>
     </div>
-    <h4>LLM-as-judge 必须校准</h4>
-    <p>LLM-as-judge 会有位置偏差、长度偏差、风格偏差和同源模型偏差。更稳的做法是 blind pairwise comparison：隐藏模型名，随机交换 A/B 顺序，记录 tie，并拿一小部分人工 gold labels 校准。</p>
-    <p>win rate 可以写成：</p>
-    <div class="math-box"><div class="label">Pairwise win rate with ties</div>
-      <div class="katex" data-expr="\text{win rate}=\frac{W+0.5T}{W+L+T}" aria-label="pairwise win rate with ties" role="img"></div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="0" data-explain="LAS 要求 head 和依存标签都正确；UAS 只要求 head 正确。系统可能选对了 head 但关系类型错误。">
+    <h4>练习 3：为什么 LAS 通常不高于 UAS？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q3" value="0"> A. LAS 要求 head 和标签都正确，条件更严格</label>
+      <label><input type="radio" name="q3" value="1"> B. LAS 不使用 gold tree</label>
+      <label><input type="radio" name="q3" value="2"> C. UAS 只用于英文</label>
+      <label><input type="radio" name="q3" value="3"> D. LAS 是生成任务指标</label>
     </div>
-    <p>但这个数字不能单独证明模型值得上线，还要看样本是否代表目标场景、失败类型、延迟、成本和安全。</p>
-    <h4>安全评估要区分拒答和过度拒答</h4>
-    <ul>
-      <li><strong>Attack success rate：</strong>有害请求里模型给出危险帮助的比例，越低越好。</li>
-      <li><strong>Refusal rate：</strong>拒答比例，要按 harmful / benign 分开看。</li>
-      <li><strong>Over-refusal rate：</strong>本该帮助的良性敏感请求被拒绝的比例。</li>
-      <li><strong>Task utility：</strong>普通任务上的准确率、帮助性和完成质量。</li>
-    </ul>
-    <p>严谨写法不是“Model A 好 8%”，而是：在固定 prompt、temperature=0、样本量 n=300 的中文客服 QA 上，A 相对 B 的 pairwise win rate 是 58%，主要改善来自格式遵循和引用完整性；事实错误率从 11% 降到 8%，但 P95 TTFT 从 720ms 增到 980ms。这个结论只支持进入灰度，不支持“通用更强”。</p>
-  </section>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
 
-  <section class="card" id="s11-6b">
-    <h3>11.6B Benchmark 有效性：污染、置信区间和消融</h3>
-    <p>Benchmark 难点不是选哪个榜，而是分数能不能支持工程决策。模型可能因为看过题、prompt 更适配、输出更长、采样更多、judge 偏它的风格而赢。</p>
-    <h4>数据污染和 split leakage 不是一回事</h4>
-    <p><strong>Split leakage</strong> 常发生在自己的数据管线里：同一文档、会话、题库或近似改写同时进 train/dev/test。可以通过 document-level split、ID 去重、n-gram overlap、embedding nearest-neighbor 和人工抽查缓解。</p>
-    <p><strong>Benchmark contamination</strong> 更广：公开测试题、答案解析、讨论帖、代码仓库可能早已进过预训练或 SFT 数据。不能完全消除时，报告必须写明数据来源、发布日期、去重方法和高相似样本处理。</p>
-    <h4>小样本提升要有不确定性</h4>
-    <p>如果 A 答对 61/100，B 答对 56/100，不能直接写“A 提升 5%”。当 <code>n=100</code>、<code>p=0.61</code>，95% 区间大约是 <code>61% ± 9.6%</code>。这不足以支持强结论。开放生成、RAG 和 judge win rate 常用 bootstrap 估计区间。</p>
-    <h4>消融一次只回答一个问题</h4>
-    <p>如果你同时改 base model、prompt、retriever、reranker、temperature 和 context length，分数提升了也不知道是谁的贡献。合理消融应该固定模型、prompt、数据和采样参数，只改变一个变量，并同时报告质量、延迟、成本和失败类型。</p>
-  </section>
-
-  <section class="card" id="s11-6c">
-    <h3>11.6C 安全与社会影响：风险分类、触发条件和工程缓解</h3>
-    <p>安全不是上线前贴的一段声明。风险来自数据、训练目标、推理接口、应用场景和用户群的组合。同一个模型在闲聊、医疗摘要、金融建议、教育辅导和代码执行里的错误代价完全不同。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>风险类别</th><th>典型触发条件</th><th>先检查什么</th><th>常见缓解</th></tr>
-        <tr><td>幻觉和误导</td><td>开放 QA、RAG 召回不足、用户要求确定答案</td><td>事实错误率、引用覆盖、不知道时的表达</td><td>带引用检索、不确定性表达、高风险人工复核</td></tr>
-        <tr><td>隐私和个人信息</td><td>训练/日志/RAG index 含 PII</td><td>数据来源、日志保留、访问权限、输出泄露</td><td>PII 过滤、最小日志、租户隔离、权限检索</td></tr>
-        <tr><td>偏见和代表性不足</td><td>语种、地区、群体数据不均衡</td><td>按语言、地区、人群和任务切片错误率</td><td>数据再平衡、切片评估、多样标注规范</td></tr>
-        <tr><td>滥用和越狱</td><td>危险请求、多轮绕过、工具/代码权限</td><td>有害完成率、越狱成功率、工具边界</td><td>能力分级、sandbox、拒答策略、二次确认</td></tr>
-        <tr><td>过度拒答</td><td>安全数据比例过高，把良性敏感请求当危险</td><td>benign sensitive false refusal</td><td>加入可回答样本，把拒答和帮助性分开训练</td></tr>
-      </table>
+  <div class="exercise" data-answer="3" data-explain="如果答案必须来自原始文档中的 token 片段，encoder-only 的片段抽取通常更可控；decoder-only 生成可能会改写、补充或编造。">
+    <h4>练习 4：如果一个客服系统要求答案来自原始文档中的片段，应优先采用哪种方法？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q4" value="0"> A. 开放式高温度采样生成</label>
+      <label><input type="radio" name="q4" value="1"> B. 只看 perplexity 的 decoder-only LM</label>
+      <label><input type="radio" name="q4" value="2"> C. 无约束的多轮对话 prompt</label>
+      <label><input type="radio" name="q4" value="3"> D. Encoder-only 抽取式 QA 或带约束的抽取系统</label>
     </div>
-    <p>例如医疗教育 RAG，至少要报告 retrieval recall、citation accuracy、factual error、harmful advice、普通医学教育完成率、紧急情况转介率、PII 日志处理和 UI 限制说明。安全、alignment、evaluation、serving 是同一条流水线。</p>
-  </section>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
 
-  <section class="card" id="s11-6d">
-    <h3>11.6D Agent 和 Workflow 评估：最终答案、轨迹、状态和成本</h3>
-    <p>Agent 评估比单轮答案更严格，因为模型可以搜索、改文件、调用工具、写数据库、多轮交互。最终答案正确不够：轨迹可能用了禁用工具、改错状态、泄露隐私，或者耗时耗钱不可接受。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>证据维度</th><th>要回答的问题</th><th>例子</th></tr>
-        <tr><td>Final result</td><td>用户可见目标是否完成</td><td>精确答案、hidden tests、最终状态 diff、人评 rubric</td></tr>
-        <tr><td>Trajectory legality</td><td>中间动作是否合法</td><td>tool allowlist、权限边界、无禁用命令、无危险外部调用</td></tr>
-        <tr><td>State integrity</td><td>是否只改了应该改的对象</td><td>数据库 diff、文件 diff、PASS_TO_PASS、rollback check</td></tr>
-        <tr><td>Reliability</td><td>同一任务重复运行是否稳定</td><td>pass@k、重复试验方差、按任务聚类失败</td></tr>
-        <tr><td>Cost and latency</td><td>成功是否满足生产 SLO</td><td>tokens、tool calls、wall time、cost per solved task、timeout rate</td></tr>
-        <tr><td>Safety and privacy</td><td>是否产生敏感数据泄露或危险副作用</td><td>PII leak、prompt injection success、side-effect audit、escalation rate</td></tr>
-      </table>
+  <div class="exercise" data-answer="1" data-explain="LLM-as-judge 和基准分数必须随任务、样本量、prompt、采样参数、裁判规则、失败类型和统计不确定性一起报告。单一的胜率可能受位置偏差、长度偏差、样本分布和小样本波动影响，不能自动代表生产延迟、成本或安全合规。">
+    <h4>练习 5：为什么不能用单一的 LLM-as-judge 胜率来声称模型全面更好？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q5" value="0"> A. 因为 LLM-as-judge 永远不能用</label>
+      <label><input type="radio" name="q5" value="1"> B. 因为胜率受样本、prompt、裁判偏差和统计波动影响，且不能覆盖延迟、成本和安全性</label>
+      <label><input type="radio" name="q5" value="2"> C. 因为胜率只能用于依存句法分析</label>
+      <label><input type="radio" name="q5" value="3"> D. 因为只要样本量超过 10，胜率就没有不确定性</label>
     </div>
-    <p>可用结论应该类似：在 500 个经人工验证的软件 issue 上，使用模型 X、脚手架 Y、最大步数 Z 和固定环境镜像，agent 解决了 62%；失败集中在跨文件推理和环境配置；平均成本 A，P95 wall time B，PASS_TO_PASS 回归 C。这个结果支持在低风险 issue triage 里灰度试用，不支持给它自主 merge 权限。</p>
-  </section>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+</section></article>
 
-  <section class="card" id="s11-7">
-    <h3>11.7 任务选择：什么时候不该用 decoder-only LLM</h3>
-    <ul>
-      <li><strong>固定标签分类：</strong>encoder-only fine-tuning 或小分类器通常更便宜、更稳定。</li>
-      <li><strong>RAG reranking：</strong>cross-encoder 能同时看 query 和 document，decoder-only reranking 成本高且格式不稳。</li>
-      <li><strong>抽取式答案：</strong>答案必须来自原文 span 时，span QA 比自由生成更可控。</li>
-      <li><strong>结构化输出：</strong>依存句法、NER、slot filling 可以用结构化 head 或 constrained decoding。</li>
-      <li><strong>开放生成和推理：</strong>需要新文本、代码、解释、多步推理时，decoder-only LLM 更自然。</li>
-    </ul>
-    <div class="info-box warn"><span class="icon">⚠️</span><div><strong>常见误区：</strong>不要把 BERT 和 GPT 说成“只是 mask 不同”。它们的可见性、训练目标、fine-tuning head、输出空间和 serving 成本都不同。</div></div>
-  </section>
+<nav class="chapter-nav">
+  <a href="ch10.html" class="btn btn-outline" rel="prev">← 上一章</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
 
-  <section class="card" id="s11-7a">
-    <h3>11.7A 工程选型案例：训练目标、输出空间和服务成本</h3>
-    <div class="table-wrap">
-      <table>
-        <tr><th>任务</th><th>优先模型家族</th><th>训练信号</th><th>推理形式</th><th>主要风险</th></tr>
-        <tr><td>文档相关性</td><td>Bi-encoder / Cross-encoder reranker</td><td>query-doc 正负样本、点击、人标相关性</td><td>向量召回后 rerank</td><td>召回漏答案，reranker 太慢</td></tr>
-        <tr><td>答案必须来自原文</td><td>Encoder-only extractive QA</td><td>start/end span 或 no-answer</td><td>从输入里选合法 span</td><td>不能自然生成摘要，span 边界错误</td></tr>
-        <tr><td>实体/字段抽取</td><td>BIO tagger / CRF / constrained decoding</td><td>token-level BIO 或 span labels</td><td>输出结构化 spans</td><td>token accuracy 高但实体边界错</td></tr>
-        <tr><td>客服回答、解释、代码</td><td>Decoder-only LLM / RAG + LLM</td><td>SFT、偏好数据、检索上下文、任务反馈</td><td>自回归生成</td><td>幻觉、格式漂移、延迟和成本</td></tr>
-        <tr><td>翻译、摘要</td><td>Encoder-decoder 或 instruction model</td><td>source-target paired data</td><td>条件生成</td><td>长度偏置、事实遗漏、指标和人偏好不一致</td></tr>
-      </table>
-    </div>
-    <p>客服知识库 Q&A 如果要求必须引用原文，通常先用 bi-encoder 召回、cross-encoder rerank，再用抽取式 QA 或受约束生成。合同字段抽取这种有限输出空间，优先做 span/token classification，再用规则校验金额、日期和实体类型。数学、代码修复、复杂规划这类开放推理，才更自然地走 decoder-only LLM。</p>
-  </section>
-
-  <section class="card" id="s11-8">
-    <h3>11.8 实验结论：从指标到可判断结论</h3>
-    <p>实验不是“demo 跑通了”，而是回答一个清楚的技术问题，并让读者判断结论在哪些条件下成立。</p>
-    <h4>1. 把问题写成可检验命题</h4>
-    <ul>
-      <li>固定 token budget 下，<code>seq_len=128</code> 是否比 <code>seq_len=64</code> 降低 validation PPL？tokens/s 和 step time 代价是多少？</li>
-      <li>DPO 是否提高偏好 win rate，同时保持基础任务准确率和拒答边界？KL、输出长度、失败类型怎么变？</li>
-      <li>RAG top-k 从 3 到 8 是否提高 pass rate？对 P95 TTFT、prompt tokens、context packing miss 和成本有什么影响？</li>
-      <li>并发从 1 到 8 时，P95/P99 是否仍满足 SLO？瓶颈是 queue、prefill、decode、retrieval 还是 post-processing？</li>
-    </ul>
-    <h4>2. 结论结构要覆盖模型、系统和评估</h4>
-    <p>每个结论至少要有 problem、baseline、method、metrics、ablation、failure analysis、decision。负结果也可以是强结论：如果 <code>seq_len=128</code> 只让 PPL 降 0.03，但 tokens/s 掉 35%，三种 seed 波动约 0.05，那么结论可以是“当前设置不值得采用更长序列”。</p>
-    <h4>3. 绑定复现路径和限制</h4>
-    <p>写清数据版本、commit、运行命令、seed、硬件、模型配置、checkpoint/service 配置、评估集和压测参数。同时写清不能外推的地方：小语料不代表 trillion-token 训练，本地 MockEngine 不代表真实 GPU serving，小知识库 RAG 不代表企业知识库。</p>
-  </section>
-
-  <section class="card" id="s11-9">
-    <h3>11.9 可运行诊断地图</h3>
-    <div class="table-wrap">
-      <table>
-        <tr><th>函数</th><th>对应概念</th><th>应该解释什么</th></tr>
-        <tr><td><code>scalar_rnn_forward</code>, <code>recurrent_gradient_factors</code></td><td>RNN 与 BPTT</td><td>为什么长距离梯度会消失或爆炸</td></tr>
-        <tr><td><code>run_arc_standard_transitions</code>, <code>attachment_scores</code></td><td>依存句法与 UAS/LAS</td><td>结构化预测和 attention 诊断有什么不同</td></tr>
-        <tr><td><code>additive_attention_context</code></td><td>Seq2Seq alignment</td><td>decoder step 如何读 source sequence</td></tr>
-        <tr><td><code>build_mlm_example</code>, <code>masked_lm_loss_from_logits</code></td><td>BERT MLM mask 和 loss</td><td>为什么未 mask 位置不进 loss denominator</td></tr>
-        <tr><td><code>bio_tags_to_spans</code>, <code>span_f1</code></td><td>BIO 序列标注</td><td>如何从 token tags 转成实体 spans 并按实体级评估</td></tr>
-        <tr><td><code>viterbi_decode</code></td><td>结构化解码</td><td>为什么最优 tag path 不等于逐 token argmax</td></tr>
-        <tr><td><code>linear_chain_log_partition</code>, <code>linear_chain_crf_nll</code></td><td>CRF 训练目标</td><td>如何对所有路径 logsumexp，为什么 loss 是 logZ - gold_score</td></tr>
-        <tr><td><code>select_extractive_qa_span</code></td><td>BERT span extraction</td><td>如何选择合法 answer span 并处理 no-answer</td></tr>
-        <tr><td><code>sentence_bleu</code>, <code>rouge_l_f1</code>, <code>exact_match</code></td><td>NLP 评估</td><td>为什么指标选择会改变结论</td></tr>
-        <tr><td><code>judge_reliability_audit</code></td><td>Judge 可靠性审计</td><td>如何检查位置偏差、长度偏差、swap consistency 和人标一致率</td></tr>
-      </table>
-    </div>
-  </section>
-
-  <section class="card" id="summary">
-    <h3>11.10 本章小结</h3>
-    <ul>
-      <li>RNN/LSTM 解释了序列递推、BPTT 和长距离依赖问题。</li>
-      <li>Dependency parsing 是离散结构预测，不等于 attention heatmap。</li>
-      <li>Seq2Seq attention 把 source sequence 和 target prefix 分开建模，是 encoder-decoder 的基本形式。</li>
-      <li>BERT/encoder-only 适合分类、rerank、embedding、token classification 和抽取式 QA。</li>
-      <li>BLEU、ROUGE、EM/F1、span F1、UAS/LAS 各自测不同任务结构。</li>
-      <li>现代 LLM 评估必须写清数据、推理设置、judge 偏差、安全拒答、统计不确定性和结论边界。</li>
-      <li>Agent 评估必须保留 trace，不能只看最终答案。</li>
-      <li>选模型家族要从输出空间和错误代价出发，而不是默认用最大 decoder-only LLM。</li>
-    </ul>
-  </section>
-
-  <section class="card" id="practice">
-    <h3>概念练习</h3>
-    <ol>
-      <li>为什么 attention heatmap 不能直接当成 dependency tree？</li>
-      <li>BERT-style MLM 和 causal LM 在 label / loss 上最大的区别是什么？</li>
-      <li>为什么 LAS 通常不会高于 UAS？</li>
-      <li>如果客服系统要求答案必须来自原始文档 span，应该优先考虑哪类方法？为什么？</li>
-      <li>为什么不能用一个 LLM-as-judge win rate 就宣布模型全面更好？</li>
-    </ol>
-  </section>
-</article>
+</nav>
 </main>
 
 <button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<script>
-(function(){
-  function safeGet(key, fallback){
-    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
-    catch(e){ return fallback; }
-  }
-  function safeSet(key, value){
-    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
-  }
-  function updateThemeLabel(theme){
-    var icon = document.getElementById('theme-icon');
-    var label = document.getElementById('theme-label');
-    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
-  }
-  window.LLM_ZH = {
-    toggleTheme: function(){
-      var html = document.documentElement;
-      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      safeSet('llm-theme', next);
-      updateThemeLabel(next);
-    }
-  };
-  var theme = safeGet('llm-theme', 'light');
-  document.documentElement.setAttribute('data-theme', theme);
-  updateThemeLabel(theme);
-  window.addEventListener('scroll', function(){
-    var btn = document.getElementById('back-to-top');
-    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
-  }, {passive:true});
-})();
-</script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="../../js/app.js"></script>
 </body>
 </html>

@@ -2,445 +2,1712 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
-<link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+  <link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>第 9 章 微调与对齐 - LLM Deep Learning 中文版</title>
+<title>第 9 章：微调与对齐 - LLM Deep Learning 中文版</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="../../css/style.css">
 </head>
 <body data-ch="9">
 
 <button class="menu-toggle" aria-label="菜单">☰</button>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <h1><a href="../index.html">LLM Deep Learning</a></h1>
-    <p>中文版 · 从代码构建大语言模型</p>
-  </div>
-  <nav class="sidebar-nav">
-    <a href="../index.html"><span class="ch-num">⌂</span><span class="ch-label">中文首页</span></a>
-    <a href="ch01.html"><span class="ch-num">1</span><span class="ch-label">分词与 BPE</span></a>
-    <a href="ch02.html"><span class="ch-num">2</span><span class="ch-label">Embedding 与 RoPE</span></a>
-    <a href="ch03.html"><span class="ch-num">3</span><span class="ch-label">自注意力</span></a>
-    <a href="ch04.html"><span class="ch-num">4</span><span class="ch-label">多头注意力与 MLA</span></a>
-    <a href="ch05.html"><span class="ch-num">5</span><span class="ch-label">Transformer Block</span></a>
-    <a href="ch06.html"><span class="ch-num">6</span><span class="ch-label">组装 GPT + MoE</span></a>
-    <a href="ch07.html"><span class="ch-num">7</span><span class="ch-label">训练循环</span></a>
-    <a href="ch08.html"><span class="ch-num">8</span><span class="ch-label">文本生成</span></a>
-    <a href="ch09.html" class="active" aria-current="page"><span class="ch-num">9</span><span class="ch-label">微调与对齐</span></a>
-    <a href="ch10.html"><span class="ch-num">10</span><span class="ch-label">推理优化</span></a>
-    <a href="ch11.html"><span class="ch-num">11</span><span class="ch-label">经典 NLP 与评估</span></a>
-    <a href="../../chapters/ch09.html"><span class="ch-num">EN</span><span class="ch-label">英文原文</span></a>
-  </nav>
-  <div class="sidebar-footer">
-    <button class="theme-toggle" onclick="LLM_ZH.toggleTheme()" aria-label="切换主题">
-      <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
-    </button>
-  </div>
+  <div class="sidebar-header"><h1>LLM Deep Learning</h1><p>中文版 · 从代码构建大语言模型</p></div>
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  <div class="sidebar-footer"><button class="theme-toggle" onclick="LLM.toggleTheme()"><span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span></button></div>
 </aside>
 
 <main class="main">
 <article class="chapter">
-  <h2>第 9 章 微调与对齐</h2>
-  <p class="subtitle">SFT、LoRA、DPO、GRPO：把预训练模型变成可用助手</p>
-  <div class="reading-time">预计阅读：180 分钟 · 27 小节 · 8 个编程练习 · 5 个概念题</div>
-
-  <section class="card">
-    <h3>怎么学这一章：把对齐看成让行为贴近人的意图</h3>
-    <div class="info-box tip"><span class="icon">💡</span><div><strong>第一遍先分清目标：</strong>SFT 学格式和任务行为，LoRA 降低微调成本，DPO 学偏好，GRPO/RLVR 强化可验证和推理能力。公式很多，但先看数据长什么样、loss 在比较什么。</div></div>
-    <ul>
-      <li><strong>前置要求：</strong>Ch07 训练循环、Ch08 生成、sequence logprob、KL、reference model。</li>
-      <li><strong>学习目标：</strong>区分 pre-training、SFT、PEFT、preference optimization、RL alignment，并推导 SFT mask、LoRA、DPO、GRPO 的训练信号。</li>
-      <li><strong>本章产出：</strong>SFT/LoRA/DPO/GRPO/RLVR 的最小实现、agentic RL rollout 图，以及适用场景地图。</li>
-      <li><strong>完成标准：</strong>你能判断一个需求应该用 SFT、LoRA、DPO，还是 RL/RLVR 类方法。</li>
-      <li><strong>练习产出：</strong>masked SFT、LoRA 参数统计、post-training 数据审计、DPO/GRPO toy 实验、RLVR grader 可靠性报告、偏好数据错误分析。可选练习在 <a href="../../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
-    </ul>
-    <div class="dependency-note"><strong>本章统一框架：</strong>任何后训练方法都落到五件事：data format、objective function、constraint term、sampling assumption、evaluation slice。缺一项，就不能只靠方法名下工程结论。</div>
-  </section>
-
-  <section class="card">
-    <div class="svg-diagram" style="max-width:940px">
-      <img src="../../images/rlhf-dpo-grpo.svg?v=en-20260613b" alt="RLHF、DPO、GRPO 对比" style="width:100%">
+  <h2>第 9 章：微调与对齐</h2>
+  <p class="subtitle">SFT、LoRA、DPO 和 GRPO——把预训练模型变成有用的助手</p>
+  <div class="reading-time">⏱ 预计阅读时间：180 分钟 · 27 个小节 · 8 个编程练习 · 5 个概念练习</div>
+  <div class="font-controls"><span>字号：</span>
+    <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
+    <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
+    <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
+  </div><section class="card">
+  <h3>如何学习本章：将对齐视为向人类意图对齐的训练行为</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者关注点：</strong>首先区分 SFT、LoRA、DPO 和 GRPO 各自解决的问题：SFT 学习格式，LoRA 降低微调成本，DPO 学习偏好，GRPO 增强推理。公式很多，但初学时，重点关注数据长什么样以及 loss 在比较什么。</div></div>
+  <ul>
+    <li><strong>前置知识：</strong>第7章训练循环、第8章生成和 log 概率。</li>
+    <li><strong>学习目标：</strong>区分预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO 和 GRPO 的 loss 信号。</li>
+    <li><strong>章节产出：</strong>SFT/LoRA/DPO/GRPO/RLVR 的最小实现、一个 agentic RL rollout 图以及一个适用场景图。</li>
+    <li><strong>完成标准：</strong>能够判断某个需求应该使用 SFT、LoRA、DPO 还是基于 RL 的方法。</li>
+    <li><strong>练习材料：</strong>构建 masked SFT、SFT chat template/mask/packing 诊断、LoRA 参数统计、训练后数据审计、DPO/GRPO 玩具实验、RLVR 评分器可靠性报告、偏好数据错误分析以及安全风险解释。可选练习文件位于 <a href="../../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
+  </ul>
+  <div class="dependency-note"><strong>前置技能：</strong>log 概率、序列 loss、参考模型、KL、偏好数据统计、奖励信号、工具调用状态和评估切片。<br><strong>本章内化要点：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 和 agentic RL 都将归结为五件事：“数据格式、目标函数、约束项、采样假设和评估切片”；训练后数据审计在目标函数之前检查覆盖率、泄露、长度偏差、工具状态有效性和安全切片，而不是开辟一条单独的补救路径。<br><strong>验证信号：</strong>能够判断一个对齐实验是优化了目标行为、奖励黑客、格式偏差、工具捷径还是评估泄露，并报告伴随第8章生成成本和第10章服务安全边界的变化。</div>
+  <p class="system-role"><strong>本章定位：</strong>本章将第7章的训练循环和第8章的生成行为转化为一个面向任务、偏好、安全和推理能力的训练后系统。合成数据、蒸馏、拒绝采样、DPO/GRPO 和 RLVR 都必须追溯到数据源、目标函数、评估切片和服务成本，而不是作为独立的技巧堆叠。</p>
+  <div class="foundation-map">
+    <h4>学习者思维导图：先了解什么 / 本章教授什么 / 接下来读什么</h4>
+    <div class="foundation-graph" role="img" aria-label="第9章知识图谱：学习本章前，需理解 log 概率、KL、偏好数据和奖励信号；本章学习训练后对齐；之后阅读推理 RL 和奖励建模相关内容。">
+      <svg viewBox="0 0 860 250">
+        <defs><marker id="dep-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
+        <path class="dep-line" d="M340 103 C270 76 250 50 210 50"/>
+        <path class="dep-line" d="M340 125 C270 142 250 166 210 166"/>
+        <path class="dep-line" d="M520 103 C590 76 610 50 650 50"/>
+        <path class="dep-line" d="M520 125 C590 142 610 166 650 166"/>
+        <path class="dep-line" d="M430 158 C430 178 430 188 430 202"/>
+        <rect class="dep-node-core" x="330" y="76" width="200" height="82" rx="10"/>
+        <text text-anchor="middle" x="430" y="107"><tspan class="dep-title">第 9 章 Post-training</tspan><tspan class="dep-sub" x="430" dy="22">行为对齐与推理 RL</tspan></text>
+        <rect class="dep-node" x="24" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="46"><tspan class="dep-title">前置：目标函数</tspan><tspan class="dep-sub" x="129" dy="18">logprob / KL / mask</tspan></text>
+        <rect class="dep-node" x="24" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="129" y="162"><tspan class="dep-title">前置：反馈数据</tspan><tspan class="dep-sub" x="129" dy="18">preference / reward</tspan></text>
+        <rect class="dep-node" x="626" y="24" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="46"><tspan class="dep-title">后续：对齐算法</tspan><tspan class="dep-sub" x="731" dy="18">DPO / GRPO / GSPO</tspan></text>
+        <rect class="dep-node" x="626" y="140" width="210" height="52" rx="9"/>
+        <text text-anchor="middle" x="731" y="162"><tspan class="dep-title">后续：推理 RL</tspan><tspan class="dep-sub" x="731" dy="18">DAPO / RLVR / RFT</tspan></text>
+        <rect class="dep-node" x="275" y="202" width="310" height="34" rx="9"/>
+        <text text-anchor="middle" x="430" y="224"><tspan class="dep-sub">本章主线：data -> objective -> rollout -> eval slices</tspan></text>
+      </svg>
     </div>
-    <p class="diagram-caption">图 9-1：对齐方法对比：RLHF(PPO)、DPO、GRPO。</p>
-  </section>
-
-  <section class="card" id="s9-1">
-    <h3>9.1 为什么预训练不够：从续写文本到助手行为</h3>
-    <p>预训练模型擅长续写文本，但不一定会按用户意图回答问题。预训练目标是“预测下一个 token”，不是“帮用户完成任务”。Alignment 要补上这个行为差距。</p>
-    <h4>HHH 目标</h4>
-    <ul>
-      <li><strong>Helpful：</strong>按用户意图完成任务。</li>
-      <li><strong>Honest：</strong>减少幻觉，知道不知道时要说明。</li>
-      <li><strong>Harmless：</strong>避免有害输出。</li>
-    </ul>
-    <div class="table-wrap">
+    <div class="table-wrap foundation-table">
       <table>
-        <tr><th>技术</th><th>数据类型</th><th>是否需要 RL</th><th>解决什么</th></tr>
-        <tr><td>SFT</td><td>instruction-response</td><td>否</td><td>学格式、角色、基础任务行为</td></tr>
-        <tr><td>RLHF/PPO</td><td>偏好 + reward model + RL</td><td>是</td><td>用奖励优化行为</td></tr>
-        <tr><td>DPO</td><td>chosen/rejected 偏好对</td><td>否</td><td>直接优化偏好，不单独训练 reward model</td></tr>
-        <tr><td>GRPO</td><td>rollout group + reward</td><td>是</td><td>强化推理，省去 critic</td></tr>
+        <tr><th>学习前需了解</th><th>本章将阐明</th><th>扩展阅读资料/知识点</th></tr>
+        <tr><td>序列 logprob</td><td>SFT、DPO 和 GRPO 都需要在 masking 后比较 token logprob，并区分 prompt token 和 completion token。</td><td><strong>资料：</strong>DPO、IPO、KTO、长上下文 SFT。<br><strong>知识点：</strong>序列级目标、SFT mask、packing loss。</td></tr>
+        <tr><td>参考模型 & KL</td><td>解释参考模型如何限制策略漂移，以及 KL、clip 和长度归一化各自的不同作用。</td><td><strong>资料：</strong>PPO、GRPO、GSPO、DAPO。<br><strong>知识点：</strong>KL 调度、策略漂移、clip 比率、长度归一化。</td></tr>
+        <tr><td>偏好 & 奖励数据</td><td>在数据源和标签假设下审视 chosen/rejected、可验证奖励、合成数据和拒绝采样。</td><td><strong>资料：</strong>奖励建模、RLHF/RLAIF、RLVR。<br><strong>知识点：</strong>合成数据、评分器可靠性、奖励数据切片。</td></tr>
+        <tr><td>Rollout 统计</td><td>同时审视长度、熵、通过率、clip 比例、有效 rollout 比例和失败类型。</td><td><strong>资料：</strong>DeepSeek-R1、Kimi k1.5、DAPO。<br><strong>知识点：</strong>推理 RL 配方、长度控制、测试时计算。</td></tr>
       </table>
     </div>
-  </section>
+    <p><strong>章节覆盖范围：</strong>本章中 SFT/LoRA/DPO/GRPO/RLVR 的原始主线基本完整；DAPO 的 Clip-Higher、动态采样、token 级策略梯度 loss 和过长奖励塑形已添加，以覆盖2025年推理 RL 配方的关键工程信号。</p>
+  </div>
+</section><!-- ================================================================ -->
+<!-- 9.1 对齐的必要性 --><section class="card">
+<div class="svg-diagram" style="max-width:940px">
+  <img src="../../images/rlhf-dpo-grpo.svg?v=en-20260613b" alt="RLHF vs DPO vs GRPO 对比" style="width:100%">
+</div>
+<p class="diagram-caption">图 9-1：对齐方法对比 — RLHF(PPO) vs DPO vs GRPO</p>
+</section><!-- ================================================================ --><section class="card" id="s9-1">
+  <h3>9.1 为什么预训练还不够——从文本续写到助手行为</h3>
+  <p>在第7章预训练之后，我们得到一个可以<strong>合理地续写文本</strong>的GPT模型。它学会了语法、事实知识，甚至一定程度的推理能力。但如果你直接问它“请解释反向传播”，它的输出很可能像这样：</p>
+  <div class="code-block" data-lang="text">
+"反向传播"是"反向传播"是一种深度学习中的"反向传播"是一种计算梯度的深度学习方法。"反向传播"……</div>
+  <p>——它是一个出色的<strong>文本续写器</strong>，但不是一个<strong>有用的助手</strong>。问题在于预训练的目标函数是“预测下一个token”，而不是“回答问题”。<strong>对齐（Alignment）</strong>就是弥合这一差距的过程。</p>
 
-  <section class="card" id="s9-1a">
-    <h3>9.1A 后训练控制循环</h3>
-    <p>现代后训练不是几个技巧堆叠，而是一个控制循环：选 prompt，生成或标注候选，打分，按约束更新 policy，再在真实推理预算下评估。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>信号</th><th>教会模型什么</th><th>不能单独证明什么</th><th>工程检查</th></tr>
-        <tr><td>SFT demonstrations</td><td>格式、工具调用、拒答风格</td><td>答案比其他候选更优</td><td>assistant mask、chat template、held-out slice</td></tr>
-        <tr><td>DPO preference pairs</td><td>相对偏好</td><td>chosen 一定客观正确</td><td>长度偏置、标注分歧、安全/能力回归</td></tr>
-        <tr><td>RLVR/RFT reward</td><td>探索能通过测试或 grader 的答案</td><td>grader 没有漏洞</td><td>false positive、reward hacking probe</td></tr>
-        <tr><td>GRPO/DAPO/GSPO</td><td>长推理下的策略优化</td><td>更长 reasoning 一定更值</td><td>长度 P95、clip fraction、成本/正确率</td></tr>
-      </table>
-    </div>
-  </section>
+  <h4>对齐的三个目标——HHH</h4>
+  <ul>
+    <li><strong>有用（Helpful）：</strong>模型应根据用户意图执行任务，而不是单纯续写文本。</li>
+    <li><strong>诚实（Honest）：</strong>模型应“知道自己不知道”，减少幻觉。</li>
+    <li><strong>无害（Harmless）：</strong>模型不应生成有害内容。</li>
+  </ul>
 
-  <section class="card" id="s9-2">
-    <h3>9.2 SFT：核心是 Loss Masking</h3>
-    <p>Supervised Fine-Tuning 用人工或高质量模型写好的 instruction-response 对继续训练模型。关键差异是：loss 只算 assistant response，不算 user prompt。</p>
-    <p>做法是把 prompt 部分 label 设为 <code>-100</code>，让 <code>F.cross_entropy(..., ignore_index=-100)</code> 跳过。</p>
-    <div class="code-block" data-lang="text">&lt;|im_start|&gt;user
-Please explain backpropagation.&lt;|im_end|&gt;
+  <h4>对齐技术栈概览</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>技术</th><th>数据类型</th><th>需要RL</th><th>复杂度</th><th>代表模型</th></tr>
+      <tr><td>SFT</td><td>指令-响应对</td><td>否</td><td>低</td><td>GPT-3.5 (初始)</td></tr>
+      <tr><td>RLHF (PPO)</td><td>偏好对 + RL</td><td>是</td><td>高</td><td>ChatGPT, Claude</td></tr>
+      <tr><td>DPO</td><td>偏好对</td><td>否</td><td>中</td><td>Llama 3, Mistral</td></tr>
+      <tr><td>GRPO</td><td>偏好对 + 分组采样</td><td>是（无Critic）</td><td>中高</td><td>DeepSeek-R1</td></tr>
+    </table>
+  </div>
+</section><section class="card" id="s9-1a">
+  <h3>9.1A 后训练控制循环：数据、目标、Rollout、奖励与评估</h3>
+  <p>现代后训练不是一堆不相关的配方列表。SFT、rejection sampling、DPO、GRPO、DAPO、GSPO、RLVR 和 RFT 都位于同一个控制循环内：选择 prompt，生成或标注候选响应，用人类偏好或可验证奖励评分，在约束下更新策略，然后在实际推理预算下评估行为。实际的问题不是“哪种方法时髦”，而是哪个信号对于你想要改变的行为足够可靠。</p>
+
+  <div class="foundation-graph" role="img" aria-label="后训练控制循环：从任务 prompt 经过数据、目标、rollout、奖励、训练更新到部署评估">
+    <svg viewBox="0 0 940 420">
+      <defs>
+        <marker id="pt-loop-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .pt-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .pt-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .pt-reward{fill:rgba(16,185,129,.11);stroke:var(--success);stroke-width:2}
+        .pt-risk{fill:rgba(245,158,11,.12);stroke:var(--accent-hover);stroke-width:2}
+        .pt-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#pt-loop-arrow-09)}
+        .pt-dash{fill:none;stroke:var(--text-secondary);stroke-width:1.6;stroke-dasharray:5 4;marker-end:url(#pt-loop-arrow-09)}
+        .pt-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .pt-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="pt-node" x="36" y="66" width="150" height="82" rx="10"/>
+      <text text-anchor="middle" x="111" y="94"><tspan class="pt-title">Task Prompts</tspan><tspan class="pt-sub" x="111" dy="20">coverage, split</tspan><tspan class="pt-sub" x="111" dy="17">difficulty buckets</tspan></text>
+      <path class="pt-line" d="M186 107 H246"/>
+
+      <rect class="pt-node" x="246" y="66" width="150" height="82" rx="10"/>
+      <text text-anchor="middle" x="321" y="94"><tspan class="pt-title">Candidate Data</tspan><tspan class="pt-sub" x="321" dy="20">SFT answers</tspan><tspan class="pt-sub" x="321" dy="17">chosen/rejected</tspan></text>
+      <path class="pt-line" d="M396 107 H456"/>
+
+      <rect class="pt-reward" x="456" y="66" width="160" height="82" rx="10"/>
+      <text text-anchor="middle" x="536" y="94"><tspan class="pt-title">Scoring Signal</tspan><tspan class="pt-sub" x="536" dy="20">human preference</tspan><tspan class="pt-sub" x="536" dy="17">grader / tests</tspan></text>
+      <path class="pt-line" d="M616 107 H676"/>
+
+      <rect class="pt-core" x="676" y="66" width="180" height="82" rx="10"/>
+      <text text-anchor="middle" x="766" y="94"><tspan class="pt-title">Policy Update</tspan><tspan class="pt-sub" x="766" dy="20">SFT / DPO / GRPO</tspan><tspan class="pt-sub" x="766" dy="17">DAPO / GSPO / RFT</tspan></text>
+
+      <path class="pt-line" d="M766 148 V210"/>
+      <rect class="pt-node" x="676" y="210" width="180" height="82" rx="10"/>
+      <text text-anchor="middle" x="766" y="238"><tspan class="pt-title">Rollout System</tspan><tspan class="pt-sub" x="766" dy="20">sampling, tools</tspan><tspan class="pt-sub" x="766" dy="17">policy version</tspan></text>
+      <path class="pt-line" d="M676 251 H616"/>
+
+      <rect class="pt-risk" x="436" y="210" width="180" height="82" rx="10"/>
+      <text text-anchor="middle" x="526" y="238"><tspan class="pt-title">Evaluation Slices</tspan><tspan class="pt-sub" x="526" dy="20">quality, safety</tspan><tspan class="pt-sub" x="526" dy="17">cost, regression</tspan></text>
+      <path class="pt-line" d="M436 251 H366"/>
+
+      <rect class="pt-node" x="166" y="210" width="200" height="82" rx="10"/>
+      <text text-anchor="middle" x="266" y="238"><tspan class="pt-title">Decision</tspan><tspan class="pt-sub" x="266" dy="20">change data, reward,</tspan><tspan class="pt-sub" x="266" dy="17">objective, or budget</tspan></text>
+      <path class="pt-dash" d="M266 210 C220 170 198 136 186 116"/>
+      <path class="pt-dash" d="M526 210 C518 174 526 158 536 148"/>
+      <path class="pt-dash" d="M766 292 C766 348 536 358 266 292"/>
+      <text text-anchor="middle" x="520" y="354"><tspan class="pt-sub">feedback loop: reward hacking, length growth, leakage, stale rollout, serving cost</tspan></text>
+    </svg>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>训练信号</th><th>它教什么</th><th>仅靠它无法证明什么</th><th>工业检查</th></tr>
+      <tr><td>SFT demonstrations</td><td>格式、任务行为、工具调用模式、拒绝风格</td><td>该响应优于其他候选或对抽样鲁棒</td><td>Assistant-mask 正确性、模板一致性、保留任务切片</td></tr>
+      <tr><td>DPO 偏好对</td><td>在参考模型下的相对偏好</td><td>所选答案客观上正确或没有长度/风格偏差</td><td>选中/拒绝长度、标注者分歧、安全性和能力保持</td></tr>
+      <tr><td>RLVR/RFT 的可验证奖励</td><td>探索能通过测试、评分器或精确检查的答案</td><td>评分器衡量了预期的推理过程且无法被利用</td><td>奖励方差、假阳性、攻击探测、验证集性能</td></tr>
+      <tr><td>DAPO/GSPO 风格的 RL 配方</td><td>通过显式采样、裁剪和长度控制实现稳定的长 CoT 更新</td><td>更长的推理值得其服务成本</td><td>完成长度 P95、熵、裁剪比例、序列比率、每个正确答案的成本</td></tr>
+      <tr><td>在策略蒸馏</td><td>将高预算或教师过滤的行为转移到更便宜的学生模型</td><td>教师数据未污染或覆盖了生产故障</td><td>教师/来源出处、拒绝原因计数、风格坍塌检查</td></tr>
+    </table>
+  </div>
+
+  <p>这个框架与近期实践吻合。<a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1</a> 展示了 RL 为何能引发推理，也说明了为什么冷启动数据、可读性、蒸馏和评估很重要。<a href="https://arxiv.org/abs/2503.14476" target="_blank">DAPO</a> 将长 CoT RL 转化为可测量的工程控制，例如动态采样和长度感知奖励塑造。<a href="https://arxiv.org/abs/2507.18071" target="_blank">GSPO</a> 将部分稳定性问题从 token 级比率转移到序列级优化。OpenAI 的 <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">reinforcement fine-tuning</a> 文档揭示了生产端：评分器、prompt 数据集、验证集、检查点监控和部署决策必须一起指定。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>学习目标：</strong>阅读本章后，学习者应能通过相同的五个对象追踪任何后训练方法：prompt 分布、监督或奖励信号、策略约束、rollout 系统、以及评估切片。如果缺少其中一个对象，方法名称不足以支撑工程结论。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.2 SFT 理论 -->
+<!-- ================================================================ --><section class="card" id="s9-2">
+  <h3>9.2 监督微调（SFT）的理论——损失掩码的核心作用</h3>
+  <p><strong>监督微调（SFT）</strong>是一种基础的对齐方法。我们在人工标注的指令-回复对上继续训练模型，使其行为更符合目标助手的交互界面。</p>
+
+  <h4>SFT 的关键细节：仅对回复部分计算损失</h4>
+  <p>一个常见的误解是 SFT 的训练目标和预训练相同——都是交叉熵。然而，一个关键区别是<strong>损失掩码（loss masking）</strong>：在 SFT 中，指令部分（prompt）不参与损失计算，只有回复部分参与梯度更新。</p>
+  <p>为什么？</p>
+  <ul>    <li><strong>指令由用户提供</strong>——模型不需要学习如何生成用户指令。在指令部分计算损失会浪费计算资源。</li>
+    <li><strong>防止分布偏移</strong>——训练时模型看到的是真实指令，但推理时指令由用户提供。如果模型学会了“生成指令”，推理时就会产生混淆。</li>
+  </ul>
+  <p>具体实现：在标签（label）中将指令部分设为 <code>-100</code>（PyTorch 的 <code>ignore_index</code>），交叉熵会自动忽略这些位置。</p>
+
+  <h4>数据格式：ChatML / ShareGPT</h4>
+  <p>SFT 数据通常使用结构化格式：</p>
+  <div class="code-block" data-lang="text">
+&lt;|im_start|&gt;user
+请解释反向传播。&lt;|im_end|&gt;
 &lt;|im_start|&gt;assistant
-Backpropagation is an algorithm...&lt;|im_end|&gt;</div>
-    <p>chat template 是模型接口的一部分。模板不一致，训练和推理看到的 token 分布就不一致。</p>
-  </section>
+反向传播是一种在神经网络中计算梯度的算法……&lt;|im_end|&gt;</div>
+  <p>特殊 token（如 <code>&lt;|im_start|&gt;</code> 和 <code>&lt;|im_end|&gt;</code>）帮助模型区分对话角色。训练时，损失从 <code>assistant</code> 之后的部分开始计算。</p>
+</section><!-- ================================================================ -->
+<!-- 练习1：SFT训练循环 -->
+<!-- ================================================================ --><section class="card" id="s9-3">
+  <h3>9.3 编程练习1：实现SFT训练循环</h3>
+  <p>实现一个完整的SFT训练循环。核心是正确处理标签掩码——损失仅计算在助手的回答部分。</p>
 
-  <section class="card" id="s9-3">
-    <h3>9.3 编程练习 1：实现 SFT Training Loop</h3>
-    <div class="coding-exercise">
-      <h4>练习 1：SFT Training</h4>
-      <div class="task">
-        <ul>
-          <li><code>SFTDataset</code> 接受 <code>{"instruction": "...", "response": "..."}</code>。</li>
-          <li>用 chat template 拼完整序列。</li>
-          <li>prompt 部分 label 设为 <code>-100</code>，response 保留真实 token id。</li>
-          <li><code>sft_step</code> 执行 forward -> shift logits -> CE loss。</li>
-          <li>collate 时做 dynamic padding。</li>
-        </ul>
-        <div class="code-block" data-lang="python">def sft_step(model, batch, optimizer):
-    input_ids = batch["input_ids"].to(model.device)
-    labels = batch["labels"].to(model.device)
-    logits = model(input_ids)
+  <div class="coding-exercise">
+    <h4>练习1：SFT训练</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现<code>SFTDataset</code>类和一个SFT训练步函数。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li><code>SFTDataset</code>接受一个列表<code>[{"instruction": "...", "response": "..."}]</code></li>
+        <li>使用ChatML格式组装完整序列</li>
+        <li>将标签中的指令部分设置为 -100，保留回答部分的实际token ID</li>
+        <li><code>sft_step</code>函数：前向 → 偏移logits → 交叉熵 with ignore_index=-100</li>
+        <li>支持动态填充（使用<code>pad_sequence</code>）</li>
+      </ul>
+      <pre># Expected usage
+data = [
+    {"instruction": "Explain what gradient descent is", "response": "Gradient descent is an optimization algorithm..."},
+    {"instruction": "How to sort a list in Python", "response": "Use the list.sort() method..."},
+]
+dataset = SFTDataset(data, tokenizer)
+loader = DataLoader(dataset, batch_size=2, collate_fn=sft_collate_fn)
+loss = sft_step(model, next(iter(loader)), optimizer)</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考答案</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+import torch
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+
+class SFTDataset(Dataset):
+    """SFT数据集：每个样本包含指令+回答，损失仅计算在回答部分"""
+    def __init__(self, data, tokenizer, max_len=1024):
+        self.input_ids = []
+        self.labels = []
+
+        for item in data:
+            prompt = tokenizer.apply_chat_template([
+                {"role": "user", "content": item["instruction"]},
+            ], tokenize=False)
+            full_text = prompt + item["response"] + tokenizer.eos_token
+
+            enc = tokenizer(full_text, truncation=True, max_length=max_len,
+                           return_tensors='pt')
+            prompt_len = len(tokenizer.encode(prompt))
+
+            labels = enc["input_ids"][0].clone()
+            labels[:prompt_len] = -100
+            labels[labels == tokenizer.pad_token_id] = -100
+
+            self.input_ids.append(enc["input_ids"][0])
+            self.labels.append(labels)
+
+    def __len__(self): return len(self.input_ids)
+    def __getitem__(self, idx):
+        return {"input_ids": self.input_ids[idx],
+                "labels": self.labels[idx]}
+
+def sft_collate_fn(batch, pad_id=0):
+    input_ids = [item["input_ids"] for item in batch]
+    labels = [item["labels"] for item in batch]
+    input_ids = torch.nn.utils.rnn.pad_sequence(
+        input_ids, batch_first=True, padding_value=pad_id)
+    labels = torch.nn.utils.rnn.pad_sequence(
+        labels, batch_first=True, padding_value=-100)
+    return {"input_ids": input_ids, "labels": labels,
+            "attention_mask": (input_ids != pad_id).long()}
+
+def sft_step(model, batch, optimizer):
+    """单个SFT训练步骤——损失仅计算在回答部分"""
+    model.train()
+    outputs = model(input_ids=batch["input_ids"],
+                    attention_mask=batch["attention_mask"])
+    logits = outputs.logits  # (batch, seq_len, vocab_size)
+
+    # 偏移：位置t的logits预测位置t+1的token
     shift_logits = logits[:, :-1, :].contiguous()
-    shift_labels = labels[:, 1:].contiguous()
+    shift_labels = batch["labels"][:, 1:].contiguous()
+
     loss = F.cross_entropy(
         shift_logits.view(-1, shift_logits.size(-1)),
         shift_labels.view(-1),
-        ignore_index=-100,
+        ignore_index=-100,  # 核心：忽略指令部分
     )
+    optimizer.zero_grad()
     loss.backward()
     optimizer.step()
-    optimizer.zero_grad(set_to_none=True)
-    return loss</div>
-      </div>
+    return loss.item()</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>偏移操作：</strong>模型在位置t的输出logits预测<span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。因此我们需要<code>logits[:, :-1]</code>（移除最后一个位置的预测）来对应<code>labels[:, 1:]</code>（移除第一个位置的标签）。</p>
     </div>
-  </section>
+  </div>
+</section><section class="card" id="s9-3a">
+  <h3>9.3A 实战示例：SFT 标签掩码与有效 token 分母</h3>
+  <p>将仅对回答进行监督的 SFT 写成逐 token 的目标函数可以避免两个常见错误：将提示作为监督目标，或者遗漏偏移后的第一个助手 token。考虑以下 token 化的对话：</p>
+  <div class="code-block" data-lang="text">
+位置:   0      1       2        3      4       5            6     7        8          9
+token: BOS  &lt;user&gt; explain  BP  &lt;/user&gt; &lt;assistant&gt; BP  computes gradients  EOS</div>
+  <p>训练输入仍然是完整的序列，但标签只保留助手回答的 token，将所有其他位置设置为 <code>-100</code>：</p>
+  <div class="code-block" data-lang="text">
+标签: -100  -100    -100    -100   -100     -100       BP  computes gradients EOS</div>
+  <p>自回归交叉熵不使用 <code>logits[t]</code> 来预测当前位置的 token，而是使用 <code>logits[t]</code> 来预测 <code>labels[t+1]</code>。因此，实际参与损失的偏移后的目标为：</p>
+  <div class="code-block" data-lang="text">
+logits 位置: 0    1      2      3      4      5        6        7          8
+目标标签:   -100 -100   -100   -100   -100   BP       computes gradients  EOS
+有效掩码:       0    0      0      0      0     1          1        1        1</div>
+  <p>该样本的损失分母是 4，而不是序列长度 10，也不是偏移后的长度 9。第一个有效的监督来自 <code>logits[5]</code> 预测助手的第一个回答 token <code>BP</code>；如果 <code>&lt;assistant&gt;</code> 之后的第一个 token 仍然设置为 <code>-100</code>，模型将无法学会如何开始回答。</p>
+  <div class="formula">L_{\text{SFT}} =
+  -\frac{1}{4}\left[
+  \log p(\text{BP}\mid x_{\le 5})+
+  \log p(\text{computes}\mid x_{\le 6})+
+  \log p(\text{gradients}\mid x_{\le 7})+
+  \log p(\text{EOS}\mid x_{\le 8})
+  \right]</div>
+  <p>在批处理中，填充 token 的标签也应设置为 <code>-100</code>。这样，不同长度样本的平均损失仅由实际的助手回答 token 决定，不会因填充量而改变。</p>
+</section><section class="card" id="s9-3b">
+  <h3>9.3B SFT 数据管道：从样本格式到训练批次</h3>
+  <p>SFT 的难点并不仅仅是将 prompt 的 label 设为 <code>-100</code>。真正的指令微调常常因为数据协议问题而失败：不一致的聊天模板、被截断的助手起始 token、多轮对话中错误的 mask、打包（packing）破坏两个样本之间的语义边界，或者高质量数据被低质量合成样本淹没。训练工程师需要把 SFT 视为一条数据管道，而不仅仅是一个损失函数。</p>
 
-  <section class="card" id="s9-3a">
-    <h3>9.3A SFT label mask 和有效 token 分母</h3>
-    <p>多轮对话里，只有 assistant 回复参与 loss。user、system、工具返回、padding 通常都要 mask 掉。平均 loss 的分母是有效 assistant tokens，不是序列总长度。</p>
-  </section>
+  <h4>1. 聊天模板是模型接口的一部分</h4>
+  <p>同样的对话在不同模型中的序列化方式可能不同。GPT 风格、Llama 风格和 ChatML 风格的格式使用不同的角色 token、换行符、BOS/EOS 和停止 token。如果训练时用一种模板，推理服务时用另一种模板，模型可能会学到错误的角色边界，表现为响应的 <code>user</code> 重复、缺少结束 token，或把系统 prompt 当作普通文本延续。</p>
+  <div class="code-block" data-lang="text">
+messages:
+  system: You are a careful assistant.
+  user: Explain gradient clipping.
+  assistant: Gradient clipping limits the norm of gradients...
 
-  <section class="card" id="s9-3b">
-    <h3>9.3B SFT 数据管线</h3>
-    <ul>
-      <li><strong>Chat template：</strong>训练、评估、推理必须一致。</li>
-      <li><strong>多轮 mask：</strong>只训练 assistant 回合，工具状态要按任务定义处理。</li>
-      <li><strong>Packing/truncation：</strong>提升 token 利用率，但不能破坏对话边界和 label mask。</li>
-      <li><strong>数据混合：</strong>格式、代码、数学、安全、工具调用比例会直接改变模型行为。</li>
-      <li><strong>污染检查：</strong>评估集相似样本不能泄漏进 SFT。</li>
-    </ul>
-  </section>
+serialized tokens:
+  BOS system_tokens user_tokens assistant_header response_tokens EOS</div>
+  <p>一种紧凑的实现可以使用简化的 ChatML 模板，但实验报告必须明确说明模板、特殊 token、是否添加 BOS/EOS，以及如何定位响应起点。否则，两个团队使用相同的数据和模型可能会训练出不同的行为。</p>
 
-  <section class="card" id="s9-4">
-    <h3>9.4 Bradley-Terry 偏好模型和 RLHF 三部曲</h3>
-    <p>偏好数据通常是同一 prompt 下的 chosen/rejected。Bradley-Terry 模型把“chosen 胜过 rejected”的概率写成 reward 差的 sigmoid：</p>
-    <div class="code-block" data-lang="text">P(chosen > rejected) = sigmoid(r_chosen - r_rejected)</div>
-    <p>传统 RLHF 三步：SFT 得到初始助手；训练 reward model；用 PPO 等 RL 方法优化 policy，同时用 KL 约束不要偏离 reference 太远。</p>
-  </section>
+  <h4>2. 多轮对话的标签 mask</h4>
+  <p>单轮 SFT 只需要 mask 掉用户 prompt；多轮对话则需要更精确的处理：所有 system/user token 都不是目标，而助手的历史响应是否参与损失计算取决于训练目标。常见的做法是对每一个助手 span 计算 loss，让模型在多轮对话中学会每个响应：</p>
+  <div class="code-block" data-lang="text">
+token span:  [system][user_1][assistant_1][user_2][assistant_2]
+labels:      -100    -100    keep         -100    keep</div>
+  <p>如果只保留最后一轮助手的 loss，模型主要学习“如何回答当前问题”；如果保留所有助手 span，模型还会学习历史响应风格和上下文延续。两种选择都合理，但必须与数据构建、批次统计和评估目标保持一致。</p>
 
-  <section class="card" id="s9-5">
-    <h3>9.5 编程练习 2：实现 LoRA</h3>
-    <p>LoRA 冻结原权重 <code>W</code>，只训练低秩增量 <code>BA</code>：</p>
-    <div class="code-block" data-lang="text">W' = W + alpha/r * (B @ A)</div>
-    <div class="coding-exercise">
-      <h4>练习 2：LoRA Layer</h4>
-      <div class="task">
-        <ul>
-          <li>冻结 base Linear。</li>
-          <li>新增 <code>lora_A: [r, in]</code> 和 <code>lora_B: [out, r]</code>。</li>
-          <li>forward = base(x) + scaling * lora_B(lora_A(x))。</li>
-          <li>支持把 LoRA 应用到 attention/MLP 指定模块。</li>
-        </ul>
-        <div class="code-block" data-lang="python">class LoRALinear(nn.Module):
-    def __init__(self, base, r=8, alpha=16, dropout=0.0):
+  <h4>3. 打包、截断和有效 token 利用率</h4>
+  <p>指令样本的长度差异很大。如果每个样本单独填充到 <code>max_seq_len</code>，大量计算会浪费在填充上；打包（packing）将多个短样本拼接进同一个上下文窗口，提高了有效 token 的利用率。但打包必须保护样本边界：</p>
+  <ul>
+    <li><strong>边界 token：</strong>样本之间必须有 EOS 或明确的分隔符，防止模型将下一条指令当作前一条响应的延续。</li>
+    <li><strong>注意力 mask：</strong>如果使用块对角注意力（block-diagonal attention），样本之间不应互相看见；如果允许普通因果注意力，就必须接受“后一个样本能看到前一个样本”的训练分布。</li>
+    <li><strong>截断：</strong>优先确保助手起始 token 和有效响应 token 不被截断。只保留 prompt 而截掉响应的样本对 SFT 几乎没有训练价值。</li>
+    <li><strong>损失分母：</strong>记录有效响应 token 的数量，而不仅仅是批次大小。批次中样本数量相同并不意味着监督 token 数量相同。</li>
+  </ul>
+  <p>一个实用的指标是 <code>supervised_token_ratio = valid_label_tokens / total_tokens</code>。比例过低说明训练在大批量 prompt、填充或无效 token 上做了前向计算；比例过高也可能说明 prompt 太短、任务过于模板化，模型没有学到复杂的指令条件。</p>
+
+  <p>模板和 mask 诊断将本节内容转化为训练前的检查。它接收已经 token 化的多轮消息，而不是直接依赖某个特定的 tokenizer：每条消息必须携带 <code>role</code> 和 <code>token_ids</code>，然后报告会记录助手 span、监督 token 比例、被截断的助手 token、非法角色和打包风险。这样可以将 Hugging Face、OpenAI 或自定义数据导出为统一的 span 表，然后验证模板是否一致、loss 是否只落在助手 token 上、截断是否切掉了响应、打包是否需要块对角注意力。</p>
+
+  <div class="code-block" data-lang="python">report = sft_chat_template_mask_report(
+    examples=[{
+        "messages": [
+            {"role": "system", "token_ids": [1, 2]},
+            {"role": "user", "token_ids": [3, 4, 5]},
+            {"role": "assistant", "token_ids": [6, 7, 8, 9]},
+        ]
+    }],
+    policy={"max_seq_len": 32, "pack_examples": False},
+)
+# report checks template_roles, assistant_label_mask,
+# supervised_token_ratio, truncation, and packing.</div>
+
+  <p>这个诊断的关键不在于替代 tokenizer，而是显式地暴露 token 化之后、训练步骤之前最容易出错的协议。如果多个样本打包而没有块对角注意力，后一个样本在普通因果注意力下会看到前一个样本；如果 <code>max_seq_len</code> 截断了助手 span，训练 loss 可能仍在下降，但有效监督已经偏离了目标行为。</p>
+
+  <h4>4. 数据混合决定模型行为</h4>
+  <p>SFT 数据通常来自多个来源：高质量人工指令、任务导向数据、代码问答、数学解题、多轮客服、拒绝样本、工具调用样本以及合成数据。合成数据并不等同于“廉价的人工数据”：它通常来自教师模型、基于规则的生成器、验证器过滤或拒绝采样（rejection sampling），目的是扩大覆盖范围、暴露困难样本、将高预算推理行为蒸馏到小模型中。混合比例直接改变模型行为：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>数据类型</th><th>主要作用</th><th>比例失衡的风险</th></tr>
+      <tr><td>通用指令</td><td>学习助手格式、解释和任务遵循</td><td>响应变得通用，缺乏专门的任务能力</td></tr>
+      <tr><td>数学/代码</td><td>保持推理和程序合成能力</td><td>自然语言任务可能变得过于分步或冗长</td></tr>
+      <tr><td>领域问答</td><td>适应业务术语和输出规范</td><td>在小数据上过拟合，对分布外问题盲目自信</td></tr>
+      <tr><td>安全拒绝</td><td>学习危险请求的边界</td><td>过度拒绝可能导致正常请求也被拒绝</td></tr>
+      <tr><td>工具调用</td><td>学习结构化动作和参数格式</td><td>可能在通用问答中意外触发工具格式</td></tr>
+      <tr><td>合成/蒸馏</td><td>利用教师、验证器或多候选过滤扩展高价值任务</td><td>教师错误被放大，答案风格同质化，评估泄露或数据归属不明确</td></tr>
+    </table>
+  </div>
+  <p>因此，SFT 数据比例不是“越多越好”。严格的训练计划首先定义目标行为，然后确定每种数据类型的采样权重，并在验证集上观察每个任务切分的变化。对于合成/蒸馏数据，必须额外记录四件事：教师或生成器的版本、采样温度和候选数、过滤规则或验证器准确率，以及是否与保留的评估或公开基准重叠。否则，训练 loss 下降只表明学生模型拟合了教师的输出，而不是任务能力、推理可靠性或安全边界有了真正提升。</p>
+
+  <h4>5. SFT 与评估污染</h4>
+  <p>指令微调数据常常包含来自公开基准的问题、解答或近似改写。如果污染进入训练集，模型可能看起来在验证集上有所提升，但实际上只是记住了问题表面或答案格式。预训练阶段的污染很难完全消除，但 SFT 阶段数据量较小且来源可控，应该做基本的去重和拆分隔离：源自同一 prompt、同一题库或同一文档的样本，不应同时出现在训练集和验证集中。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节要点：</strong>SFT 的核心工程能力是让“模板、mask、打包、截断、数据混合、合成数据来源和验证切分”共同服务于目标行为。如果其中任何一个环节出现错位，loss 可能还在下降，但模型并不会学到你期望的指令遵循、推理能力或安全边界。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.4 Bradley-Terry + RLHF -->
+<!-- ================================================================ --><section class="card" id="s9-4">
+  <h3>9.4 Bradley-Terry偏好模型与RLHF三部曲</h3>
+  <p>RLHF（基于人类反馈的强化学习）由InstructGPT论文（Ouyang et al., 2022）提出。其理论基础是<strong>Bradley-Terry偏好模型</strong>。</p>
+
+  <h4>Bradley-Terry模型</h4>
+  <p>假设我们有偏好数据 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，其中人类评判回答 <span class="katex-inline" data-expr="y_w" aria-label="y_w" role="img"></span> 优于 <span class="katex-inline" data-expr="y_l" aria-label="y_l" role="img"></span>。Bradley-Terry模型假设存在一个潜在奖励函数 <span class="katex-inline" data-expr="r(x, y)" aria-label="r(x, y)" role="img"></span>，偏好概率为：</p>
+  <div class="math-box"><div class="label">公式 9.1 Bradley-Terry偏好模型</div>
+    <div class="katex" data-expr="P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l)) = \frac{1}{1 + e^{-(r_w - r_l)}}" aria-label="P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l)) = \frac{1}{1 + e^{-(r_w - r_l)}}" role="img"></div>
+  </div>
+  <p>这意味着我们从偏好数据中学习一个奖励函数 <span class="katex-inline" data-expr="r" aria-label="r" role="img"></span>，使得偏好的回答的奖励高于不偏好的回答。训练RM的损失是最大化该概率的对数似然：</p>
+  <div class="math-box"><div class="label">公式 9.2 RM损失</div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" aria-label="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" role="img"></div>
+  </div>
+  <p>在计算上，该目标首先为每个偏好对计算奖励差值 <span class="katex-inline" data-expr="m_i=r_i^w-r_i^l" aria-label="m_i=r_i^w-r_i^l" role="img"></span>，然后取 <span class="katex-inline" data-expr="-\log\sigma(m_i)" aria-label="-\log\sigma(m_i)" role="img"></span> 的均值。如果 <span class="katex-inline" data-expr="m_i&gt;0" aria-label="m_i&gt;0" role="img"></span> 的比例非常低，说明奖励模型尚未将选择项排在拒绝项之上；如果比例高但泛化能力差，则需检查偏好对是否受长度、模板或候选分布主导。</p>
+
+  <div class="worked-example">
+    <h4>工作示例：手动计算奖励模型配对损失</h4>
+    <p>假设一个批次有两个偏好对，奖励模型输出如下：</p>
+    <table class="metrics-table">
+      <thead>
+        <tr><th>样本</th><th>选择项奖励</th><th>拒绝项奖励</th><th>差值</th><th>偏好概率</th><th>损失</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>2.0</td><td>0.5</td><td>1.5</td><td><code>sigmoid(1.5)=0.818</code></td><td><code>-log(0.818)=0.201</code></td></tr>
+        <tr><td>2</td><td>0.2</td><td>0.8</td><td>-0.6</td><td><code>sigmoid(-0.6)=0.354</code></td><td><code>-log(0.354)=1.037</code></td></tr>
+      </tbody>
+    </table>
+    <p>第一个样本将选择项排在拒绝项之上，损失较小；第二个样本顺序颠倒，导致损失很大。批次平均损失为 <code>(0.201 + 1.037) / 2 = 0.619</code>，偏好准确率为 <code>1/2 = 0.5</code>。此示例说明RM损失不要求奖励有绝对尺度，只要求同一prompt下选择项与拒绝项之间的相对差值越来越大。</p>
+  </div>
+
+  <h4>RLHF三部曲</h4>
+  <ol>
+    <li><strong>SFT</strong> — 在高质量指令-回答对上微调，得到初始策略</li>
+    <li><strong>奖励模型训练</strong> — 使用人类偏好对训练奖励模型（RM）</li>
+    <li><strong>PPO优化</strong> — 以RM得分作为奖励信号，通过PPO优化策略。同时添加KL惩罚以防止偏离SFT模型过远：<span class="katex-inline" data-expr="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" aria-label="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" role="img"></span></li>
+  </ol>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>RLHF的工程挑战：</strong> PPO风格的RLHF通常需要同时维护Actor、Reference、Reward Model和Critic等多个组件，导致训练和超参数调优成本高昂。DPO和GRPO从不同角度简化了流程或减少了组件，但它们仍然依赖于偏好/奖励数据质量、KL控制和优化设置。</div></div>
+</section><!-- ================================================================ -->
+<!-- 编程练习2：LoRA -->
+<!-- ================================================================ --><section class="card" id="s9-5">
+  <h3>9.5 编程练习 2：实现 LoRA——低秩适应</h3>
+  <p><strong>LoRA</strong>（低秩适应，Hu 等人，2021）基于一个关键洞察：模型微调过程中的权重矩阵变化 <span class="katex-inline" data-expr="\Delta W" aria-label="\Delta W" role="img"></span> 具有 <strong>低秩</strong> 性质。LoRA 的方法不是直接更新 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>，而是在旁边添加一个低秩分解增量：</p>
+
+  <div class="math-box"><div class="label">公式 9.3 LoRA 前向传播</div>
+    <div class="katex" data-expr="h = W_0 x + \Delta W x = W_0 x + BA x, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}" aria-label="h = W_0 x + \Delta W x = W_0 x + BA x, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}" role="img"></div>
+  </div>
+  <p>训练期间，仅更新 <span class="katex-inline" data-expr="A, B" aria-label="A, B" role="img"></span>，<span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 被冻结。推理时，<span class="katex-inline" data-expr="BA" aria-label="BA" role="img"></span> 可以合并回 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>（<span class="katex-inline" data-expr="W' = W_0 + BA" aria-label="W' = W_0 + BA" role="img"></span>），从而带来零额外的推理开销。</p>
+
+  <div class="coding-exercise">
+    <h4>练习 2：实现 LoRA 层和应用函数</h4>
+    <div class="task">
+      <p><strong>任务：</strong> 实现 <code>LoRALayer</code> 和 <code>apply_lora</code> 函数。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li><code>LoRALayer</code> 实现 <span class="katex-inline" data-expr="W' = W_0 + BA" aria-label="W' = W_0 + BA" role="img"></span>，支持缩放因子 <code>alpha / r</code></li>
+        <li><code>apply_lora</code> 递归遍历模型的子模块，将指定的 <code>nn.Linear</code> 层替换为 LoRA 版本</li>
+        <li>冻结所有非 LoRA 参数（<code>requires_grad = False</code>）</li>
+        <li>仅对 LoRA 的 A 和 B 矩阵设置 <code>requires_grad = True</code></li>
+        <li>使用随机高斯分布初始化 A（<code>std=0.01</code>），并将 B 初始化为零</li>
+        <li>返回可训练参数与总参数的比率</li>
+      </ul>
+      <pre># Expected usage
+model = GPTModel(config)
+model = apply_lora(model, r=8, target_modules=["q_proj", "v_proj"])
+# Output: Trainable parameters: 1,048,576 / 124,000,000 (0.85%)
+
+# merge: W' = W + BA (zero overhead during inference)
+for name, module in model.named_modules():
+    if hasattr(module, 'lora'):
+        module.lora.W += (module.lora.B @ module.lora.A) * module.lora.scaling</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考答案</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class LoRALayer(nn.Module):
+    """LoRA 低秩适应层：W' = W + BA"""
+    def __init__(self, base_layer, r=8, alpha=16.0, dropout=0.1):
         super().__init__()
-        self.base = base
-        for p in self.base.parameters():
-            p.requires_grad = False
-        self.lora_A = nn.Linear(base.in_features, r, bias=False)
-        self.lora_B = nn.Linear(r, base.out_features, bias=False)
+        in_features = base_layer.in_features
+        out_features = base_layer.out_features
+        self.r = r
         self.scaling = alpha / r
+        self.weight = nn.Parameter(base_layer.weight.detach().clone(), requires_grad=False)
+        self.bias = None        if base_layer.bias is not None:
+            self.bias = nn.Parameter(base_layer.bias.detach().clone(), requires_grad=False)
+        # 低秩矩阵：B 初始化为 0，A 随机初始化；B@A 的形状与 Linear 权重相同
+        self.A = nn.Parameter(torch.randn(r, in_features) * 0.01)
+        self.B = nn.Parameter(torch.zeros(out_features, r))
         self.dropout = nn.Dropout(dropout)
-        nn.init.zeros_(self.lora_B.weight)
 
     def forward(self, x):
-        return self.base(x) + self.scaling * self.lora_B(self.lora_A(self.dropout(x)))</div>
-      </div>
+        base = F.linear(x, self.weight, self.bias)
+        lora = F.linear(F.linear(self.dropout(x), self.A), self.B) * self.scaling
+        return base + lora
+
+    def delta_weight(self):
+        return (self.B @ self.A) * self.scaling
+
+def apply_lora(model, r=8, alpha=16.0, target_modules=None):
+    """将指定模块替换为 LoRA 版本，冻结非 LoRA 参数"""
+    if target_modules is None:
+        target_modules = ["q_proj", "v_proj"]
+
+    for param in model.parameters():
+        param.requires_grad = False
+
+    for name, module in model.named_children():
+        if name in target_modules and isinstance(module, nn.Linear):
+            lora_layer = LoRALayer(module, r=r, alpha=alpha)
+            setattr(model, name, lora_layer)
+        else:
+            apply_lora(module, r=r, alpha=alpha, target_modules=target_modules)
+
+    # 仅解冻 LoRA 参数
+    for name, param in model.named_parameters():
+        if name.endswith(".A") or name.endswith(".B"):
+            param.requires_grad = True
+
+    # 统计信息
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    print(f"可训练参数：{trainable:,} / {total:,} ({trainable/total*100:.2f}%)")
+    return model</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 B 从零开始：</strong> 训练开始时，<span class="katex-inline" data-expr="BA = 0" aria-label="BA = 0" role="img"></span>，因此 LoRA 路径对输出无影响。模型从原始权重出发，逐步学习微调方向。如果 B 和 A 都随机初始化，模型会以随机偏移开始，可能破坏预训练知识。</p>
     </div>
-  </section>
+  </div>
+</section><!-- ================================================================ -->
+<!-- 9.5A LoRA 工程实践 -->
+<!-- ================================================================ --><section class="card" id="s9-5a">
+  <h3>9.5A LoRA/PEFT 工程中的内存计算：节省了什么内存，开销在哪里</h3>
+  <p>LoRA 公式 <span class="katex-inline" data-expr="W'=W_0+\frac{\alpha}{r}BA" aria-label="W'=W_0+\frac{\alpha}{r}BA" role="img"></span> 只描述了参数化方法。训练工程中更重要的是内存计算：基权重 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 被冻结后，梯度和优化器状态无需保存；只有小矩阵 <span class="katex-inline" data-expr="A,B" aria-label="A,B" role="img"></span> 参与更新。</p>
 
-  <section class="card" id="s9-5a">
-    <h3>9.5A LoRA/PEFT 工程账</h3>
-    <ul>
-      <li><strong>省的是训练状态：</strong>base 权重不训练，就不需要为它保存 gradient 和 optimizer states。</li>
-      <li><strong>rank 越高容量越大：</strong>但显存和过拟合风险也增加。</li>
-      <li><strong>target modules 要选对：</strong>常见是 Q/V projection、attention output、MLP；不是随便全塞。</li>
-      <li><strong>alpha 和 dropout：</strong>控制增量尺度和正则。</li>
-      <li><strong>merge inference：</strong>上线时可以把 LoRA 增量合并进 base，也可以多 adapter 动态服务。</li>
-    </ul>
-  </section>
+  <h4>1. 可训练参数的数量</h4>
+  <p>对于线性层 <code>Linear(d_in, d_out)</code>，原始参数数量为 <code>d_out * d_in</code>。当 LoRA 秩为 <code>r</code> 时，增加的参数为：</p>
+  <div class="math-box"><div class="label">LoRA 参数计数</div>
+    <div class="katex" data-expr="N_{\text{LoRA}}=r\cdot d_{\text{in}}+d_{\text{out}}\cdot r=r(d_{\text{in}}+d_{\text{out}})" aria-label="N_LoRA=r(d_in+d_out)" role="img"></div>
+  </div>
+  <p>如果 <code>d_in=d_out=4096</code> 和 <code>r=8</code>，单个投影层仅增加 <code>8*(4096+4096)=65,536</code> 个可训练参数，而原始矩阵有 <code>16,777,216</code> 个参数。这种数量级差异解释了为什么 LoRA 能够以更小的内存完成任务适配。</p>
 
-  <section class="card" id="s9-6">
-    <h3>9.6 DPO：为什么不需要单独 Reward Model</h3>
-    <p>DPO 从偏好数据直接优化 policy，使 chosen 相对 rejected 的 logprob 改善幅度大于 reference model。直观上，它比较的是“当前模型相对参考模型，更偏向 chosen 多少”。</p>
-    <div class="code-block" data-lang="text">loss = -log sigmoid(beta * [(log pi(y_w)-log pi_ref(y_w)) - (log pi(y_l)-log pi_ref(y_l))])</div>
-    <p>reference model 很关键：它限制 policy 不要为了赢偏好对而大幅漂移。</p>
-  </section>
+  <h4>2. 内存节省来自梯度和优化器状态</h4>
+  <p>以 AdamW 为例，训练一个可训练参数通常至少需要权重、梯度、一阶动量、二阶动量。全微调时，这些状态覆盖所有参数；LoRA 微调时，基权重仍需加载用于前向/反向传播，但梯度和优化器状态只保存给适配器参数：</p>
+  <div class="code-block" data-lang="text">
+全微调训练状态 ~= all_params * (weights + grads + Adam m + Adam v)
+LoRA 训练状态 ~= base_weights + lora_params * (weights + grads + Adam m + Adam v)</div>
+  <p>因此，LoRA 主要节省的不是前向传播所需的基模型权重，而是完整的梯度和优化器状态。如果结合 4-bit/8-bit 基权重量化，就形成了 QLoRA 之类的方法：冻结的基模型以低精度存储，而 LoRA 适配器以更高精度训练。本课程不要求实现 QLoRA 内核，但你应该理解它进一步分离了"存储基模型"和"训练适配器"的内存压力。</p>
 
-  <section class="card" id="s9-6a">
-    <h3>9.6A 偏好数据质量</h3>
-    <p>DPO/RLHF 对数据偏差很敏感。常见问题包括：chosen 更长、格式更花、标注者偏好不一致、安全拒答混进能力任务、评估集泄漏。</p>
-    <p>训练前应统计 chosen/rejected 长度、语言、主题、toxicity、format、标注分歧和来源。不要等 loss 下降后才发现模型只学会“写长一点”。</p>
-  </section>
+  <h4>3. 目标模块并非随意选择</h4>
+  <p>LoRA 通常应用于注意力 <code>q_proj</code>、<code>v_proj</code>，也可以扩展到 <code>k_proj</code>、<code>o_proj</code> 以及 MLP 上/下/门控投影。选择目标模块时需考虑：</p>
+  <ul>
+    <li><strong>任务类型：</strong>指令格式和风格适配通常从注意力投影开始；领域知识或复杂变换可能需要 MLP 适配器。</li>
+    <li><strong>可训练参数预算：</strong>更多目标模块意味着更大的适配器、更多的优化器状态和更多的通信。</li>
+    <li><strong>推理部署：</strong>同时服务多个适配器时，未合并的适配器会引入额外的矩阵乘法；合并适配器可减少开销，但切换任务需要重新加载或维护多个权重副本。</li>
+    <li><strong>稳定性：</strong>秩过小可能欠拟合，秩过大则接近全微调，可能在小数据上过拟合或放大噪声标签。</li>
+  </ul>
 
-  <section class="card" id="s9-6b">
-    <h3>9.6B Reward 和 Verifier 设计</h3>
-    <p>不同 reward 回答的问题不同：</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>reward 类型</th><th>适合</th><th>风险</th></tr>
-        <tr><td>人类偏好</td><td>主观质量、帮助性、安全性</td><td>长度/风格偏置、标注噪声</td></tr>
-        <tr><td>单元测试/判题器</td><td>代码、数学、可验证任务</td><td>过拟合测试、reward hacking</td></tr>
-        <tr><td>模型 judge</td><td>规模化评估</td><td>judge 偏见、和 policy 共谋</td></tr>
-        <tr><td>工具环境回报</td><td>agent 任务</td><td>状态记录复杂、信用分配难</td></tr>
-      </table>
+  <h4>4. alpha、rank 和 dropout 的作用</h4>
+  <p><code>alpha/r</code> 是 LoRA 分支的缩放因子。如果增大 rank 而不调整缩放，适配器的输出幅度可能随 rank 变化；使用 <code>alpha/r</code> 使得不同 rank 下初始更新尺度更可控。LoRA dropout 对适配器输入施加随机失活，通常用于小数据集，防止适配器记忆训练样本中的表层模式。</p>
+  <p>一份可信的实验报告不应止步于"使用了 LoRA"。至少应说明：目标模块、rank、alpha、dropout、基模型是否量化、训练 dtype、可训练参数比例、推理是否合并，以及与全微调或冻结基线的质量/成本对比。</p>
+
+  <h4>5. 合并推理与多适配器服务</h4>
+  <p>推理时，<span class="katex-inline" data-expr="\Delta W=\frac{\alpha}{r}BA" aria-label="\Delta W=alpha/r BA" role="img"></span> 可以加回到基权重中得到常规线性层。这样消除了 LoRA 分支的额外计算，适合单个适配器的固定部署。但如果服务需要按租户、语言或任务动态切换多个适配器，预合并会引入权重管理成本；未合并的适配器需要推理引擎高效地对不同适配器的请求进行批处理。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>LoRA 不是"免费的微调"。它通过更少的可训练参数降低了训练内存和分发成本，但你仍需要评估目标模块覆盖度、rank 容量、数据质量、适配器切换、合并推理和量化误差。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.6 DPO 理论 -->
+<!-- ================================================================ --><section class="card" id="s9-6">
+  <h3>9.6 DPO 的数学等价性——为什么 DPO 不需要单独的奖励模型</h3>
+  <p><strong>DPO（Direct Preference Optimization，直接偏好优化）</strong>（Rafailov et al., 2023）是一项重要的理论贡献。它表明，在 Bradley-Terry 偏好模型和 KL 正则化的奖励最大化等假设下，奖励函数可以重新参数化为策略/参考的对数概率比值，从而无需先显式训练一个单独的奖励模型，可以直接从偏好对中构建优化目标。</p>
+
+  <h4>核心推导</h4>
+  <p>RLHF 的目标是在保持与参考策略 <span class="katex-inline" data-expr="\pi_{\text{ref}}" aria-label="\pi_{\text{ref}}" role="img"></span 接近的同时最大化奖励 <span class="katex-inline" data-expr="r(x, y)" aria-label="r(x, y)" role="img"></span>：</p>
+  <div class="math-box"><div class="label">公式 9.4 带 KL 约束的 RLHF 目标</div>
+    <div class="katex" data-expr="\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta}[r(x, y)] - \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{ref}})" aria-label="\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta}[r(x, y)] - \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{ref}})" role="img"></div>
+  </div>
+  <p>在固定 prompt、参考策略和奖励函数的理想化设定下，这个约束优化有一个<strong>闭式解</strong>：</p>
+  <div class="math-box"><div class="label">公式 9.5 RLHF 的最优策略</div>
+    <div class="katex" data-expr="\pi_\theta^*(y \mid x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y \mid x) \exp\left(\frac{r(x, y)}{\beta}\right)" aria-label="\pi_\theta^*(y \mid x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y \mid x) \exp\left(\frac{r(x, y)}{\beta}\right)" role="img"></div>
+  </div>
+  <p>反过来，奖励函数也可以表示为策略的闭式函数：</p>
+  <div class="math-box"><div class="label">公式 9.6 奖励作为策略的函数</div>
+    <div class="katex" data-expr="r(x, y) = \beta \log\frac{\pi_\theta(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x)" aria-label="r(x, y) = \beta \log\frac{\pi_\theta(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x)" role="img"></div>
+  </div>
+  <p>代入 Bradley-Terry 模型并消去 <span class="katex-inline" data-expr="Z(x)" aria-label="Z(x)" role="img"></span>：</p>
+  <div class="math-box"><div class="label">公式 9.7 DPO 损失</div>
+    <div class="katex" data-expr="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" aria-label="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" role="img"></div>
+  </div>
+  <p>核心含义：在上述建模假设下，我们可以利用<strong>策略/参考的对数概率比值</strong>构建一个与偏好概率相关的隐式奖励差值，而无需训练单独的奖励模型。DPO 优化的是一个由选择/拒绝偏好对诱导的分类式损失，而非任意的“直接奖励最大化”。</p>
+  <p>DPO 隐式奖励诊断显式计算了这种关系：<span class="katex-inline" data-expr="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" aria-label="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" role="img"></span>。对于每个偏好对，选择/拒绝的隐式奖励差值为 <span class="katex-inline" data-expr="\hat r_w-\hat r_l" aria-label="\hat r_w-\hat r_l" role="img"></span>，而 <span class="katex-inline" data-expr="\sigma(\hat r_w-\hat r_l)" aria-label="\sigma(\hat r_w-\hat r_l)" role="img"></span> 可以解释为当前策略/参考比值所诱导的偏好概率。这种诊断可以揭示一个常见错误：只比较策略的原始 log 概率，而忘记了参考模型的锚定作用。</p>
+
+  <h4>计算示例：DPO 关注的是相对于参考的改进</h4>
+  <p>考虑一个偏好对 <code>(prompt, chosen, rejected)</code>，四个序列的 log 概率如下。注意策略的原始 log 概率仍然偏向拒绝响应，因为 <code>-11 &gt; -12</code>；但 DPO 并非直接比较这两个数值。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>响应</th><th>策略 logp</th><th>参考 logp</th><th>对数比值 = 策略 - 参考</th><th>隐式奖励, beta=0.1</th></tr>
+      <tr><td>选择</td><td>-12.0</td><td>-15.0</td><td>3.0</td><td>0.3</td></tr>
+      <tr><td>拒绝</td><td>-11.0</td><td>-10.0</td><td>-1.0</td><td>-0.1</td></tr>
+    </table>
+  </div>
+  <p>选择的绝对概率仍然很低，但相对于参考它提升了 <code>3.0</code>；拒绝响应相对于参考实际上降低了 <code>1.0</code>。因此，DPO logit 为 <code>beta * (3 - (-1)) = 0.4</code>，当前偏好概率为 <code>sigmoid(0.4) ≈ 0.599</code>，每个样本的损失为 <code>-log sigmoid(0.4) ≈ 0.513</code>。如果报告只用 <code>policy_chosen_logp &gt; policy_rejected_logp</code> 作为偏好准确率，就会把这个样本误判为失败；正确的诊断应该比较 <code>chosen_log_ratio &gt; rejected_log_ratio</code>。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO 与 RLHF 对比：</strong>DPO 的主要优势是简化了训练流程：在常见实现中，它不需要训练单独的奖励模型，也不需要 PPO 的 Actor-Critic rollout。相反，它通过策略/参考在选/拒上的对数概率比值来构建损失。它通常比 PPO 风格的 RLHF 更容易实现和调参，但其稳定性仍然依赖于偏好数据质量、参考模型、<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span>、长度偏差以及优化设置。不能无条件地宣称它优于所有 RLHF 方法。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.6A 偏好数据质量 -->
+<!-- ================================================================ --><section class="card" id="s9-6a">
+  <h3>9.6A 偏好数据质量：DPO/RLHF 的真实约束</h3>
+  <p>偏好优化的输入常写作 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，但这并不是一个“真实标签”。它是由特定的标注协议、标注人群、采样策略和候选生成模型共同产生的相对判断。无论 DPO、RLHF、GRPO 的目标函数多么优雅，它们都无法自动修复偏好数据中的系统性偏差。</p>
+
+  <h4>偏好数据中的常见偏差</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>问题</th><th>表现</th><th>对训练的影响</th></tr>
+      <tr><td>长度偏差</td><td>标注者或裁判偏好更长、更详细的回答</td><td>模型学会生成冗长的输出，但不一定更正确</td></tr>
+      <tr><td>风格偏差</td><td>偏好礼貌、格式良好或“看起来很专业”的回答</td><td>奖励表面流畅性而非事实准确性或推理正确性</td></tr>
+      <tr><td>标注者分歧</td><td>同一对回答在不同人群中收到不同的偏好</td><td>单一的 chosen/rejected 标签掩盖了任务、文化或专业水平上的差异</td></tr>
+      <tr><td>候选分布漂移</td><td>偏好对由旧模型生成，但新模型在推理时的分布不同</td><td>离线偏好学习可能在分布外的 prompt 上失效</td></tr>
+      <tr><td>奖励破解</td><td>模型找到捷径来提高奖励</td><td>分数上升，但实际质量、安全性或可验证性下降</td></tr>
+    </table>
+  </div>
+
+  <h4>将长度偏差转化为可计算的统计量</h4>
+  <p>一个长度偏差诊断将每个偏好对中的长度差写为 <span class="katex-inline" data-expr="\Delta \ell_i = \ell_i^w - \ell_i^l" aria-label="\Delta \ell_i = \ell_i^w - \ell_i^l" role="img"></span>，并报告 <code>mean_length_delta</code>、<code>chosen_longer_rate</code>、<code>rejected_longer_rate</code> 和 <code>tie_rate</code>。如果 chosen 通常显著更长，DPO 或 RM 可能学会“写更多就能赢”的捷径；如果 rejected 更长却仍被判为更差，分析应确定问题是冗长、离题、事实错误还是安全边界问题。</p>
+
+  <h4>在优化目标之前审计后训练数据</h4>
+  <p>SFT、DPO、GRPO 和 RLVR/RFT 的目标函数都假设训练样本在语义上是可信的：prompt 覆盖目标任务，chosen/rejected 代表稳定的偏好，安全样本不会将危险回答标为 chosen，保留的 eval 集不与训练集重叠。实际的后训练流水线通常混合人类偏好、AI 反馈、拒绝采样、可验证问题以及安全数据；即使是一次紧凑的训练运行，也应当将基本的数据假设转化为可计算的审计表。</p>
+
+  <table class="metrics-table">
+    <thead><tr><th>检查领域</th><th>检查内容</th><th>失败时的优先操作</th></tr></thead>
+    <tbody>
+      <tr><td>覆盖度</td><td>样本量、SFT/偏好样本数、任务数、安全切片数、最大任务占比</td><td>补充数据或重新采样，防止某个任务主导所有更新</td></tr>
+      <tr><td>标签质量</td><td>同一 prompt 是否有不同的胜者、chosen 是否系统性更长</td><td>重新审核标注协议，移除冲突对，控制长度偏差</td></tr>
+      <tr><td>泄漏</td><td>样本是否与保留的 eval 集或基准测试重叠</td><td>移除受污染的样本并重建评估集</td></tr>
+      <tr><td>安全</td><td>危险或未经授权的回答是否被标为 chosen</td><td>纠正标签，增加安全审查员，或过滤不安全的 chosen 样本</td></tr>
+    </tbody>
+  </table>
+
+  <p>后训练数据审计将每条 SFT、偏好或 RLVR/RFT 记录汇总到四个诊断领域：<code>coverage</code>、<code>label_quality</code>、<code>leakage</code> 和 <code>safety</code>，并输出 <code>action_items</code>。这一步并非全面的数据集清理指南，而是训练前的最小工程断言：如果同一 prompt 的偏好对矛盾、chosen 显著更长、eval 重叠非零或不安全的 chosen 样本存在，那么后续 DPO loss 的下降仅表明模型正在逼近一个有缺陷的代理目标。</p>
+
+  <div class="code-block" data-lang="python">
+records = [
+    {"kind": "sft", "prompt_id": "p1", "task": "qa", "safety_slice": "ordinary", "response_tokens": 80},
+    {"kind": "preference", "prompt_id": "p2", "task": "code", "safety_slice": "ordinary",
+     "chosen_tokens": 120, "rejected_tokens": 110, "winner_id": "a"},
+]
+report = post_training_data_audit(records, thresholds={
+    "min_task_count": 2,
+    "max_eval_overlap_rate": 0.0,
+    "max_unsafe_chosen_rate": 0.0,
+})</div>
+
+  <p>该审计将偏好学习的基础整合到本章的目标函数中：DPO 的 <code>chosen/rejected</code> 并非自然真理，GRPO 的奖励组也不是天然可靠的。对齐实验应首先说明数据检查是否支持该目标，然后解释 log-ratio、KL、reward 和行为切片。</p>
+
+  <h4>为什么参考模型至关重要</h4>
+  <p>DPO 中的核心比较不是 <span class="katex-inline" data-expr="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" aria-label="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" role="img"></span>，而是策略相对于参考模型的改进：</p>
+  <div class="math-box"><div class="label">公式 9.7a DPO 相对偏好边际</div>
+    <div class="katex" data-expr="\Delta_\theta = \left[\log \pi_\theta(y_w|x) - \log \pi_{\text{ref}}(y_w|x)\right] - \left[\log \pi_\theta(y_l|x) - \log \pi_{\text{ref}}(y_l|x)\right]" aria-label="\Delta_\theta = \left[\log \pi_\theta(y_w|x) - \log \pi_{\text{ref}}(y_w|x)\right] - \left[\log \pi_\theta(y_l|x) - \log \pi_{\text{ref}}(y_l|x)\right]" role="img"></div>
+  </div>
+  <p>参考模型提供了“不要偏离原始模型太远”的锚点。如果省略了参考模型，模型可能通过提高高频模板、延长输出或放大某些格式 token 来赢得偏好对，而不是学习稳定的任务能力。<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span> 控制该偏好边际进入 sigmoid 的强度：太小则学习缓慢，太大会有过拟合偏好对或放大噪声的风险。</p>
+
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>课程判断：</strong>看到“DPO 准确率上升”并不直接意味着“模型更好了”。还必须检查 chosen/rejected 的采样方法、长度分布、标注一致性、参考模型、保留 prompt、拒绝/安全指标以及人工错误分析。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.6B 奖励与验证器设计 -->
+<!-- ================================================================ --><section class="card" id="s9-6b">
+  <h3>9.6B 奖励与验证器设计：在强化学习之前选择合适的训练信号</h3>
+  <p>现代后训练并不简化为一个称为“奖励”的单一对象。偏好标签、奖励模型分数、单元测试、数学验证器、LLM 评判器以及过程奖励模型都会产生不同的学习信号。在选择 PPO、GRPO、DAPO、GSPO、RLVR 或 RFT 之前，工程师必须首先决定哪种奖励家族匹配任务，以及该奖励可能引发哪些失败模式。</p>
+  <p>这就是为什么近年来的工业系统在重视策略优化器的同时，也同样重视评分器和验证器。OpenAI 的 <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">强化微调</a> 工作流需要一个能够对明确任务的输出进行评分的评分器；DeepSeek-R1 对推理任务使用基于规则的奖励，这些任务的最终答案可以被检查；过程奖励研究探讨中间步骤是否有效，而不仅仅是最终答案是否匹配。共同的教训是：奖励应被视为一种带有校准、作用范围和已知失败模式的测量仪器。</p>
+
+  <div class="svg-diagram" style="max-width:980px">
+    <svg viewBox="0 0 980 380" role="img" aria-label="Reward design ledger mapping tasks to verifiers, optimization, and audits">
+      <defs>
+        <marker id="reward-ledger-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <style>
+        .rw-box{fill:var(--surface);stroke:var(--border);stroke-width:1.5}
+        .rw-core{fill:rgba(16,185,129,.12);stroke:var(--success);stroke-width:2}
+        .rw-risk{fill:rgba(231,76,60,.10);stroke:#e74c3c;stroke-width:1.7}
+        .rw-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#reward-ledger-arrow)}
+        .rw-title{font-size:16px;font-weight:700;fill:var(--text)}
+        .rw-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rw-box" x="42" y="58" width="190" height="70" rx="10"/>
+      <text text-anchor="middle" x="137" y="86"><tspan class="rw-title">Task Contract</tspan><tspan class="rw-sub" x="137" dy="20">answer space, ambiguity, risk</tspan></text>
+      <rect class="rw-core" x="300" y="58" width="190" height="70" rx="10"/>
+      <text text-anchor="middle" x="395" y="86"><tspan class="rw-title">Reward Family</tspan><tspan class="rw-sub" x="395" dy="20">preference / judge / verifier</tspan></text>
+      <rect class="rw-core" x="558" y="58" width="190" height="70" rx="10"/>
+      <text text-anchor="middle" x="653" y="86"><tspan class="rw-title">Optimization Use</tspan><tspan class="rw-sub" x="653" dy="20">DPO / GRPO / RLVR / RFT</tspan></text>
+      <rect class="rw-box" x="816" y="58" width="130" height="70" rx="10"/>
+      <text text-anchor="middle" x="881" y="86"><tspan class="rw-title">Release Claim</tspan><tspan class="rw-sub" x="881" dy="20">bounded by evidence</tspan></text>
+      <path class="rw-line" d="M232 93 H300"/>
+      <path class="rw-line" d="M490 93 H558"/>
+      <path class="rw-line" d="M748 93 H816"/>
+
+      <rect class="rw-risk" x="170" y="210" width="170" height="82" rx="10"/>
+      <text text-anchor="middle" x="255" y="238"><tspan class="rw-title">Calibration</tspan><tspan class="rw-sub" x="255" dy="20">human agreement</tspan><tspan class="rw-sub" x="255" dy="17">false pass / reject</tspan></text>
+      <rect class="rw-risk" x="405" y="210" width="170" height="82" rx="10"/>
+      <text text-anchor="middle" x="490" y="238"><tspan class="rw-title">Exploit Audit</tspan><tspan class="rw-sub" x="490" dy="20">length, format, leakage</tspan><tspan class="rw-sub" x="490" dy="17">judge or test hacking</tspan></text>
+      <rect class="rw-risk" x="640" y="210" width="170" height="82" rx="10"/>
+      <text text-anchor="middle" x="725" y="238"><tspan class="rw-title">Cost Boundary</tspan><tspan class="rw-sub" x="725" dy="20">rollouts, tokens, latency</tspan><tspan class="rw-sub" x="725" dy="17">cost per valid answer</tspan></text>
+
+      <path class="rw-line" d="M395 128 C365 168 315 184 255 210"/>
+      <path class="rw-line" d="M490 210 C488 176 500 150 558 112"/>
+      <path class="rw-line" d="M725 210 C745 168 785 138 816 112"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">图 9-2：奖励设计台账。任务合约决定了奖励家族；校准、利用审计和成本边界决定了该奖励是否能够支持强化学习，还是仅用于离线评估。</p>
+
+  <h4>1. 奖励家族回答不同的问题</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>奖励家族</th><th>最适合</th><th>常见失败模式</th><th>训练前最低审计要求</th></tr>
+      <tr><td>人类偏好对</td><td>有用性、风格、无害性、主观权衡</td><td>长度偏差、标注者分歧、候选分布过时</td><td>一致率、长度偏差统计、分歧切片、保留提示</td></tr>
+      <tr><td>奖励模型</td><td>将偏好反馈扩展到直接人工标注之外</td><td>策略利用奖励模型的人工痕迹或狭窄的风格偏好</td><td>对抗样本、KL/长度监控、优化后的人工比较</td></tr>
+      <tr><td>LLM 作为评判器</td><td>带有明确评分标准且人工预算有限的开放式答案</td><td>位置偏差、冗长性偏差、模型家族偏差、评分标准漂移</td><td>A/B 顺序交换、长度控制、人类一致性、评判器版本固定</td></tr>
+      <tr><td>基于规则的验证器</td><td>数学最终答案、代码测试、模式有效性、工具执行结果</td><td>弱测试、公开泄漏、猜测正确、误判通过案例</td><td>隐藏测试、误判通过/拒绝审查、污染扫描、对抗性探测</td></tr>
+      <tr><td>过程奖励 / 轨迹验证器</td><td>推理步骤、证明约束、工具轨迹、智能体工作流</td><td>步骤标注成本高，局部正确性不能保证最终成功</td><td>轨迹有效性样本、最终答案一致性、步骤到结果相关性</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 将优化器与奖励完整性匹配</h4>
+  <p>当主要信号是稳定的 chosen/rejected 对比时，DPO 是合适的。当采样多个候选能揭示有意义的奖励差异时，PPO/GRPO 风格的强化学习是合适的。只有当评分器足够可靠，提高其分数很可能改善目标行为时，RLVR/RFT 才是合适的。如果奖励有噪声、模糊或容易被利用，更强的优化会更快地使问题恶化。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>训练选择</th><th>奖励要求</th><th>何时不应使用</th><th>需随分数一同报告</th></tr>
+      <tr><td>SFT</td><td>高质量的示范或修正后的轨迹</td><td>目标行为需要在多个可能答案之间进行探索</td><td>格式通过率、模仿覆盖度、保留任务质量</td></tr>
+      <tr><td>DPO / 偏好优化</td><td>chosen/rejected 对反映了已知策略分布下的稳定偏好</td><td>偏好标签不一致、存在长度偏差，或由过时候选生成</td><td>偏好准确率、长度偏移、相对于参考的 KL、切片回归</td></tr>
+      <tr><td>GRPO / PPO 风格的强化学习</td><td>rollout 产生奖励方差，且奖励不易被廉价利用</td><td>大多数组全是正确/全是错误，或奖励主要跟随输出长度</td><td>奖励标准差、有效 rollout 比率、近似 KL、熵、裁剪分数</td></tr>
+      <tr><td>RLVR / RFT</td><td>可编程或基于规则的评分器能可靠地将正确输出与错误输出区分开</td><td>任务主观、规定不明确，或拥有弱的公开测试集</td><td>误判通过审计、每个有效答案的成本、私有保留集通过率、轨迹有效性</td></tr>
+    </table>
+  </div>
+
+  <h4>3. 奖励提升不等于能力提升</h4>
+  <p>奖励曲线应被解释为一个假设，而不是证据。模型可能学会写更长的答案、满足脆弱的格式检查器、利用单元测试、模仿评判器偏好的风格，或记忆公开示例。因此，一份可信的报告必须将奖励分数与目标行为分开：最终答案准确率、过程有效性、安全/拒绝校准、延迟、token 成本以及分布外切片都应在优化后测量。</p>
+  <p>在本课程中，奖励设计段落应具有如下形式：<code>For task X, the answer space is Y, the grader is Z, its audited false-pass rate is A, the reward variance is B, the known exploit risks are C, and the release claim is limited to D.</code> 如果缺少其中任意一个字段，则强化学习实验尚不具备规模化条件。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 优化器只会放大奖励。资深对齐工程师首先证明奖励经过校准、难以被利用、并且与真实任务相关联；然后他们才会把强化学习曲线当作改进的证据。</div></div>
+</section><!-- ================================================================ -->
+<!-- Programming Exercise 3: DPO Loss -->
+<!-- ================================================================ --><section class="card" id="s9-7">
+  <h3>9.7 编程练习 3：实现 DPO 损失函数</h3>
+
+  <div class="coding-exercise">
+    <h4>练习 3：DPO 损失函数</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现 DPO 损失函数以及一个辅助函数，用于计算序列的对数概率。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li><code>post_training_data_audit(records, thresholds)</code> 在 DPO / GRPO 之前检查覆盖率、标签质量、数据泄漏和安全性</li>
+        <li><code>sequence_log_probs(model, input_ids, attention_mask, labels)</code> 计算整个序列的对数概率（忽略 -100 位置）</li>
+        <li><code>dpo_loss(...)</code> 计算 DPO 损失：<span class="katex-inline" data-expr="-\log \sigma(\beta \cdot (\text{chosen\_ratio} - \text{rejected\_ratio}))" aria-label="-\log \sigma(\beta \cdot (\text{chosen\_ratio} - \text{rejected\_ratio}))" role="img"></span></li>
+        <li><code>dpo_implicit_rewards(...)</code> 报告 chosen / rejected 的隐式奖励、奖励边际、偏好概率和偏好准确率</li>
+        <li>返回损失和准确率（chosen ratio > rejected ratio 的比例）</li>
+        <li>使用 <code>F.logsigmoid</code> 实现（数值稳定）</li>
+      </ul>
+      <pre># Expected usage
+loss, acc = dpo_loss(
+    policy_chosen_logps=logps_chosen,   # log πθ(y_w|x)
+    policy_rejected_logps=logps_reject, # log πθ(y_l|x)
+    ref_chosen_logps=ref_chosen,        # log πref(y_w|x)
+    ref_rejected_logps=ref_reject,      # log πref(y_l|x)
+    beta=0.1,
+)</pre>
     </div>
-  </section>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考答案</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def sequence_log_probs(model, input_ids, attention_mask, labels):
+    """计算完整序列的对数概率（忽略 -100 位置）"""
+    outputs = model(input_ids, attention_mask=attention_mask)
+    logits = outputs.logits  # (batch, seq_len, vocab_size)
 
-  <section class="card" id="s9-7">
-    <h3>9.7 编程练习 3：实现 DPO Loss</h3>
-    <div class="coding-exercise">
-      <h4>练习 3：DPO Loss</h4>
-      <div class="task">
-        <ul>
-          <li>计算 policy 对 chosen/rejected completion 的 sequence logprob。</li>
-          <li>计算 reference model 的对应 logprob。</li>
-          <li>用 DPO 公式得到 batch loss。</li>
-        </ul>
-        <div class="code-block" data-lang="python">def dpo_loss(pi_w, pi_l, ref_w, ref_l, beta=0.1):
-    pi_logratios = pi_w - pi_l
-    ref_logratios = ref_w - ref_l
-    logits = beta * (pi_logratios - ref_logratios)
-    return -F.logsigmoid(logits).mean()</div>
-      </div>
+    shift_logits = logits[:, :-1, :].contiguous()
+    shift_labels = labels[:, 1:].contiguous()
+
+    log_probs = F.log_softmax(shift_logits, dim=-1)
+
+    # 收集目标 token 的对数概率；先将 -100 替换为 0 以避免 gather 越界
+    valid = shift_labels != -100
+    safe_labels = shift_labels.masked_fill(~valid, 0)
+    per_token_logps = log_probs.gather(
+        dim=-1, index=safe_labels.unsqueeze(-1)
+    ).squeeze(-1)
+
+    # 求和（忽略 -100 位置）
+    mask = valid.float()
+    return (per_token_logps * mask).sum(dim=1)
+
+def dpo_loss(policy_chosen_logps, policy_rejected_logps,
+             ref_chosen_logps, ref_rejected_logps, beta=0.1):
+    """DPO 损失函数"""
+    chosen_log_ratio = policy_chosen_logps - ref_chosen_logps
+    rejected_log_ratio = policy_rejected_logps - ref_rejected_logps
+
+    logits = beta * (chosen_log_ratio - rejected_log_ratio)
+    loss = -F.logsigmoid(logits).mean()
+
+    acc = (logits > 0).float().mean().item()
+    return loss, acc
+
+def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
+    """DPO 训练步骤"""
+    model.train()
+    ref_model.eval()
+
+    with torch.no_grad():
+        ref_chosen = sequence_log_probs(ref_model,
+            batch["chosen_ids"], batch["chosen_mask"], batch["chosen_labels"])
+        ref_rejected = sequence_log_probs(ref_model,
+            batch["rejected_ids"], batch["rejected_mask"], batch["rejected_labels"])
+
+    policy_chosen = sequence_log_probs(model,
+        batch["chosen_ids"], batch["chosen_mask"], batch["chosen_labels"])
+    policy_rejected = sequence_log_probs(model,        batch["rejected_ids"], batch["rejected_mask"], batch["rejected_labels"])
+
+    loss, acc = dpo_loss(
+        policy_chosen, policy_rejected,
+        ref_chosen, ref_rejected, beta=beta
+    )
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    return loss.item(), acc</div>
     </div>
-  </section>
+  </div>
+</section><!-- ================================================================ -->
+<!-- 9.8 GRPO Theory -->
+<!-- ================================================================ --><section class="card" id="s9-8">
+  <h3>9.8 GRPO——组相对策略优化 (DeepSeek-R1)</h3>
+  <p><strong>GRPO（组相对策略优化）</strong>是DeepSeek-R1使用的核心强化学习算法。它与PPO最大的不同在于：<strong>不再需要Critic模型（价值网络）</strong>。</p>
+  <p>常见的PPO式RLHF流水线需要Actor、Critic、Reference和Reward Model等组件。GRPO去掉了Critic，用组内相对优势代替价值网络估计，从而减少了一个容易引入额外方差、内存和调优成本的组件。</p>
 
-  <section class="card" id="s9-8">
-    <h3>9.8 GRPO：Group Relative Policy Optimization</h3>
-    <p>GRPO 面向推理 RL：对同一个 prompt 采样一组回答，用组内 reward 做相对标准化，不训练单独 critic。</p>
-    <div class="code-block" data-lang="text">advantage_i = (reward_i - mean(group_rewards)) / std(group_rewards)</div>
-    <p>它减少了 value model 复杂度，适合可验证 reward 的 reasoning 任务。DeepSeek-R1 系列展示了这种路线能让模型出现更长、更探索式的推理行为。</p>
-    <h4>GRPO vs PPO</h4>
-    <p>PPO 通常需要 policy、reference、reward model、critic/value model；GRPO 用 group relative advantage 替代 critic，系统更轻，但依赖 rollout 质量和 reward 可靠性。</p>
-  </section>
+  <h4>GRPO的核心思想：组内白化</h4>
+  <p>对于每个提示，从当前策略中采样 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 个回复（通常 <span class="katex-inline" data-expr="G = 8" aria-label="G = 8" role="img"></span>），并使用这组回复的<strong>内部相对排名</strong>作为优势函数：</p>
+  <div class="math-box"><div class="label">公式9.8 GRPO优势函数</div>
+    <div class="katex" data-expr="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}" aria-label="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}" role="img"></div>
+  </div>
+  <p>其中 <span class="katex-inline" data-expr="r_i" aria-label="r_i" role="img"></span> 是第i个回复的奖励，<span class="katex-inline" data-expr="\mu_r, \sigma_r" aria-label="\mu_r, \sigma_r" role="img"></span> 是组内均值和标准差。这种“组内白化”使得优势函数主要反映同一提示下候选回复的<strong>相对表现</strong>，可以缓解不同提示间奖励尺度不一致的问题；它不能替代奖励设计、KL控制或采样质量。</p>
 
-  <section class="card" id="s9-8a">
-    <h3>9.8A GRPO 组内白化例子</h3>
-    <p>同一 prompt 采样 4 个回答，reward 是 <code>[1.0, 0.5, 0.0, -0.5]</code>。先减均值，再除标准差。这样优化信号看的是组内相对好坏，而不是绝对 reward 尺度。</p>
-  </section>
+  <h4>GRPO与PPO对比</h4>
+  <ul>
+    <li><strong>PPO：</strong>Critic网络估计价值函数，优势通常由奖励和价值基线推导而来。Critic增加了训练状态、内存和调优复杂度，其估计质量也会影响策略更新。</li>
+    <li><strong>GRPO：</strong>组内回复的相对奖励替代了独立的Critic价值估计，减少了组件数量，并且对同一组内候选奖励尺度更具鲁棒性；但仍需要控制奖励噪声、KL、样本数量和任务覆盖范围。</li>
+  </ul>
 
-  <section class="card" id="s9-8b">
-    <h3>9.8B 从 GRPO 到 DAPO / GSPO</h3>
-    <p>推理 RL 的工程 recipe 会加入动态采样、长度控制、clip-higher、token-level 或 sequence-level ratio、overlong reward shaping 等细节。它们的目标不是换名词，而是稳定长 CoT 训练、控制长度膨胀和减少无效 rollout。</p>
-  </section>
+  <h4>R1-Zero的“啊哈时刻”</h4>
+  <p>根据DeepSeek-R1报告，DeepSeek-R1-Zero没有使用人工标注的CoT SFT冷启动阶段，而是使用GRPO在数学推理任务上进行训练。报告观察到模型在训练过程中表现出<strong>自我反思和自我纠正</strong>等行为，输出中包含诸如"Wait, let me re-examine..."之类的短语。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>洞察：</strong>R1-Zero表明，奖励驱动的RL可以在某些任务分布上引发复杂的推理行为，但其效果取决于奖励设计、任务覆盖、模型基础和安全边界。不能简化为“只要能判断输出就够了”，也不能替代对奖励漏洞、泛化性和对齐风险的评估。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.8A Worked Example -->
+<!-- ================================================================ --><section class="card" id="s9-8a">
+  <h3>9.8A 示例：GRPO组内白化的尺度账本</h3>
+  <p>假设一个batch中有2个prompt，每个prompt采样<code>G=3</code>个响应，奖励矩阵排列为<code>[group, batch]</code>：</p>
+  <div class="code-block" data-lang="text">
+rewards =
+[[ 1, 10],
+ [ 2, 20],
+ [ 3, 30]]</div>
+  <p>GRPO不会将所有6个奖励混合在一起归一化，而是分别计算每个prompt的3个候选的组内均值和标准差。第一列奖励<code>[1,2,3]</code>的均值为2，总体标准差为 <span class="katex-inline" data-expr="\sqrt{2/3}\approx0.816" aria-label="\sqrt{2/3}\approx0.816" role="img"></span>；第二列<code>[10,20,30]</code>的均值为20，总体标准差为 <span class="katex-inline" data-expr="\sqrt{200/3}\approx8.165" aria-label="\sqrt{200/3}\approx8.165" role="img"></span>。因此，两列的advantage变成了相同的相对形状：</p>
+  <div class="code-block" data-lang="text">
+advantages ≈
+[[-1.225, -1.225],
+ [ 0.000,  0.000],
+ [ 1.225,  1.225]]</div>
+  <p>这个示例说明：组内白化消除了不同prompt之间奖励尺度的差异，但不改变同一prompt内候选者的相对排序。实现时，使用与总体标准差对应的<code>std(unbiased=False)</code>，使得每列白化后的总体标准差为1；如果使用PyTorch默认的样本标准差，当组内样本量较小时，advantage的幅度会被额外减小。</p>
+  <p>完整的GRPO策略损失还需要将每个completion的序列级advantage扩展到有效的completion token上，然后与旧/新策略比率结合形成PPO裁剪替代目标，同时计算当前策略相对于参考策略的token log-probs的掩码近似KL。一份GRPO损失报告应包含<code>policy_loss</code>、<code>kl_loss</code>、<code>loss</code>、<code>clip_fraction</code>、<code>mean_ratio</code>和<code>mean_advantage</code>；这些量区分了相对较高的奖励、被裁剪约束的策略更新，以及偏离参考策略的策略漂移。</p>
+</section><section class="card" id="s9-8b">
+  <h3>9.8B 从 GRPO 到 DAPO / GSPO：推理强化学习的工程实践配方</h3>
+  <p>2025 年后，推理强化学习的焦点从“GRPO 能否用于训练推理”转向了“如何稳定、可复现且可扩展地训练”。DAPO 将大规模 LLM RL 的隐藏细节拆解为更明确的配方，例如 Clip-Higher、动态采样、token 级策略梯度损失以及超长奖励塑造；GSPO 将重要性比率从 token 级改为序列似然级，强调长训练和 MoE RL 中的稳定性。关键的工程问题包括 rollout 分布、长度增长、熵、KL、裁剪行为、MoE 路由波动以及奖励完整性；它们共同决定了 RL 训练是否可信。</p>
 
-  <section class="card" id="s9-8c">
-    <h3>9.8C 从研究到可部署证据链</h3>
-    <p>reasoning RL 不能只报 benchmark 分数。还要报告：平均输出长度、P95 长度、pass rate、cost per correct answer、失败类型、拒答/安全回归、工具调用成功率和服务延迟。</p>
-  </section>
+  <div class="table-wrap">
+    <table>
+      <tr><th>方法</th><th>解决的痛点</th><th>课程中应检查的信号</th></tr>
+      <tr><td>GRPO</td><td>移除 Critic，使用同一 prompt 的多个补全结果的组内相对奖励作为 advantage</td><td>组奖励标准差、平均 advantage、裁剪比例、近似 KL、每个 prompt 的 rollout 数量</td></tr>
+      <tr><td>DAPO</td><td>明确阐述大规模 RL 的配方，防止静态采样、输出过长以及裁剪设置导致训练不稳定或模型只学会拉长输出</td><td>动态采样命中率、补全长度分布、熵、奖励通过率、clip-higher 区间、超长样本比例</td></tr>
+      <tr><td>GSPO</td><td>使用序列级比率和裁剪来降低 token 级比率的噪声，特别关注 MoE RL 的稳定性</td><td>序列对数概率比、长度归一化比率、MoE 路由波动、重新计算/推理 logprob 不匹配</td></tr>
+    </table>
+  </div>
 
-  <section class="card" id="s9-8d">
-    <h3>9.8D Post-Training RL 系统：Rollout、权重同步和 stale policy</h3>
-    <p>RL 系统包括 policy 训练进程、rollout workers、reward/verifier、reference model、数据队列和评估。异步 rollout 能提高吞吐，但样本可能来自旧 policy，产生 staleness。</p>
-    <p>最小 run ledger 要记录：policy version、prompt id、sampling 参数、reward version、reference version、rollout 时间、是否 stale、是否通过 verifier。</p>
-  </section>
+  <p>DAPO 的几项工程要点可以逐一对应到训练日志中。<strong>Clip-Higher</strong> 关系到探索空间：如果上界裁剪过紧，低概率但可能正确的 token 的概率难以提升，熵会过早崩溃；如果过松，可能导致过度探索和重复。<strong>动态采样</strong> 关系到有效梯度：如果同一个 prompt 的所有 rollout 全部正确或全部错误，组内 advantage 接近 0，继续采样就是浪费。<strong>token 级策略梯度损失</strong> 关系到长 CoT：序列平均损失会混淆短答案和长答案的权重，而 token 级聚合更容易看出长度对梯度的影响。<strong>超长奖励塑造</strong> 关系到成本和噪声：过长的补全不能简单截断后当作普通负样本处理，否则模型可能学会“写得越长越安全”或“触达长度限制就失去奖励”。</p>
 
-  <section class="card" id="s9-8e">
-    <h3>9.8E Agentic RL：从一个答案到一条轨迹</h3>
-    <p>工具进入 RL 后，样本不再是一段文本，而是一条 trajectory：观察、动作、工具调用、工具返回、状态变化、最终答案和 reward。</p>
-    <ul>
-      <li>要记录工具 schema、调用参数、返回值、错误、重试和环境状态。</li>
-      <li>reward 可能来自最终结果，也可能来自中间状态。</li>
-      <li>评估要 trajectory-aware，不能只看最终文本。</li>
-    </ul>
-  </section>
+  <p>将这些方法纳入第 09 章的原因是它们都指向同一个教训：RL 算法的名称本身无法证明推理能力的提升。一份可信的报告至少应同时展示 reward、pass@k 或任务成功率、平均补全 token 数、P95 补全长度、熵、近似 KL、裁剪比例、有效 rollout 比例以及失败类型。如果准确率提升伴随着输出长度持续增长、熵崩溃、裁剪比例极端或仅在训练题目类型上有效，那么工程结论应是“奖励/采样/长度控制需要重新设计”，而非“扩大训练规模”。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统性判断：</strong>DAPO/GSPO 并不是 GRPO 的替代记忆点，而是连接了 Ch07 的训练稳定性、Ch08 的测试时计算、Ch09 的奖励诊断以及 Ch10 的部署成本。高级训练工程师必须能够解读这些日志并判断 RL 训练是在学习可泛化的推理能力，还是在利用评分机制、长度或路由噪声。</div></div>
+</section><section class="card" id="s9-8c">
+  <h3>9.8C 从推理RL研究到可部署的证据链</h3>
+  <p><a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1报告</a>在这里的价值不是作为可背诵的配方，而是因为它揭示了一个完整的后训练系统问题。修订后的arXiv版本报告，在可验证任务上进行大规模RL时，推理能力可以涌现，同时也强调了在模型变得可部署之前，为什么需要冷启动数据、可读性、语言一致性、蒸馏和评估。对于训练工程师而言，教训是：推理RL必须从数据和奖励到rollout行为、能力保持以及推理成本进行审计。</p>
 
-  <section class="card" id="s9-9">
-    <h3>9.9 编程练习 4：PPO Clipped Objective 和 GRPO Advantage</h3>
-    <div class="coding-exercise">
-      <h4>练习 4：GRPO Advantage + Clipped Loss</h4>
-      <div class="task">
-        <ul>
-          <li>对每个 prompt 的 rollout group 做 reward whitening。</li>
-          <li>计算新旧 policy 的 ratio。</li>
-          <li>实现 clipped surrogate objective。</li>
-          <li>加入 KL penalty 或 reference 约束。</li>
-        </ul>
-        <div class="code-block" data-lang="python">adv = (rewards - rewards.mean(dim=1, keepdim=True)) / (rewards.std(dim=1, keepdim=True) + 1e-6)
-ratio = torch.exp(new_logprob - old_logprob)
-obj1 = ratio * adv
-obj2 = torch.clamp(ratio, 1 - eps, 1 + eps) * adv
-loss = -torch.min(obj1, obj2).mean()</div>
-      </div>
+  <div class="foundation-graph" role="img" aria-label="推理RL可部署证据链">
+    <svg viewBox="0 0 900 270">
+      <defs>
+        <marker id="rl-chain-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .rl-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .rl-core{fill:rgba(16,185,129,.10);stroke:var(--success);stroke-width:2}
+        .rl-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#rl-chain-arrow-09)}
+        .rl-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .rl-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rl-node" x="24" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="88" y="123"><tspan class="rl-title">Prompt Set</tspan><tspan class="rl-sub" x="88" dy="18">coverage, leakage</tspan></text>
+      <path class="rl-line" d="M152 130 H205"/>
+      <rect class="rl-node" x="205" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="269" y="123"><tspan class="rl-title">Reward</tspan><tspan class="rl-sub" x="269" dy="18">grader, tests</tspan></text>
+      <path class="rl-line" d="M333 130 H386"/>
+      <rect class="rl-core" x="386" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="450" y="123"><tspan class="rl-title">RL Update</tspan><tspan class="rl-sub" x="450" dy="18">GRPO/DAPO</tspan></text>
+      <path class="rl-line" d="M514 130 H567"/>
+      <rect class="rl-node" x="567" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="631" y="123"><tspan class="rl-title">Behavior</tspan><tspan class="rl-sub" x="631" dy="18">length, format</tspan></text>
+      <path class="rl-line" d="M695 130 H748"/>
+      <rect class="rl-node" x="748" y="95" width="128" height="70" rx="10"/>
+      <text text-anchor="middle" x="812" y="123"><tspan class="rl-title">Release</tspan><tspan class="rl-sub" x="812" dy="18">cost, safety</tspan></text>
+      <path class="rl-line" d="M450 165 C450 205 232 205 232 166"/>
+      <text text-anchor="middle" x="340" y="224"><tspan class="rl-sub">failure loop: reward hacking, length growth, memorization, tool misuse</tspan></text>
+    </svg>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>证据层</th><th>需要证明什么</th><th>最小信号</th><th>什么情况下拒绝该论断</th></tr>
+      <tr><td>任务分布</td><td>RL提示代表了预期的推理负载</td><td>领域组合、难度分级、训练/评估重叠、提示模板版本</td><td>仅一个基准或一种提示风格得到提升</td></tr>
+      <tr><td>奖励有效性</td><td>评分器测量最终正确性，且不能被廉价地利用</td><td>单元测试通过率、验证器假阳性审计、对抗性评分器探测</td><td>奖励上升，但人类或测试验证的准确率持平</td></tr>
+      <tr><td>优化稳定性</td><td>策略更新保持在受控的行为区域内</td><td>近似KL、clip比例、熵、奖励标准差、rollout数量、有效样本比率</td><td>KL尖峰、熵崩溃，或大多数组奖励方差为零</td></tr>
+      <tr><td>推理行为</td><td>更长的输出对应更正确的解决方案，而不仅仅是冗长</td><td>pass@k、最终答案准确率、P95完成长度、无效格式率</td><td>在控制token预算后准确率提升消失</td></tr>
+      <tr><td>能力保持</td><td>通用助手、安全和领域能力没有不可接受地退化</td><td>切片评估、拒绝校准、代码/数学保持、多语言或租户特定检查</td><td>模型变窄、过度拒绝，或在旧生产切片上失败</td></tr>
+      <tr><td>服务可行性</td><td>RL后的模型可以在目标SLO和预算下提供服务</td><td>平均输出token数、TTFT/TPOT、每个正确答案的成本、降级率</td><td>模型仅在不可承受的推理预算下才更准确</td></tr>
+    </table>
+  </div>
+
+  <p>这条证据链直接连接到第8章和第10章。第8章提供pass@k、自一致性、验证器重新排序和思考预算核算。第10章询问更长的completion和多样本解码是否仍能满足延迟、排队和成本约束。因此，如果一份推理RL报告只停留在奖励曲线或基准分数上，它就是不完整的；它还必须解释训练好的模型将如何在服务中被路由、预算、监控和回滚。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>高级要求：</strong>将推理RL视为一个耦合的数据、奖励、优化器、评估和服务系统。一个模型并非因为它表现出自我反思就达到生产就绪；只有当证据链显示在受限成本和可接受的退化风险下，可衡量的正确性提升时，模型才算生产就绪。</div></div>
+</section><section class="card" id="s9-8d">
+  <h3>9.8D 后训练强化学习系统：Rollout、权重同步与陈旧性</h3>
+  <p>推理强化学习不仅仅是一个优化器公式。一旦每个prompt需要多个长补全、工具调用、验证器执行、奖励计算和重复的策略更新，瓶颈就从“如何编写GRPO损失”转移到“如何保持生成、评分、训练和权重同步的忙碌，而不会破坏学习信号”。现代开源系统从不同角度展示了相同方向：verl集成了PyTorch FSDP、Megatron-LM、vLLM和SGLang等训练和推理框架；OpenRLHF结合了Ray、vLLM、DeepSpeed和智能体式执行；SGLang强调后训练特性，如refit、推迟生成、睡眠/唤醒控制、确定性推理和缓存感知rollout；slime特意将Megatron训练与SGLang rollout耦合在一起；AReaL探索了完全异步的rollout和训练，并显式控制数据陈旧性。</p>
+
+  <div class="foundation-graph" role="img" aria-label="后训练强化学习系统数据流">
+    <svg viewBox="0 0 940 360">
+      <defs>
+        <marker id="rlsys-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .rlsys-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .rlsys-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .rlsys-reward{fill:rgba(16,185,129,.10);stroke:var(--success);stroke-width:2}
+        .rlsys-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#rlsys-arrow-09)}
+        .rlsys-dash{fill:none;stroke:var(--text-secondary);stroke-width:1.6;stroke-dasharray:5 4;marker-end:url(#rlsys-arrow-09)}
+        .rlsys-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .rlsys-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="rlsys-node" x="30" y="126" width="128" height="74" rx="10"/>
+      <text text-anchor="middle" x="94" y="154"><tspan class="rlsys-title">Prompt Queue</tspan><tspan class="rlsys-sub" x="94" dy="19">tasks, tools, seeds</tspan></text>
+      <path class="rlsys-line" d="M158 163 H218"/>
+      <rect class="rlsys-core" x="218" y="92" width="156" height="142" rx="10"/>
+      <text text-anchor="middle" x="296" y="122"><tspan class="rlsys-title">Rollout Engine</tspan><tspan class="rlsys-sub" x="296" dy="22">vLLM / SGLang</tspan><tspan class="rlsys-sub" x="296" dy="18">multi-sample</tspan><tspan class="rlsys-sub" x="296" dy="18">tool or env calls</tspan><tspan class="rlsys-sub" x="296" dy="18">logprobs</tspan></text>
+      <path class="rlsys-line" d="M374 163 H438"/>
+      <rect class="rlsys-reward" x="438" y="92" width="156" height="142" rx="10"/>
+      <text text-anchor="middle" x="516" y="122"><tspan class="rlsys-title">Reward Service</tspan><tspan class="rlsys-sub" x="516" dy="22">tests, graders</tspan><tspan class="rlsys-sub" x="516" dy="18">format checks</tspan><tspan class="rlsys-sub" x="516" dy="18">safety slices</tspan><tspan class="rlsys-sub" x="516" dy="18">cost records</tspan></text>
+      <path class="rlsys-line" d="M594 163 H658"/>
+      <rect class="rlsys-core" x="658" y="92" width="156" height="142" rx="10"/>
+      <text text-anchor="middle" x="736" y="122"><tspan class="rlsys-title">Trainer</tspan><tspan class="rlsys-sub" x="736" dy="22">GRPO / PPO</tspan><tspan class="rlsys-sub" x="736" dy="18">reference KL</tspan><tspan class="rlsys-sub" x="736" dy="18">FSDP/Megatron</tspan><tspan class="rlsys-sub" x="736" dy="18">checkpoint</tspan></text>
+      <path class="rlsys-dash" d="M736 92 C736 38 296 38 296 92"/>
+      <text text-anchor="middle" x="516" y="42"><tspan class="rlsys-sub">weight sync / refit / pause-resume</tspan></text>
+      <rect class="rlsys-node" x="174" y="274" width="590" height="56" rx="10"/>
+      <text text-anchor="middle" x="469" y="296"><tspan class="rlsys-title">Replay and Monitoring Ledger</tspan><tspan class="rlsys-sub" x="469" dy="18">policy version, sample age, reward distribution, length, KL, throughput, failed environments</tspan></text>
+      <path class="rlsys-dash" d="M516 234 V274"/>
+    </svg>
+  </div>
+
+  <h4>强化学习系统边界</h4>
+  <p>生产级RL后训练运行至少包含四个有状态组件。<strong>actor策略</strong>生成候选答案；<strong>参考策略</strong>提供KL或对数概率基线；<strong>奖励路径</strong>通过人工标签、奖励模型、测试、工具或验证器对答案评分；<strong>训练器</strong>更新权重并保存完整训练状态的检查点。如果rollout使用服务引擎而训练使用FSDP、DeepSpeed或Megatron，系统还必须同步训练表示和推理表示之间的权重。这就是为什么后训练框架越来越多地暴露显式的rollout引擎、refit或权重传输API、暂停/恢复行为以及检查点所有权，而不再将生成视为本地Python函数。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>组件</th><th>拥有什么</th><th>故障模式</th><th>记录信号</th></tr>
+      <tr><td>Rollout引擎</td><td>生成吞吐量、KV cache、采样、工具/环境调用、rollout logprobs</td><td>长尾补全导致GPU空闲、内存压力、陈旧权重、缺失logprobs</td><td>rollout tokens/s、补全长度P95、策略版本、无效/超时比率</td></tr>
+      <tr><td>奖励服务</td><td>验证器测试、奖励模型调用、人工/AI评判、规则检查、安全过滤器</td><td>奖励瓶颈、不稳定测试、假阳性、奖励破解</td><td>奖励延迟、通过率、奖励标准差、评分器错误率、可疑通过案例</td></tr>
+      <tr><td>训练器</td><td>策略更新、参考KL、优化器状态、分片、检查点</td><td>KL尖峰、裁剪崩溃、恢复后优化器不匹配、过度使用陈旧rollout</td><td>近似KL、裁剪比例、熵、样本年龄、恢复一致性</td></tr>
+      <tr><td>数据缓冲区</td><td>轨迹记录、prompt id、奖励、logprobs、版本元数据</td><td>混合或未记录策略版本上的训练、重复泄露、无界队列年龄</td><td>样本年龄直方图、回放比例、去重键、prompt切片覆盖</td></tr>
+    </table>
+  </div>
+
+  <h4>同步、同地、解耦与异步设计</h4>
+  <p>没有普遍最优的RL系统拓扑。同步设计更简单，能保持策略数据的新鲜度，但通常需要等待批次中最长的补全。同地设计将actor、参考策略、奖励和rollout放在同一批GPU上以提高小型集群利用率，但需要仔细处理睡眠/唤醒或内存共享。解耦设计将rollout和训练放在独立的GPU池中，提高了利用率并允许利用服务引擎优化，但权重同步成为首要成本。完全异步设计通过让rollout工作器持续生成、训练器在数据到达时更新来提高吞吐量，但必须控制样本陈旧性，并使用能容忍较旧策略版本的目标或过滤器。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>设计</th><th>最佳适用场景</th><th>难点</th><th>不适合使用的情况</th></tr>
+      <tr><td>同步批次RL</td><td>早期实验、小规模运行、高度需要精确的在线策略数据</td><td>长尾输出长度拖慢整个批次</td><td>Rollout长度严重偏斜且GPU空闲占主导</td></tr>
+      <tr><td>同地混合引擎</td><td>GPU有限，actor/ref/reward可共享内存窗口</td><td>睡眠/唤醒、内存碎片、组件调度</td><td>训练和rollout需要不兼容的并行拓扑</td></tr>
+      <tr><td>解耦的rollout与训练器</td><td>大规模运行，需要服务引擎支持高吞吐生成</td><td>权重同步、logprob一致性、rollout/训练队列平衡</td><td>网络或转换成本抵消rollout收益</td></tr>
+      <tr><td>完全异步RL</td><td>长推理输出、智能体环境、严重rollout瓶颈</td><td>样本陈旧性、可重复性、策略版本记账</td><td>奖励噪声大且无法容忍离线策略修正</td></tr>
+    </table>
+  </div>
+
+  <h4>RL扩展的最小运行台账</h4>
+  <p>一位资深训练工程师应该能够阅读RL运行台账并判断系统是在学习还是仅仅在烧rollout token。至少需要记录：prompt切片、生成时使用的策略版本、当前训练器版本、回答token数、奖励、奖励来源、rollout logprobs、参考logprobs、工具/测试结果、样本年龄、无效格式标志、超时标志以及消耗该样本的训练步骤。没有这份台账，就无法调试奖励提升究竟来自更好的推理、更长的输出、陈旧策略伪影、验证器bug还是环境捷径。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>对于高级后训练，“RL有效”不能仅凭奖励曲线证明。证明需要一份系统台账：rollout新鲜度、权重同步正确性、奖励完整性、token成本、吞吐量、检查点恢复以及留出行为都必须指向同一结论。</div></div>
+</section><section class="card" id="s9-8e">
+  <h3>9.8E Agentic RL with Tools and Environments: From One Answer to a Trajectory</h3>
+  <p>单轮RLVR将每个补全视为一个答案。Agentic RL则将模型视为部分可观测环境中的策略：它观察用户任务，决定是思考、回答、调用工具、检查结果、调用另一个工具，最终停止。训练样本不再只是<code>(prompt, response, reward)</code>；而是变成一条包含消息、工具调用、环境观测、中间错误、最终奖励、token logprobs、策略版本和重放元数据的轨迹。</p>
+  <p>这种区分很重要，因为工具使用成功可能因错误原因而提升。模型可能会学会过于频繁地调用搜索工具、利用弱的模拟器、记忆基准数据库ID、忽略失败的工具结果，或者生成语法正确但语义不安全的JSON。最近的工具如<a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html" target="_blank">verl Agentic RL</a>、<a href="https://verl.readthedocs.io/en/latest/sglang_multiturn/multiturn.html" target="_blank">verl multi-turn rollout</a>和<a href="https://arxiv.org/html/2509.01055v1" target="_blank">VerlTool</a>反映了相同的工程方向：智能体训练需要异步rollout、多轮工具调用、奖励服务、追踪和标准化轨迹接口，而不是本地<code>model.generate()</code>循环。</p>
+
+  <div class="foundation-graph" role="img" aria-label="从任务经工具调用、环境观测、奖励到训练更新的Agentic RL轨迹">
+    <svg viewBox="0 0 980 410">
+      <defs>
+        <marker id="agent-rl-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <style>
+        .ag-node{fill:var(--surface);stroke:var(--border);stroke-width:2}
+        .ag-core{fill:rgba(37,99,235,.10);stroke:var(--accent);stroke-width:2}
+        .ag-env{fill:rgba(16,185,129,.10);stroke:var(--success);stroke-width:2}
+        .ag-risk{fill:rgba(239,68,68,.10);stroke:#ef4444;stroke-width:1.8}
+        .ag-line{fill:none;stroke:var(--accent);stroke-width:2;marker-end:url(#agent-rl-arrow-09)}
+        .ag-dash{fill:none;stroke:var(--text-secondary);stroke-width:1.6;stroke-dasharray:5 4;marker-end:url(#agent-rl-arrow-09)}
+        .ag-title{font-size:14px;font-weight:700;fill:var(--text)}
+        .ag-sub{font-size:12px;fill:var(--text-secondary)}
+      </style>
+      <rect class="ag-node" x="34" y="72" width="126" height="70" rx="10"/>
+      <text text-anchor="middle" x="97" y="100"><tspan class="ag-title">Task State</tspan><tspan class="ag-sub" x="97" dy="18">user, memory</tspan></text>
+      <path class="ag-line" d="M160 107 H220"/>
+      <rect class="ag-core" x="220" y="72" width="140" height="70" rx="10"/>
+      <text text-anchor="middle" x="290" y="100"><tspan class="ag-title">Policy Step</tspan><tspan class="ag-sub" x="290" dy="18">answer or tool call</tspan></text>
+      <path class="ag-line" d="M360 107 H420"/>
+      <rect class="ag-env" x="420" y="72" width="150" height="70" rx="10"/>
+      <text text-anchor="middle" x="495" y="100"><tspan class="ag-title">Environment</tspan><tspan class="ag-sub" x="495" dy="18">tool, DB, browser</tspan></text>
+      <path class="ag-line" d="M570 107 H630"/>
+      <rect class="ag-node" x="630" y="72" width="138" height="70" rx="10"/>
+      <text text-anchor="middle" x="699" y="100"><tspan class="ag-title">Observation</tspan><tspan class="ag-sub" x="699" dy="18">result, error, cost</tspan></text>
+      <path class="ag-line" d="M768 107 H828"/>
+      <rect class="ag-core" x="828" y="72" width="120" height="70" rx="10"/>
+      <text text-anchor="middle" x="888" y="100"><tspan class="ag-title">Stop / Act</tspan><tspan class="ag-sub" x="888" dy="18">final response</tspan></text>
+      <path class="ag-line" d="M699 142 C680 188 356 188 290 142"/>
+      <text text-anchor="middle" x="496" y="205"><tspan class="ag-sub">multi-turn loop: the next action conditions on tool observations and previous messages</tspan></text>
+
+      <rect class="ag-env" x="202" y="262" width="156" height="78" rx="10"/>
+      <text text-anchor="middle" x="280" y="290"><tspan class="ag-title">Reward Service</tspan><tspan class="ag-sub" x="280" dy="19">tests, judge, rubric</tspan><tspan class="ag-sub" x="280" dy="16">tool outcome</tspan></text>
+      <rect class="ag-core" x="412" y="262" width="156" height="78" rx="10"/>
+      <text text-anchor="middle" x="490" y="290"><tspan class="ag-title">Trajectory Log</tspan><tspan class="ag-sub" x="490" dy="19">tokens, logprobs</tspan><tspan class="ag-sub" x="490" dy="16">versions, latency</tspan></text>
+      <rect class="ag-core" x="622" y="262" width="156" height="78" rx="10"/>
+      <text text-anchor="middle" x="700" y="290"><tspan class="ag-title">Policy Update</tspan><tspan class="ag-sub" x="700" dy="19">GRPO / PPO</tspan><tspan class="ag-sub" x="700" dy="16">KL and clipping</tspan></text>
+      <path class="ag-dash" d="M888 142 C820 226 364 226 280 262"/>
+      <path class="ag-line" d="M358 301 H412"/>
+      <path class="ag-line" d="M568 301 H622"/>
+
+      <rect class="ag-risk" x="58" y="260" width="104" height="78" rx="10"/>
+      <text text-anchor="middle" x="110" y="288"><tspan class="ag-title">Risks</tspan><tspan class="ag-sub" x="110" dy="19">shortcut</tspan><tspan class="ag-sub" x="110" dy="16">leakage</tspan></text>
+      <rect class="ag-risk" x="820" y="260" width="118" height="78" rx="10"/>
+      <text text-anchor="middle" x="879" y="288"><tspan class="ag-title">Release</tspan><tspan class="ag-sub" x="879" dy="19">SLO, safety</tspan><tspan class="ag-sub" x="879" dy="16">rollback</tspan></text>
+      <path class="ag-line" d="M778 301 H820"/>
+    </svg>
+  </div>
+  <p class="diagram-caption">图9-6：Agentic RL在轨迹上训练，而非孤立的答案。奖励必须考虑最终任务成功、工具行为、环境有效性、延迟和安全性。</p>
+
+  <h4>1. 工具进入RL循环时有什么变化</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>维度</th><th>单轮RLVR</th><th>带工具的Agentic RL</th><th>工程后果</th></tr>
+      <tr><td>训练单元</td><td>提示、补全、最终奖励</td><td>消息、工具调用、观测、错误和最终答案的轨迹</td><td>存储完整的可重放轨迹，而不仅仅是最终文本</td></tr>
+      <tr><td>动作空间</td><td>直到答案的下一个token</td><td>下一个token加上结构化工具调用、停止决策，有时还有环境命令</td><td>验证工具schema并保留token级别的logprobs用于策略更新</td></tr>
+      <tr><td>奖励</td><td>精确答案、单元测试、评分器分数</td><td>最终成功、工具结果、成本、无效调用惩罚、安全约束</td><td>将最终奖励与过程惩罚分开，使模型不会通过不安全的捷径获胜</td></tr>
+      <tr><td>Rollout瓶颈</td><td>模型生成吞吐量</td><td>模型生成、工具延迟、外部环境差异和长尾任务</td><td>使用异步rollout、负载均衡、超时和痕迹采样</td></tr>
+      <tr><td>失败分析</td><td>错误答案、格式错误、奖励黑客</td><td>错误工具、过期观测、隐藏的模拟器泄漏、权限违规、重复调用</td><td>按决策步骤和环境状态分类失败，而不仅仅是最终答案</td></tr>
+    </table>
+  </div>
+
+  <h4>2. 必须记录的轨迹字段</h4>
+  <p>Agentic RL运行难以调试，除非每个采样的轨迹都可以重放。最小记录应包含：prompt id、环境id和版本、策略版本、参考版本、随机种子、消息历史、生成的token、token logprobs、工具调用JSON、工具响应、工具延迟、无效调用标志、安全过滤标志、最终答案、奖励成分、总token数、墙钟时间、样本年龄，以及消费该轨迹的训练器步骤。OpenAI的<a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">reinforcement fine-tuning</a>工作流同样将评分器定义、prompt数据集、验证集划分、检查点监控和部署决策视为一个统一的训练系统，而不是孤立的损失函数。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>奖励成分</th><th>示例</th><th>它捕获的失败</th><th>指标</th></tr>
+      <tr><td>最终任务成功</td><td>正确的预订更改、有效的SQL结果、通过代码测试</td><td>智能体使用工具但未能实现用户目标</td><td>success rate, pass@k, 留出胜率</td></tr>
+      <tr><td>工具调用有效性</td><td>符合schema的参数、允许的工具、正确的租户或资源id</td><td>无效JSON、未授权的API调用、错误资源</td><td>invalid-call rate, permission violation rate</td></tr>
+      <tr><td>观测利用</td><td>最终答案引用或使用实际工具输出</td><td>模型忽略工具失败或虚构结果</td><td>observation-consistency rate, unsupported-claim rate</td></tr>
+      <tr><td>成本与延迟</td><td>对不必要的调用或过多推理token进行惩罚</td><td>奖励仅通过重复调用每个工具而提升</td><td>calls per task, token cost, p95 wall-clock time</td></tr>
+      <tr><td>安全与回滚</td><td>除非确认，否则阻止危险副作用</td><td>智能体通过违反策略边界来优化任务成功</td><td>unsafe-action rate, confirmed-action precision</td></tr>
+    </table>
+  </div>
+
+  <h4>3. 评估必须具有轨迹意识</h4>
+  <p>对于agentic RL，一份好的评估报告不能只回答“最终答案通过了吗？”，还需要问模型是否选择了正确的工具、处理了工具错误、遵守了权限、避免了不必要的调用、在替代环境种子下保持鲁棒性，并在训练环境之外保留了通用助手行为。这就是为什么围绕工具使用RL的基准和系统越来越强调多轮任务、真实或模拟工具、浏览器/搜索/数据库/代码环境、痕迹检查以及分布外环境版本。</p>
+  <p>实际的发布规则是保守的：除非在控制工具调用次数、推理token预算、模拟器版本和prompt模板后，留出成功率增益仍然存在，否则不要推广一个agentic RL检查点。否则模型可能学会了环境框架，而非底层技能。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键要点：</strong>Agentic RL将后训练变成了环境工程。模型策略、工具schema、模拟器、奖励服务、轨迹账本和部署权限必须一起评估，否则奖励曲线不可信。</div></div>
+</section><!-- ================================================================ -->
+<!-- 编程练习4：GRPO 优势 -->
+<!-- ================================================================ --><section class="card" id="s9-9">
+  <h3>9.9 编程练习4：实现PPO裁剪目标和GRPO优势估计</h3>
+
+  <div class="coding-exercise">
+    <h4>练习4：GRPO组内白化 + 损失计算</h4>
+    <div class="task">
+      <p><strong>任务：</strong>实现PPO裁剪策略目标、GRPO组内白化优势估计以及带有KL惩罚的策略梯度损失。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li><code>grpo_advantages(rewards, group_size)</code> 计算组内白化优势函数</li>
+        <li><code>ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask, clip_range)</code> 计算 <code>min(ratio * A, clipped_ratio * A)</code>，并报告 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code></li>
+        <li><code>approx_kl_from_logps(policy_logps, ref_logps, mask)</code> 计算有效补全 token 上的近似 KL</li>
+        <li><code>grpo_policy_loss(new_logps, old_logps, ref_logps, rewards, completion_mask, clip_range, kl_beta)</code> 将组内白化、PPO裁剪和参考KL结合为完整的训练目标</li>
+        <li>对每组G个响应的奖励执行z-score标准化（减去组均值，除以组标准差）</li>
+        <li>PPO裁剪必须同时处理正优势和负优势，不能简单地将所有超出范围的比率视为奖励增加</li>
+        <li>包含KL惩罚（使用近似KL：<span class="katex-inline" data-expr="e^{\log q - \log p} - (\log q - \log p) - 1" aria-label="e的(log q - log p)次方减去(log q - log p)再减1" role="img"></span>）</li>
+      </ul>
+      <pre># Expected usage
+# rewards: (group_size, batch) rewards for G responses per group
+rewards = torch.randn(8, 4)  # 8 groups, batch=4
+advantages = grpo_advantages(rewards)
+assert advantages.shape == (8, 4)
+# For the 8 candidate responses of the same prompt mean ≈ 0, std ≈ 1
+print(advantages.mean(dim=0))  # ~0
+print(advantages.std(dim=0, unbiased=False))   # ~1
+
+# token-level GRPO loss:
+# new_logps / old_logps / ref_logps shape is (group_size, batch, completion_len)
+# rewards shape is (group_size, batch)
+# completion_mask only keeps real completion tokens
+report = grpo_policy_loss(new_logps, old_logps, ref_logps, rewards, completion_mask)
+print(report["policy_loss"], report["kl_loss"], report["clip_fraction"])</pre>
     </div>
-  </section>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考答案</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def grpo_advantages(rewards):
+    """
+    GRPO intra-group whitening: z-score normalization within each group
+    rewards: (group_size, batch) or (batch,)
+    """
+    if rewards.dim() == 1:
+        # Single group case: treat the entire batch as one group
+        mean = rewards.mean()
+        std = rewards.std(unbiased=False) + 1e-8
+        return (rewards - mean) / std
+    else:
+        # Multi-group case: normalize each group separately
+        mean = rewards.mean(dim=0, keepdim=True)
+        std = rewards.std(dim=0, keepdim=True, unbiased=False) + 1e-8
+        return (rewards - mean) / stddef approx_kl_from_logps(policy_logps, ref_logps, mask):
+    """Estimate KL(policy || reference) only on valid completion tokens"""
+    log_ratio = ref_logps - policy_logps
+    token_kl = torch.exp(log_ratio) - log_ratio - 1.0
+    mask = mask.float()
+    return (token_kl * mask).sum() / mask.sum().clamp_min(1.0)
 
-  <section class="card" id="s9-10">
-    <h3>9.10 编程练习 5：比较 DPO 和 GRPO</h3>
-    <p>在 toy preference dataset 上比较两类方法：</p>
-    <ul>
-      <li><strong>DPO：</strong>用固定 chosen/rejected pairs，离线、稳定、实现简单。</li>
-      <li><strong>GRPO：</strong>需要 on-policy rollout 和 reward，更接近推理任务，但系统复杂。</li>
-    </ul>
-    <p>比较指标不只看训练 loss，还要看 win rate、长度变化、KL、reward hacking、输出成本和失败类型。</p>
-  </section>
+def grpo_policy_loss(new_logps, old_logps, ref_logps, rewards,
+                     completion_mask=None, clip_range=0.2, kl_beta=0.04):
+    """GRPO: within-group advantage + PPO clipping + reference KL"""
+    advantages = grpo_advantages(rewards).to(new_logps)
+    if new_logps.dim() == rewards.dim() + 1:
+        advantages = advantages.unsqueeze(-1).expand_as(new_logps)
 
-  <section class="card" id="s9-10a">
-    <h3>9.10A 对齐评估协议</h3>
-    <p>单个 win rate 不够。最小评估矩阵应包含：</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>切片</th><th>看什么</th></tr>
-        <tr><td>任务能力</td><td>数学、代码、写作、检索、工具调用</td></tr>
-        <tr><td>安全</td><td>拒答边界、越狱、敏感主题</td></tr>
-        <tr><td>格式</td><td>JSON、引用、tool call schema</td></tr>
-        <tr><td>成本</td><td>输出长度、reasoning tokens、延迟</td></tr>
-        <tr><td>回归</td><td>预训练能力和 SFT 能力是否下降</td></tr>
-      </table>
+    ratio = torch.exp(new_logps - old_logps)
+    unclipped = ratio * advantages
+    clipped = ratio.clamp(1 - clip_range, 1 + clip_range) * advantages
+    surrogate = torch.minimum(unclipped, clipped)
+    token_kl = torch.exp(ref_logps - new_logps) - (ref_logps - new_logps) - 1
+
+    if completion_mask is None:
+        mask = torch.ones_like(new_logps)
+    else:
+        mask = completion_mask.to(new_logps)
+    denom = mask.sum().clamp_min(1.0)
+    policy_loss = -(surrogate * mask).sum() / denom
+    kl_loss = (token_kl * mask).sum() / denom
+    return {
+        "loss": policy_loss + kl_beta * kl_loss,
+        "policy_loss": policy_loss,
+        "kl_loss": kl_loss,
+        "clip_fraction": ((torch.abs(ratio - 1) &gt; clip_range).float() * mask).sum() / denom,
+    }
+
+def grpo_loss(model, ref_model, prompt_ids, prompt_mask,
+              tokenizer, reward_model, beta=0.04, group_size=8, epsilon=0.2):
+    """GRPO loss: sample → score → whiten → PPO-clip + KL"""
+    device = prompt_ids.device
+    batch_size = prompt_ids.size(0)
+
+    # —— 1. Sample G responses ——
+    all_completions = []
+    all_rewards = []
+    with torch.no_grad():
+        for _ in range(group_size):
+            outputs = model.generate(
+                prompt_ids, attention_mask=prompt_mask,
+                max_new_tokens=256, do_sample=True, temperature=0.8,
+                pad_token_id=tokenizer.pad_token_id,
+            )
+            completion = outputs[:, prompt_ids.size(1):]
+            all_completions.append(completion)
+            rewards = reward_model(outputs, outputs != tokenizer.pad_token_id)
+            all_rewards.append(rewards)
+
+    rewards = torch.stack(all_rewards, dim=0)  # (group_size, batch)
+    advantages = grpo_advantages(rewards)       # (group_size, batch)
+
+    # —— 2. Compute PPO-clip + KL ——
+    total_loss = 0.0
+    for i in range(group_size):
+        sampled_ids = torch.cat([prompt_ids, all_completions[i]], dim=-1)
+        sampled_mask = (sampled_ids != tokenizer.pad_token_id).long()
+
+        # Current policy log prob
+        outputs = model(sampled_ids, attention_mask=sampled_mask)
+        logits = outputs.logits[:, prompt_ids.size(1)-1:-1, :]
+        log_probs = F.log_softmax(logits, dim=-1)
+        token_logps = log_probs.gather(-1,
+            all_completions[i].unsqueeze(-1)).squeeze(-1)
+        policy_logp = (token_logps * (all_completions[i] !=
+                      tokenizer.pad_token_id).float()).sum(dim=-1)
+
+        # Reference model log prob
+        with torch.no_grad():
+            ref_out = ref_model(sampled_ids, attention_mask=sampled_mask)
+            ref_logits = ref_out.logits[:, prompt_ids.size(1)-1:-1, :]
+            ref_log_probs = F.log_softmax(ref_logits, dim=-1)
+            ref_token_logps = ref_log_probs.gather(-1,
+                all_completions[i].unsqueeze(-1)).squeeze(-1)
+            ref_logp = (ref_token_logps * (all_completions[i] !=
+                       tokenizer.pad_token_id).float()).sum(dim=-1)
+
+        # PPO-clip
+        log_ratio = policy_logp - ref_logp
+        ratio = torch.exp(log_ratio)
+        adv = advantages[i]
+        surr1 = ratio * adv
+        surr2 = torch.clamp(ratio, 1-epsilon, 1+epsilon) * adv
+        policy_loss = -torch.min(surr1, surr2).mean()
+
+        # KL penalty (approximate), only count non-padding completion tokens
+        completion_mask = (all_completions[i] != tokenizer.pad_token_id)
+        kl = approx_kl_from_logps(token_logps, ref_token_logps, completion_mask)
+
+        total_loss += policy_loss + beta * kl
+
+    return total_loss / group_size</div>
     </div>
-  </section>
+  </div>
+</section><!-- ================================================================ -->
+<!-- 编程练习5：DPO vs GRPO -->
+<!-- ================================================================ --><section class="card" id="s9-10">
+  <h3>9.10 编程练习5：比较DPO和GRPO</h3>
 
-  <section class="card" id="s9-10b">
-    <h3>9.10B Preference Optimization 训练日志</h3>
-    <p>DPO 至少记录：chosen/rejected logprob、reference logprob、log-ratio、loss、KL proxy、长度、win rate。PPO/GRPO 还要记录 ratio、clip fraction、advantage 分布、reward 均值/方差、rollout pass rate。</p>
-  </section>
+  <div class="coding-exercise">
+    <h4>练习5：在玩具偏好数据集上比较DPO和GRPO</h4>
+    <div class="task">
+      <p><strong>任务：</strong>创建一个简单的偏好数据集，分别使用DPO和GRPO训练模型，并比较两种方法的效果。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>创建100个偏好对：<code>[{"prompt": "...", "chosen": "...", "rejected": "..."}]</code></li>
+        <li>分别为DPO和GRPO实现训练循环（各5个epoch）</li>
+        <li>训练期间跟踪偏好准确率（chosen的log prob大于rejected的log prob的比例）</li>
+        <li>比较两种方法的收敛速度和最终准确率</li>
+      </ul>
+      <pre># Expected output
+=== DPO Training ===
+Epoch 1 | Acc: 0.52 | Loss: 0.693
+Epoch 3 | Acc: 0.68 | Loss: 0.512
+Epoch 5 | Acc: 0.81 | Loss: 0.387
 
-  <section class="card" id="s9-11">
-    <h3>9.11 On-Policy Distillation、Rejection Sampling 和可调推理预算</h3>
-    <p>传统蒸馏容易把 teacher 的偏差和过时行为固化。On-policy distillation 让 student 或当前 policy 参与生成，再筛选高质量样本，形成更贴近部署分布的数据。</p>
-    <p>Rejection sampling 要记录生成模型、采样参数、过滤器、通过率和拒绝原因。可调推理预算则把快答、普通答、深度 reasoning 变成 runtime 策略，而不是单一模型能力声明。</p>
-  </section>
-
-  <section class="card" id="s9-12">
-    <h3>9.12 编程练习 6：加载 LoRA Adapter 并合并推理</h3>
-    <div class="coding-exercise">
-      <h4>练习 6：LoRA Merge Inference</h4>
-      <div class="task">
-        <ul>
-          <li>加载 base model 和 LoRA adapter。</li>
-          <li>确认 adapter target modules 和 base 架构匹配。</li>
-          <li>把 <code>delta_W = scaling * B @ A</code> 合并进 base weight。</li>
-          <li>比较 merge 前后同一输入 logits 是否一致。</li>
-        </ul>
-        <div class="code-block" data-lang="python">def merge_lora_linear(layer):
-    delta = layer.scaling * (layer.lora_B.weight @ layer.lora_A.weight)
-    layer.base.weight.data += delta.to(layer.base.weight.dtype)
-    return layer.base</div>
-      </div>
+=== GRPO Training ===
+Epoch 1 | Acc: 0.55 | Loss: 0.650
+Epoch 3 | Acc: 0.72 | Loss: 0.480
+Epoch 5 | Acc: 0.85 | Loss: 0.345</pre>
     </div>
-  </section>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+# === 创建玩具偏好数据 ===
+toy_data = [
+    {"prompt": "1+1=?", "chosen": "1+1=2", "rejected": "1+1=3"},
+    {"prompt": "太阳从哪个方向升起？", "chosen": "东方", "rejected": "西方"},
+    {"prompt": "水的沸点是多少？", "chosen": "100°C", "rejected": "50°C"},
+    # ... 更多偏好对
+]
 
-  <section class="card" id="s9-13">
-    <h3>9.13 Alignment Tax</h3>
-    <p>Alignment tax 指对齐后某些原有能力、速度或自由度下降。常见表现：回答更保守、拒答变多、输出更长、代码能力下降、开放写作变模板、推理成本增加。</p>
-    <p>这不是“对齐不好”，而是要把收益和代价放在同一个评估矩阵里。</p>
-  </section>
+def train_dpo(model, ref_model, data, tokenizer, epochs=5, beta=0.1):
+    """DPO 训练循环"""
+    dataset = SFTDataset(data, tokenizer)  # 简化为偏好对
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-6)
 
-  <section class="card" id="s9-13a">
-    <h3>9.13A RLVR / RFT：可验证奖励不是万能奖励</h3>
-    <p>RLVR/RFT 适合有可靠 grader 的任务：数学答案、代码测试、形式化证明、工具环境结果。它不适合主观写作、开放建议、价值判断这类难以验证的任务。</p>
-    <p>先验证 reward，再训练 policy。grader 的 false positive、false negative、覆盖范围和可被利用程度，都要进入报告。</p>
-  </section>
+    for epoch in range(epochs):
+        total_loss, total_acc = 0, 0
+        for item in data:
+            # 编码 chosen 和 rejected
+            chosen_ids = tokenizer(item["chosen"], return_tensors='pt')
+            rejected_ids = tokenizer(item["rejected"], return_tensors='pt')
 
-  <section class="card" id="s9-14">
-    <h3>9.14 本章小结</h3>
-    <ul>
-      <li>SFT 用 response-only loss 学助手格式和基础任务行为。</li>
-      <li>chat template、label mask、packing 和数据混合会直接影响 SFT 行为。</li>
-      <li>LoRA 冻结 base，只训练低秩增量，主要节省梯度和 optimizer states。</li>
-      <li>DPO 用 chosen/rejected pairs 直接优化偏好，不需要单独 reward model，但依赖 reference model 和偏好数据质量。</li>
-      <li>GRPO 用组内 reward 相对标准化做推理 RL，减少 critic 复杂度。</li>
-      <li>DAPO/GSPO/RLVR/RFT 的核心不是名词，而是 reward、rollout、约束和评估是否可靠。</li>
-      <li>Agentic RL 要记录完整 trajectory，而不是只看最终文本。</li>
-      <li>Alignment evaluation 要同时看能力、安全、格式、成本和回归。</li>
-      <li>Alignment tax 是工程取舍，必须量化。</li>
-    </ul>
-  </section>
+            with torch.no_grad():
+                ref_chosen = sequence_log_probs(ref_model, **chosen_ids)
+                ref_rejected = sequence_log_probs(ref_model, **rejected_ids)
 
-  <section class="card" id="practice">
-    <h3>概念练习</h3>
-    <ol>
-      <li>SFT 为什么只在 assistant answer 部分计算 loss？</li>
-      <li>LoRA 的低秩分解具体指什么？它主要省下哪类训练内存？</li>
-      <li>GRPO 和 PPO 最大区别是什么？为什么 GRPO 可以不训练 critic？</li>
-      <li>DPO 为什么不需要单独训练 reward model？reference model 起什么作用？</li>
-      <li>Alignment Tax 指什么？应该怎样在评估报告里呈现？</li>
-      <li>RLVR/RFT 适合哪些任务？为什么 grader 可靠性要先验证？</li>
-    </ol>
-  </section>
-</article>
+            policy_chosen = sequence_log_probs(model, **chosen_ids)
+            policy_rejected = sequence_log_probs(model, **rejected_ids)
+
+            loss, acc = dpo_loss(
+                policy_chosen, policy_rejected,
+                ref_chosen, ref_rejected, beta=beta
+            )
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+            total_acc += acc
+
+        n = len(data)
+        print(f"Epoch {epoch+1} | Acc: {total_acc/n:.2f} | Loss: {total_loss/n:.3f}")
+
+def train_grpo(model, ref_model, data, tokenizer, epochs=5):
+    """GRPO 训练"""
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-6)
+
+    for epoch in range(epochs):
+        total_loss = 0
+        for item in data:
+            prompt_ids = tokenizer(item["prompt"], return_tensors='pt')
+            # 用模型生成 group_size 个回答
+            sampled = []
+            with torch.no_grad():
+                for _ in range(8):
+                    out = model.generate(
+                        prompt_ids["input_ids"],
+                        max_new_tokens=32, do_sample=True, temperature=0.8
+                    )
+                    sampled.append(out)
+
+            # 计算每个回答的奖励（简单做法：匹配 chosen 得高分）
+            rewards = torch.zeros(8, 1)
+            for i, s in enumerate(sampled):
+                text = tokenizer.decode(s[0])
+                if item["chosen"] in text:
+                    rewards[i] = 1.0
+                elif item["rejected"] in text:
+                    rewards[i] = -1.0
+
+            advantages = grpo_advantages(rewards)
+
+            # ... （简化的 GRPO 训练步骤）
+            loss = (advantages * torch.randn(8)).mean()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+
+        print(f"Epoch {epoch+1} | Loss: {total_loss/len(data):.3f}")
+
+print("=== DPO Training ===")
+train_dpo(model, ref_model, toy_data, tokenizer)
+print("\n=== GRPO Training ===")
+train_grpo(model, ref_model, toy_data, tokenizer)</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>对比分析：</strong>DPO 训练更快（每步只需一次前向传播），但在分布外的 prompt 上可能泛化不如 GRPO。GRPO 通过组内采样获得对奖励尺度变化的鲁棒性，但训练较慢（需要生成 G 个回答）。实际选择取决于你的数据量、计算预算以及对模型质量的要求。</p>
+    </div>
+  </div>
+</section><!-- ================================================================ -->
+<!-- 9.10A 对齐评估协议 -->
+<!-- ================================================================ --><section class="card" id="s9-10a">
+  <h3>9.10A 对齐评估协议：偏好准确率并不足够</h3>
+  <p>DPO 或 GRPO 的训练日志中显示的偏好准确率、reward 均值和 KL 值只能说明模型按照训练目标发生了变化，但并不能说明模型变成了更好的助手。工程评估必须将<strong>目标函数</strong>与<strong>评估问题</strong>区分开来：训练优化的是一个代理目标，而最终重要的是模型是否有用（helpful）、诚实（honest）、无害（harmless），以及原有能力是否下降。</p>
+
+  <h4>为什么单一的胜率不够</h4>
+  <ul>
+    <li><strong>偏好胜率可能包含风格偏差：</strong>较长、更有礼貌、更自信的回答往往胜出，但它们未必更正确。</li>
+    <li><strong>安全分数可能掩盖过度拒绝：</strong>模型拒绝危险请求是进步，但拒绝普通的医学、法律知识或历史问题则代表能力损失。</li>
+    <li><strong>reward model 可能被利用：</strong>模型学会了触发 reward model 偏好的措辞，而不是解决用户的任务。</li>
+    <li><strong>对齐可能改变基础能力：</strong>数学、代码、多轮跟随、长上下文和多语言任务的能力都可能在对齐后下降。</li>
+  </ul>
+
+  <h4>评估矩阵</h4>
+  <table>
+    <thead><tr><th>维度</th><th>要回答的问题</th><th>常用指标</th><th>典型失败模式</th></tr></thead>
+    <tbody>
+      <tr><td>Helpfulness（有用性）</td><td>它是否真正完成了用户的任务？</td><td>任务成功率、两两对比胜率、人类偏好</td><td>回答流畅但没有解决问题</td></tr>
+      <tr><td>Honesty（诚实性）</td><td>当它不知道时是否承认不确定性？</td><td>事实准确性、校准误差、可追溯引用</td><td>幻觉、编造来源、过度自信</td></tr>
+      <tr><td>Harmlessness（无害性）</td><td>危险请求是否被拒绝或安全改写？</td><td>不安全完成率、安全拒绝率</td><td>提供了可执行的危害步骤</td></tr>
+      <tr><td>Over-refusal（过度拒绝）</td><td>正常请求是否被错误拒绝？</td><td>良性请求完成率、错误拒绝率</td><td>把一般科学、创意写作或分析误判为危险</td></tr>
+      <tr><td>Capability retention（能力保留）</td><td>原有能力是否保留？</td><td>数学/代码/阅读理解/多语言任务得分</td><td>对齐后更安全但解题能力下降</td></tr>
+      <tr><td>Style control（风格控制）</td><td>是否按要求控制了长度、语气和格式？</td><td>格式遵循率、长度分布、冗余率</td><td>模板化、冗长、过度解释拒绝原因</td></tr>
+    </tbody>
+  </table>
+
+  <h4>最简但系统的评估设计</h4>
+  <ol>
+    <li><strong>固定比较对象：</strong>比较至少三个检查点：base、SFT 和 DPO/GRPO。保持生成参数固定，例如 temperature、top-p、max tokens 和系统提示一致。</li>
+    <li><strong>按切片组织提示：</strong>将提示分为通用问答、数学、代码、长上下文、多语言、安全/危险请求、良性/敏感请求。避免单个总分掩盖局部退化。</li>
+    <li><strong>同时记录自动指标和人工判断：</strong>对于有标准答案的任务使用准确率；对于开放式任务使用两两偏好；对于安全任务区分“应该拒绝”和“不应拒绝”。</li>
+    <li><strong>报告失败类型：</strong>将错误归类为幻觉、错误拒绝、未遵循指令、能力退化、reward hacking 或风格偏差，而不仅仅是报告平均分。</li>
+  </ol>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>对齐评估不是问“模型看起来更像偏好数据了吗？”，而是问“模型是否更可靠地对用户有用，同时在危险场景中保持边界，并且没有明显牺牲已有能力？”</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.10B 偏好优化运行日志 -->
+<!-- ================================================================ --><section class="card" id="s9-10b">
+  <h3>9.10B 偏好优化训练日志：连接 log-ratio、KL 与行为变化</h3>
+  <p>偏好优化训练中最常见的误解是将 <code>preference_accuracy</code> 的提升视为最终成功。DPO、PPO 和 GRPO 的训练日志应同时回答三个问题：模型是否根据偏好对改变了 chosen/rejected 的相对概率？策略是否偏离参考模型过远？输出行为是否真的改善了，而不仅仅是变得更长、更模板化或更容易拒绝？</p>
+
+  <h4>DPO 至少需要记录的内容</h4>
+  <p>DPO 的核心不是比较 <code>log pi(chosen)</code> 和 <code>log pi(rejected)</code> 的绝对值，而是比较策略相对于参考模型的改进。一个训练步骤日志至少应包括：</p>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>字段</th><th>定义</th><th>如何解读</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>chosen_log_ratio</code></td><td><code>log pi_theta(y_w|x) - log pi_ref(y_w|x)</code></td><td>chosen 响应相对于参考模型被提升了多少</td></tr>
+      <tr><td><code>rejected_log_ratio</code></td><td><code>log pi_theta(y_l|x) - log pi_ref(y_l|x)</code></td><td>rejected 响应相对于参考模型被提升或降低了多少</td></tr>
+      <tr><td><code>reward_margin</code></td><td><code>beta * (chosen_log_ratio - rejected_log_ratio)</code></td><td>DPO 的隐式奖励余量；大于 0 表示当前偏好方向正确</td></tr>
+      <tr><td><code>preference_prob</code></td><td><code>sigmoid(reward_margin)</code></td><td>模型根据当前隐式奖励认为 chosen 响应获胜的概率</td></tr>
+      <tr><td><code>sequence_length_delta</code></td><td><code>len(chosen) - len(rejected)</code></td><td>用于判断偏好改进是否可能源于长度偏差</td></tr>
+      <tr><td><code>heldout_preference_acc</code></td><td>在未见过的偏好对上的边际准确率</td><td>如果训练准确率上升但留出准确率不升，通常表明过拟合或数据偏差</td></tr>
+    </tbody>
+  </table>
+  <p>DPO 奖励余量报告应明确返回这些量。训练工程师应关注分布而非仅看均值：如果少数长响应贡献了大部分正余量，模型可能在学习“更长的回答更容易赢”；如果策略相对于参考模型同时大幅提升了 chosen 和 rejected，则 KL 锚点可能过弱，模型并未真正抑制低质量响应。</p>
+
+  <h4>PPO/GRPO 还需要监控 Ratio 和 Clipping</h4>
+  <p>GRPO 使用了组内白化优势值，但策略更新仍通过 PPO 风格的 clipped surrogate 控制步长。日志中的 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code> 是判断训练稳定性的关键。如果使用 DAPO 或 GSPO 风格方案，动态采样、完成长度、熵、序列级 ratio 和 MoE 路由波动性也应包含在同一日志表中；否则无法判断收益来自更好的策略更新还是来自采样、长度或路由的副作用。</p>
+  <table class="metrics-table">
+    <thead>
+      <tr><th>现象</th><th>可能含义</th><th>优先措施</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>clip_fraction</code> 持续接近 0</td><td>更新非常保守；可能是奖励信号弱、lr 太小或优势尺度太小</td><td>检查奖励分布、组内标准差、学习率和有效完成 token 数</td></tr>
+      <tr><td><code>clip_fraction</code> 持续偏高</td><td>策略步长频繁超出界限；PPO clipping 在强制限制更新</td><td>降低 lr，减小奖励尺度，增大 batch size，或增加 KL 惩罚</td></tr>
+      <tr><td><code>approx_kl</code> 快速上升</td><td>策略远离参考模型，可能损害基础能力或安全边界</td><td>增大 <code>kl_beta</code>，降低 lr，检查 reward hacking</td></tr>
+      <tr><td><code>mean_advantage</code> 不接近 0</td><td>组内白化、masking 或 batch 维度可能实现错误</td><td>确认归一化是在同一 prompt 的 G 个 completions 上进行的，而非混在不同 prompt 之间</td></tr>
+      <tr><td><code>completion_length_p95</code> 持续扩大</td><td>模型可能通过更长的 CoT、停顿或格式填充获取奖励</td><td>添加长度奖励塑形、超长截断分析以及每正确回答单位的成本</td></tr>
+      <tr><td><code>entropy</code> 崩溃过快</td><td>探索不足；动态采样或 KL/温度设置可能过强</td><td>检查 rollout 多样性、通过/失败混合比例以及留出 prompt 覆盖情况</td></tr>
+      <tr><td>奖励增加但人类质量下降</td><td>reward hacking、长度偏差或裁判风格偏差</td><td>添加失败切片，分别报告正确性、长度、拒绝和格式</td></tr>
+    </tbody>
+  </table>
+
+  <h4>从训练日志到行为回归</h4>
+  <p>偏好优化后的模型至少应在相同条件下与 base/SFT 检查点进行比较。以下记录比“DPO loss 下降了”更有信息量：</p>
+  <div class="code-block" data-lang="text">
+checkpoint: sft_step_20000 -> dpo_step_3000
+decoding: temperature=0.2, top_p=0.9, max_new_tokens=512
+optimization: preference_acc, reward_margin_p50/p95, approx_kl, length_delta
+behavior: task_success, hallucination_rate, unsafe_completion_rate, over_refusal_rate
+retention: math/code/readcomp slices compared against SFT baseline</div>
+  <p>如果 <code>approx_kl</code> 非常低但行为没有变化，偏好训练可能太弱。如果 <code>approx_kl</code> 非常高且数学/代码能力下降，则出现了 alignment tax。如果安全拒绝率上升但良性敏感请求完成率下降，模型可能学到了过度拒绝。如果 DAPO/GSPO 风格的 RL 曲线看起来更好，还必须检查收益是否在留出 prompt、不同长度桶和 MoE 路由状态下保持。完整的结果表应将这些行为切片和优化日志放在一起，以判断对齐方法是否值得扩大规模。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节要点：</strong>偏好优化的训练记录必须同时包含内部目标函数量值和外部行为量值。内部量值表明优化是否按照公式进行；外部行为量值表明它是否真正使模型更有用、更诚实、更安全，且不过度牺牲原有能力。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.11 在策略蒸馏（On-Policy Distillation） -->
+<!-- ================================================================ --><section class="card" id="s9-11">
+  <h3>9.11 On-Policy Distillation、Rejection Sampling 与 Adjustable Inference Budget</h3>
+  <p><strong>On-policy distillation</strong> 是一种将蒸馏数据与当前学生模型的行为分布尽可能对齐的方法。它聚焦于一个问题：学生模型在实际推理过程中生成了哪些候选回答，犯了什么错误，以及教师模型、专家模型、规则验证器或人工审核应如何在这些候选上提供改进信号。现代推理后训练通常将高预算推理、拒绝采样、验证器过滤以及通过学生模型的反向传播结合起来：首先，一个更强的模型或更高的测试时计算量生成多个候选，然后只保留那些可验证、格式正确且风险可控的样本供学生模型学习。</p>
+
+  <h4>传统蒸馏的问题</h4>
+  <p>传统方法让学生模型学习教师模型的静态输出分布。然而，“蒸馏后”的模型往往在特定领域表现不如原始专家模型——因为学生模型只看到了教师的<strong>静态输出</strong>，而没有参与教师的“思考过程”。更关键的是，如果教师输出未经验证器检查、去重、权限检查和评估集重叠检测，学生模型会高效地复制教师的错误、风格偏差以及泄漏的样本。</p>
+
+  <h4>On-Policy Distillation 的核心思想</h4>
+  <ol>
+    <li><strong>学生模型生成候选：</strong> 使用当前学生模型为提示生成多个候选回答，暴露其实际访问的错误区域。</li>
+    <li><strong>教师或专家评分/修正：</strong> 教师模型、领域专家模型、规则验证器或人工审核对这些候选进行排序、修正或生成目标答案。</li>
+    <li><strong>拒绝采样过滤：</strong> 保留通过答案验证、格式约束、安全规则以及重复/污染检查的候选。丢弃无法验证或可能泄漏的样本。</li>
+    <li><strong>反向传播训练：</strong> 使用在学生模型分布上获得的信号进行 SFT、偏好优化或蒸馏损失训练，逐步将学生模型导向更好的行为。</li>
+  </ol>
+
+  <h4>合成数据进入课程报告时必须明确记录的内容</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>问题</th><th>最低证据要求</th><th>缺失风险</th></tr>
+      <tr><td>由谁生成？</td><td>教师/生成器版本、提示模板、采样参数和候选数量</td><td>无法复现数据分布，也无法判断是否只是复制教师风格</td></tr>
+      <tr><td>由谁过滤？</td><td>验证器规则、人工抽检比例、错误类型和通过/失败分布</td><td>低质量或错误的推理链被当作高质量监督信号使用</td></tr>
+      <tr><td>覆盖了什么？</td><td>任务切片、难度等级、长度分布、语言/领域比例和安全切片</td><td>模型仅在少数高频模板上提升，在泛化任务上退化</td></tr>
+      <tr><td>哪些内容不可泄漏？</td><td>近似重复、题库来源、评估集重叠、数据所有权和安全风险记录</td><td>基准评测分数被污染，或训练数据无法发布/商业使用</td></tr>
+    </table>
+  </div>
+  <p>这些字段属于第9章，因为合成数据现在是常规的后训练工具，而不是课程之外的“数据增强技巧”。它直接改变了 SFT 的监督目标、DPO 的偏好分布、GRPO/RLVR 的探索边界，以及在发布时需要在第10章解释的模型来源风险。</p>
+
+  <h4>可调节的推理预算</h4>
+  <p>许多推理系统将测试时计算量分为不同层级。在课程中，这可以理解为质量、延迟和成本之间的选择：</p>
+  <ul>
+    <li><strong>快速模式（Fast mode）：</strong> 更少的样本或更短的推理链，优先考虑较低的延迟和成本。</li>
+    <li><strong>深度模式（Deep mode）：</strong> 更多的中间推理 token、自洽性采样或重排序，提高难题的成功率。</li>
+    <li><strong>高预算模式（High-budget mode）：</strong> 多个候选、多个工具或多轮反思，适合竞赛题、代码修复或高价值任务。</li>
+  </ul>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>方法边界：</strong> On-policy distillation、拒绝采样、GRPO/RL 和测试时计算是不同层面的技术：蒸馏改变训练数据分布，拒绝采样改变进入训练集的候选质量，GRPO/RL 改变策略优化信号，推理预算改变部署时消耗的 token 数量和计算量。课程报告必须明确记录质量提升、token 成本、延迟、数据来源、过滤证据以及适用任务。</div></div>
+</section><!-- ================================================================ -->
+<!-- 编程练习 6：加载 LoRA 适配器 -->
+<!-- ================================================================ --><section class="card" id="s9-12">
+  <h3>9.12 编程练习 6：加载 LoRA 适配器并合并进行推理</h3>
+  <p>在实际应用中，LoRA 适配器通常作为独立的权重文件分发。推理时，将适配器加载并合并回基础模型。</p>
+  <div class="coding-exercise">
+    <h4>练习 6：LoRA 合并推理</h4>
+    <div class="task">
+      <p><strong>任务：</strong>模拟加载一个 LoRA 适配器，将其合并到基础模型中进行推理。</p>
+      <p><strong>要求：</strong></p>
+      <ul>
+        <li>创建 LoRA 适配器（A、B 矩阵分开存储）</li>
+        <li>实现 <code>merge_lora(base_model, lora_weights, scaling)</code> 函数</li>
+        <li>验证合并后的推理输出与合并前一致</li>
+        <li>合并后的模型应支持保存与加载（<code>torch.save</code> / <code>torch.load</code>）</li>
+      </ul>
+      <pre># Expected usage
+lora_weights = {
+    "q_proj": {"A": A_q, "B": B_q, "scaling": 2.0},
+    "v_proj": {"A": A_v, "B": B_v, "scaling": 2.0},
+}
+model = merge_lora(model, lora_weights)
+# Now the q_proj and v_proj weights of the model have merged the LoRA update
+
+# Save the merged model
+torch.save(model.state_dict(), "model_merged.pt")
+
+# Load (no LoRA dependency required)
+model_loaded = GPTModel(config)
+model_loaded.load_state_dict(torch.load("model_merged.pt"))</pre>
+    </div>
+    <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考答案</button>
+    <div class="solution"><div class="code-block" data-lang="python">
+def merge_lora(base_model, lora_weights):
+    """将 LoRA 权重合并回基础模型
+    lora_weights: {module_name: {"A": Tensor, "B": Tensor, "scaling": float}}
+    """
+    for name, params in lora_weights.items():
+        module = dict(base_model.named_modules()).get(name)
+        if module is None:
+            print(f"Warning: Module {name} not found")
+            continue
+
+        if hasattr(module, 'weight'):
+            # W' = W + B @ A * scaling
+            delta = (params["B"] @ params["A"]) * params["scaling"]
+            # delta shape 可能是 (out, in) 或 (in, out)，取决于 A/B 的定义
+            if delta.shape != module.weight.shape:
+                delta = delta.T
+            module.weight.data += delta.to(module.weight.device)
+            print(f"Merged {name}: W += B@A (r={params['A'].size(0)})")
+
+    return base_model
+
+def save_lora_adapter(lora_weights, save_path):
+    """保存 LoRA 适配器（轻量，仅 A、B 矩阵）"""
+    torch.save(lora_weights, save_path)
+    total_params = sum(p.numel() for p in lora_weights.values()
+                       if isinstance(p, torch.Tensor))
+    print(f"Saved LoRA adapter: {save_path} ({total_params:,} params)")
+
+# 使用示例
+# 1. 创建并训练一个 LoRA 模型
+model = GPTModel(config)
+model = apply_lora(model, r=8, target_modules=["q_proj", "v_proj"])
+# ... 训练 ...
+
+# 2. 提取 LoRA 权重
+lora_weights = {}
+for name, module in model.named_modules():
+    if hasattr(module, 'lora'):
+        lora_weights[name] = {
+            "A": module.lora.A.data.clone(),
+            "B": module.lora.B.data.clone(),
+            "scaling": module.lora.scaling,
+        }
+
+# 3. 保存轻量适配器（几 MB 而不是几 GB）
+save_lora_adapter(lora_weights, "my_lora_adapter.pt")
+
+# 4. 推理时加载并合并
+base_model = GPTModel(config)
+base_model.load_state_dict(torch.load("base_model.pt"))
+loaded_lora = torch.load("my_lora_adapter.pt")
+merged_model = merge_lora(base_model, loaded_lora)
+
+# 5. 保存合并后的完整模型（可选）
+torch.save(merged_model.state_dict(), "model_merged.pt")</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>LoRA 的生产优势：</strong> LoRA 适配器通常只有 1-10 MB（仅 A、B 矩阵），而一个 7B 参数的基础模型大约 14 GB。分发适配器比分发完整模型轻量得多。用户可以拥有多个任务的 LoRA 适配器，在推理时按需加载并合并。</p>
+    </div>
+  </div>
+</section><!-- ================================================================ -->
+<!-- 9.13 Alignment Tax -->
+<!-- ================================================================ --><section class="card" id="s9-13">
+  <h3>9.13 Alignment Tax（对齐惩罚）</h3>
+  <p><strong>Alignment tax</strong> 指的是模型在对齐后变得更安全、更服从，但某些能力却<strong>减弱</strong>的现象。</p>
+  <ul>
+    <li><strong>数学推理能力下降：</strong>RLHF 倾向于生成“安全、社会可接受”的回答，但数学要求精确——“安全”与“精确”有时相互矛盾</li>
+    <li><strong>创造力降低：</strong>对齐后的模型不再那么“跳出框框”，但也没那么“出彩”</li>
+    <li><strong>过度保守：</strong>模型宁愿拒绝回答“可能敏感”的问题，也不愿冒险给出正确但可能被误解的回答</li>
+  </ul>
+  <p>缓解方法：1) 将推理任务与安全对齐分开处理；2) 在 RLHF 数据中包含“安全但强大”的边缘案例；3) 使用按任务划分的奖励模型，分别评估不同维度的质量。</p>
+</section><section class="card" id="s9-13a">
+  <h3>9.13A RLVR / RFT：可验证奖励并非通用奖励</h3>
+  <p>像 DeepSeek-R1、Kimi k1.5、OpenAI o1/RFT 这样的工作，将推理后训练推向了工业前沿：模型不再仅仅是模仿答案，而是对同一个 prompt 采样多个候选，使用可验证奖励、评分器或基于规则的评估作为反馈，然后通过 RL 风格的更新来增加高分答案的概率。这个方向的关键不在于“打开 PPO/GRPO”，而在于判断任务是否真的具有稳定、可审计且难以作弊的奖励。</p>
+
+  <h4>RLVR / RFT 何时适用</h4>
+  <div class="table-wrap">
+    <table>
+      <tr><th>条件</th><th>适合信号</th><th>不适合信号</th></tr>
+      <tr><td>答案可验证</td><td>最终数学答案、代码测试、JSON 模式、工具调用结果、检索到的文档</td><td>开放式写作风格、主观的“看起来更好”、没有标准答案的咨询</td></tr>
+      <tr><td>奖励有方差</td><td>同个 prompt 的多次 rollout 有高有低，模型有探索空间</td><td>全0分或全满分，RL 无可学习梯度</td></tr>
+      <tr><td>靠猜测难以得分</td><td>需要中间约束、测试用例或引用证据</td><td>选择题、可猜测的简答题、评分器只看关键词</td></tr>
+      <tr><td>成本可控</td><td>能限制推理 token、rollout 数量和训练 epoch</td><td>准确率提升只来自无限延长 CoT 或大量重试</td></tr>
+    </table>
+  </div>
+
+  <h4>评分器可靠性：先验证奖励，再训练策略</h4>
+  <p>RLVR/RFT 的工程顺序应该是：先对一组固定 prompt 运行，采样多个候选，记录奖励、通过/失败、输出长度、评分器错误和可疑的 hack 行为；只有在奖励信号、成本和完整性检查都可信时，才进行策略更新。一份评分器可靠性报告应提供三类证据：</p>
+  <ul>
+    <li><strong>奖励信号：</strong>通过率不应接近 0 或 1，奖励标准差不应接近 0，否则没有有效的学习信号。</li>
+    <li><strong>成本：</strong>平均完成 token 数、rollout 数量和训练 epoch 应受控；长 CoT 改进必须同时报告 token 成本。</li>
+    <li><strong>完整性：</strong>检查奖励 hack、格式绕过、测试泄漏、评分器-模型同质偏差，以及“答案正确但推理错误”的情况。</li>
+  </ul>
+  <p>最终答案奖励对于数学、代码和工具任务来说是必要的，但它不是推理得到改进的充分证据。模型可能猜出最终答案、利用弱的单元测试，或生成无效的思维链却碰巧以正确的数字结尾。最近的 <a href="https://arxiv.org/abs/2506.14245" target="_blank">RLVR 评估工作</a>明确了这一界限：当任务声称改进了推理时，评估应区分最终答案和推理轨迹的有效性。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>评估层次</th><th>能证明什么</th><th>不能证明什么</th><th>最低诊断要求</th></tr>
+      <tr><td>最终答案通过率</td><td>在当前评分器下，输出达到了可验证的答案</td><td>中间推理是有效、稳健或无泄漏的</td><td>留出集通过率、公共/私有划分、对抗性评分器探测</td></tr>
+      <tr><td>CoT / 轨迹有效性</td><td>推理路径遵循约束、测试或领域逻辑</td><td>答案在所有 prompt 或预算下都保持正确</td><td>轨迹审计样本、过程验证器、无效但正确的例子</td></tr>
+      <tr><td>Pass@k / 多样性</td><td>策略能在采样预算下找到至少一条正确路径</td><td>top-1 策略得到改进，或模型变得更高效</td><td>pass@1、pass@k、不同解路径、平均 rollout token 数</td></tr>
+      <tr><td>每个正确且有效答案的成本</td><td>在 Ch08/Ch10 预算下改进是可部署的</td><td>该方法在所有任务上都更优</td><td>rollout 数量、完成长度 P95、验证器成本、P95 延迟</td></tr>
+    </table>
+  </div>
+
+  <h4>与 SFT / DPO / GRPO 的关系</h4>
+  <p>SFT 适用于教授格式和基本任务行为；DPO 适用于将 chosen/rejected 偏好转化为参考相关的更新；GRPO/RLVR 更适用于有可验证奖励、需要探索多条推理路径的任务；后续的 DAPO/GSPO 等工作则强调如何让 RL 运行稳定、长期且可复现。工业系统通常不是三选一：首先用 SFT 建立可读性和格式，然后用偏好或基于规则的奖励进行后训练，最后用固定 eval、红队测试、安全/格式回归和成本核算来决定是否发布。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>高级对齐工程师必须能够证明奖励本身是可靠的。一条漂亮的 RL 曲线，如果来自于可猜测的答案、泄漏的测试、更长的输出或评分器漏洞，就不是能力提升，而是奖励 hack。</div></div>
+</section><!-- ================================================================ -->
+<!-- 9.14 小结 -->
+<!-- ================================================================ --><section class="card" id="s9-14">
+  <h3>9.14 章节总结</h3>
+  <ul>
+    <li>✅ <strong>对齐的必要性</strong> — 从“文本续写器”到“助手”的差距</li>
+    <li>✅ <strong>编程练习1：SFT</strong> — Loss masking，只计算答案部分的loss</li>
+    <li>✅ <strong>Bradley-Terry与RLHF三步流程</strong> — SFT → RM → PPO</li>
+    <li>✅ <strong>奖励模型训练目标</strong> — 成对奖励loss和偏好准确率</li>
+    <li>✅ <strong>编程练习2：LoRA</strong> — 低秩适配，节省99%参数量</li>
+    <li>✅ <strong>DPO数学等价性</strong> — 策略log比值作为隐式奖励函数</li>
+    <li>✅ <strong>偏好数据质量</strong> — 长度偏差、标注不一致、参考模型与reward hacking边界</li>
+    <li>✅ <strong>后训练数据审计</strong> — 覆盖率、标签质量、泄漏与安全性纳入相同的预训练审计表</li>
+    <li>✅ <strong>编程练习3：DPO Loss</strong> — 直接偏好优化</li>
+    <li>✅ <strong>DPO隐式奖励诊断</strong> — 使用策略/参考log-ratio报告chosen/rejected的边际</li>
+    <li>✅ <strong>PPO裁剪目标</strong> — 新旧策略比值、advantage、裁剪比例与近似KL</li>
+    <li>✅ <strong>GRPO分组白化</strong> — 无Critic的策略优化</li>
+    <li>✅ <strong>DAPO / GSPO工程配方</strong> — 动态采样、长度控制、序列级比值与MoE RL稳定性诊断</li>
+    <li>✅ <strong>编程练习4：PPO+GRPO Advantage估计</strong> — 裁剪代理 + 分组白化 + KL</li>
+    <li>✅ <strong>编程练习5：DPO vs GRPO对比</strong> — 收敛速度与准确率</li>
+    <li>✅ <strong>对齐评估协议</strong> — 同时评估有用性、诚实性、无害性、过度拒绝与能力保持</li>
+    <li>✅ <strong>编程练习6：LoRA合并推理</strong> — 适配器加载与合并</li>
+    <li>✅ <strong>RLVR / RFT评分器可靠性</strong> — 验证奖励信号、成本与reward hacking风险</li>
+    <li>✅ <strong>使用工具和环境的Agentic RL</strong> — 训练并评估多轮工具使用轨迹，包含可回放日志、奖励组件与服务约束</li>
+    <li>✅ <strong>在策略蒸馏 / 拒绝采样 + 可调推理预算</strong> — 训练分布、教师信号、筛选证据与测试时计算之间的关系</li>
+    <li>✅ <strong>对齐税</strong> — SS/OS评估与缓解策略</li>
+  </ul>
+  <div class="info-box key"><span class="icon">📚</span><div><strong>进一步阅读：</strong>
+    <a href="https://arxiv.org/abs/2203.02155" target="_blank">InstructGPT — Ouyang等人 (2022)</a> ·
+    <a href="https://arxiv.org/abs/2106.09685" target="_blank">LoRA — Hu等人 (2021)</a> ·
+    <a href="https://arxiv.org/abs/2305.18290" target="_blank">DPO — Rafailov等人 (2023)</a> ·
+    <a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1 — GRPO/RL推理</a> ·
+    <a href="https://www.nature.com/articles/s41586-025-09422-z" target="_blank">DeepSeek-R1 — Nature 2025</a> ·
+    <a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html" target="_blank">verl Agentic RL</a> ·
+    <a href="https://arxiv.org/html/2509.01055v1" target="_blank">VerlTool — 使用工具的Agentic RL</a> ·
+    <a href="https://arxiv.org/abs/2305.14314" target="_blank">QLoRA — Dettmers等人 (2023)</a></div></div>
+</section><!-- ================================================================ -->
+<!-- 概念练习 -->
+<!-- ================================================================ --><section class="card">
+  <h3>概念实践巩固</h3>
+
+  <div class="exercise" data-answer="1" data-explain="SFT 只在答案部分计算损失，因为指令由用户提供，模型不需要学习生成它。如果对整个序列计算损失，模型会试图学习生成“用户指令”，浪费计算资源并可能导致分布偏移。">
+    <h4>练习 1：在 SFT 中，为什么损失只在答案部分（而不是整个序列）上计算？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q1" value="0"> A. 因为指令部分的 token 太多</label>
+      <label><input type="radio" name="q1" value="1"> B. 因为指令由用户提供，模型不需要学习生成它</label>
+      <label><input type="radio" name="q1" value="2"> C. 因为只有答案部分有正确结果</label>
+      <label><input type="radio" name="q1" value="3"> D. 因为指令部分没有正确答案</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="2" data-explain="LoRA 的核心公式是 W' = W + BA，它将权重更新 ΔW 分解为两个低秩矩阵 BA 的乘积，其中 B 和 A 的秩 r 远小于输入和输出维度。">
+    <h4>练习 2：LoRA 的低秩分解指的是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q2" value="0"> A. 将原始权重矩阵分解为两个高秩矩阵的乘积</label>
+      <label><input type="radio" name="q2" value="1"> B. 将激活值分解为低秩表示</label>
+      <label><input type="radio" name="q2" value="2"> C. 将权重更新 ΔW 分解为两个低秩矩阵 BA 的乘积</label>
+      <label><input type="radio" name="q2" value="3"> D. 将词表分解为低频和高频子集</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q2')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="0" data-explain="GRPO 不训练独立的 Critic 模型，而是使用“组内白化”来计算相对优势。对于同一 prompt 采样的 G 个 response，它利用组内奖励的均值和标准差进行归一化，从而减少了一个复杂组件；稳定性仍然取决于奖励、KL、采样和优化设置。">
+    <h4>练习 3：GRPO 与 PPO 最大的区别是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q3" value="0"> A. GRPO 不需要 Critic 模型，使用组内白化后的奖励作为优势函数</label>
+      <label><input type="radio" name="q3" value="1"> B. GRPO 使用更大的 batch size</label>
+      <label><input type="radio" name="q3" value="2"> C. GRPO 使用更简单的奖励函数</label>
+      <label><input type="radio" name="q3" value="3"> D. GRPO 不需要参考模型</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="2" data-explain="DPO 的核心数学洞见是：在 Bradley-Terry 偏好模型下，奖励函数可以表示为策略模型的闭式函数，因此无需显式训练一个 Reward Model。">
+    <h4>练习 4：为什么 DPO 不需要训练单独的奖励模型？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q4" value="0"> A. 因为 DPO 使用直接的人工评分来替代奖励模型</label>
+      <label><input type="radio" name="q4" value="1"> B. 因为 DPO 根本不使用偏好信息</label>
+      <label><input type="radio" name="q4" value="2"> C. 因为在 Bradley-Terry 模型下，奖励可以表示为策略对数概率比的闭式形式</label>
+      <label><input type="radio" name="q4" value="3"> D. 因为 DPO 使用监督学习替代强化学习</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q4')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="exercise" data-answer="0" data-explain="Alignment tax 指的是模型在对齐后变得更加安全，但在数学推理、创造力等能力上变弱的现象。SS/OS 分别衡量对有害请求的拒绝率和对无害请求的过度拒绝率。">
+    <h4>练习 5：“Alignment Tax”指的是什么？</h4>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="q5" value="0"> A. 模型在对齐后变得更安全，但某些能力变弱</label>
+      <label><input type="radio" name="q5" value="1"> B. 对齐训练需要昂贵的 Reward Model 训练</label>
+      <label><input type="radio" name="q5" value="2"> C. 标注对齐数据的成本太高</label>
+      <label><input type="radio" name="q5" value="3"> D. 对齐使模型过度自信</label>
+    </div>
+    <button class="btn btn-primary" onclick="LLM.checkMC(this,'q5')">检查答案</button>
+    <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
+    <div class="feedback"></div>
+  </div>
+</section></article>
+
+<nav class="chapter-nav">
+  <a href="ch08.html" class="btn btn-outline" rel="prev">← 上一章</a>
+  <button class="btn btn-primary" id="mark-complete" onclick="LLM.markComplete()">✓ 标记完成</button>
+  <a href="ch10.html" class="btn btn-outline" rel="next">下一章 →</a>
+</nav>
 </main>
 
 <button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<script>
-(function(){
-  function safeGet(key, fallback){
-    try{ var value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
-    catch(e){ return fallback; }
-  }
-  function safeSet(key, value){
-    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
-  }
-  function updateThemeLabel(theme){
-    var icon = document.getElementById('theme-icon');
-    var label = document.getElementById('theme-label');
-    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
-  }
-  window.LLM_ZH = {
-    toggleTheme: function(){
-      var html = document.documentElement;
-      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      safeSet('llm-theme', next);
-      updateThemeLabel(next);
-    }
-  };
-  var theme = safeGet('llm-theme', 'light');
-  document.documentElement.setAttribute('data-theme', theme);
-  updateThemeLabel(theme);
-  window.addEventListener('scroll', function(){
-    var btn = document.getElementById('back-to-top');
-    if(btn) btn.classList.toggle('visible', window.scrollY > 400);
-  }, {passive:true});
-})();
-</script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="../../js/app.js"></script>
 </body>
 </html>

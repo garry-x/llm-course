@@ -5,17 +5,17 @@
   'use strict';
 
   var CHAPTERS = [
-    {id:1, file:'ch01.html', title:'Environment Setup & Tokenization', navTitle:'Tokenization', desc:'BPE, multilingual tokenizer, special tokens & model interface contract', sections:19},
-    {id:2, file:'ch02.html', title:'Embedding Layer & Positional Encoding', navTitle:'Embeddings & RoPE', desc:'TokenEmbedding, word vectors, contextualized representations, RoPE, long context & prompt representation', sections:20},
-    {id:3, file:'ch03.html', title:'Single-Head Self-Attention', navTitle:'Self-Attention', desc:'Scaled Dot-Product Attention, mask, masked softmax, diagnostic ledger & complexity bounds', sections:20},
-    {id:4, file:'ch04.html', title:'Multi-Head Attention & MLA', navTitle:'Multi-Head & MLA', desc:'MHA, GQA, MLA, KV Cache budget & checkpoint conversion', sections:18},
-    {id:5, file:'ch05.html', title:'Transformer Block', navTitle:'Transformer Block', desc:'RMSNorm, SwiGLU, resource estimation, stability & interpretability', sections:20},
-    {id:6, file:'ch06.html', title:'Assembling a Complete GPT Model', navTitle:'GPT Model', desc:'GPT-2 124M, MoE, weight loading, logit parity & checkpoint compatibility', sections:18},
-    {id:7, file:'ch07.html', title:'Training Loop', navTitle:'Training', desc:'Data pipeline, AdamW, checkpoint, distributed, MFU, industrial training diagnostics', sections:26},
-    {id:8, file:'ch08.html', title:'Text Generation', navTitle:'Generation', desc:'Sampling, beam, thinking budget, speculative & structured decoding', sections:25},
-    {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', navTitle:'Alignment', desc:'SFT, synthetic distillation, LoRA, DPO, GRPO, rollout systems & retention', sections:27},
-    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', navTitle:'Inference', desc:'KV Cache, sparse/linear attention, continuous batching, RAG & KV-aware orchestration', sections:38},
-    {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', navTitle:'NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, agent workflow evaluation & safety', sections:20}
+    {id:1, file:'ch01.html', title:'Environment Setup & Tokenization', navTitle:'Tokenization', desc:'BPE, multilingual tokenizer, special tokens & model interface contract', zhTitle:'环境搭建与分词', zhNavTitle:'分词与 BPE', zhDesc:'BPE、多语言 tokenizer、special tokens 与模型接口契约', sections:19},
+    {id:2, file:'ch02.html', title:'Embedding Layer & Positional Encoding', navTitle:'Embeddings & RoPE', desc:'TokenEmbedding, word vectors, contextualized representations, RoPE, long context & prompt representation', zhTitle:'Embedding 层与位置编码', zhNavTitle:'Embedding 与 RoPE', zhDesc:'TokenEmbedding、词向量、上下文化表示、RoPE、长上下文与 prompt 表示', sections:20},
+    {id:3, file:'ch03.html', title:'Single-Head Self-Attention', navTitle:'Self-Attention', desc:'Scaled Dot-Product Attention, mask, masked softmax, diagnostic ledger & complexity bounds', zhTitle:'单头自注意力', zhNavTitle:'自注意力', zhDesc:'Scaled Dot-Product Attention、mask、masked softmax、诊断台账与复杂度边界', sections:20},
+    {id:4, file:'ch04.html', title:'Multi-Head Attention & MLA', navTitle:'Multi-Head & MLA', desc:'MHA, GQA, MLA, KV Cache budget & checkpoint conversion', zhTitle:'多头注意力与 MLA', zhNavTitle:'多头注意力与 MLA', zhDesc:'MHA、GQA、MLA、KV Cache 预算与 checkpoint 转换', sections:18},
+    {id:5, file:'ch05.html', title:'Transformer Block', navTitle:'Transformer Block', desc:'RMSNorm, SwiGLU, resource estimation, stability & interpretability', zhTitle:'Transformer Block', zhNavTitle:'Transformer Block', zhDesc:'RMSNorm、SwiGLU、资源估算、稳定性与可解释性', sections:20},
+    {id:6, file:'ch06.html', title:'Assembling a Complete GPT Model', navTitle:'GPT Model', desc:'GPT-2 124M, MoE, weight loading, logit parity & checkpoint compatibility', zhTitle:'组装完整 GPT 模型', zhNavTitle:'GPT 模型', zhDesc:'GPT-2 124M、MoE、权重加载、logit parity 与 checkpoint 兼容性', sections:18},
+    {id:7, file:'ch07.html', title:'Training Loop', navTitle:'Training', desc:'Data pipeline, AdamW, checkpoint, distributed, MFU, industrial training diagnostics', zhTitle:'训练循环', zhNavTitle:'训练循环', zhDesc:'数据流水线、AdamW、checkpoint、分布式、MFU 与工业训练诊断', sections:26},
+    {id:8, file:'ch08.html', title:'Text Generation', navTitle:'Generation', desc:'Sampling, beam, thinking budget, speculative & structured decoding', zhTitle:'文本生成', zhNavTitle:'文本生成', zhDesc:'采样、beam、thinking budget、speculative decoding 与结构化输出', sections:25},
+    {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', navTitle:'Alignment', desc:'SFT, synthetic distillation, LoRA, DPO, GRPO, rollout systems & retention', zhTitle:'微调与对齐', zhNavTitle:'微调与对齐', zhDesc:'SFT、synthetic distillation、LoRA、DPO、GRPO、rollout 系统与能力保持', sections:27},
+    {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', navTitle:'Inference', desc:'KV Cache, sparse/linear attention, continuous batching, RAG & KV-aware orchestration', zhTitle:'推理优化与前沿', zhNavTitle:'推理优化', zhDesc:'KV Cache、稀疏/线性注意力、continuous batching、RAG 与 KV-aware orchestration', sections:38},
+    {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', navTitle:'NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, agent workflow evaluation & safety', zhTitle:'经典神经 NLP 与评估', zhNavTitle:'NLP 与评估', zhDesc:'RNN、Parsing、Seq2Seq、BERT、agent workflow evaluation 与 safety', sections:20}
   ];
 
   // ---- State helpers (localStorage-backed) ----
@@ -47,7 +47,7 @@
     var explicitHome = document.body.getAttribute('data-home-href');
     if(explicitHome) return explicitHome;
     if(isEnglishPage()) return currentCh === 0 ? 'en.html' : '../en.html';
-    return currentCh === 0 ? 'index.html' : '../index.html';
+    return currentCh === 0 ? 'index.html' : '../../index.html';
   }
 
   function chapterHref(ch){
@@ -56,18 +56,19 @@
 
   function languageHref(){
     if(isEnglishPage()){
-      return currentCh === 0 ? 'zh/index.html' : '../zh/chapters/' + CHAPTERS[currentCh - 1].file;
+      return currentCh === 0 ? 'index.html' : '../zh/chapters/' + CHAPTERS[currentCh - 1].file;
     }
     return currentCh === 0 ? '../en.html' : '../../chapters/' + CHAPTERS[currentCh - 1].file;
   }
 
   function chaptersWithHref(){
+    var zh = !isEnglishPage();
     return CHAPTERS.map(function(ch){
       return {
         id: ch.id,
         file: chapterHref(ch),
-        title: ch.title,
-        desc: ch.desc,
+        title: zh ? ch.zhTitle : ch.title,
+        desc: zh ? ch.zhDesc : ch.desc,
         sections: ch.sections
       };
     });
@@ -77,18 +78,19 @@
   function renderSidebar(){
     var nav = document.getElementById('sidebar-nav');
     if(!nav) return;
+    var zh = !isEnglishPage();
     var html = '<a href="'+homeHref()+'" class="'+(currentCh===0?'active ':'')+'home-link"'+
       (currentCh===0?' aria-current="page"':'')+'>'+
-      '<span class="ch-num">⌂</span><span class="ch-label">Home</span></a>';
+      '<span class="ch-num">⌂</span><span class="ch-label">'+(zh?'中文首页':'Home')+'</span></a>';
     CHAPTERS.forEach(function(ch){
       var cls = (ch.id===currentCh?'active ':'')+(completed.has(ch.id)?'completed ':'');
-      html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'" title="'+ch.title+'"'+
+      html += '<a href="'+chapterHref(ch)+'" class="'+cls.trim()+'" title="'+(zh?ch.zhTitle:ch.title)+'"'+
         (ch.id===currentCh?' aria-current="page"':'')+'>'+
-        '<span class="ch-num">'+ch.id+'</span><span class="ch-label">'+ch.navTitle+'</span></a>';
+        '<span class="ch-num">'+ch.id+'</span><span class="ch-label">'+(zh?ch.zhNavTitle:ch.navTitle)+'</span></a>';
     });
     html += '<a href="'+languageHref()+'" class="language-link">'+
       '<span class="ch-num">'+(isEnglishPage()?'中':'EN')+'</span>'+
-      '<span class="ch-label">'+(isEnglishPage()?'中文':'English')+'</span></a>';
+      '<span class="ch-label">'+(isEnglishPage()?'中文':'英文版')+'</span></a>';
     nav.innerHTML = html;
   }
 
@@ -101,7 +103,9 @@
 
   function updateCompleteButton(){
     var btn = document.getElementById('mark-complete');
-    if(btn) btn.textContent = completed.has(currentCh) ? '✅ Completed (Click to undo)' : '✓ Mark Complete';
+    if(btn) btn.textContent = completed.has(currentCh)
+      ? (isEnglishPage() ? '✅ Completed (Click to undo)' : '✅ 已完成（点击撤销）')
+      : (isEnglishPage() ? '✓ Mark Complete' : '✓ 标记完成');
   }
 
   function renderHomeChapterList(){
@@ -113,8 +117,8 @@
       var isDone = done.has(ch.id);
       return '<a href="'+ch.file+'" class="chapter-item'+(isDone?' completed':'')+'">'+
         '<span class="ch-num-big">'+(isDone?'✓':ch.id)+'</span>'+
-        '<span class="ch-info"><h4>Chapter '+ch.id+' '+ch.title+'</h4><p>'+ch.desc+'</p></span>'+
-        '<span class="ch-meta">'+ch.sections+' sections</span></a>';
+        '<span class="ch-info"><h4>'+(isEnglishPage()?'Chapter ':'第 ')+ch.id+(isEnglishPage()?' ':' 章 ')+ch.title+'</h4><p>'+ch.desc+'</p></span>'+
+        '<span class="ch-meta">'+ch.sections+(isEnglishPage()?' sections':' 小节')+'</span></a>';
     }).join('');
   }
 
@@ -148,7 +152,9 @@
     var icon = document.getElementById('theme-icon');
     var label = document.getElementById('theme-label');
     if(icon) icon.textContent = theme==='dark'?'☀️':'🌙';
-    if(label) label.textContent = theme==='dark'?'Light Mode':'Dark Mode';
+    if(label) label.textContent = theme==='dark'
+      ? (isEnglishPage()?'Light Mode':'浅色模式')
+      : (isEnglishPage()?'Dark Mode':'深色模式');
   }
   function initTheme(){
     var t = getTheme();
@@ -181,13 +187,13 @@
     var correctAns = exEl.getAttribute('data-answer');
     var explain = exEl.getAttribute('data-explain')||'';
     var selected = exEl.querySelector('input[name="'+groupName+'"]:checked');
-    if(!selected){ fb.className='feedback show wrong'; fb.innerHTML='Please select an option first'; return; }
+    if(!selected){ fb.className='feedback show wrong'; fb.innerHTML=isEnglishPage()?'Please select an option first':'请先选择一个选项'; return; }
     if(selected.value===correctAns){
       fb.className='feedback show correct';
-      fb.innerHTML='✅ Correct! '+explain;
+      fb.innerHTML=(isEnglishPage()?'✅ Correct! ':'✅ 答对了。')+explain;
     } else {
       fb.className='feedback show wrong';
-      fb.innerHTML='❌ Incorrect. '+explain;
+      fb.innerHTML=(isEnglishPage()?'❌ Incorrect. ':'❌ 不对。')+explain;
     }
   }
 
@@ -195,7 +201,7 @@
     var exEl = btn.closest('.exercise');
     var fb = exEl.querySelector('.feedback');
     fb.className='feedback show hint';
-    fb.innerHTML='💡 <strong>Hint:</strong>'+exEl.getAttribute('data-explain');
+    fb.innerHTML=(isEnglishPage()?'💡 <strong>Hint:</strong>':'💡 <strong>提示：</strong>')+exEl.getAttribute('data-explain');
   }
 
   // ---- Back to top ----
@@ -291,21 +297,21 @@
     function buildToc(className, title, compact){
       var toc = document.createElement('nav');
       toc.className = className;
-      toc.setAttribute('aria-label', 'Chapter sections');
+      toc.setAttribute('aria-label', isEnglishPage() ? 'Chapter sections' : '章节目录');
       toc.innerHTML = '<h4>'+title+'</h4><ol>' + renderTocItems(compact) + '</ol>';
       return toc;
     }
 
     document.body.classList.add('has-page-toc');
 
-    var inlineToc = buildToc('toc toc-inline', '📑 Table of Contents', false);
+    var inlineToc = buildToc('toc toc-inline', isEnglishPage() ? '📑 Table of Contents' : '📑 本章目录', false);
     var subtitle = chapter.querySelector('.reading-time');
     if(subtitle) subtitle.after(inlineToc);
 
     var sideToc = null;
     var main = document.querySelector('.main');
     if(currentCh >= 1 && main){
-      sideToc = buildToc('chapter-page-toc', 'On This Page', true);
+      sideToc = buildToc('chapter-page-toc', isEnglishPage() ? 'On This Page' : '本页内容', true);
       main.appendChild(sideToc);
     }
 

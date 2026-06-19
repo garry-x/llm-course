@@ -121,7 +121,7 @@ git clone https://github.com/garry-x/llm-course.git && cd llm-course
 
 Open the printed local URL, usually `http://127.0.0.1:8080`. The server may listen on `0.0.0.0` so other devices on the LAN can connect, but `0.0.0.0` itself is not the browser URL.
 
-The default site entry now opens the standalone Chinese course at [zh/index.html](zh/index.html). The English homepage remains available at [en.html](en.html), and every homepage/chapter page links to its counterpart language.
+The default site entry is the Chinese homepage at [index.html](index.html). The English homepage is [en.html](en.html), and every homepage/chapter page links to its counterpart language.
 
 ### Running Assignment Tests
 
@@ -189,7 +189,7 @@ The table below is for establishing a technology map. Please open and read the o
 
 ```
 llm-course/
-├── index.html                # Default Chinese entry redirect
+├── index.html                # Default Chinese course homepage
 ├── en.html                   # English course homepage and chapter directory
 ├── zh/                       # Standalone Chinese homepage and 11 chapter pages
 ├── css/style.css             # Warm editorial style, dark/light dual theme

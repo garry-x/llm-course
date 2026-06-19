@@ -79,6 +79,22 @@
   }
 
   // ---- Sidebar rendering ----
+  function renderLanguageSwitch(){
+    var header = document.querySelector('.sidebar-header');
+    if(!header) return;
+    var existing = header.querySelector('.language-switch');
+    if(existing) existing.remove();
+    var zh = !isEnglishPage();
+    var currentHref = homeHref();
+    var otherHref = languageHref();
+    var html = '<div class="language-switch" aria-label="Language">';
+    html += zh
+      ? '<span class="active" aria-current="true">中文</span><a href="'+otherHref+'">EN</a>'
+      : '<a href="'+otherHref+'">中文</a><span class="active" aria-current="true">EN</span>';
+    html += '</div>';
+    header.insertAdjacentHTML('beforeend', html);
+  }
+
   function renderSidebar(){
     var nav = document.getElementById('sidebar-nav');
     if(!nav) return;
@@ -92,9 +108,6 @@
         (ch.id===currentCh?' aria-current="page"':'')+'>'+
         '<span class="ch-num">'+ch.id+'</span><span class="ch-label">'+(zh?ch.zhNavTitle:ch.navTitle)+'</span></a>';
     });
-    html += '<a href="'+languageHref()+'" class="language-link">'+
-      '<span class="ch-num">'+(isEnglishPage()?'中':'EN')+'</span>'+
-      '<span class="ch-label">'+(isEnglishPage()?'中文':'英文版')+'</span></a>';
     nav.innerHTML = html;
   }
 
@@ -419,6 +432,7 @@
     initTheme();
     initFontSize();
     initHomeLinks();
+    renderLanguageSwitch();
     renderSidebar();
     renderHomeChapterList();
     updateCompleteButton();

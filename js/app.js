@@ -39,12 +39,26 @@
   var completed = new Set(safeGet('llm-done', []));
   var currentCh = parseInt(document.body.getAttribute('data-ch')||'0');
 
+  function isEnglishPage(){
+    return (document.documentElement.getAttribute('lang') || '').toLowerCase().indexOf('en') === 0;
+  }
+
   function homeHref(){
+    var explicitHome = document.body.getAttribute('data-home-href');
+    if(explicitHome) return explicitHome;
+    if(isEnglishPage()) return currentCh === 0 ? 'en.html' : '../en.html';
     return currentCh === 0 ? 'index.html' : '../index.html';
   }
 
   function chapterHref(ch){
     return currentCh === 0 ? 'chapters/' + ch.file : ch.file;
+  }
+
+  function languageHref(){
+    if(isEnglishPage()){
+      return currentCh === 0 ? 'zh/index.html' : '../zh/chapters/' + CHAPTERS[currentCh - 1].file;
+    }
+    return currentCh === 0 ? '../en.html' : '../../chapters/' + CHAPTERS[currentCh - 1].file;
   }
 
   function chaptersWithHref(){
@@ -72,6 +86,9 @@
         (ch.id===currentCh?' aria-current="page"':'')+'>'+
         '<span class="ch-num">'+ch.id+'</span><span class="ch-label">'+ch.navTitle+'</span></a>';
     });
+    html += '<a href="'+languageHref()+'" class="language-link">'+
+      '<span class="ch-num">'+(isEnglishPage()?'中':'EN')+'</span>'+
+      '<span class="ch-label">'+(isEnglishPage()?'中文':'English')+'</span></a>';
     nav.innerHTML = html;
   }
 

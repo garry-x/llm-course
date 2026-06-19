@@ -29,9 +29,11 @@
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
-  </div><section class="card">
-  <h3>如何学习本章：将 Block 视为 Attention + FFN + 残差</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>给初学者的关键提示：</strong>Transformer Block 并不是新的魔法；它只是把注意力层、前馈网络、归一化和残差连接组合在一起。mHC 是一个前沿的扩展；在初学时，只需知道它试图改进残差路径的稳定性。</div></div>
+  </div>
+</article>
+</main><section class="card">
+  <h3>学习本章的思路：将 Block 视为 Attention + FFN + 残差</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>给初学者的关键提示：</strong>Transformer Block 并不是全新的结构，它只是把注意力层、前馈网络、归一化和残差连接组合在一起。mHC 是一种较新的扩展；初学时只需知道它试图改进残差路径的稳定性。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第 3–4 章的注意力输出、PyTorch Module、残差加法。</li>
     <li><strong>学习目标：</strong>解释 Transformer Block 的残差路径、归一化放置位置、FFN/SwiGLU 的容量作用、资源预算，以及为什么 Pre-Norm 能稳定深层训练。</li>
@@ -39,8 +41,8 @@
     <li><strong>完成标准：</strong>你能解释为什么 Block 的输入和输出都保持形状 <code>[batch, seq, d_model]</code>。</li>
     <li><strong>练习产出：</strong>提交 Block 实现、梯度检查、归一化消融实验、以及 FFN 参数量、FLOPs 和激活内存的分析；配套作业请见 <a href="../../assignments/ch05_block/">assignments/ch05_block/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>前置技能：</strong>PyTorch Module、残差加法、矩阵乘法、激活函数、LayerNorm/RMSNorm 统计量、反向传播检查。<br><strong>本章内化目标：</strong>Pre-Norm 稳定性要追溯到梯度路径；FFN/SwiGLU 要追溯到矩阵参数和激活门控；mHC 要追溯到残差连接如何在约束下混合。<br><strong>验证信号：</strong>你能解释 Transformer block 的前向传播、参数量、FLOPs 和梯度路径，并能把一个 norm 或 FFN 的实现错误追溯到后续 Ch06 GPT 组装失败。</div>
-  <p class="system-role"><strong>本章定位：</strong>本章将注意力、FFN、归一化和残差组织成可堆叠的 block。它是 Ch06 GPT 组装的直接构建模块，也是 Ch07 训练稳定性、Ch10 内核融合和模型可解释性分析的共享依赖。</p>
+  <div class="dependency-note"><strong>前置技能：</strong>PyTorch Module、残差加法、矩阵乘法、激活函数、LayerNorm/RMSNorm 统计量、反向传播检查。<br><strong>本章内化目标：</strong>Pre-Norm 稳定性要追溯到梯度路径；FFN/SwiGLU 要追溯到矩阵参数和激活门控；mHC 要追溯到残差连接如何在约束下混合。<br><strong>验证信号：</strong>你能解释 Transformer block 的前向传播、参数量、FLOPs 和梯度路径，并且能把 norm 或 FFN 的实现错误与后续 Ch06 GPT 组装失败联系起来。</div>
+  <p class="system-role"><strong>本章定位：</strong>本章将注意力、FFN、归一化和残差组合成可堆叠的 block。它是 Ch06 GPT 组装的直接构建模块，也是 Ch07 训练稳定性、Ch10 内核融合和模型可解释性分析共同依赖的基础。</p>
   <div class="foundation-map">
     <h4>学习者知识图谱：学习前需知 / 本章教授的内容 / 后续阅读</h4>
     <div class="foundation-graph" role="img" aria-label="第5章知识图谱：学习本章前，理解残差、归一化、FFN和梯度路径；本章学习Transformer block；之后阅读归一化变体、FFN变体和内核融合。">
@@ -69,18 +71,18 @@
       <table>
         <tr><th>学习前需知</th><th>本章将阐明</th><th>扩展阅读材料 / 知识点</th></tr>
         <tr><td>残差保持形状不变</td><td>强调 block 的输入和输出都保持 <code>[B,T,D]</code>；attention、FFN 和 mHC 都必须回到相同的残差通道。</td><td><strong>材料：</strong>DeepNorm、ReZero、残差缩放。<br><strong>知识点：</strong>深层 Transformer 稳定性、残差缩放、mHC。</td></tr>
-        <tr><td>归一化统计量</td><td>区分 LayerNorm/RMSNorm 沿特征维度归一化；解释为什么 Pre-Norm 保护深层梯度。</td><td><strong>材料：</strong>LayerNorm、RMSNorm、ScaleNorm、Sandwich Norm。<br><strong>知识点：</strong>Pre-Norm/Post-Norm、训练曲线差异。</td></tr>
-        <tr><td>FFN / SwiGLU</td><td>逐项计算逐 token 的扩展、门控、激活和投影参数量。</td><td><strong>材料：</strong>GLU 变体、SwiGLU、MoE 专家 FFN。<br><strong>知识点：</strong>门控激活、融合 SwiGLU 内核、参数/FLOPs 清单。</td></tr>
-        <tr><td>梯度路径</td><td>利用残差主路径、归一化位置和激活饱和来解释 loss 尖峰、梯度爆炸/消失以及梯度裁剪。</td><td><strong>材料：</strong>激活检查点、梯度裁剪实践报告。<br><strong>知识点：</strong>loss 尖峰诊断、训练稳定性报告。</td></tr>
+        <tr><td>归一化统计量</td><td>区分 LayerNorm 和 RMSNorm 沿特征维度归一化的方式；解释 Pre-Norm 为何能保护深层梯度。</td><td><strong>材料：</strong>LayerNorm、RMSNorm、ScaleNorm、Sandwich Norm。<br><strong>知识点：</strong>Pre-Norm/Post-Norm、训练曲线差异。</td></tr>
+        <tr><td>FFN / SwiGLU</td><td>逐项计算每个 token 的扩展、门控、激活和投影参数量。</td><td><strong>材料：</strong>GLU 变体、SwiGLU、MoE 专家 FFN。<br><strong>知识点：</strong>门控激活、融合 SwiGLU 内核、参数/FLOPs 清单。</td></tr>
+        <tr><td>梯度路径</td><td>通过残差主路径、归一化位置和激活饱和来解释 loss 尖峰、梯度爆炸/消失以及梯度裁剪。</td><td><strong>材料：</strong>激活检查点、梯度裁剪实践报告。<br><strong>知识点：</strong>loss 尖峰诊断、训练稳定性报告。</td></tr>
       </table>
     </div>
-    <p><strong>本章覆盖范围：</strong>本章已经涵盖 block 可堆叠性、Pre-Norm、RMSNorm、SwiGLU、残差和梯度路径；扩展阅读可以继续学习 DeepNorm、Sandwich Norm、GLU 家族和融合 RMSNorm/SwiGLU，但不需要额外的基础章节。</p>
+    <p><strong>本章覆盖范围：</strong>本章涵盖了 block 可堆叠性、Pre-Norm、RMSNorm、SwiGLU、残差和梯度路径；扩展阅读可继续学习 DeepNorm、Sandwich Norm、GLU 家族和融合 RMSNorm/SwiGLU，但不需要额外的基础章节。</p>
   </div>
 </section><!-- ================================================================ -->
 <!-- 5.1 Decoder-only Overview -->
 <!-- ================================================================ --><section class="card" id="s5-1">
   <h3>5.1 仅解码器架构概述——Transformer 块作为主要可复用单元</h3>
-  <p>许多主流自回归大语言模型（如 GPT、Llama 和 DeepSeek 系列中的语言模型）采用 <strong>仅解码器</strong>（decoder-only）架构：没有独立的编码器，模型主要由一堆 <strong>Transformer 块</strong> 堆叠而成。仅编码器、编码器-解码器和混合架构在 NLP 和多模态系统中仍然很重要；本章聚焦于仅解码器路线。每个块包含两个核心子层：</p>
+  <p>主流自回归大语言模型（如 GPT、Llama 和 DeepSeek 系列中的语言模型）采用 <strong>仅解码器</strong>（decoder-only）架构：没有独立的编码器，模型主要由一层层 <strong>Transformer 块</strong> 堆叠而成。仅编码器、编码器-解码器和混合架构在 NLP 和多模态系统中仍然很重要；本章聚焦于仅解码器路线。每个块包含两个核心子层：</p>
   <ul>
     <li><strong>自注意力层</strong>（Self-Attention Layer）—— 允许 token 之间交换信息（第 4 章已介绍）</li>
     <li><strong>前馈神经网络</strong>（Feed-Forward Neural Network, FFN）—— 对每个 token 独立执行非线性变换</li>
@@ -95,7 +97,7 @@
       \mathbf{x}'' &= \text{FFN}(\text{LayerNorm}(\mathbf{x}')) + \mathbf{x}'
       \end{aligned}" role="img"></div>
   </div>
-  <p>为什么需要 <strong>两个</strong> 不同的子层？注意力机制提供“<strong>信息检索</strong>”——每个 token 从整个序列中聚合信息。FFN 提供“<strong>信息处理</strong>”——每个 token 在接收信息后进行复杂的非线性变换。没有 FFN，模型将只是一个线性加权求和系统，表达能力极其有限。</p>
+  <p>这两个子层分工明确：注意力机制提供“<strong>信息检索</strong>”——每个 token 从整个序列中聚合信息；FFN 提供“<strong>信息处理</strong>”——每个 token 在接收信息后进行复杂的非线性变换。如果没有 FFN，模型就只是一个线性加权求和系统，表达能力极其有限。</p>
 
   <div class="svg-diagram flow-diagram">
     <svg viewBox="0 0 900 430" role="img" aria-label="Pre-norm Transformer block with attention, residual addition, feed-forward network, and output residual stream">
@@ -169,23 +171,23 @@
       <text class="block-t" x="260" y="386" text-anchor="middle">x' + FFN(Norm(x'))</text>
     </svg>
   </div>
-  <p>每个块的输出维度保持为 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span>，这使得模型可以堆叠很多层。然而，深度能否稳定训练还取决于归一化位置、初始化、残差缩放、优化器、学习率调度和数据规模等因素。</p>
+  <p>每个块的输出维度保持为 <span class="katex-inline" data-expr="d_{\text{model}}" aria-label="d_{\text{model}}" role="img"></span>，这允许模型堆叠很多层。但深度能否稳定训练，还取决于归一化位置、初始化、残差缩放、优化器、学习率调度和数据规模等因素。</p>
 </section><section class="card" id="s5-1a">
   <h3>5.1A 示例：Pre-Norm 与 Post-Norm 的梯度路径</h3>
-  <p>使用标量残差块来近似归一化位置的差异。设子层为 <code>f</code>，归一化为 <code>n</code>。Pre-Norm 写作 <code>y = x + f(n(x))</code>，Post-Norm 写作 <code>y = n(x + f(x))</code>。进行局部线性化后：</p>
+  <p>用标量残差块来近似归一化位置的影响。设子层为 <code>f</code>，归一化为 <code>n</code>。Pre-Norm 写作 <code>y = x + f(n(x))</code>，Post-Norm 写作 <code>y = n(x + f(x))</code>。局部线性化后得到：</p>
   <div class="math-box"><div class="label">局部梯度因子</div>
     <div class="katex" data-expr="\text{PreNorm: }\frac{dy}{dx}=1+f'(n(x))n'(x),\qquad \text{PostNorm: }\frac{dy}{dx}=n'(x+f(x))(1+f'(x))" aria-label="PreNorm dy/dx = 1 + f prime n prime; PostNorm dy/dx = n prime times (1 + f prime)" role="img"></div>
-  </div>  <p>给定一个三层玩具块：子层斜率分别为 <code>[0.2, -0.1, 0.3]</code>，归一化的局部斜率约为 <code>0.5</code>。Pre-Norm 中每一层的梯度因子为：</p>
+  </div>  <p>考虑一个三层玩具块：子层斜率分别为 <code>[0.2, -0.1, 0.3]</code>，归一化的局部斜率约为 <code>0.5</code>。Pre-Norm 中每一层的梯度因子为：</p>
   <div class="code-block" data-lang="text">
 Pre-Norm:  [1 + 0.2*0.5, 1 - 0.1*0.5, 1 + 0.3*0.5]
          = [1.10, 0.95, 1.15]
 product  = 1.20175</div>
-  <p>在 Post-Norm 中，归一化直接应用于残差输出之后：</p>
+  <p>Post-Norm 中，归一化直接应用在残差输出之后：</p>
   <div class="code-block" data-lang="text">
 Post-Norm: [0.5*(1 + 0.2), 0.5*(1 - 0.1), 0.5*(1 + 0.3)]
           = [0.60, 0.45, 0.65]
 product   = 0.1755</div>
-  <p>这个玩具示例解释了为什么 Pre-Norm 更有利于深层网络中的梯度传播：在残差路径中保留了一个显式的 <code>1</code>。然而，这并不足以保证无限深网络；真实 Transformer 的 Jacobian 矩阵是一个高维矩阵，还受到 attention、FFN、初始化、学习率、残差缩放以及优化器的影响。在 Ch05 作业中的 <code>residual_gradient_path_factors</code> 让学习者重新计算这个局部线性化模型。</p>
+  <p>这个例子说明 Pre-Norm 为什么更有利于深层网络中的梯度传播：它在残差路径中保留了一个显式的 <code>1</code>。不过，这并不保证无限深网络也能稳定训练；真实 Transformer 的 Jacobian 矩阵是高维的，还受 attention、FFN、初始化、学习率、残差缩放以及优化器的影响。Ch05 作业中的 <code>residual_gradient_path_factors</code> 让学习者重新计算这个局部线性化模型。</p>
 </section><!-- ================================================================ -->
 <!-- 编程练习 1：LayerNorm -->
 <!-- ================================================================ --><section class="card">
@@ -195,7 +197,7 @@ product   = 0.1755</div>
 <p class="diagram-caption">图 5-1: Transformer 块内部结构 (Pre-Norm + RMSNorm + SwiGLU)</p>
 </section><section class="card" id="s5-2">
   <h3>5.2 编程练习 1：实现 LayerNorm（不使用 nn.LayerNorm）</h3>
-  <p><strong>层归一化（Layer Normalization）</strong>是 Transformer 训练稳定性的基石。与 BatchNorm 不同，LayerNorm 沿<strong>特征维度</strong>进行归一化，不依赖于 batch size——这对可变长序列和自回归模型至关重要。</p>
+  <p><strong>层归一化（Layer Normalization）</strong>是 Transformer 训练稳定的基础。与 BatchNorm 不同，LayerNorm 沿<strong>特征维度</strong>归一化，不依赖 batch size——这对变长序列和自回归模型很重要。</p>
 
   <div class="math-box"><div class="label">公式 5.2 LayerNorm</div>
     <div class="katex" data-expr="\text{LayerNorm}(\mathbf{x}) = \gamma \odot \frac{\mathbf{x} - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta, \quad \mu = \frac{1}{d}\sum x_i, \quad \sigma^2 = \frac{1}{d}\sum (x_i - \mu)^2" aria-label="\text{LayerNorm}(\mathbf{x}) = \gamma \odot \frac{\mathbf{x} - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta, \quad \mu = \frac{1}{d}\sum x_i, \quad \sigma^2 = \frac{1}{d}\sum (x_i - \mu)^2" role="img"></div>
@@ -208,10 +210,10 @@ product   = 0.1755</div>
       <p><strong>要求：</strong></p>
       <ul>
         <li>可学习参数 <code>gamma</code>（尺度，初始化为全 1）和 <code>beta</code>（偏移，初始化为全 0）</li>
-        <li><code>eps=1e-6</code> 用于防止除零</li>
+        <li><code>eps=1e-6</code> 防止除零</li>
         <li>支持任意输入形状：在最后一维进行归一化</li>
         <li>使用 <code>unbiased=False</code> 计算方差</li>
-        <li>验证：输出应与 <code>nn.LayerNorm</code> 一致（随机输入，误差 &lt; 1e-5）</li>
+        <li>验证：随机输入下，输出与 <code>nn.LayerNorm</code> 的误差小于 1e-5</li>
       </ul>
       <pre># Expected usage
 ln = LayerNorm(dim=768)
@@ -256,7 +258,7 @@ ref.load_state_dict({'weight': ln.gamma, 'bias': ln.beta})
 y_ref = ref(x)
 print(f"Max error: {(y - y_ref).abs().max().item():.2e}")
 assert torch.allclose(y, y_ref, atol=1e-5)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>关于 var(unbiased=False) 的说明：</strong>LayerNorm 使用总体方差（除以 N 而非 N-1），这与统计学中的样本方差不同。使用 <code>unbiased=False</code> 可确保与 <code>nn.LayerNorm</code> 的实现一致。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>关于 var(unbiased=False)：</strong>LayerNorm 使用总体方差（除以 N 而非 N-1），与样本方差不同。设置 <code>unbiased=False</code> 可确保与 <code>nn.LayerNorm</code> 的实现一致。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
@@ -270,14 +272,14 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
   <div class="math-box"><div class="label">Post-Norm</div>
     <div class="katex" data-expr="\mathbf{x}' = \text{LayerNorm}(\text{Attention}(\mathbf{x}) + \mathbf{x})" aria-label="\mathbf{x}' = \text{LayerNorm}(\text{Attention}(\mathbf{x}) + \mathbf{x})" role="img"></div>
   </div>
-  <p>归一化发生在<strong>残差连接之后</strong>。这意味着残差分支的输出（Attention/FFN 的输出）会干扰残差流中原始信息的尺度。在深层网络中，这种干扰不断累积，导致梯度不稳定。</p>
+  <p>归一化发生在<strong>残差连接之后</strong>。残差分支的输出（Attention/FFN 的输出）会干扰残差流中原始信息的尺度。在深层网络中，这种干扰不断累积，导致梯度不稳定。</p>
 
   <h4>Pre-Norm（现代 LLM 标准）</h4>
   <p>Pre-Norm 将归一化放在子层的<strong>输入</strong>：</p>
   <div class="math-box"><div class="label">Pre-Norm</div>
     <div class="katex" data-expr="\mathbf{x}' = \text{Attention}(\text{LayerNorm}(\mathbf{x})) + \mathbf{x}" aria-label="\mathbf{x}' = \text{Attention}(\text{LayerNorm}(\mathbf{x})) + \mathbf{x}" role="img"></div>
   </div>
-  <p>关键优势：<strong>残差流不被归一化</strong>。信息可以沿着残差路径跨层传播，较少受到归一化层的直接压制，梯度路径也更短、更直接。Pre-Norm 通常更容易训练深层网络；实际可达到的深度仍然依赖于初始化、优化器、残差缩放、数据和实现细节。</p>
+  <p>关键优势：<strong>残差流不被归一化</strong>。信息可以沿着残差路径跨层传播，较少受到归一化层的直接压制，梯度路径也更短、更直接。Pre-Norm 通常更容易训练深层网络；实际可达到的深度取决于初始化、优化器、残差缩放、数据和实现细节。</p>
 
   <h4>训练动态分析</h4>
   <p>更形式化地，考虑一个 L 层 Pre-Norm Transformer 的残差流：</p>
@@ -298,12 +300,12 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
     </table>
   </div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键结论：</strong>Pre-Norm 的成功可以归因于“<strong>归一化隔离</strong>”——每个子层的输入被独立归一化，而残差分支保留了一条未经归一化的信息通道。这有助于深层网络中的梯度传播，但它并不是任意深度和学习率下稳定性的保证。Post-Norm 将归一化放在残差连接之后，通常需要更小心地处理初始化、warmup 和残差缩放。作业中的梯度因子函数对应了这种局部线性化解释。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键结论：</strong>Pre-Norm 的成功源于“<strong>归一化隔离</strong>”——每个子层的输入被独立归一化，而残差分支保留了一条未经归一化的信息通道。这有助于深层网络中的梯度传播，但它并不是任意深度和学习率下稳定性的保证。Post-Norm 将归一化放在残差连接之后，通常需要更小心地处理初始化、warmup 和残差缩放。作业中的梯度因子函数对应了这种局部线性化解释。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 2：RMSNorm -->
 <!-- ================================================================ --><section class="card" id="s5-4">
   <h3>5.4 编程练习 2：实现 RMSNorm——Llama/DeepSeek 的选择</h3>
-  <p>RMSNorm (Zhang & Sennrich, 2019) 去掉了 LayerNorm 的均值中心化步骤，只保留 RMS 缩放。它基于一个简单的观察：<strong>均值中心化对训练质量影响很小</strong>，而节省的计算量（约 15%）却很显著。</p>
+  <p>RMSNorm (Zhang & Sennrich, 2019) 去掉了 LayerNorm 的均值中心化步骤，只保留 RMS 缩放。这是因为<strong>均值中心化对训练质量影响很小</strong>，而节省的计算量（约 15%）却很显著。</p>
 
   <div class="math-box"><div class="label">公式 5.3 RMSNorm</div>    <div class="katex" data-expr="\text{RMSNorm}(\mathbf{x}) = \gamma \odot \frac{\mathbf{x}}{\sqrt{\text{RMS}(\mathbf{x})^2 + \epsilon}}, \quad \text{RMS}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2}" aria-label="\text{RMSNorm}(\mathbf{x}) = \gamma \odot \frac{\mathbf{x}}{\sqrt{\text{RMS}(\mathbf{x})^2 + \epsilon}}, \quad \text{RMS}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2}" role="img"></div>
   </div>
@@ -314,12 +316,12 @@ assert torch.allclose(y, y_ref, atol=1e-5)</div>
     <div class="math-box"><div class="label">手动 RMS 计算</div>
       <div class="katex" data-expr="\text{RMS}(x)=\sqrt{(1^2+2^2+2^2+3^2)/4}=\sqrt{18/4}\approx 2.121" aria-label="\text{RMS}(x)=\sqrt{(1^2+2^2+2^2+3^2)/4}=\sqrt{18/4}\approx 2.121" role="img"></div>
     </div>
-    <p>因此，输出近似为 <code>[0.471, 0.943, 0.943, 1.414]</code>。它的 RMS 等于 1，但均值仍然约为 <code>0.883</code>，而不是 0。LayerNorm 会先减去均值 <code>2.0</code> 再除以标准差；RMSNorm 则保持原始向量的方向，只将长度缩放到稳定的幅度。这就是为什么课后测验会检查输出的 RMS 是否接近 1，同时确认输出均值不一定为 0。</p>
+    <p>因此输出近似为 <code>[0.471, 0.943, 0.943, 1.414]</code>。它的 RMS 约等于 1，但均值仍然约为 <code>0.883</code>，并非 0。LayerNorm 会先减去均值 <code>2.0</code> 再除以标准差；RMSNorm 则保持向量方向不变，只缩放长度到稳定幅度。所以课后测验会要求检查输出的 RMS 是否接近 1，并确认输出均值不一定为 0。</p>
   </div>
   <div class="math-box"><div class="label">RMSNorm 输入梯度</div>
     <div class="katex" data-expr="r=\sqrt{\frac{1}{d}\sum_i x_i^2+\epsilon},\quad g=\frac{\partial L}{\partial y}\odot\gamma,\quad \frac{\partial L}{\partial x}= \frac{g}{r}-x\frac{\operatorname{mean}(g\odot x)}{r^3}" aria-label="r=\sqrt{\frac{1}{d}\sum_i x_i^2+\epsilon},\quad g=\frac{\partial L}{\partial y}\odot\gamma,\quad \frac{\partial L}{\partial x}= \frac{g}{r}-x\frac{\operatorname{mean}(g\odot x)}{r^3}" role="img"></div>
   </div>
-  <p>第二项是 RMSNorm 反向传播中最容易遗漏的耦合项：每个特征都会影响共享的 RMS 分母，因此某一维度的梯度不仅取决于它自身的上游梯度。Ch05 作业中的 <code>rms_norm_input_gradient</code> 要求学习者将此公式写成张量运算，并与 PyTorch autograd 对齐。</p>
+  <p>第二项是 RMSNorm 反向传播中容易遗漏的耦合项：每个特征都会影响共享的 RMS 分母，因此某一维度的梯度不仅受自身上游梯度影响。Ch05 作业中的 <code>rms_norm_input_gradient</code> 要求将此公式写成张量运算，并与 PyTorch autograd 对齐。</p>
 
   <div class="coding-exercise">
     <h4>🖥️ 练习 2：RMSNorm 模块</h4>
@@ -377,16 +379,16 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
 <!-- 5.5 理论：FFN 作为键值记忆 -->
 <!-- ================================================================ --><section class="card" id="s5-5">
   <h3>5.5 理论：FFN 作为键值记忆——模型如何存储知识</h3>
-  <p>FFN 不仅仅是“非线性变换”。从可解释性角度，Geva 等人（2021）指出 FFN 可以像<strong>一个大规模键值记忆</strong>那样运作。</p>
+  <p>FFN 不只是“非线性变换”。从可解释性的角度看，Geva 等人（2021）指出 FFN 可以像<strong>一个大规模键值记忆</strong>那样运作。</p>
 
   <h4>重温 FFN</h4>
   <p>标准 FFN 的计算方式：</p>
   <div class="math-box"><div class="label">公式 5.4 FFN 重写为键值存储</div>
     <div class="katex" data-expr="\text{FFN}(\mathbf{x}) = \sum_{i=1}^{d_{\text{ff}}} \underbrace{\text{ReLU}(\mathbf{W}_1^{(i)} \cdot \mathbf{x} + b_1^{(i)})}_{\text{Gating: matches key } i?} \cdot \underbrace{\mathbf{W}_2^{(\cdot,i)}}_{\text{Value vector } i}" aria-label="\text{FFN}(\mathbf{x}) = \sum_{i=1}^{d_{\text{ff}}} \underbrace{\text{ReLU}(\mathbf{W}_1^{(i)} \cdot \mathbf{x} + b_1^{(i)})}_{\text{门控：匹配键 } i?} \cdot \underbrace{\mathbf{W}_2^{(\cdot,i)}}_{\text{值向量 } i}" role="img"></div>
   </div>
-  <p>这个求和中的每一项都揭示了一个“键值对”：</p>
+  <p>这个求和中的每一项都对应一个“键值对”：</p>
   <ul>
-    <li><strong>键：</strong> <span class="katex-inline" data-expr="\mathbf{W}_1^{(i)} \cdot \mathbf{x} + b_1^{(i)}" aria-label="\mathbf{W}_1^{(i)} \cdot \mathbf{x} + b_1^{(i)}" role="img"></span> 检测输入是否匹配某个模式。ReLU 门控决定是否激活——只有匹配的键才产生非零输出</li>
+    <li><strong>键：</strong> <span class="katex-inline" data-expr="\mathbf{W}_1^{(i)} \cdot \mathbf{x} + b_1^{(i)}" aria-label="\mathbf{W}_1^{(i)} \cdot \mathbf{x} + b_1^{(i)}" role="img"></span> 检测输入是否匹配某个模式。ReLU 门控决定是否激活该键：只有匹配的键才产生非零输出</li>
     <li><strong>值：</strong> <span class="katex-inline" data-expr="\mathbf{W}_2^{(\cdot,i)} \in \mathbb{R}^{d}" aria-label="\mathbf{W}_2^{(\cdot,i)} \in \mathbb{R}^{d}" role="img"></span> 是对应于键 i 的输出“知识片段”</li>
     <li><strong>存储容量：</strong> <span class="katex-inline" data-expr="d_{\text{ff}}" aria-label="d_{\text{ff}}" role="img"></span> 是键值对的数量。GPT-2 small 有 3072 个键值对，GPT-3 175B 每层有 4 × 12288 = 49152 个</li>
   </ul>
@@ -394,19 +396,19 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
   <h4>知识的分层分布</h4>
   <p>不同层的 FFN 存储不同类型的知识：</p>
   <ul>
-    <li><strong>低层（1-4）：</strong> 句法模式——检测词性标注、短语边界、浅层句法结构</li>
-    <li><strong>中层（5-8）：</strong> 事实知识——“巴黎是法国的首都”“水在 100°C 沸腾”</li>
-    <li><strong>高层（9-12）：</strong> 长距离依赖与推理——代词消解、多步推理模式</li>
+    <li><strong>低层（1-4）：</strong> 句法模式——识别词性标注、短语边界等浅层句法结构</li>
+    <li><strong>中层（5-8）：</strong> 事实知识——例如“巴黎是法国的首都”“水在 100°C 沸腾”</li>
+    <li><strong>高层（9-12）：</strong> 长距离依赖与推理——例如代词消解、多步推理模式</li>
   </ul>
 
   <h4>对模型编辑的启示</h4>
-  <p>这一视角直接启发了<strong>模型编辑</strong>方法。ROME（Meng 等人，2022）利用 FFN 的键值存储特性，定位存储特定事实的 FFN 神经元，直接修改它们的值向量来更新模型中的事实知识——无需重新训练。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>这意味着：</strong> 模型的知识主要集中在 FFN 权重中。注意力机制扮演“检索协调员”的角色——决定从哪些键值对中检索信息。这也解释了为什么增加 FFN 维度（更多键值对）比增加注意力维度更能提升模型容量。</div></div>
+  <p>这种视角直接启发了<strong>模型编辑</strong>方法。ROME（Meng 等人，2022）利用 FFN 的键值存储特性，找到存储特定事实的 FFN 神经元，直接修改它们的值向量来更新模型中的事实知识——无需重新训练。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>这意味着：</strong> 模型的知识主要集中在 FFN 权重中。注意力机制充当“检索协调员”——决定从哪些键值对中检索信息。这也解释了为什么增加 FFN 维度（更多键值对）比增加注意力维度更能提升模型容量。</div></div>
 </section><!-- ================================================================ -->
 <!-- 5.5A 可解释性机制方法 -->
 <!-- ================================================================ --><section class="card" id="s5-5a">
   <h3>5.5A 机制可解释性：从“看起来相关”到“改变它就能改变输出”</h3>
-  <p>把 FFN 看作键值记忆后，一个自然的问题就是：我们如何确定某个特定的 neuron、head、layer 或 residual stream 方向是否真的参与到了某个具体行为中？本课程区分三类问题：表示中是否包含该信息、模型是否使用了该信息、以及改变该信息是否真的会改变输出。</p>
+  <p>把 FFN 看作键值记忆后，自然会问：如何确定某个特定的 neuron、head、layer 或 residual stream 方向是否真正参与了某个具体行为？本课程区分三类问题：表示中是否包含该信息，模型是否使用了该信息，以及改变该信息是否真的会改变输出。</p>
 
   <h4>四种常用方法</h4>
   <div class="table-wrap">
@@ -420,28 +422,28 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
   </div>
 
   <h4>一个最小案例：主谓一致</h4>
-  <p>给定提示：<code>The keys to the cabinet ...</code>，模型应该更倾向于 <code>are</code> 而非 <code>is</code>。可解释性实验可以设计如下：</p>
+  <p>给定提示：<code>The keys to the cabinet ...</code>，模型应该更倾向于 <code>are</code> 而非 <code>is</code>。可解释性实验可以这样设计：</p>
   <ol>
     <li><strong>构建对比：</strong>将主语从复数 <code>keys</code> 改为单数 <code>key</code>，保持中间短语 <code>to the cabinet</code> 不变。</li>
     <li><strong>定位层和位置：</strong>比较主语 token、介词短语 token 和预测位置的 residual stream。</li>
     <li><strong>执行 patching：</strong>将复数样本中特定层和位置的 activation 替换到单数样本中，观察 <code>are</code> 和 <code>is</code> 之间的 logit 差是否恢复。</li>
-    <li><strong>然后执行 ablation：</strong>掩码候选的 head 或 FFN neuron，观察一致性的 logit 差是否下降。</li>
+    <li><strong>执行 ablation：</strong>掩码候选的 head 或 FFN neuron，观察一致性的 logit 差是否下降。</li>
   </ol>
 
   <h4>结论的边界</h4>
-  <p>高的 probe 准确率只能说明 hidden state 中包含线性可读的信息。如果 patching 恢复了输出，那么这个 activation 对这一组 prompt 的行为具有因果效应。如果 ablation 使性能下降，则该组件对当前任务很重要。这些结论仍然依赖于 prompt 分布、层位置、替换方法和评估指标，因此不能推广到“模型的全部句法能力都在这个 head 里”。</p>
+  <p>高 probe 准确率只说明 hidden state 中包含线性可读的信息。如果 patching 恢复了输出，则该 activation 对这一组 prompt 的行为具有因果效应。如果 ablation 使性能下降，则该组件对当前任务很重要。这些结论依赖于 prompt 分布、层位置、替换方法和评估指标，因此不能推广为“模型的全部句法能力都在这个 head 里”。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>可解释性不是画热力图。严谨的做法是先定义一个行为度量（例如目标 logit 差），然后使用对比样本、patching 和 ablation 来确定哪些内部状态对该行为有影响。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>可解释性不是画热力图。严谨的做法是先定义一个行为度量（例如目标 logit 差），再用对比样本、patching 和 ablation 来确定哪些内部状态对该行为有影响。</div></div>
 </section><section class="card" id="s5-5b">
   <h3>5.5B 可解释性方法的谱系：从读取表征到行为干预</h3>
-  <p>机制可解释性并非单一技术，而是一套证据强度递增的方法。本课程的重点是阐明每种方法回答什么问题、需要哪些控制、以及结论可以推到多远。一个有用的顺序是：先观察表征，再进行归因，然后做因果干预，最后才讨论引导或模型编辑。</p>
+  <p>机制可解释性包含一系列证据强度递增的方法。本课程的重点是阐明每种方法回答什么问题、需要哪些控制、以及结论可以推到多远。推荐的顺序是：先观察表征，再做归因，然后进行因果干预，最后再讨论引导或模型编辑。</p>
 
   <h4>1. 方法层级与结论强度</h4>
   <div class="table-wrap">
     <table>
       <tr><th>层级</th><th>代表性方法</th><th>所需输入</th><th>支持的结论</th><th>主要风险</th></tr>
-      <tr><td>表征读取</td><td>探针（probing）、logit lens、tuned lens</td><td>隐状态、标签或目标 token</td><td>能否从某一层的表征中读出句法、事实或下一个 token 的倾向</td><td>可读性并不等于模型实际使用了该表征</td></tr>
-      <tr><td>局部归因</td><td>Logit 归因、路径归因、激活范数</td><td>组件的输出、unembedding、目标 logit 差</td><td>哪些组件直接推高/推低目标 token</td><td>忽略后续层的重写和非线性交互</td></tr>
+      <tr><td>表征读取</td><td>探针（probing）、logit lens、tuned lens</td><td>隐状态、标签或目标 token</td><td>能否从某一层的表征中读出句法、事实或下一个 token 的倾向</td><td>可读性不等于模型实际使用了该表征</td></tr>
+      <tr><td>局部归因</td><td>Logit 归因、路径归因、激活范数</td><td>组件的输出、unembedding、目标 logit 差</td><td>哪些组件直接推高/推低目标 token</td><td>忽略后续层的重写以及非线性交互</td></tr>
       <tr><td>因果干预</td><td>激活修补（activation patching）、因果追踪、头/神经元消融</td><td>干净/损坏提示、替换位置、行为指标</td><td>某一激活是否足以恢复或破坏目标行为</td><td>分布外干预，替换方法可能产生虚假效应</td></tr>
       <tr><td>特征分解</td><td>稀疏自编码器、字典特征</td><td>大量激活样本、稀疏重构目标</td><td>将叠加中的混合方向解开为更可解释的特征</td><td>特征命名是主观的，稀疏特征并不自动等于真实机制</td></tr>
       <tr><td>行为干预</td><td>激活引导、模型编辑、adapter 引导</td><td>方向向量、编辑位置、干预前后行为评估</td><td>某一方向或权重变化可以稳定地改变一类输出</td><td>副作用、泛化失败、事实更新与安全边界之间的冲突</td></tr>
@@ -449,38 +451,38 @@ print(f"sqrt(dim) * gamma_norm: {(768 ** 0.5) * rms.gamma.norm().item():.4f}")</
   </div>
 
   <h4>2. Logit lens 观察“中间层已经接近哪个答案”</h4>
-  <p>Logit lens 方法直接将某一层的残差流乘以最终的 unembedding 矩阵，观察中间表征已经偏好哪些 token。如果在国家-首都问题上，第 8 层已经将 <code>Paris</code> 排在前几位，说明中间表征已经包含了一些答案倾向；如果后续层将其改为另一个 token，说明后续层仍在重写或整合信息。</p>
+  <p>Logit lens 方法直接将某一层的残差流乘以最终的 unembedding 矩阵，观察中间表征偏向哪些 token。如果在国家-首都问题上，第 8 层已经把 <code>Paris</code> 排在前几位，说明中间表征已经包含了一些答案倾向；如果后续层将其改为另一个 token，说明后续层仍在重写或整合信息。</p>
   <div class="math-box"><div class="label">Logit lens</div>
     <span class="katex-block" data-expr="\ell^{(l)} = h^{(l)} W_U,\qquad \Delta^{(l)} = \ell^{(l)}_{\text{target}} - \ell^{(l)}_{\text{foil}}" aria-label="ell l 等于 h l 乘以 W_U，Delta l 等于目标 logit 减去对比 logit" role="img"></span>
   </div>
-  <p>这里，<code>target</code> 可以是正确 token，<code>foil</code> 是对比 token。例如，在主谓一致中，使用 <code>are</code> 和 <code>is</code> 之间的 logit 差。这个指标比“看 top-1 token”更稳定，因为它直接对应研究问题。</p>
+  <p>这里，<code>target</code> 是正确 token，<code>foil</code> 是对比 token。例如，在主谓一致任务中，使用 <code>are</code> 和 <code>is</code> 之间的 logit 差。这个指标比只看 top-1 token 更稳定，它直接对应研究问题。</p>
 
   <h4>3. 因果追踪需要干净/损坏的对比</h4>
-  <p>可解释性实验应避免只看单个 prompt。一个更稳健的设置是构造一对输入：触发正确行为的干净 prompt，以及破坏某些关键信息的损坏 prompt。然后将干净运行的某一层某个位置的激活修补到损坏运行中，观察目标行为是否恢复。</p>
+  <p>可解释性实验不应只看单个 prompt。更稳健的做法是构造一对输入：触发正确行为的干净 prompt，以及破坏关键信息的损坏 prompt。然后将干净运行的某一层某个位置的激活修补到损坏运行中，观察目标行为是否恢复。</p>
   <ol>    <li><strong>定义行为指标：</strong>例如 <code>logit(Paris) - logit(Rome)</code>，或 <code>logit(are) - logit(is)</code>。</li>
-    <li><strong>构建最小扰动：</strong>只改变国家名、主语数、实体名称或事实槽位；尽量保持其他 token 不变。</li>
+    <li><strong>构建最小扰动：</strong>只改变国家名、主语数、实体名称或事实槽位，尽量保持其他 token 不变。</li>
     <li><strong>扫描层和位置：</strong>分别修补残差流、注意力输出和 MLP 输出。</li>
-    <li><strong>报告恢复量：</strong>不要只说“有效果”，而要报告恢复了多少干净-损坏差距的比例。</li>
+    <li><strong>报告恢复量：</strong>不要说“有效果”，而要报告恢复了多少比例的干净-损坏差距。</li>
   </ol>
-  <p>如果修补某一层的 MLP 输出能恢复目标 logit 差，说明该激活对该 prompt 对的行为有因果效应；但这仍然不能证明所有相似事实都存储在同一位置，也不能证明编辑该位置没有副作用。</p>
+  <p>如果修补某一层的 MLP 输出能恢复目标 logit 差，说明该激活对该 prompt 对的行为有因果效应；但还不能证明所有相似事实都存储在同一位置，也不能证明编辑该位置没有副作用。</p>
 
   <h4>示例：从归因升级到修补的结论</h4>
-  <p>假设模型看到 <code>The capital of France is</code>，目标 token 是 <code>Paris</code>，对比 token 是 <code>Rome</code>。你发现第 10 层的 MLP 对 <code>Paris</code> 有很高的 logit 归因。这仅仅表明它朝着 <code>Paris</code> 的方向直接写入残差流。如果你进一步将第 10 层 MLP 从干净 prompt 的输出修补到损坏 prompt <code>The capital of Italy is</code>，并观察到 <code>Paris</code> 相对于 <code>Rome</code> 显著上升，只有那时你才能说该激活足以承载法国→巴黎的信息。如果对同一个 MLP 进行消融后，法国 prompt 仍能正确回答，则说明模型可能有冗余路径。</p>
+  <p>假设模型看到 <code>The capital of France is</code>，目标 token 是 <code>Paris</code>，对比 token 是 <code>Rome</code>。你发现第 10 层的 MLP 对 <code>Paris</code> 有很高的 logit 归因。这仅仅表明它朝着 <code>Paris</code> 的方向直接写入残差流。如果你进一步将第 10 层 MLP 从干净 prompt 的输出修补到损坏 prompt <code>The capital of Italy is</code>，并观察到 <code>Paris</code> 相对于 <code>Rome</code> 显著上升，这时才能说该激活足以承载法国→巴黎的信息。如果对同一个 MLP 进行消融后，法国 prompt 仍能正确回答，则说明模型可能有冗余路径。</p>
 
   <h4>4. 从解释到干预必须评估副作用</h4>
-  <p>激活引导和模型编辑很诱人，因为它们似乎能直接改变模型行为。但从工程角度看，必须同时评估目标成功率和副作用：</p>
+  <p>激活引导和模型编辑很有吸引力，它们似乎能直接改变模型行为。但从工程角度看，必须同时评估目标成功率和副作用：</p>
   <ul>
-    <li><strong>定位性（Locality）：</strong>编辑法国→巴黎是否会错误地影响意大利、德国或其他事实？</li>
+    <li><strong>定位性（Locality）：</strong>编辑法国→巴黎是否会影响到意大利、德国等其他事实？</li>
     <li><strong>泛化性（Generalization）：</strong>在不同的措辞、语言或上下文长度下是否仍然有效？</li>
-    <li><strong>能力保持（Capability retention）：</strong>数学、代码、长上下文和拒绝边界是否下降？</li>
+    <li><strong>能力保持（Capability retention）：</strong>数学、代码、长上下文以及拒绝边界是否下降？</li>
     <li><strong>回滚能力（Rollback capability）：</strong>干预是否可以版本化、比较和撤销？</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>可解释性的最终价值不是“命名神经元”，而是将模型行为分解为可检验的假设。你越接近干预和编辑，就越需要报告副作用、泛化性和回滚边界。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>可解释性的价值不在于“命名神经元”，而在于将模型行为分解为可检验的假设。你越接近干预和编辑，就越需要报告副作用、泛化性和回滚边界。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 3：SwiGLU -->
 <!-- ================================================================ --><section class="card" id="s5-6">
   <h3>5.6 编程练习 3：实现 FFN 和 SwiGLU 激活函数</h3>
-  <p>GPT-2 使用 GELU 激活的 FFN。许多现代仅解码器的大语言模型（如 Llama、Mistral 和 DeepSeek 系列）已转向 <strong>SwiGLU</strong> 或类似的 GLU 变体——一种通过三个权重矩阵实现选择性信息传递的门控激活函数。</p>
+  <p>GPT-2 使用 GELU 激活的 FFN。许多现代仅解码器的大语言模型（如 Llama、Mistral 和 DeepSeek 系列）已转向 <strong>SwiGLU</strong> 或类似的 GLU 变体——一种用三个权重矩阵来选择性传递信息的门控激活函数。</p>
 
   <div class="math-box"><div class="label">SwiGLU vs 标准 FFN</div>
     <div class="katex" data-expr="\text{FFN}_{\text{GELU}}(x) = W_2 \cdot \text{GELU}(W_1 \cdot x)" aria-label="\text{FFN}_{\text{GELU}}(x) = W_2 \cdot \text{GELU}(W_1 \cdot x)" role="img"></div>
@@ -556,9 +558,9 @@ print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for 
       <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么常采用 SwiGLU：</strong>门控机制让模型能够<strong>选择性</strong>地传递信息。当门控值接近 0 时，该维度的信息被阻断。与 GELU 那种“所有神经元都激活，但程度不同”的行为相比，SwiGLU 提供了更灵活的 token 级别控制。SwiGLU 在许多 Transformer 报告中表现良好，但具体的困惑度（PPL）提升取决于模型规模、数据、宽度平衡、训练预算和实现细节；不应将其视为固定收益。</p>
     </div>
   </div>
-</section>您提供的 HTML 片段只有注释，没有需要翻译的正文内容。请补充完整的 HTML 片段，包括文字、表格、列表等，我会严格按照规则处理。<section class="card" id="s5-6a">
+</section><!-- 这是一门关于大语言模型的课程，内容涵盖Transformer、预训练、微调、推理优化等核心技术。 --><section class="card" id="s5-6a">
   <h3>5.6A 为什么现代大语言模型偏爱SwiGLU：门控、参数预算与表达能力</h3>
-  <p>仅仅把SwiGLU记作 <code>w3(silu(w1(x)) * w2(x))</code> 是不够的。真正重要的是，前馈网络不再只是“投影、激活、再投影”，而是将每个隐藏维度拆分为一个<strong>门控分支</strong>和一个<strong>值分支</strong>，让模型能够在token级别决定哪些中间特征应该通过。</p>
+  <p>仅仅把SwiGLU记作 <code>w3(silu(w1(x)) * w2(x))</code> 是不够的。关键是，前馈网络不再只是“投影、激活、再投影”，而是将每个隐藏维度拆分为一个<strong>门控分支</strong>和一个<strong>值分支</strong>，让模型在token级别决定哪些中间特征可以通过。</p>
 
   <h4>为什么参数预算为8/3</h4>
   <p>一个标准的4倍GELU前馈网络，忽略偏置，有两个矩阵：</p>
@@ -568,17 +570,17 @@ print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for 
   <p>SwiGLU有三个矩阵：门控矩阵 <span class="katex-inline" data-expr="W_1" aria-label="W_1" role="img"></span>、值分支矩阵 <span class="katex-inline" data-expr="W_2" aria-label="W_2" role="img"></span> 和输出投影矩阵 <span class="katex-inline" data-expr="W_3" aria-label="W_3" role="img"></span>。如果中间宽度为 <span class="katex-inline" data-expr="d_{\text{ff}}" aria-label="d_{\text{ff}}" role="img"></span>，则参数量约为：</p>
   <div class="math-box"><div class="label">SwiGLU参数量</div>    <div class="katex" data-expr="3d_{\text{model}}d_{\text{ff}}" aria-label="3d_{\text{model}}d_{\text{ff}}" role="img"></div>
   </div>
-  <p>为了保持与4倍前馈网络相似的参数预算，令 <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" aria-label="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" role="img"></span>，解得 <span class="katex-inline" data-expr="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" aria-label="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" role="img"></span>。因此，8/3并非经验性的随意取值，而是在相同参数预算下引入门控机制后的<strong>平衡结果</strong>。习题 <code>swiglu_hidden_size_for_param_budget</code> 和 <code>ffn_parameter_counts</code> 要求学习者用具体的整数维度重新计算这一平衡，而不仅仅是记住结论。</p>
+  <p>为了保持与4倍前馈网络相似的参数预算，令 <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" aria-label="3d_{\text{model}}d_{\text{ff}} \approx 8d_{\text{model}}^2" role="img"></span>，解得 <span class="katex-inline" data-expr="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" aria-label="d_{\text{ff}} \approx \frac{8}{3}d_{\text{model}}" role="img"></span>。因此，8/3不是随便取的经验值，而是在相同参数预算下引入门控后的<strong>平衡结果</strong>。习题 <code>swiglu_hidden_size_for_param_budget</code> 和 <code>ffn_parameter_counts</code> 要求学习者用具体的整数维度重新计算这一平衡，而不仅仅是记住结论。</p>
 
   <h4>门控乘法改变了什么</h4>
   <p>在GELU前馈网络中，中间神经元的输出主要由单一路径 <span class="katex-inline" data-expr="\phi(W_1x)" aria-label="\phi(W_1x)" role="img"></span> 决定。SwiGLU引入了逐元素乘法：</p>
   <div class="math-box"><div class="label">SwiGLU中的逐元素门控</div>
     <div class="katex" data-expr="z_i = \mathrm{SiLU}(w_{1,i}^{\top}x)\cdot (w_{2,i}^{\top}x)" aria-label="z_i = \mathrm{SiLU}(w_{1,i}^{\top}x)\cdot (w_{2,i}^{\top}x)" role="img"></div>
   </div>
-  <p>这实际上让一个模式检测器能够控制另一个值通道是否写入残差流。与标准激活函数相比，门控乘法更容易表达诸如“只有条件A成立时才使用特征B”这样的交互。这种条件交互在语言建模中很常见：代码缩进、括号闭合、实体属性、共指关系以及格式约束都不是孤立特征，只有在特定的上下文条件下才有意义。</p>
+  <p>这相当于让一个模式检测器控制另一个值通道是否写入残差流。与标准激活函数相比，门控乘法能更自然地表达“只有条件A成立时才使用特征B”这类交互。这种条件交互在语言建模中很常见：代码缩进、括号闭合、实体属性、共指关系以及格式约束都不是孤立特征，只在特定上下文条件下才有意义。</p>
 
   <h4>SwiGLU与MoE的区别</h4>
-  <p>SwiGLU是一个稠密前馈网络：每个token都经过同一组矩阵，沿隐藏维度施加软门控。MoE是一个稀疏前馈网络：每个token只激活少数专家，由路由器在其中选择。两者都引入了“选择性计算”，但粒度不同：</p>
+  <p>SwiGLU是一个稠密前馈网络：每个token都经过同一组矩阵，沿隐藏维度施加软门控。MoE是一个稀疏前馈网络：每个token只激活少数专家，由路由器选择其中几个。两者都引入了“选择性计算”，但粒度不同：</p>
   <div class="table-wrap">
     <table>
       <tr><th>机制</th><th>选择发生的位置</th><th>每个token的激活方式</th><th>主要优势</th><th>主要风险</th></tr>
@@ -587,41 +589,41 @@ print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for 
     </table>
   </div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>设计结论：</strong>SwiGLU并非简单地“多了一个矩阵所以更强”。它在近似相同的参数预算下，通过门控乘法增加了token条件化的表示能力；而MoE则以更高的系统复杂度为代价，将前馈网络容量扩展到多个稀疏专家上。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>设计结论：</strong>SwiGLU不是简单的“多了一个矩阵所以更强”。它在近似相同的参数预算下，通过门控乘法增强了token条件化的表示能力；而MoE则以更高的系统复杂度为代价，将前馈网络容量扩展到多个稀疏专家上。</div></div>
 </section><!-- ================================================================ -->
 <!-- 5.6C 块资源估算 -->
 <!-- ================================================================ --><section class="card" id="s5-6c">
   <h3>5.6C 单个 Transformer 模块的参数、FLOPs 与激活显存</h3>
-  <p>编写 <code>TransformerBlock.forward</code> 只是第一步。训练工程师还需要估算一个模块的昂贵之处在哪里：参数主要来自投影矩阵，FLOPs 主要来自矩阵乘法和二次注意力项，而训练激活显存则存储了 Q/K/V、FFN 中间值和注意力分数。</p>
+  <p>编写 <code><code>TransformerBlock.forward</code></code> 只是第一步。训练工程师还需要估算一个模块的资源开销主要集中在哪些地方：参数主要来自投影矩阵，FLOPs 主要来自矩阵乘法和注意力分数的二次计算，而训练激活显存则存储了 Q/K/V、FFN 中间值和注意力分数。</p>
 
   <h4>参数数量近似</h4>
   <p>对于 Pre‑Norm 模块，忽略偏置，MHA 的 Q/K/V/O 投影大约为 <span class="katex-inline" data-expr="4d_{\text{model}}^2" aria-label="4d_{\text{model}}^2" role="img"></span>。SwiGLU 有三个矩阵，大约为 <span class="katex-inline" data-expr="3d_{\text{model}}d_{\text{ff}}" aria-label="3d_{\text{model}}d_{\text{ff}}" role="img"></span>。两个 RMSNorm 层只有 <span class="katex-inline" data-expr="2d_{\text{model}}" aria-label="2d_{\text{model}}" role="img"></span> 个可学习的缩放参数。</p>
 
   <h4>FLOPs 与激活显存</h4>
-  <p>课程作业中的 <code>estimate_block_resources</code> 函数采用常见的矩阵乘法约定：一次 <code>[m,k] @ [k,n]</code> 操作大约为 <span class="katex-inline" data-expr="2mkn" aria-label="2mkn" role="img"></span> FLOPs。它分别估算了 QKV 投影、注意力分数、注意力值混合、输出投影以及 SwiGLU 的三个线性层的主要 FLOPs。</p>
-  <p>激活显存估算包括主要的张量：Q/K/V、SwiGLU 的门控/值中间激活、注意力分数以及残差流。注意力分数的大小为 <span class="katex-inline" data-expr="B \times H \times T^2" aria-label="B \times H \times T^2" role="img"></span>，这就是为什么用长序列训练比用短序列训练昂贵得多的原因。FlashAttention 可以避免完全物化注意力矩阵，但标准教学实现会显式保存它。</p>
-  <p><strong>激活检查点（Activation Checkpointing）</strong> 涉及一个权衡：它不改变参数数量或最终数学函数，但在前向过程中保存更少的中间激活，并在反向过程中重新计算这些激活。Ch05 作业中的 <code>activation_checkpointing_tradeoff</code> 函数使用一个简化模型来估算：如果检查点分数为 <code>c</code>，大约节省 <code>c * activation_bytes</code>，同时在反向传播中引入额外的重计算开销 <code>c * forward_flops</code>。</p>
+  <p>课程作业中的 <code><code>estimate_block_resources</code></code> 函数采用常见的矩阵乘法约定：一次 <code><code>[m,k] @ [k,n]</code></code> 操作大约为 <span class="katex-inline" data-expr="2mkn" aria-label="2mkn" role="img"></span> FLOPs。它分别估算了 QKV 投影、注意力分数、注意力值混合、输出投影以及 SwiGLU 的三个线性层的主要 FLOPs 组成。</p>
+  <p>激活显存估算包括主要的张量：Q/K/V、SwiGLU 的门控/值中间激活、注意力分数以及残差流。注意力分数的大小为 <span class="katex-inline" data-expr="B \times H \times T^2" aria-label="B \times H \times T^2" role="img"></span>，这就是长序列训练比短序列训练昂贵得多的原因。FlashAttention 可以避免完全物化注意力矩阵，但标准教学实现会显式保存它。</p>
+  <p><strong>激活检查点（Activation Checkpointing）</strong> 是一个权衡：它不改变参数数量或最终数学输出，但在前向过程中保存更少的中间激活，并在反向过程中重新计算这些激活。Ch05 作业中的 <code><code>activation_checkpointing_tradeoff</code></code> 函数使用一个简化模型来估算：如果检查点分数为 <code><code>c</code></code>，大约节省 <code><code>c * activation_bytes</code></code>，同时在反向传播中引入额外的重计算开销 <code><code>c * forward_flops</code></code>。</p>
 
   <h4>实例计算：一个教学模块的资源预算</h4>
-  <p>假设 <code>B=2</code>，<code>T=128</code>，<code>d_model=768</code>，<code>n_heads=12</code>，<code>d_ff=2048</code>，使用 fp16/bf16 激活（2 字节）。这里 <code>d_head=64</code>。单个 Pre‑Norm + MHA + SwiGLU 模块的主要参数数量为：</p>
+  <p>设 <code><code>B=2</code></code>，<code><code>T=128</code></code>，<code><code>d_model=768</code></code>，<code><code>n_heads=12</code></code>，<code><code>d_ff=2048</code></code>，使用 fp16/bf16 激活（2 字节）。这里 <code><code>d_head=64</code></code>。单个 Pre‑Norm + MHA + SwiGLU 模块的主要参数数量为：</p>
   <div class="table-wrap">
     <table>
       <tr><th>组件</th><th>公式</th><th>参数数量</th></tr>
-      <tr><td>Q/K/V/O 投影</td><td><code>4 * d_model^2</code></td><td>2,359,296</td></tr>
-      <tr><td>SwiGLU FFN</td><td><code>3 * d_model * d_ff</code></td><td>4,718,592</td></tr>
-      <tr><td>两个 RMSNorm 缩放</td><td><code>2 * d_model</code></td><td>1,536</td></tr>
+      <tr><td>Q/K/V/O 投影</td><td><code><code>4 * d_model^2</code></code></td><td>2,359,296</td></tr>
+      <tr><td>SwiGLU FFN</td><td><code><code>3 * d_model * d_ff</code></code></td><td>4,718,592</td></tr>
+      <tr><td>两个 RMSNorm 缩放</td><td><code><code>2 * d_model</code></code></td><td>1,536</td></tr>
       <tr><td><strong>总计</strong></td><td></td><td><strong>7,079,424</strong></td></tr>
     </table>
   </div>
-  <p>在同一配置下，主要前向 FLOPs 大约为 <code>3.72B</code>：QKV 投影约为 <code>0.91B</code>，注意力分数和值混合各约为 <code>0.05B</code>，输出投影约为 <code>0.30B</code>，SwiGLU 的三个线性层约为 <code>2.42B</code>。对于短序列（<code>T=128</code>），FFN 已经是主要的计算项；当 <code>T</code> 增大时，注意力的 <code>T^2</code> 项很快变得显著。</p>
-  <p>主要激活显存大约为 <code>4.63 MiB</code>，其中注意力分数占 <code>B * H * T^2 * 2 bytes = 0.75 MiB</code>。如果对这些激活的一半进行检查点保存，前向过程中保存的主要激活可减少约 <code>2.31 MiB</code>；代价是反向过程中额外重计算约 <code>1.86B</code> FLOPs，使简化的训练 FLOPs 从 <code>3 * forward</code> 增加到约 <code>1.17x</code>。激活检查点不改变模型函数；它用额外计算换取更低的训练显存。</p>
+  <p>在同一配置下，主要前向 FLOPs 大约为 <code><code>3.72B</code></code>：QKV 投影约为 <code><code>0.91B</code></code>，注意力分数和值混合各约为 <code><code>0.05B</code></code>，输出投影约为 <code><code>0.30B</code></code>，SwiGLU 的三个线性层约为 <code><code>2.42B</code></code>。对于短序列（<code><code>T=128</code></code>），FFN 已经是主要的计算项；当 <code><code>T</code></code> 增大时，注意力的 <code><code>T^2</code></code> 项很快变得显著。</p>
+  <p>主要激活显存大约为 <code><code>4.63 MiB</code></code>，其中注意力分数占 <code><code>B * H * T^2 * 2 bytes = 0.75 MiB</code></code>。如果对这些激活中的一半使用检查点，前向过程中保存的主要激活可减少约 <code><code>2.31 MiB</code></code>；代价是反向过程中额外重计算约 <code><code>1.86B</code></code> FLOPs，使简化的训练 FLOPs 从 <code><code>3 * forward</code></code> 增加到约 <code><code>1.17x</code></code>。激活检查点不改变模型函数；它用额外计算换取更低的训练显存。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>估算范围：</strong> 这是课程级别的数量级估算。它不包括内核融合、优化器状态、dropout 掩码、通信、分配器碎片或特定硬件效率。其目的是让学习者能够解释“哪个项随 T 二次增长，哪个项随 d_model 和 d_ff 增长”，以及为什么检查点用计算换取训练显存。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>估算说明：</strong> 这是课程级别的数量级估算。它不包括内核融合、优化器状态、dropout 掩码、通信、分配器碎片或特定硬件效率。目的是让学习者能够理解"哪个项随 T 二次增长，哪个项随 d_model 和 d_ff 增长"，以及为什么检查点用计算换取训练显存。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习4：TransformerBlock -->
 <!-- ================================================================ --><section class="card" id="s5-7">
   <h3>5.7 编程练习 4：组装完整的 TransformerBlock</h3>
-  <p>现在将所有组件——RMSNorm + MHA/GQA + SwiGLU + 残差连接——组合成一个完整的 Block。</p>
+  <p>将前面的组件——RMSNorm、MHA/GQA、SwiGLU 和残差连接——组合成一个完整的 Block。</p>
 
   <div class="coding-exercise">
     <h4>🖥️ 练习 4：TransformerBlock 组装</h4>
@@ -631,9 +633,9 @@ print(f"Ratio: {sum(p.numel() for p in swiglu.parameters()) / sum(p.numel() for 
       <ul>
         <li>子层 1：RMSNorm → MultiHeadAttention（来自第 4 章）→ Dropout → 残差连接</li>
         <li>子层 2：RMSNorm → SwiGLU → Dropout → 残差连接</li>
-        <li>Pre-Norm 布局（归一化应用于子层输入而非输出）</li>
+        <li>使用 Pre-Norm 布局（归一化作用于子层输入，而非输出）</li>
         <li>支持向 Attention 传递可选的 <code>mask</code> 参数</li>
-        <li>验证：输出形状与输入 <code>(batch, seq_len, d_model)</code> 匹配</li>
+        <li>验证：输出形状与输入 <code>(batch, seq_len, d_model)</code> 一致</li>
         <li>验证：梯度能反向传播到所有参数</li>
       </ul>
       <pre># Expected usage
@@ -693,14 +695,14 @@ assert out.shape == (2, 64, 768)
 loss = out.sum()
 loss.backward()
 print(f"All parameters have gradients: {all(p.grad is not None for p in block.parameters())}")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 这是一个完整 Transformer Block 的核心代码，约 25 行。关键设计是“<strong>将归一化路径与残差路径分离</strong>”——信息沿着残差路径无阻碍流动（无非线性、无归一化），RMSNorm 仅应用于每个子层的输入。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 核心代码约 25 行。关键设计是将归一化路径与残差路径分离：残差路径让信息无阻碍流动（无非线性、无归一化），RMSNorm 只作用在每个子层的输入上。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 5.7A 模块实现稳定性记录 -->
 <!-- ================================================================ --><section class="card" id="s5-7a">
   <h3>5.7A 模块实现稳定性手册：残差、初始化、Dropout 与精度</h3>
-  <p>Transformer 模块的数学形式非常简短，但训练是否稳定取决于许多实现细节。课程级实现可以先写出 Pre-Norm + RMSNorm + Attention + SwiGLU；工程级实现还必须解释残差分支如何初始化、dropout 放在哪里、norm 使用什么精度、是否保留 bias、如何选择 checkpointing，以及这些选择如何影响损失曲线、梯度范数和吞吐量。</p>
+  <p>Transformer 模块的数学形式很简洁，但训练是否稳定取决于很多实现细节。课程级实现可以先写出 Pre-Norm + RMSNorm + Attention + SwiGLU；工程级实现还必须解释残差分支如何初始化、dropout 放在哪里、norm 使用什么精度、是否保留 bias、如何选择 checkpointing，以及这些选择如何影响损失曲线、梯度范数和吞吐量。</p>
 
   <h4>1. 控制残差分支的初始扰动</h4>
   <p>Pre-Norm 保留了直接的梯度路径，但如果每个子层从一开始就对残差流写入过大的更新，深层堆叠仍可能变得不稳定。常见做法包括更小的初始化、依赖于深度的残差投影缩放，或使用可学习的残差门。抽象写法如下：</p>
@@ -754,23 +756,23 @@ x = x + dropout(ffn(norm2(x)))</div>  <p>这个位置的含义是：训练时随
 <!-- 5.8 梯度检查 -->
 <!-- ================================================================ --><section class="card" id="s5-8">
   <h3>5.8 理论：梯度检查——为什么要验证反向传播？</h3>
-  <p>在实现复杂自定义算子时，手写的反向函数可能包含数学错误。即使是单个符号错误，也可能导致模型“训练”很长时间却不收敛。</p>
+  <p>在实现复杂自定义算子时，手写的反向函数可能包含数学错误。即使是单个符号错误，也可能导致模型“训练”很久却不收敛。</p>
 
   <h4>有限差分的数学原理</h4>
   <p>PyTorch 的 <code>torch.autograd.gradcheck</code> 使用<strong>中心差分</strong>来近似数值梯度：</p>
   <div class="math-box"><div class="label">中心差分近似</div>
     <div class="katex" data-expr="\frac{\partial f}{\partial x_i} \approx \frac{f(x + \epsilon e_i) - f(x - \epsilon e_i)}{2\epsilon} + O(\epsilon^2)" aria-label="\(\frac{\partial f}{\partial x_i} \approx \frac{f(x + \epsilon e_i) - f(x - \epsilon e_i)}{2\epsilon} + O(\epsilon^2)\)" role="img"></div>
   </div>
-  <p>中心差分的误差为 <span class="katex-inline" data-expr="O(\epsilon^2)" aria-label="O(\epsilon^2)" role="img"></span>，而前向差分的误差为 <span class="katex-inline" data-expr="O(\epsilon)" aria-label="O(\epsilon)" role="img"></span>。因此，中心差分更精确——代价是在每个参数维度上需要两次前向传播。</p>
+  <p>中心差分的误差为 <span class="katex-inline" data-expr="O(\epsilon^2)" aria-label="O(\epsilon^2)" role="img"></span>，前向差分则为 <span class="katex-inline" data-expr="O(\epsilon)" aria-label="O(\epsilon)" role="img"></span>。因此，中心差分更精确——代价是在每个参数维度上需要两次前向传播。</p>
 
   <h4>为什么 gradcheck 很重要</h4>
   <p>考虑一个手动实现的反向函数，其中有一个符号错误：</p>
   <div class="code-block" data-lang="python">
   # 错误的反向：应该是 dx = grad * w，但写成 dx = grad / w
   # gradcheck 会检测到数值梯度和解析梯度之间的差异 > atol</div>
-  <p>这类错误在简单模块中容易发现，但在复杂的自定义算子（如用于 FlashAttention 的 Triton kernel）中，手动推导和实现反向传播是一个常见的调试环节。</p>
+  <p>这类错误在简单模块中容易发现，但在复杂的自定义算子（如用于 FlashAttention 的 Triton kernel）中，手动推导和实现反向传播是常见的调试环节。</p>
 
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>重要提示：</strong> gradcheck 对每个参数维度都需要额外两次前向传播。对于大模型来说，这极其昂贵。因此：使用 <code>float64</code>（有限差分对 float32 的舍入误差很敏感）；用非常小的输入进行验证（batch=2, seq=8, dim=64）；设置 <code>eps=1e-4</code> 和 <code>atol=1e-3</code>。</div></div>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>重要提示：</strong> gradcheck 对每个参数维度都需要额外两次前向传播。对于大模型，这代价极高。因此：使用 <code>float64</code>（有限差分对 float32 的舍入误差很敏感）；用很小的输入进行验证（batch=2, seq=8, dim=64）；设置 <code>eps=1e-4</code> 和 <code>atol=1e-3</code>。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 5：梯度检查 -->
 <!-- ================================================================ --><section class="card" id="s5-9">
@@ -779,14 +781,14 @@ x = x + dropout(ffn(norm2(x)))</div>  <p>这个位置的含义是：训练时随
   <div class="coding-exercise">
     <h4>🖥️ 练习 5：LayerNorm 梯度检查</h4>
     <div class="task">
-      <p><strong>任务：</strong>使用 <code>torch.autograd.gradcheck</code> 验证 LayerNorm 实现的反向传播是否正确。</p>
+      <p><strong>任务：</strong>用 <code>torch.autograd.gradcheck</code> 检查 LayerNorm 实现的反向传播是否正确。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>定义 <code>LayerNormFunction</code> —— 继承 <code>torch.autograd.Function</code>，手动实现前向和反向</li>
-        <li>在 backward 中验证反向公式是否正确</li>
+        <li>定义 <code>LayerNormFunction</code>（继承 <code>torch.autograd.Function</code>），手动实现前向和反向传播</li>
+        <li>在 backward 中手动实现反向公式，并验证其正确性</li>
         <li>使用 <code>gradcheck</code> 比较数值梯度和解析梯度</li>
         <li>先在小的输入上测试（batch=2, seq=8, dim=64），再在更大的输入上测试</li>
-        <li>使用 <code>float64</code> 保证足够的数值精度</li>
+        <li>使用 <code>float64</code> 保证数值精度</li>
       </ul>
       <pre># Expected usage
 ln_func = LayerNormFunction.apply
@@ -850,26 +852,26 @@ test_module = gradcheck(
     raise_exception=False
 )
 print(f"LayerNorm module gradient check: {test_module}")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>最佳实践：</strong>逐个模块验证梯度（单独 LayerNorm、单独 SwiGLU、单独整个 Block）。不要一次性测试所有模块——如果失败，你将不知道是哪个模块的问题。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>最佳实践：</strong>建议逐个模块检查梯度：先单独测 LayerNorm，再测 SwiGLU，最后测整个 Block。一次性测所有模块遇到错误时，很难定位问题来源。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 5.10 可学习的超连接（Learnable Hyper-Connections） -->
 <!-- ================================================================ --><section class="card" id="s5-10">
   <h3>5.10 理论：可学习超连接（Learnable Hyper-Connections）——Birkhoff约束与Sinkhorn-Knopp迭代</h3>
-  <p><strong>超连接（Hyper-Connections）</strong>是一类试图扩展传统残差连接的设计：不同于每层仅与其相邻层有固定的1:1残差相加，它们学习更灵活的层间连接权重。为避免可学习连接矩阵带来的过度信号放大，一些前沿设计将连接矩阵约束到诸如<strong>Birkhoff多面体（Birkhoff polytope）</strong>之类的结构化集合上。</p>
+  <p><strong>超连接（Hyper-Connections）</strong>是一类扩展传统残差连接的设计：与每层只有固定的1:1相邻残差相加不同，它们学习更灵活的层间连接权重。一些前沿设计将连接矩阵约束到<strong>Birkhoff多面体（Birkhoff polytope）</strong>之类的结构化集合上，以避免可学习连接矩阵带来的过度信号放大。</p>
 
   <h4>传统残差连接的局限性</h4>
   <p>残差连接 <span class="katex-inline" data-expr="x' = f(x) + x" aria-label="x' = f(x) + x" role="img"></span> 假设每层有固定的1:1贡献比例。然而，不同层对最终输出的贡献可能不同——某些层可能只需微调上一层的表示，而另一些层可能需要大幅修改它。</p>
 
   <h4>Birkhoff多面体（双随机矩阵）</h4>
-  <p>可学习超连接可以使用连接矩阵 <span class="katex-inline" data-expr="A \in \mathbb{R}^{L \times L}" aria-label="A \in \mathbb{R}^{L \times L}" role="img"></span> 来控制层间连接的强度，但直接学习 <span class="katex-inline" data-expr="A" aria-label="A" role="img"></span> 可能导致梯度放大。一个常见的约束思路是让 <span class="katex-inline" data-expr="A" aria-label="A" role="img"></span> 逼近Birkhoff多面体内的双随机矩阵。</p>
+  <p>可学习超连接可以使用连接矩阵 <span class="katex-inline" data-expr="A \in \mathbb{R}^{L \times L}" aria-label="A \in \mathbb{R}^{L \times L}" role="img"></span> 来控制层间连接的强度，但直接学习 <span class="katex-inline" data-expr="A" aria-label="A" role="img"></span> 可能导致梯度放大。一种常见思路是约束 <span class="katex-inline" data-expr="A" aria-label="A" role="img"></span> 逼近Birkhoff多面体内的双随机矩阵。</p>
   <div class="math-box"><div class="label">Birkhoff多面体定义</div>    <div class="katex" data-expr="\mathcal{B}_n = \{A \in \mathbb{R}^{n \times n} \mid A \geq 0, A\mathbf{1} = \mathbf{1}, A^\top\mathbf{1} = \mathbf{1}\}" aria-label="\mathcal{B}_n = \{A \in \mathbb{R}^{n \times n} \mid A \geq 0, A\mathbf{1} = \mathbf{1}, A^\top\mathbf{1} = \mathbf{1}\}" role="img"></div>
   </div>
-  <p>双随机矩阵有一个有用的谱范数上界性质，通常写作 <span class="katex-inline" data-expr="\|A\|_2 \leq 1" aria-label="\|A\|_2 \leq 1" role="img"></span>（在相应假设下成立）。这可以约束层间连接的放大效应，降低梯度放大风险；实际训练稳定性还取决于残差缩放、优化器、数据分布和实现细节。</p>
+  <p>双随机矩阵有一个有用的性质：其谱范数上界为 <span class="katex-inline" data-expr="\|A\|_2 \leq 1" aria-label="\|A\|_2 \leq 1" role="img"></span>（在相应假设下成立）。这个性质可以约束层间连接的放大效应，降低梯度放大风险；但实际训练稳定性还取决于残差缩放、优化器、数据分布和实现细节。</p>
 
   <h4>Sinkhorn-Knopp迭代</h4>
-  <p>将任意矩阵投影到Birkhoff多面体上的算法如下：</p>
+  <p>将任意矩阵投影到Birkhoff多面体的常用算法如下：</p>
   <div class="math-box"><div class="label">Sinkhorn-Knopp迭代</div>
     <div class="katex" data-expr="\begin{aligned}
       M^{(0)} &= \exp(M) \quad (\text{确保非负性}) \\
@@ -879,7 +881,7 @@ print(f"LayerNorm module gradient check: {test_module}")</div>
       M^{(t+1)} &= \text{row\_norm}(\text{col\_norm}(M^{(t)}))
       \end{aligned}" role="img"></div>
   </div>
-  <p>交替进行行归一化和列归一化。当满足矩阵元素为正、目标边际可行等条件时，Sinkhorn-Knopp收敛到满足给定行/列边际的缩放矩阵；收敛速度和数值稳定性取决于矩阵条件数、温度/缩放以及迭代次数。实践中通常使用少量迭代来获得近似双随机结构，但不能保证10次迭代对任意输入都足够。</p>
+  <p>交替进行行归一化和列归一化。当矩阵元素为正、目标边际可行时，Sinkhorn-Knopp迭代收敛到满足给定行/列边际的缩放矩阵；收敛速度和数值稳定性取决于矩阵条件数、温度/缩放和迭代次数。实践中通常使用少量迭代获得近似双随机结构，但不能保证10次迭代对任意输入都足够。</p>
 
   <div class="code-block" data-lang="python">
 def sinkhorn_knopp(M, num_iter=10):
@@ -890,26 +892,26 @@ def sinkhorn_knopp(M, num_iter=10):
         M = M / (M.sum(dim=-1, keepdim=True) + 1e-6)
         M = M / (M.sum(dim=-2, keepdim=True) + 1e-6)
     return M</div>
-  <p>多头超连接可以使用多个独立的连接矩阵来捕获不同类型的层间依赖，然后合并连接结果。本课程关注这类方法的通用数学结构：连接强度是可学习的，但需要非负性、行/列归一化、残差缩放或其他约束来控制信号放大。具体收益必须在给定模型、深度、优化器、初始化和训练数据下通过实证衡量；单个技术报告中的数据不能视为通用常数。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>直觉理解：</strong>Sinkhorn-Knopp迭代的交替归一化与熵正则化最优传输密切相关。得到的连接权重在行和列两个维度上近似满足概率分布约束，使得每层“提出”和“接收”的信息量更加可控。这有助于解释为何该约束可能改善深度训练动态，但不能独立保证完全的训练稳定性。</div></div>
+  <p>多头超连接可以使用多个独立的连接矩阵来捕获不同类型的层间依赖，然后合并连接结果。本课程关注这类方法的通用数学结构：连接强度可学习，但需通过非负性、行/列归一化、残差缩放等约束来控制信号放大。具体收益必须在给定模型、深度、优化器、初始化和训练数据下通过实证衡量；单个技术报告中的数据不能视为通用常数。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>直觉理解：</strong>Sinkhorn-Knopp迭代的交替归一化与熵正则化最优传输密切相关。得到的连接权重在行和列两个维度上近似满足概率分布约束，使得每层“提出”和“接收”的信息量更可控。这有助于解释该约束为何可能改善深度训练动态，但不能独立保证完全的训练稳定性。</div></div>
 </section><!-- ================================================================ -->
 <!-- 5.11 Summary -->
 <!-- ================================================================ --><section class="card" id="s5-11">
   <h3>5.11 章节总结</h3>
-  <p>你已经构建了LLM的核心构建块——Transformer Block：</p>
+  <p>你已经完成了LLM核心构建块——Transformer Block的实现：</p>
   <ul>
-    <li>✅ <strong>LayerNorm（从头实现）</strong> — 均值+方差归一化+仿射变换，理解为何LLM选择它而不是BatchNorm</li>
-    <li>✅ <strong>RMSNorm</strong> — 移除均值中心化，只保留RMS缩放，理解其参数和计算差异</li>
-    <li>✅ <strong>Pre-Norm 与 Post-Norm</strong> — 解释归一化位置如何通过局部梯度路径影响深层训练稳定性</li>
-    <li>✅ <strong>机械可解释性</strong> — 区分 probing、logit attribution、activation patching 和 ablation 的适用边界</li>
-    <li>✅ <strong>可解释性方法谱系</strong> — 理解 logit lens、causal tracing、SAE、steering 和 model editing 的结论边界</li>
-    <li>✅ <strong>SwiGLU 门控 FFN</strong> — 三个权重矩阵 + SiLU 门控，信息选择性通过</li>
-    <li>✅ <strong>SwiGLU 参数预算</strong> — 使用 8/3 宽度引入门控乘法，参数量接近 4x FFN</li>
-    <li>✅ <strong>TransformerBlock 组装</strong> — RMSNorm + MHA + SwiGLU + 残差连接，约25行核心代码</li>
-    <li>✅ <strong>梯度检查</strong> — 使用 gradcheck 验证反向传播正确性</li>
+    <li>✅ <strong>LayerNorm（从头实现）</strong> — 均值+方差归一化+仿射变换，知道LLM为什么选它而不是BatchNorm</li>
+    <li>✅ <strong>RMSNorm</strong> — 去掉均值中心化，只保留RMS缩放，掌握它的参数和计算差异</li>
+    <li>✅ <strong>Pre-Norm 与 Post-Norm</strong> — 归一化位置如何通过局部梯度路径影响深层训练稳定性</li>
+    <li>✅ <strong>机械可解释性</strong> — 弄清楚 probing、logit attribution、activation patching、ablation 各自适用的场景</li>
+    <li>✅ <strong>可解释性方法谱系</strong> — 学会判断 logit lens、causal tracing、SAE、steering、model editing 能得出什么结论，不能得出什么结论</li>
+    <li>✅ <strong>SwiGLU 门控 FFN</strong> — 三个权重矩阵 + SiLU 门控，让信息有选择地通过</li>
+    <li>✅ <strong>SwiGLU 参数预算</strong> — 用 8/3 的宽度做门控乘法，参数量大约是标准 FFN 的 4 倍</li>
+    <li>✅ <strong>TransformerBlock 组装</strong> — RMSNorm + MHA + SwiGLU + 残差连接，大约25行核心代码</li>
+    <li>✅ <strong>梯度检查</strong> — 用 gradcheck 验证反向传播正确性</li>
     <li>✅ <strong>可学习超连接</strong> — Birkhoff 多面体约束、Sinkhorn-Knopp 迭代和层间连接稳定性</li>
   </ul>
-  <p>在下一章中，我们将堆叠12个这样的Block，构建一个完整的GPT-2 124M模型，并实现DeepSeekMoE架构。</p>
+  <p>下一章，我们会堆叠12个这样的 Block，搭建一个完整的 GPT-2 124M 模型，并实现 DeepSeekMoE 架构。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>拓展阅读：</strong>
     <a href="https://arxiv.org/abs/1607.06450" target="_blank">Ba等人(2016) — Layer Normalization</a> ·
     <a href="https://arxiv.org/abs/1910.07467" target="_blank">Zhang & Sennrich (2019) — RMSNorm</a> ·
@@ -917,27 +919,27 @@ def sinkhorn_knopp(M, num_iter=10):
     <a href="https://arxiv.org/abs/2104.08696" target="_blank">Geva等人(2021) — FFN as Key-Value Memory</a> ·
     <a href="https://arxiv.org/abs/2409.19606" target="_blank">Zhu等人 — Hyper-Connections</a>
   </div></div>
-</section>看起来您没有附上完整的 HTML 片段。请重新发送包含需要翻译的 HTML 内容，我会严格按照要求处理。<section class="card">
+</section>您提供的消息末尾并未包含任何 HTML 片段，而是复制了我上一轮回复中的一段话。请将需要润色的完整 HTML 代码直接粘贴在消息中，我会严格按照您的要求处理。<section class="card">
   <h3>📝 概念练习与巩固</h3>
 
-  <div class="exercise" data-answer="0" data-explain="RMSNorm去掉了均值中心化，仅保留RMS缩放（除以sqrt(mean(x^2))），然后乘以可学习的gamma。它减少了与均值/方差相关的计算；实际速度提升取决于内核、硬件、序列长度和模型实现。">
-    <h4>练习1：RMSNorm与LayerNorm的主要区别是什么？</h4>
+  <div class="exercise" data-answer="0" data-explain="RMSNorm 去掉了均值中心化，只保留 RMS 缩放（除以 sqrt(mean(x^2))），然后乘以可学习的 gamma。它减少了均值/方差相关计算；实际速度提升取决于内核、硬件、序列长度和模型实现。">
+    <h4>练习1：RMSNorm 与 LayerNorm 的主要区别是什么？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q51" value="0"> A. RMSNorm省略均值中心化，仅进行RMS缩放</label>
-      <label><input type="radio" name="q51" value="1"> B. RMSNorm在批次维度上归一化</label>
-      <label><input type="radio" name="q51" value="2"> C. RMSNorm没有可学习参数</label>
-      <label><input type="radio" name="q51" value="3"> D. RMSNorm显著降低模型质量</label>
+      <label><input type="radio" name="q51" value="0"> A. RMSNorm 省略均值中心化，仅进行 RMS 缩放</label>
+      <label><input type="radio" name="q51" value="1"> B. RMSNorm 在批次维度上归一化</label>
+      <label><input type="radio" name="q51" value="2"> C. RMSNorm 没有可学习参数</label>
+      <label><input type="radio" name="q51" value="3"> D. RMSNorm 显著降低模型质量</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q51')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="Pre-Norm将归一化放在子层输入上，残差流保留显式快捷连接；在线性化模型中，梯度路径包含恒等项。Post-Norm将归一化放在残差输出之后，归一化的雅可比矩阵直接影响快捷连接。">
-    <h4>练习2：关于Pre-Norm的描述哪一项是正确的？</h4>
+  <div class="exercise" data-answer="2" data-explain="Pre-Norm 把归一化放在子层输入上，残差流保持显式的快捷连接；在线性化模型中，梯度路径包含恒等项。Post-Norm 把归一化放在残差输出之后，归一化的雅可比矩阵直接影响快捷连接。">
+    <h4>练习2：关于 Pre-Norm 的描述哪一项是正确的？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q52" value="0"> A. 在残差连接之后进行归一化</label>
-      <label><input type="radio" name="q52" value="1"> B. 这是原始Transformer（Vaswani等人）使用的方法</label>
+      <label><input type="radio" name="q52" value="1"> B. 这是原始 Transformer（Vaswani 等人）使用的方法</label>
       <label><input type="radio" name="q52" value="2"> C. 在每个子层的输入上进行归一化，残差流保持未归一化</label>
       <label><input type="radio" name="q52" value="3"> D. 仅适用于编码器-解码器架构</label>
     </div>
@@ -946,25 +948,25 @@ def sinkhorn_knopp(M, num_iter=10):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="SwiGLU使用三个权重矩阵（W1, W2, W3），通过SiLU门控选择性地传递信息。这是与标准双权重FFN（W1, W2加激活函数）的核心区别。通过设置d_ff = int(8/3 * d_model)使参数量与4倍FFN保持一致。">
-    <h4>练习3：SwiGLU与标准ReLU/GELU FFN的关键区别是什么？</h4>
+  <div class="exercise" data-answer="1" data-explain="SwiGLU 使用三个权重矩阵（W1, W2, W3），通过 SiLU 门控选择性地传递信息。这是它与标准双权重 FFN（W1, W2 加激活函数）的核心区别。通过设置 d_ff = int(8/3 * d_model)，参数量与 4 倍 FFN 一致。">
+    <h4>练习3：SwiGLU 与标准 ReLU/GELU FFN 的关键区别是什么？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q53" value="0"> A. SwiGLU使用更少的参数</label>
-      <label><input type="radio" name="q53" value="1"> B. SwiGLU使用门控机制（SiLU激活），通过三个权重矩阵选择性地传递信息</label>
-      <label><input type="radio" name="q53" value="2"> C. SwiGLU移除所有非线性激活函数</label>
-      <label><input type="radio" name="q53" value="3"> D. SwiGLU只有一个线性变换层</label>
+      <label><input type="radio" name="q53" value="0"> A. SwiGLU 使用更少的参数</label>
+      <label><input type="radio" name="q53" value="1"> B. SwiGLU 使用门控机制（SiLU 激活），通过三个权重矩阵选择性地传递信息</label>
+      <label><input type="radio" name="q53" value="2"> C. SwiGLU 移除所有非线性激活函数</label>
+      <label><input type="radio" name="q53" value="3"> D. SwiGLU 只有一个线性变换层</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q53')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="可学习的超连接可以使用Birkhoff多面体（双随机矩阵）约束来控制连接矩阵的放大效应。Sinkhorn-Knopp迭代通过交替行/列归一化将矩阵推向双随机结构。这有助于降低可学习连接权重带来的梯度放大风险，但并非训练稳定性的独立保证。">
+  <div class="exercise" data-answer="0" data-explain="可学习的超连接可以用 Birkhoff 多面体（双随机矩阵）约束来控制连接矩阵的放大效应。Sinkhorn-Knopp 迭代通过交替行/列归一化将矩阵推向双随机结构。这有助于降低可学习连接权重带来的梯度放大风险，但不能单独保证训练稳定性。">
     <h4>练习4：可学习的超连接通过什么机制约束训练动态？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q54" value="0"> A. Birkhoff多面体约束确保连接矩阵的谱范数≤1，通过Sinkhorn-Knopp迭代实现</label>
-      <label><input type="radio" name="q54" value="1"> B. 使用固定的1:1连接权重，不进行学习</label>
-      <label><input type="radio" name="q54" value="2"> C. 通过额外的BatchNorm层稳定训练</label>
+      <label><input type="radio" name="q54" value="0"> A. Birkhoff 多面体约束确保连接矩阵的谱范数 ≤1，通过 Sinkhorn-Knopp 迭代实现</label>
+      <label><input type="radio" name="q54" value="1"> B. 使用固定的 1:1 连接权重，不进行学习</label>
+      <label><input type="radio" name="q54" value="2"> C. 通过额外的 BatchNorm 层稳定训练</label>
       <label><input type="radio" name="q54" value="3"> D. 将学习率降低到接近零以避免梯度问题</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q54')">检查答案</button>
@@ -972,12 +974,12 @@ def sinkhorn_knopp(M, num_iter=10):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="从FFN作为键值记忆的角度看，FFN中的每个神经元对应一对键（W1的行向量检测模式）和值（W2的列向量输出"知识"片段）。模型的事实知识实际上存储在这些键值对中。注意力的作用是从哪些键值对中检索信息。">
-    <h4>练习5：从"FFN作为键值记忆"的角度看，模型的知识主要存储在哪里？</h4>
+  <div class="exercise" data-answer="2" data-explain="从 FFN 作为键值记忆的角度看，FFN 中的每个神经元对应一对键（W1 的行向量检测模式）和值（W2 的列向量输出"知识"片段）。模型的事实知识实际上存储在这些键值对中。注意力的作用是从这些键值对中检索信息。">
+    <h4>练习5：从"FFN 作为键值记忆"的角度看，模型的知识主要存储在哪里？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q55" value="0"> A. 在注意力层的QKV权重中</label>
+      <label><input type="radio" name="q55" value="0"> A. 在注意力层的 QKV 权重中</label>
       <label><input type="radio" name="q55" value="1"> B. 在位置编码中</label>
-      <label><input type="radio" name="q55" value="2"> C. 在FFN层的键值对权重中</label>
+      <label><input type="radio" name="q55" value="2"> C. 在 FFN 层的键值对权重中</label>
       <label><input type="radio" name="q55" value="3"> D. 在嵌入层的权重中</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q55')">检查答案</button>

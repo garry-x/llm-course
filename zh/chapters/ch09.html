@@ -30,19 +30,19 @@
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
   </div><section class="card">
-  <h3>如何学习本章：将对齐视为向人类意图对齐的训练行为</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者关注点：</strong>首先区分 SFT、LoRA、DPO 和 GRPO 各自解决的问题：SFT 学习格式，LoRA 降低微调成本，DPO 学习偏好，GRPO 增强推理。公式很多，但初学时，重点关注数据长什么样以及 loss 在比较什么。</div></div>
+  <h3>如何学习本章：将对齐看作训练行为与人类意图的匹配过程</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者关注点：</strong>先分清 SFT、LoRA、DPO 和 GRPO 各自要解决的问题：SFT 学习格式，LoRA 降低微调成本，DPO 学习偏好，GRPO 增强推理。公式比较多，但初学时，重点关注数据的结构和 loss 在比较什么。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第7章训练循环、第8章生成和 log 概率。</li>
-    <li><strong>学习目标：</strong>区分预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO 和 GRPO 的 loss 信号。</li>
+    <li><strong>学习目标：</strong>分清预训练、SFT、PEFT、偏好优化和强化学习对齐，并推导 SFT mask、LoRA、DPO 和 GRPO 的 loss 信号。</li>
     <li><strong>章节产出：</strong>SFT/LoRA/DPO/GRPO/RLVR 的最小实现、一个 agentic RL rollout 图以及一个适用场景图。</li>
-    <li><strong>完成标准：</strong>能够判断某个需求应该使用 SFT、LoRA、DPO 还是基于 RL 的方法。</li>
+    <li><strong>完成标准：</strong>能够判断某个需求应该用 SFT、LoRA、DPO 还是基于 RL 的方法。</li>
     <li><strong>练习材料：</strong>构建 masked SFT、SFT chat template/mask/packing 诊断、LoRA 参数统计、训练后数据审计、DPO/GRPO 玩具实验、RLVR 评分器可靠性报告、偏好数据错误分析以及安全风险解释。可选练习文件位于 <a href="../../assignments/ch09_alignment/">assignments/ch09_alignment/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>前置技能：</strong>log 概率、序列 loss、参考模型、KL、偏好数据统计、奖励信号、工具调用状态和评估切片。<br><strong>本章内化要点：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 和 agentic RL 都将归结为五件事：“数据格式、目标函数、约束项、采样假设和评估切片”；训练后数据审计在目标函数之前检查覆盖率、泄露、长度偏差、工具状态有效性和安全切片，而不是开辟一条单独的补救路径。<br><strong>验证信号：</strong>能够判断一个对齐实验是优化了目标行为、奖励黑客、格式偏差、工具捷径还是评估泄露，并报告伴随第8章生成成本和第10章服务安全边界的变化。</div>
-  <p class="system-role"><strong>本章定位：</strong>本章将第7章的训练循环和第8章的生成行为转化为一个面向任务、偏好、安全和推理能力的训练后系统。合成数据、蒸馏、拒绝采样、DPO/GRPO 和 RLVR 都必须追溯到数据源、目标函数、评估切片和服务成本，而不是作为独立的技巧堆叠。</p>
+  <div class="dependency-note"><strong>前置技能：</strong>log 概率、序列 loss、参考模型、KL、偏好数据统计、奖励信号、工具调用状态和评估切片。<br><strong>本章内化要点：</strong>SFT、LoRA、DPO、GRPO、RLVR/RFT 和 agentic RL 都归结为五件事：“数据格式、目标函数、约束项、采样假设和评估切片”；训练后数据审计在目标函数之前检查覆盖率、泄露、长度偏差、工具状态有效性和安全切片，不另设补救步骤。<br><strong>验证信号：</strong>能够判断一个对齐实验的结果是目标行为优化、奖励黑客、格式偏差、工具捷径还是评估泄露，并报告伴随第8章生成成本和第10章服务安全边界的变化。</div>
+  <p class="system-role"><strong>本章定位：</strong>本章把第7章的训练循环和第8章的生成行为整合成一个面向任务、偏好、安全和推理能力的训练后系统。合成数据、蒸馏、拒绝采样、DPO/GRPO 和 RLVR 都必须关联到数据源、目标函数、评估切片和服务成本，不能当成独立技巧堆叠。</p>
   <div class="foundation-map">
-    <h4>学习者思维导图：先了解什么 / 本章教授什么 / 接下来读什么</h4>
+    <h4>学习路线：先了解什么 / 本章教什么 / 接下来读什么</h4>
     <div class="foundation-graph" role="img" aria-label="第9章知识图谱：学习本章前，需理解 log 概率、KL、偏好数据和奖励信号；本章学习训练后对齐；之后阅读推理 RL 和奖励建模相关内容。">
       <svg viewBox="0 0 860 250">
         <defs><marker id="dep-arrow-09" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker></defs>
@@ -69,12 +69,12 @@
       <table>
         <tr><th>学习前需了解</th><th>本章将阐明</th><th>扩展阅读资料/知识点</th></tr>
         <tr><td>序列 logprob</td><td>SFT、DPO 和 GRPO 都需要在 masking 后比较 token logprob，并区分 prompt token 和 completion token。</td><td><strong>资料：</strong>DPO、IPO、KTO、长上下文 SFT。<br><strong>知识点：</strong>序列级目标、SFT mask、packing loss。</td></tr>
-        <tr><td>参考模型 & KL</td><td>解释参考模型如何限制策略漂移，以及 KL、clip 和长度归一化各自的不同作用。</td><td><strong>资料：</strong>PPO、GRPO、GSPO、DAPO。<br><strong>知识点：</strong>KL 调度、策略漂移、clip 比率、长度归一化。</td></tr>
-        <tr><td>偏好 & 奖励数据</td><td>在数据源和标签假设下审视 chosen/rejected、可验证奖励、合成数据和拒绝采样。</td><td><strong>资料：</strong>奖励建模、RLHF/RLAIF、RLVR。<br><strong>知识点：</strong>合成数据、评分器可靠性、奖励数据切片。</td></tr>
+        <tr><td>参考模型 & KL</td><td>解释参考模型如何限制策略漂移，以及 KL、clip 和长度归一化各自的作用有何不同。</td><td><strong>资料：</strong>PPO、GRPO、GSPO、DAPO。<br><strong>知识点：</strong>KL 调度、策略漂移、clip 比率、长度归一化。</td></tr>
+        <tr><td>偏好 & 奖励数据</td><td>在数据源和标签假设下，审视 chosen/rejected、可验证奖励、合成数据和拒绝采样。</td><td><strong>资料：</strong>奖励建模、RLHF/RLAIF、RLVR。<br><strong>知识点：</strong>合成数据、评分器可靠性、奖励数据切片。</td></tr>
         <tr><td>Rollout 统计</td><td>同时审视长度、熵、通过率、clip 比例、有效 rollout 比例和失败类型。</td><td><strong>资料：</strong>DeepSeek-R1、Kimi k1.5、DAPO。<br><strong>知识点：</strong>推理 RL 配方、长度控制、测试时计算。</td></tr>
       </table>
     </div>
-    <p><strong>章节覆盖范围：</strong>本章中 SFT/LoRA/DPO/GRPO/RLVR 的原始主线基本完整；DAPO 的 Clip-Higher、动态采样、token 级策略梯度 loss 和过长奖励塑形已添加，以覆盖2025年推理 RL 配方的关键工程信号。</p>
+    <p><strong>章节覆盖范围：</strong>本章中 SFT/LoRA/DPO/GRPO/RLVR 的原始主线基本保留；DAPO 的 Clip-Higher、动态采样、token 级策略梯度 loss 和过长奖励塑形已添加，以覆盖 2025 年推理 RL 配方的关键工程信号。</p>
   </div>
 </section><!-- ================================================================ -->
 <!-- 9.1 对齐的必要性 --><section class="card">
@@ -84,10 +84,10 @@
 <p class="diagram-caption">图 9-1：对齐方法对比 — RLHF(PPO) vs DPO vs GRPO</p>
 </section><!-- ================================================================ --><section class="card" id="s9-1">
   <h3>9.1 为什么预训练还不够——从文本续写到助手行为</h3>
-  <p>在第7章预训练之后，我们得到一个可以<strong>合理地续写文本</strong>的GPT模型。它学会了语法、事实知识，甚至一定程度的推理能力。但如果你直接问它“请解释反向传播”，它的输出很可能像这样：</p>
+  <p>第7章预训练后，我们得到一个能<strong>合理续写文本</strong>的GPT模型。它学会了语法、事实知识，甚至一定程度的推理。但你直接问“解释反向传播”，它的输出很可能像这样：</p>
   <div class="code-block" data-lang="text">
 "反向传播"是"反向传播"是一种深度学习中的"反向传播"是一种计算梯度的深度学习方法。"反向传播"……</div>
-  <p>——它是一个出色的<strong>文本续写器</strong>，但不是一个<strong>有用的助手</strong>。问题在于预训练的目标函数是“预测下一个token”，而不是“回答问题”。<strong>对齐（Alignment）</strong>就是弥合这一差距的过程。</p>
+  <p>——它善于<strong>续写文本</strong>，但不是一个<strong>有用的助手</strong>。因为预训练的目标是“预测下一个token”，而非“回答问题”。<strong>对齐（Alignment）</strong>要做的就是弥合这个差距。</p>
 
   <h4>对齐的三个目标——HHH</h4>
   <ul>
@@ -108,7 +108,7 @@
   </div>
 </section><section class="card" id="s9-1a">
   <h3>9.1A 后训练控制循环：数据、目标、Rollout、奖励与评估</h3>
-  <p>现代后训练不是一堆不相关的配方列表。SFT、rejection sampling、DPO、GRPO、DAPO、GSPO、RLVR 和 RFT 都位于同一个控制循环内：选择 prompt，生成或标注候选响应，用人类偏好或可验证奖励评分，在约束下更新策略，然后在实际推理预算下评估行为。实际的问题不是“哪种方法时髦”，而是哪个信号对于你想要改变的行为足够可靠。</p>
+  <p>现代后训练不是一堆互不相关的配方。SFT、rejection sampling、DPO、GRPO、DAPO、GSPO、RLVR 和 RFT 都遵循同一个控制循环：选择 prompt，生成或标注候选响应，用人类偏好或可验证奖励评分，在约束下更新策略，然后在实际推理预算下评估行为。关键不是“哪种方法更时髦”，而是哪个信号对你想要改变的行为足够可靠。</p>
 
   <div class="foundation-graph" role="img" aria-label="后训练控制循环：从任务 prompt 经过数据、目标、rollout、奖励、训练更新到部署评估">
     <svg viewBox="0 0 940 420">
@@ -176,15 +176,15 @@
 <!-- 9.2 SFT 理论 -->
 <!-- ================================================================ --><section class="card" id="s9-2">
   <h3>9.2 监督微调（SFT）的理论——损失掩码的核心作用</h3>
-  <p><strong>监督微调（SFT）</strong>是一种基础的对齐方法。我们在人工标注的指令-回复对上继续训练模型，使其行为更符合目标助手的交互界面。</p>
+  <p><strong>监督微调（SFT）</strong>是一种基础的对齐方法。我们在人工标注的指令-回复对上继续训练模型，让它的输出更符合目标助手的风格。</p>
 
   <h4>SFT 的关键细节：仅对回复部分计算损失</h4>
-  <p>一个常见的误解是 SFT 的训练目标和预训练相同——都是交叉熵。然而，一个关键区别是<strong>损失掩码（loss masking）</strong>：在 SFT 中，指令部分（prompt）不参与损失计算，只有回复部分参与梯度更新。</p>
+  <p>SFT 的训练目标容易误以为和预训练一样都是交叉熵。但关键区别在于<strong>损失掩码（loss masking）</strong>：在 SFT 中，指令部分（prompt）不参与损失计算，只有回复部分参与梯度更新。</p>
   <p>为什么？</p>
   <ul>    <li><strong>指令由用户提供</strong>——模型不需要学习如何生成用户指令。在指令部分计算损失会浪费计算资源。</li>
     <li><strong>防止分布偏移</strong>——训练时模型看到的是真实指令，但推理时指令由用户提供。如果模型学会了“生成指令”，推理时就会产生混淆。</li>
   </ul>
-  <p>具体实现：在标签（label）中将指令部分设为 <code>-100</code>（PyTorch 的 <code>ignore_index</code>），交叉熵会自动忽略这些位置。</p>
+  <p>具体做法：在标签（label）中将指令部分设为 <code>-100</code>（PyTorch 中为 <code>ignore_index</code>），交叉熵损失会自动忽略这些位置。</p>
 
   <h4>数据格式：ChatML / ShareGPT</h4>
   <p>SFT 数据通常使用结构化格式：</p>
@@ -193,12 +193,12 @@
 请解释反向传播。&lt;|im_end|&gt;
 &lt;|im_start|&gt;assistant
 反向传播是一种在神经网络中计算梯度的算法……&lt;|im_end|&gt;</div>
-  <p>特殊 token（如 <code>&lt;|im_start|&gt;</code> 和 <code>&lt;|im_end|&gt;</code>）帮助模型区分对话角色。训练时，损失从 <code>assistant</code> 之后的部分开始计算。</p>
+  <p>特殊 token（如 <code>&lt;|im_start|&gt;</code> 和 <code>&lt;|im_end|&gt;</code>）用来标记不同的对话角色。训练时损失从 <code>assistant</code> 之后的部分开始计算。</p>
 </section><!-- ================================================================ -->
 <!-- 练习1：SFT训练循环 -->
 <!-- ================================================================ --><section class="card" id="s9-3">
   <h3>9.3 编程练习1：实现SFT训练循环</h3>
-  <p>实现一个完整的SFT训练循环。核心是正确处理标签掩码——损失仅计算在助手的回答部分。</p>
+  <p>实现完整的SFT训练循环。核心是正确设置标签掩码：损失只计算在助手的回答部分。</p>
 
   <div class="coding-exercise">
     <h4>练习1：SFT训练</h4>
@@ -208,8 +208,8 @@
       <ul>
         <li><code>SFTDataset</code>接受一个列表<code>[{"instruction": "...", "response": "..."}]</code></li>
         <li>使用ChatML格式组装完整序列</li>
-        <li>将标签中的指令部分设置为 -100，保留回答部分的实际token ID</li>
-        <li><code>sft_step</code>函数：前向 → 偏移logits → 交叉熵 with ignore_index=-100</li>
+        <li>标签中指令部分的token ID设为-100，保留回答部分的实际token ID</li>
+        <li><code>sft_step</code>函数：前向传播 → 偏移logits → 交叉熵损失（ignore_index=-100）</li>
         <li>支持动态填充（使用<code>pad_sequence</code>）</li>
       </ul>
       <pre># Expected usage
@@ -285,24 +285,24 @@ def sft_step(model, batch, optimizer):
     loss.backward()
     optimizer.step()
     return loss.item()</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>偏移操作：</strong>模型在位置t的输出logits预测<span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。因此我们需要<code>logits[:, :-1]</code>（移除最后一个位置的预测）来对应<code>labels[:, 1:]</code>（移除第一个位置的标签）。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>偏移操作：</strong>模型在位置 t 的输出 logits 预测<span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。因此需要 <code>logits[:, :-1]</code>（去掉最后一个位置的预测）来对齐 <code>labels[:, 1:]</code>（去掉第一个位置的标签）。</p>
     </div>
   </div>
 </section><section class="card" id="s9-3a">
   <h3>9.3A 实战示例：SFT 标签掩码与有效 token 分母</h3>
-  <p>将仅对回答进行监督的 SFT 写成逐 token 的目标函数可以避免两个常见错误：将提示作为监督目标，或者遗漏偏移后的第一个助手 token。考虑以下 token 化的对话：</p>
+  <p>SFT 只对回答部分进行监督。如果将其写成逐 token 的目标函数，就能避免两个常见错误：把提示也当作监督目标，或者漏掉偏移后的第一个助手 token。考虑以下 token 化的对话：</p>
   <div class="code-block" data-lang="text">
 位置:   0      1       2        3      4       5            6     7        8          9
 token: BOS  &lt;user&gt; explain  BP  &lt;/user&gt; &lt;assistant&gt; BP  computes gradients  EOS</div>
-  <p>训练输入仍然是完整的序列，但标签只保留助手回答的 token，将所有其他位置设置为 <code>-100</code>：</p>
+  <p>训练输入仍是完整序列，但标签只保留助手回答的 token，其余位置都设为 <code>-100</code>：</p>
   <div class="code-block" data-lang="text">
 标签: -100  -100    -100    -100   -100     -100       BP  computes gradients EOS</div>
-  <p>自回归交叉熵不使用 <code>logits[t]</code> 来预测当前位置的 token，而是使用 <code>logits[t]</code> 来预测 <code>labels[t+1]</code>。因此，实际参与损失的偏移后的目标为：</p>
+  <p>自回归交叉熵不是用 <code>logits[t]</code> 来预测当前 token，而是用 <code>logits[t]</code> 来预测 <code>labels[t+1]</code>。因此，实际参与损失的目标需要偏移一位：</p>
   <div class="code-block" data-lang="text">
 logits 位置: 0    1      2      3      4      5        6        7          8
 目标标签:   -100 -100   -100   -100   -100   BP       computes gradients  EOS
 有效掩码:       0    0      0      0      0     1          1        1        1</div>
-  <p>该样本的损失分母是 4，而不是序列长度 10，也不是偏移后的长度 9。第一个有效的监督来自 <code>logits[5]</code> 预测助手的第一个回答 token <code>BP</code>；如果 <code>&lt;assistant&gt;</code> 之后的第一个 token 仍然设置为 <code>-100</code>，模型将无法学会如何开始回答。</p>
+  <p>这个样本的损失分母是 4，而不是序列长度 10，也不是偏移后的长度 9。第一个有效的监督来自 <code>logits[5]</code> 预测助手的第一个回答 token <code>BP</code>；如果 <code>&lt;assistant&gt;</code> 之后的第一个 token 还是设为 <code>-100</code>，模型就学不会如何开始回答。</p>
   <div class="formula">L_{\text{SFT}} =
   -\frac{1}{4}\left[
   \log p(\text{BP}\mid x_{\le 5})+
@@ -310,10 +310,10 @@ logits 位置: 0    1      2      3      4      5        6        7          8
   \log p(\text{gradients}\mid x_{\le 7})+
   \log p(\text{EOS}\mid x_{\le 8})
   \right]</div>
-  <p>在批处理中，填充 token 的标签也应设置为 <code>-100</code>。这样，不同长度样本的平均损失仅由实际的助手回答 token 决定，不会因填充量而改变。</p>
+  <p>批处理中，填充 token 的标签也要设为 <code>-100</code>。这样，不同长度样本的平均损失只由实际的助手回答 token 决定，不会受填充量影响。</p>
 </section><section class="card" id="s9-3b">
   <h3>9.3B SFT 数据管道：从样本格式到训练批次</h3>
-  <p>SFT 的难点并不仅仅是将 prompt 的 label 设为 <code>-100</code>。真正的指令微调常常因为数据协议问题而失败：不一致的聊天模板、被截断的助手起始 token、多轮对话中错误的 mask、打包（packing）破坏两个样本之间的语义边界，或者高质量数据被低质量合成样本淹没。训练工程师需要把 SFT 视为一条数据管道，而不仅仅是一个损失函数。</p>
+  <p>SFT 的难点不只是将 prompt 的 label 设为 <code>-100</code>。指令微调常因数据协议问题失败：不一致的聊天模板、被截断的助手起始 token、多轮对话中错误的 mask、打包（packing）破坏两个样本之间的语义边界，或者高质量数据被低质量合成样本淹没。训练工程师应将 SFT 视为一条数据管道，而非仅仅一个损失函数。</p>
 
   <h4>1. 聊天模板是模型接口的一部分</h4>
   <p>同样的对话在不同模型中的序列化方式可能不同。GPT 风格、Llama 风格和 ChatML 风格的格式使用不同的角色 token、换行符、BOS/EOS 和停止 token。如果训练时用一种模板，推理服务时用另一种模板，模型可能会学到错误的角色边界，表现为响应的 <code>user</code> 重复、缺少结束 token，或把系统 prompt 当作普通文本延续。</p>
@@ -325,10 +325,10 @@ messages:
 
 serialized tokens:
   BOS system_tokens user_tokens assistant_header response_tokens EOS</div>
-  <p>一种紧凑的实现可以使用简化的 ChatML 模板，但实验报告必须明确说明模板、特殊 token、是否添加 BOS/EOS，以及如何定位响应起点。否则，两个团队使用相同的数据和模型可能会训练出不同的行为。</p>
+  <p>一种紧凑实现可用简化的 ChatML 模板，但实验报告必须明确说明模板、特殊 token、是否添加 BOS/EOS 以及如何定位响应起点。否则，两个团队使用相同数据和模型，可能训练出不同行为。</p>
 
   <h4>2. 多轮对话的标签 mask</h4>
-  <p>单轮 SFT 只需要 mask 掉用户 prompt；多轮对话则需要更精确的处理：所有 system/user token 都不是目标，而助手的历史响应是否参与损失计算取决于训练目标。常见的做法是对每一个助手 span 计算 loss，让模型在多轮对话中学会每个响应：</p>
+  <p>单轮 SFT 只需 mask 掉用户 prompt；多轮对话需要更精确处理：所有 system/user token 都不参与损失计算，而助手的历史响应是否参与取决于训练目标。常见的做法是对每一个助手 span 计算 loss，让模型在多轮对话中学会每个响应：</p>
   <div class="code-block" data-lang="text">
 token span:  [system][user_1][assistant_1][user_2][assistant_2]
 labels:      -100    -100    keep         -100    keep</div>
@@ -339,12 +339,12 @@ labels:      -100    -100    keep         -100    keep</div>
   <ul>
     <li><strong>边界 token：</strong>样本之间必须有 EOS 或明确的分隔符，防止模型将下一条指令当作前一条响应的延续。</li>
     <li><strong>注意力 mask：</strong>如果使用块对角注意力（block-diagonal attention），样本之间不应互相看见；如果允许普通因果注意力，就必须接受“后一个样本能看到前一个样本”的训练分布。</li>
-    <li><strong>截断：</strong>优先确保助手起始 token 和有效响应 token 不被截断。只保留 prompt 而截掉响应的样本对 SFT 几乎没有训练价值。</li>
+    <li><strong>截断：</strong>优先确保助手起始 token 和有效响应 token 不被截断。只保留 prompt 而截掉响应的样本几乎没有训练价值。</li>
     <li><strong>损失分母：</strong>记录有效响应 token 的数量，而不仅仅是批次大小。批次中样本数量相同并不意味着监督 token 数量相同。</li>
   </ul>
-  <p>一个实用的指标是 <code>supervised_token_ratio = valid_label_tokens / total_tokens</code>。比例过低说明训练在大批量 prompt、填充或无效 token 上做了前向计算；比例过高也可能说明 prompt 太短、任务过于模板化，模型没有学到复杂的指令条件。</p>
+  <p>一个实用的指标是 <code>supervised_token_ratio = valid_label_tokens / total_tokens</code>。比例过低说明大量前向计算浪费在 prompt、填充或无效 token 上；比例过高也可能说明 prompt 太短、任务过于模板化，模型没有学到复杂的指令条件。</p>
 
-  <p>模板和 mask 诊断将本节内容转化为训练前的检查。它接收已经 token 化的多轮消息，而不是直接依赖某个特定的 tokenizer：每条消息必须携带 <code>role</code> 和 <code>token_ids</code>，然后报告会记录助手 span、监督 token 比例、被截断的助手 token、非法角色和打包风险。这样可以将 Hugging Face、OpenAI 或自定义数据导出为统一的 span 表，然后验证模板是否一致、loss 是否只落在助手 token 上、截断是否切掉了响应、打包是否需要块对角注意力。</p>
+  <p>模板和 mask 诊断将上述内容转化为训练前的检查。它接收已 token 化的多轮消息，而非直接依赖特定 tokenizer：每条消息必须携带 <code>role</code> 和 <code>token_ids</code>，然后报告会记录助手 span、监督 token 比例、被截断的助手 token、非法角色和打包风险。这样可将 Hugging Face、OpenAI 或自定义数据导出为统一 span 表，然后验证模板是否一致、loss 是否只落在助手 token 上、截断是否切掉了响应、打包是否需要块对角注意力。</p>
 
   <div class="code-block" data-lang="python">report = sft_chat_template_mask_report(
     examples=[{
@@ -359,7 +359,7 @@ labels:      -100    -100    keep         -100    keep</div>
 # report checks template_roles, assistant_label_mask,
 # supervised_token_ratio, truncation, and packing.</div>
 
-  <p>这个诊断的关键不在于替代 tokenizer，而是显式地暴露 token 化之后、训练步骤之前最容易出错的协议。如果多个样本打包而没有块对角注意力，后一个样本在普通因果注意力下会看到前一个样本；如果 <code>max_seq_len</code> 截断了助手 span，训练 loss 可能仍在下降，但有效监督已经偏离了目标行为。</p>
+  <p>这个诊断的关键不是替代 tokenizer，而是显式暴露 token 化之后、训练步骤之前最容易出错的协议。如果多个样本打包而没有块对角注意力，后一个样本在普通因果注意力下会看到前一个样本；如果 <code>max_seq_len</code> 截断了助手 span，训练 loss 可能仍在下降，但有效监督已偏离目标行为。</p>
 
   <h4>4. 数据混合决定模型行为</h4>
   <p>SFT 数据通常来自多个来源：高质量人工指令、任务导向数据、代码问答、数学解题、多轮客服、拒绝样本、工具调用样本以及合成数据。合成数据并不等同于“廉价的人工数据”：它通常来自教师模型、基于规则的生成器、验证器过滤或拒绝采样（rejection sampling），目的是扩大覆盖范围、暴露困难样本、将高预算推理行为蒸馏到小模型中。混合比例直接改变模型行为：</p>
@@ -374,7 +374,7 @@ labels:      -100    -100    keep         -100    keep</div>
       <tr><td>合成/蒸馏</td><td>利用教师、验证器或多候选过滤扩展高价值任务</td><td>教师错误被放大，答案风格同质化，评估泄露或数据归属不明确</td></tr>
     </table>
   </div>
-  <p>因此，SFT 数据比例不是“越多越好”。严格的训练计划首先定义目标行为，然后确定每种数据类型的采样权重，并在验证集上观察每个任务切分的变化。对于合成/蒸馏数据，必须额外记录四件事：教师或生成器的版本、采样温度和候选数、过滤规则或验证器准确率，以及是否与保留的评估或公开基准重叠。否则，训练 loss 下降只表明学生模型拟合了教师的输出，而不是任务能力、推理可靠性或安全边界有了真正提升。</p>
+  <p>因此，SFT 数据比例不是“越多越好”。严格的训练计划应先定义目标行为，再确定每种数据类型的采样权重，并在验证集上观察每个任务切分的变化。对于合成/蒸馏数据，必须额外记录四件事：教师或生成器的版本、采样温度和候选数、过滤规则或验证器准确率，以及是否与保留的评估或公开基准重叠。否则，训练 loss 下降只表明学生模型拟合了教师的输出，而非任务能力、推理可靠性或安全边界有了真正提升。</p>
 
   <h4>5. SFT 与评估污染</h4>
   <p>指令微调数据常常包含来自公开基准的问题、解答或近似改写。如果污染进入训练集，模型可能看起来在验证集上有所提升，但实际上只是记住了问题表面或答案格式。预训练阶段的污染很难完全消除，但 SFT 阶段数据量较小且来源可控，应该做基本的去重和拆分隔离：源自同一 prompt、同一题库或同一文档的样本，不应同时出现在训练集和验证集中。</p>
@@ -384,18 +384,18 @@ labels:      -100    -100    keep         -100    keep</div>
 <!-- 9.4 Bradley-Terry + RLHF -->
 <!-- ================================================================ --><section class="card" id="s9-4">
   <h3>9.4 Bradley-Terry偏好模型与RLHF三部曲</h3>
-  <p>RLHF（基于人类反馈的强化学习）由InstructGPT论文（Ouyang et al., 2022）提出。其理论基础是<strong>Bradley-Terry偏好模型</strong>。</p>
+  <p>RLHF（基于人类反馈的强化学习）在InstructGPT论文（Ouyang et al., 2022）中提出。其核心理论基础是<strong>Bradley-Terry偏好模型</strong>。</p>
 
   <h4>Bradley-Terry模型</h4>
-  <p>假设我们有偏好数据 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，其中人类评判回答 <span class="katex-inline" data-expr="y_w" aria-label="y_w" role="img"></span> 优于 <span class="katex-inline" data-expr="y_l" aria-label="y_l" role="img"></span>。Bradley-Terry模型假设存在一个潜在奖励函数 <span class="katex-inline" data-expr="r(x, y)" aria-label="r(x, y)" role="img"></span>，偏好概率为：</p>
+  <p>假设我们有偏好数据 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，其中人类认为回答 <span class="katex-inline" data-expr="y_w" aria-label="y_w" role="img"></span> 优于 <span class="katex-inline" data-expr="y_l" aria-label="y_l" role="img"></span>。Bradley-Terry模型假设存在一个潜在的奖励函数 <span class="katex-inline" data-expr="r(x, y)" aria-label="r(x, y)" role="img"></span>，偏好概率为：</p>
   <div class="math-box"><div class="label">公式 9.1 Bradley-Terry偏好模型</div>
     <div class="katex" data-expr="P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l)) = \frac{1}{1 + e^{-(r_w - r_l)}}" aria-label="P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l)) = \frac{1}{1 + e^{-(r_w - r_l)}}" role="img"></div>
   </div>
-  <p>这意味着我们从偏好数据中学习一个奖励函数 <span class="katex-inline" data-expr="r" aria-label="r" role="img"></span>，使得偏好的回答的奖励高于不偏好的回答。训练RM的损失是最大化该概率的对数似然：</p>
+  <p>这意味着我们从偏好数据中学习一个奖励函数 <span class="katex-inline" data-expr="r" aria-label="r" role="img"></span>，使得被偏好的回答获得更高的奖励。训练奖励模型（RM）的损失函数是最大化该概率的对数似然：</p>
   <div class="math-box"><div class="label">公式 9.2 RM损失</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" aria-label="\mathcal{L}_{\text{RM}} = -\mathbb{E}[\log \sigma(r(x, y_w) - r(x, y_l))]" role="img"></div>
   </div>
-  <p>在计算上，该目标首先为每个偏好对计算奖励差值 <span class="katex-inline" data-expr="m_i=r_i^w-r_i^l" aria-label="m_i=r_i^w-r_i^l" role="img"></span>，然后取 <span class="katex-inline" data-expr="-\log\sigma(m_i)" aria-label="-\log\sigma(m_i)" role="img"></span> 的均值。如果 <span class="katex-inline" data-expr="m_i&gt;0" aria-label="m_i&gt;0" role="img"></span> 的比例非常低，说明奖励模型尚未将选择项排在拒绝项之上；如果比例高但泛化能力差，则需检查偏好对是否受长度、模板或候选分布主导。</p>
+  <p>在计算时，该目标先为每个偏好对计算奖励差值 <span class="katex-inline" data-expr="m_i=r_i^w-r_i^l" aria-label="m_i=r_i^w-r_i^l" role="img"></span>，然后取 <span class="katex-inline" data-expr="-\log\sigma(m_i)" aria-label="-\log\sigma(m_i)" role="img"></span> 的均值。如果 <span class="katex-inline" data-expr="m_i&gt;0" aria-label="m_i&gt;0" role="img"></span> 的比例非常低，说明奖励模型还没有把选择项排在拒绝项之前；如果比例高但泛化能力差，则需要检查偏好对是否受长度、模板或候选分布影响。</p>
 
   <div class="worked-example">
     <h4>工作示例：手动计算奖励模型配对损失</h4>
@@ -409,26 +409,26 @@ labels:      -100    -100    keep         -100    keep</div>
         <tr><td>2</td><td>0.2</td><td>0.8</td><td>-0.6</td><td><code>sigmoid(-0.6)=0.354</code></td><td><code>-log(0.354)=1.037</code></td></tr>
       </tbody>
     </table>
-    <p>第一个样本将选择项排在拒绝项之上，损失较小；第二个样本顺序颠倒，导致损失很大。批次平均损失为 <code>(0.201 + 1.037) / 2 = 0.619</code>，偏好准确率为 <code>1/2 = 0.5</code>。此示例说明RM损失不要求奖励有绝对尺度，只要求同一prompt下选择项与拒绝项之间的相对差值越来越大。</p>
+    <p>第一个样本将选择项排在拒绝项之前，损失较小；第二个样本顺序颠倒，损失很大。批次平均损失为 <code>(0.201 + 1.037) / 2 = 0.619</code>，偏好准确率为 <code>1/2 = 0.5</code>。这个例子说明RM损失不要求奖励有绝对尺度，只要求同一prompt下选择项与拒绝项之间的相对差值越来越大。</p>
   </div>
 
   <h4>RLHF三部曲</h4>
   <ol>
-    <li><strong>SFT</strong> — 在高质量指令-回答对上微调，得到初始策略</li>
+    <li><strong>SFT</strong> — 在高质量指令-回答对上进行微调，得到初始策略</li>
     <li><strong>奖励模型训练</strong> — 使用人类偏好对训练奖励模型（RM）</li>
-    <li><strong>PPO优化</strong> — 以RM得分作为奖励信号，通过PPO优化策略。同时添加KL惩罚以防止偏离SFT模型过远：<span class="katex-inline" data-expr="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" aria-label="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" role="img"></span></li>
+    <li><strong>PPO优化</strong> — 以RM得分为奖励信号，通过PPO优化策略，同时加入KL惩罚项防止偏离SFT模型过远：<span class="katex-inline" data-expr="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" aria-label="\mathcal{L} = -\mathbb{E}[r_\phi(x, y)] + \beta \cdot \text{KL}(\pi_\theta \parallel \pi_{\text{SFT}})" role="img"></span></li>
   </ol>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>RLHF的工程挑战：</strong> PPO风格的RLHF通常需要同时维护Actor、Reference、Reward Model和Critic等多个组件，导致训练和超参数调优成本高昂。DPO和GRPO从不同角度简化了流程或减少了组件，但它们仍然依赖于偏好/奖励数据质量、KL控制和优化设置。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>RLHF的工程挑战：</strong> PPO风格的RLHF通常需要同时维护Actor、Reference、Reward Model和Critic等多个模型组件，导致训练和调参成本很高。DPO和GRPO从不同角度简化流程或减少组件数量，但它们仍然依赖偏好/奖励数据的质量、KL控制和优化设置。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习2：LoRA -->
 <!-- ================================================================ --><section class="card" id="s9-5">
   <h3>9.5 编程练习 2：实现 LoRA——低秩适应</h3>
-  <p><strong>LoRA</strong>（低秩适应，Hu 等人，2021）基于一个关键洞察：模型微调过程中的权重矩阵变化 <span class="katex-inline" data-expr="\Delta W" aria-label="\Delta W" role="img"></span> 具有 <strong>低秩</strong> 性质。LoRA 的方法不是直接更新 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>，而是在旁边添加一个低秩分解增量：</p>
+  <p><strong>LoRA</strong>（低秩适应，Hu 等人，2021）的核心思路是：模型微调时权重矩阵的变化 <span class="katex-inline" data-expr="\Delta W" aria-label="\Delta W" role="img"></span> 往往是 <strong>低秩</strong> 的。LoRA 不直接更新 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>，而是在其旁边添加一个低秩分解增量：</p>
 
   <div class="math-box"><div class="label">公式 9.3 LoRA 前向传播</div>
     <div class="katex" data-expr="h = W_0 x + \Delta W x = W_0 x + BA x, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}" aria-label="h = W_0 x + \Delta W x = W_0 x + BA x, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}" role="img"></div>
   </div>
-  <p>训练期间，仅更新 <span class="katex-inline" data-expr="A, B" aria-label="A, B" role="img"></span>，<span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 被冻结。推理时，<span class="katex-inline" data-expr="BA" aria-label="BA" role="img"></span> 可以合并回 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>（<span class="katex-inline" data-expr="W' = W_0 + BA" aria-label="W' = W_0 + BA" role="img"></span>），从而带来零额外的推理开销。</p>
+  <p>训练时只更新 <span class="katex-inline" data-expr="A, B" aria-label="A, B" role="img"></span>，<span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 被冻结。推理时，<span class="katex-inline" data-expr="BA" aria-label="BA" role="img"></span> 可以合并回 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span>（<span class="katex-inline" data-expr="W' = W_0 + BA" aria-label="W' = W_0 + BA" role="img"></span>），推理时没有任何额外开销。</p>
 
   <div class="coding-exercise">
     <h4>练习 2：实现 LoRA 层和应用函数</h4>
@@ -508,28 +508,28 @@ def apply_lora(model, r=8, alpha=16.0, target_modules=None):
     total = sum(p.numel() for p in model.parameters())
     print(f"可训练参数：{trainable:,} / {total:,} ({trainable/total*100:.2f}%)")
     return model</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 B 从零开始：</strong> 训练开始时，<span class="katex-inline" data-expr="BA = 0" aria-label="BA = 0" role="img"></span>，因此 LoRA 路径对输出无影响。模型从原始权重出发，逐步学习微调方向。如果 B 和 A 都随机初始化，模型会以随机偏移开始，可能破坏预训练知识。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 B 从零开始：</strong> 训练开始时，<span class="katex-inline" data-expr="BA = 0" aria-label="BA = 0" role="img"></span>，LoRA 路径对输出无影响。模型从原始权重出发，逐步学习微调方向。如果 B 和 A 都随机初始化，模型会从随机偏移开始，可能破坏预训练知识。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 9.5A LoRA 工程实践 -->
 <!-- ================================================================ --><section class="card" id="s9-5a">
   <h3>9.5A LoRA/PEFT 工程中的内存计算：节省了什么内存，开销在哪里</h3>
-  <p>LoRA 公式 <span class="katex-inline" data-expr="W'=W_0+\frac{\alpha}{r}BA" aria-label="W'=W_0+\frac{\alpha}{r}BA" role="img"></span> 只描述了参数化方法。训练工程中更重要的是内存计算：基权重 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 被冻结后，梯度和优化器状态无需保存；只有小矩阵 <span class="katex-inline" data-expr="A,B" aria-label="A,B" role="img"></span> 参与更新。</p>
+  <p>LoRA 公式 <span class="katex-inline" data-expr="W'=W_0+\frac{\alpha}{r}BA" aria-label="W'=W_0+\frac{\alpha}{r}BA" role="img"></span> 只描述了参数化方法。训练时更关键的是内存计算：基权重 <span class="katex-inline" data-expr="W_0" aria-label="W_0" role="img"></span> 被冻结后，梯度和优化器状态无需保存；只有小矩阵 <span class="katex-inline" data-expr="A,B" aria-label="A,B" role="img"></span> 参与更新。</p>
 
   <h4>1. 可训练参数的数量</h4>
   <p>对于线性层 <code>Linear(d_in, d_out)</code>，原始参数数量为 <code>d_out * d_in</code>。当 LoRA 秩为 <code>r</code> 时，增加的参数为：</p>
   <div class="math-box"><div class="label">LoRA 参数计数</div>
     <div class="katex" data-expr="N_{\text{LoRA}}=r\cdot d_{\text{in}}+d_{\text{out}}\cdot r=r(d_{\text{in}}+d_{\text{out}})" aria-label="N_LoRA=r(d_in+d_out)" role="img"></div>
   </div>
-  <p>如果 <code>d_in=d_out=4096</code> 和 <code>r=8</code>，单个投影层仅增加 <code>8*(4096+4096)=65,536</code> 个可训练参数，而原始矩阵有 <code>16,777,216</code> 个参数。这种数量级差异解释了为什么 LoRA 能够以更小的内存完成任务适配。</p>
+  <p>如果 <code>d_in=d_out=4096</code> 和 <code>r=8</code>，单个投影层仅增加 <code>8*(4096+4096)=65,536</code> 个可训练参数，而原始矩阵有 <code>16,777,216</code> 个参数。这种数量级差异解释了 LoRA 为何能用更少的内存完成适配。</p>
 
   <h4>2. 内存节省来自梯度和优化器状态</h4>
   <p>以 AdamW 为例，训练一个可训练参数通常至少需要权重、梯度、一阶动量、二阶动量。全微调时，这些状态覆盖所有参数；LoRA 微调时，基权重仍需加载用于前向/反向传播，但梯度和优化器状态只保存给适配器参数：</p>
   <div class="code-block" data-lang="text">
 全微调训练状态 ~= all_params * (weights + grads + Adam m + Adam v)
 LoRA 训练状态 ~= base_weights + lora_params * (weights + grads + Adam m + Adam v)</div>
-  <p>因此，LoRA 主要节省的不是前向传播所需的基模型权重，而是完整的梯度和优化器状态。如果结合 4-bit/8-bit 基权重量化，就形成了 QLoRA 之类的方法：冻结的基模型以低精度存储，而 LoRA 适配器以更高精度训练。本课程不要求实现 QLoRA 内核，但你应该理解它进一步分离了"存储基模型"和"训练适配器"的内存压力。</p>
+  <p>因此，LoRA 节省的主要不是前向传播所需的基模型权重，而是完整的梯度和优化器状态。如果结合 4-bit/8-bit 基权重量化，就形成了 QLoRA 之类的方法：冻结的基模型以低精度存储，而 LoRA 适配器以更高精度训练。本课程不要求实现 QLoRA 内核，但你需要理解它进一步将“存储基模型”和“训练适配器”的内存压力分开。</p>
 
   <h4>3. 目标模块并非随意选择</h4>
   <p>LoRA 通常应用于注意力 <code>q_proj</code>、<code>v_proj</code>，也可以扩展到 <code>k_proj</code>、<code>o_proj</code> 以及 MLP 上/下/门控投影。选择目标模块时需考虑：</p>
@@ -542,16 +542,16 @@ LoRA 训练状态 ~= base_weights + lora_params * (weights + grads + Adam m + Ad
 
   <h4>4. alpha、rank 和 dropout 的作用</h4>
   <p><code>alpha/r</code> 是 LoRA 分支的缩放因子。如果增大 rank 而不调整缩放，适配器的输出幅度可能随 rank 变化；使用 <code>alpha/r</code> 使得不同 rank 下初始更新尺度更可控。LoRA dropout 对适配器输入施加随机失活，通常用于小数据集，防止适配器记忆训练样本中的表层模式。</p>
-  <p>一份可信的实验报告不应止步于"使用了 LoRA"。至少应说明：目标模块、rank、alpha、dropout、基模型是否量化、训练 dtype、可训练参数比例、推理是否合并，以及与全微调或冻结基线的质量/成本对比。</p>
+  <p>一份可靠的实验报告不能只说“使用了 LoRA”。至少应说明：目标模块、rank、alpha、dropout、基模型是否量化、训练 dtype、可训练参数比例、推理是否合并，以及与全微调或冻结基线的质量/成本对比。</p>
 
   <h4>5. 合并推理与多适配器服务</h4>
   <p>推理时，<span class="katex-inline" data-expr="\Delta W=\frac{\alpha}{r}BA" aria-label="\Delta W=alpha/r BA" role="img"></span> 可以加回到基权重中得到常规线性层。这样消除了 LoRA 分支的额外计算，适合单个适配器的固定部署。但如果服务需要按租户、语言或任务动态切换多个适配器，预合并会引入权重管理成本；未合并的适配器需要推理引擎高效地对不同适配器的请求进行批处理。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>LoRA 不是"免费的微调"。它通过更少的可训练参数降低了训练内存和分发成本，但你仍需要评估目标模块覆盖度、rank 容量、数据质量、适配器切换、合并推理和量化误差。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>LoRA 不是“免费的微调”。它用更少的可训练参数降低了训练内存和分发成本，但你仍需评估目标模块覆盖度、rank 容量、数据质量、适配器切换、合并推理和量化误差。</div></div>
 </section><!-- ================================================================ -->
 <!-- 9.6 DPO 理论 -->
 <!-- ================================================================ --><section class="card" id="s9-6">
   <h3>9.6 DPO 的数学等价性——为什么 DPO 不需要单独的奖励模型</h3>
-  <p><strong>DPO（Direct Preference Optimization，直接偏好优化）</strong>（Rafailov et al., 2023）是一项重要的理论贡献。它表明，在 Bradley-Terry 偏好模型和 KL 正则化的奖励最大化等假设下，奖励函数可以重新参数化为策略/参考的对数概率比值，从而无需先显式训练一个单独的奖励模型，可以直接从偏好对中构建优化目标。</p>
+  <p><strong>DPO（Direct Preference Optimization，直接偏好优化）</strong>（Rafailov et al., 2023）有一个重要的理论贡献：在 Bradley-Terry 偏好模型和 KL 正则化的奖励最大化假设下，奖励函数可以重新参数化为策略与参考策略的对数概率比值。这样一来，就不需要先训练一个单独的奖励模型，可以直接从偏好对中构造优化目标。</p>
 
   <h4>核心推导</h4>
   <p>RLHF 的目标是在保持与参考策略 <span class="katex-inline" data-expr="\pi_{\text{ref}}" aria-label="\pi_{\text{ref}}" role="img"></span 接近的同时最大化奖励 <span class="katex-inline" data-expr="r(x, y)" aria-label="r(x, y)" role="img"></span>：</p>
@@ -570,11 +570,11 @@ LoRA 训练状态 ~= base_weights + lora_params * (weights + grads + Adam m + Ad
   <div class="math-box"><div class="label">公式 9.7 DPO 损失</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" aria-label="\mathcal{L}_{\text{DPO}} = -\mathbb{E}[\log \sigma(\beta \cdot (\log\frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)}))]" role="img"></div>
   </div>
-  <p>核心含义：在上述建模假设下，我们可以利用<strong>策略/参考的对数概率比值</strong>构建一个与偏好概率相关的隐式奖励差值，而无需训练单独的奖励模型。DPO 优化的是一个由选择/拒绝偏好对诱导的分类式损失，而非任意的“直接奖励最大化”。</p>
-  <p>DPO 隐式奖励诊断显式计算了这种关系：<span class="katex-inline" data-expr="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" aria-label="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" role="img"></span>。对于每个偏好对，选择/拒绝的隐式奖励差值为 <span class="katex-inline" data-expr="\hat r_w-\hat r_l" aria-label="\hat r_w-\hat r_l" role="img"></span>，而 <span class="katex-inline" data-expr="\sigma(\hat r_w-\hat r_l)" aria-label="\sigma(\hat r_w-\hat r_l)" role="img"></span> 可以解释为当前策略/参考比值所诱导的偏好概率。这种诊断可以揭示一个常见错误：只比较策略的原始 log 概率，而忘记了参考模型的锚定作用。</p>
+  <p>这意味着，在上述建模假设下，可以用<strong>策略/参考的对数概率比值</strong>构造一个与偏好概率相关的隐式奖励差值，不需要训练单独的奖励模型。DPO 实际上是在优化一个由选择/拒绝偏好对导出的分类式损失，而不是做直接的“奖励最大化”。</p>
+  <p>DPO 隐式奖励诊断则显式计算了这个差值：<span class="katex-inline" data-expr="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" aria-label="\hat r_\theta(x,y)=\beta(\log \pi_\theta(y\mid x)-\log \pi_{\text{ref}}(y\mid x))" role="img"></span>。对于每个偏好对，选择与拒绝的隐式奖励差值为 <span class="katex-inline" data-expr="\hat r_w-\hat r_l" aria-label="\hat r_w-\hat r_l" role="img"></span>，而 <span class="katex-inline" data-expr="\sigma(\hat r_w-\hat r_l)" aria-label="\sigma(\hat r_w-\hat r_l)" role="img"></span> 可以解释为当前策略/参考比值所对应的偏好概率。这个诊断能揭示一个常见错误：只比较策略的原始 log 概率，而忘记了参考模型的锚定作用。</p>
 
   <h4>计算示例：DPO 关注的是相对于参考的改进</h4>
-  <p>考虑一个偏好对 <code>(prompt, chosen, rejected)</code>，四个序列的 log 概率如下。注意策略的原始 log 概率仍然偏向拒绝响应，因为 <code>-11 &gt; -12</code>；但 DPO 并非直接比较这两个数值。</p>
+  <p>考虑一个偏好对 <code>(prompt, chosen, rejected)</code>，四个序列的 log 概率如下。注意策略的原始 log 概率仍然偏向拒绝响应，因为 <code>-11 &gt; -12</code>；但 DPO 并不直接比较这两个数值。</p>
   <div class="table-wrap">
     <table>
       <tr><th>响应</th><th>策略 logp</th><th>参考 logp</th><th>对数比值 = 策略 - 参考</th><th>隐式奖励, beta=0.1</th></tr>
@@ -582,13 +582,13 @@ LoRA 训练状态 ~= base_weights + lora_params * (weights + grads + Adam m + Ad
       <tr><td>拒绝</td><td>-11.0</td><td>-10.0</td><td>-1.0</td><td>-0.1</td></tr>
     </table>
   </div>
-  <p>选择的绝对概率仍然很低，但相对于参考它提升了 <code>3.0</code>；拒绝响应相对于参考实际上降低了 <code>1.0</code>。因此，DPO logit 为 <code>beta * (3 - (-1)) = 0.4</code>，当前偏好概率为 <code>sigmoid(0.4) ≈ 0.599</code>，每个样本的损失为 <code>-log sigmoid(0.4) ≈ 0.513</code>。如果报告只用 <code>policy_chosen_logp &gt; policy_rejected_logp</code> 作为偏好准确率，就会把这个样本误判为失败；正确的诊断应该比较 <code>chosen_log_ratio &gt; rejected_log_ratio</code>。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO 与 RLHF 对比：</strong>DPO 的主要优势是简化了训练流程：在常见实现中，它不需要训练单独的奖励模型，也不需要 PPO 的 Actor-Critic rollout。相反，它通过策略/参考在选/拒上的对数概率比值来构建损失。它通常比 PPO 风格的 RLHF 更容易实现和调参，但其稳定性仍然依赖于偏好数据质量、参考模型、<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span>、长度偏差以及优化设置。不能无条件地宣称它优于所有 RLHF 方法。</div></div>
+  <p>选择的绝对概率仍然很低，但相对于参考它提升了 <code>3.0</code>；拒绝响应相对于参考实际上降低了 <code>1.0</code>。因此，DPO logit 为 <code>beta * (3 - (-1)) = 0.4</code>，当前偏好概率为 <code>sigmoid(0.4) ≈ 0.599</code>，每个样本的损失为 <code>-log sigmoid(0.4) ≈ 0.513</code>。如果只用 <code>policy_chosen_logp &gt; policy_rejected_logp</code> 来报告偏好准确率，这个样本就会被误判为失败；正确的诊断应该比较 <code>chosen_log_ratio &gt; rejected_log_ratio</code>。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>DPO 与 RLHF 对比：</strong>DPO 的主要优势在于简化训练流程：在常见实现中，它不需要训练单独的奖励模型，也不需要 PPO 中的 Actor-Critic rollout。它通过策略/参考在选/拒上的对数概率比值来构造损失。它通常比 PPO 风格的 RLHF 更容易实现和调参，但稳定性仍然取决于偏好数据质量、参考模型、<span class="katex-inline" data-expr="\beta" aria-label="\beta" role="img"></span>、长度偏差以及优化设置。不能无条件地说它优于所有 RLHF 方法。</div></div>
 </section><!-- ================================================================ -->
 <!-- 9.6A 偏好数据质量 -->
 <!-- ================================================================ --><section class="card" id="s9-6a">
   <h3>9.6A 偏好数据质量：DPO/RLHF 的真实约束</h3>
-  <p>偏好优化的输入常写作 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，但这并不是一个“真实标签”。它是由特定的标注协议、标注人群、采样策略和候选生成模型共同产生的相对判断。无论 DPO、RLHF、GRPO 的目标函数多么优雅，它们都无法自动修复偏好数据中的系统性偏差。</p>
+  <p>偏好优化的输入通常写作 <span class="katex-inline" data-expr="(x, y_w, y_l)" aria-label="(x, y_w, y_l)" role="img"></span>，但这并不是一个“真实标签”。它是一个相对判断，由标注协议、标注人群、采样策略和候选生成模型共同决定。无论 DPO、RLHF、GRPO 的目标函数设计得多好，它们都无法自动消除偏好数据中的系统性偏差。</p>
 
   <h4>偏好数据中的常见偏差</h4>
   <div class="table-wrap">
@@ -603,10 +603,10 @@ LoRA 训练状态 ~= base_weights + lora_params * (weights + grads + Adam m + Ad
   </div>
 
   <h4>将长度偏差转化为可计算的统计量</h4>
-  <p>一个长度偏差诊断将每个偏好对中的长度差写为 <span class="katex-inline" data-expr="\Delta \ell_i = \ell_i^w - \ell_i^l" aria-label="\Delta \ell_i = \ell_i^w - \ell_i^l" role="img"></span>，并报告 <code>mean_length_delta</code>、<code>chosen_longer_rate</code>、<code>rejected_longer_rate</code> 和 <code>tie_rate</code>。如果 chosen 通常显著更长，DPO 或 RM 可能学会“写更多就能赢”的捷径；如果 rejected 更长却仍被判为更差，分析应确定问题是冗长、离题、事实错误还是安全边界问题。</p>
+  <p>一个长度偏差诊断将每个偏好对中的长度差写为 <span class="katex-inline" data-expr="\Delta \ell_i = \ell_i^w - \ell_i^l" aria-label="\Delta \ell_i = \ell_i^w - \ell_i^l" role="img"></span>，并报告 <code>mean_length_delta</code>、<code>chosen_longer_rate</code>、<code>rejected_longer_rate</code> 和 <code>tie_rate</code>。如果 chosen 通常显著更长，DPO 或 RM 可能学会“写更多就能赢”的捷径；如果 rejected 更长却仍被判为更差，应分析问题是冗长、离题、事实错误还是安全边界问题。</p>
 
   <h4>在优化目标之前审计后训练数据</h4>
-  <p>SFT、DPO、GRPO 和 RLVR/RFT 的目标函数都假设训练样本在语义上是可信的：prompt 覆盖目标任务，chosen/rejected 代表稳定的偏好，安全样本不会将危险回答标为 chosen，保留的 eval 集不与训练集重叠。实际的后训练流水线通常混合人类偏好、AI 反馈、拒绝采样、可验证问题以及安全数据；即使是一次紧凑的训练运行，也应当将基本的数据假设转化为可计算的审计表。</p>
+  <p>SFT、DPO、GRPO 和 RLVR/RFT 的目标函数都假设训练样本在语义上是可靠的：prompt 覆盖目标任务，chosen/rejected 反映稳定的偏好，安全样本不会将危险回答标为 chosen，保留的 eval 集不与训练集重叠。实际的后训练流水线通常混合人类偏好、AI 反馈、拒绝采样、可验证问题以及安全数据；即使是一次简短的训练运行，也应当将基本的数据假设转化为可计算的审计表。</p>
 
   <table class="metrics-table">
     <thead><tr><th>检查领域</th><th>检查内容</th><th>失败时的优先操作</th></tr></thead>
@@ -618,7 +618,7 @@ LoRA 训练状态 ~= base_weights + lora_params * (weights + grads + Adam m + Ad
     </tbody>
   </table>
 
-  <p>后训练数据审计将每条 SFT、偏好或 RLVR/RFT 记录汇总到四个诊断领域：<code>coverage</code>、<code>label_quality</code>、<code>leakage</code> 和 <code>safety</code>，并输出 <code>action_items</code>。这一步并非全面的数据集清理指南，而是训练前的最小工程断言：如果同一 prompt 的偏好对矛盾、chosen 显著更长、eval 重叠非零或不安全的 chosen 样本存在，那么后续 DPO loss 的下降仅表明模型正在逼近一个有缺陷的代理目标。</p>
+  <p>后训练数据审计将每条 SFT、偏好或 RLVR/RFT 记录汇总到四个诊断领域：<code>coverage</code>、<code>label_quality</code>、<code>leakage</code> 和 <code>safety</code>，并输出 <code>action_items</code>。这一步并非全面的数据集清理指南，而是训练前的最小工程断言：如果同一 prompt 的偏好对矛盾、chosen 显著更长、eval 重叠非零或不安全的 chosen 样本存在，那么后续 DPO loss 的下降仅说明模型正在逼近一个有缺陷的代理目标。</p>
 
   <div class="code-block" data-lang="python">
 records = [
@@ -632,7 +632,7 @@ report = post_training_data_audit(records, thresholds={
     "max_unsafe_chosen_rate": 0.0,
 })</div>
 
-  <p>该审计将偏好学习的基础整合到本章的目标函数中：DPO 的 <code>chosen/rejected</code> 并非自然真理，GRPO 的奖励组也不是天然可靠的。对齐实验应首先说明数据检查是否支持该目标，然后解释 log-ratio、KL、reward 和行为切片。</p>
+  <p>该审计将偏好学习的基础整合到本章的目标函数中：DPO 的 <code>chosen/rejected</code> 并非天然成立，GRPO 的奖励组也不是天生可靠。对齐实验应首先确认数据检查是否支持该目标，然后解释 log-ratio、KL、reward 和行为切片。</p>
 
   <h4>为什么参考模型至关重要</h4>
   <p>DPO 中的核心比较不是 <span class="katex-inline" data-expr="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" aria-label="\log \pi_\theta(y_w \mid x) - \log \pi_\theta(y_l \mid x)" role="img"></span>，而是策略相对于参考模型的改进：</p>
@@ -646,8 +646,8 @@ report = post_training_data_audit(records, thresholds={
 <!-- 9.6B 奖励与验证器设计 -->
 <!-- ================================================================ --><section class="card" id="s9-6b">
   <h3>9.6B 奖励与验证器设计：在强化学习之前选择合适的训练信号</h3>
-  <p>现代后训练并不简化为一个称为“奖励”的单一对象。偏好标签、奖励模型分数、单元测试、数学验证器、LLM 评判器以及过程奖励模型都会产生不同的学习信号。在选择 PPO、GRPO、DAPO、GSPO、RLVR 或 RFT 之前，工程师必须首先决定哪种奖励家族匹配任务，以及该奖励可能引发哪些失败模式。</p>
-  <p>这就是为什么近年来的工业系统在重视策略优化器的同时，也同样重视评分器和验证器。OpenAI 的 <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">强化微调</a> 工作流需要一个能够对明确任务的输出进行评分的评分器；DeepSeek-R1 对推理任务使用基于规则的奖励，这些任务的最终答案可以被检查；过程奖励研究探讨中间步骤是否有效，而不仅仅是最终答案是否匹配。共同的教训是：奖励应被视为一种带有校准、作用范围和已知失败模式的测量仪器。</p>
+  <p>现代后训练并不只有一个叫“奖励”的单一信号。偏好标签、奖励模型分数、单元测试、数学验证器、LLM 评判器以及过程奖励模型都会产生不同的学习信号。在选择 PPO、GRPO、DAPO、GSPO、RLVR 或 RFT 之前，工程师必须首先确定哪种奖励家族适合当前任务，以及该奖励可能引发哪些失败模式。</p>
+  <p>所以，近年来的工业系统在重视策略优化器的同时，也同等重视评分器和验证器。OpenAI 的 <a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">强化微调</a> 工作流需要能够对明确任务的输出进行评分的评分器；DeepSeek-R1 对推理任务使用基于规则的奖励，因为这类任务的最终答案可被验证；过程奖励研究探讨中间步骤的有效性，而非仅检查最终答案是否匹配。经验表明：奖励应视为一种测量仪器，需要校准、明确作用范围，并了解其已知失败模式。</p>
 
   <div class="svg-diagram" style="max-width:980px">
     <svg viewBox="0 0 980 380" role="img" aria-label="Reward design ledger mapping tasks to verifiers, optimization, and audits">
@@ -703,7 +703,7 @@ report = post_training_data_audit(records, thresholds={
   </div>
 
   <h4>2. 将优化器与奖励完整性匹配</h4>
-  <p>当主要信号是稳定的 chosen/rejected 对比时，DPO 是合适的。当采样多个候选能揭示有意义的奖励差异时，PPO/GRPO 风格的强化学习是合适的。只有当评分器足够可靠，提高其分数很可能改善目标行为时，RLVR/RFT 才是合适的。如果奖励有噪声、模糊或容易被利用，更强的优化会更快地使问题恶化。</p>
+  <p>当主要信号是稳定的 chosen/rejected 对比时，DPO 适用。当采样多个候选能揭示有意义的奖励差异时，适用 PPO/GRPO 风格的强化学习。只有当评分器足够可靠，提升其分数能可靠改善目标行为时，RLVR/RFT 才适用。如果奖励有噪声、模糊或容易被利用，更强的优化只会更快地导致问题恶化。</p>
   <div class="table-wrap">
     <table>
       <tr><th>训练选择</th><th>奖励要求</th><th>何时不应使用</th><th>需随分数一同报告</th></tr>
@@ -715,9 +715,9 @@ report = post_training_data_audit(records, thresholds={
   </div>
 
   <h4>3. 奖励提升不等于能力提升</h4>
-  <p>奖励曲线应被解释为一个假设，而不是证据。模型可能学会写更长的答案、满足脆弱的格式检查器、利用单元测试、模仿评判器偏好的风格，或记忆公开示例。因此，一份可信的报告必须将奖励分数与目标行为分开：最终答案准确率、过程有效性、安全/拒绝校准、延迟、token 成本以及分布外切片都应在优化后测量。</p>
-  <p>在本课程中，奖励设计段落应具有如下形式：<code>For task X, the answer space is Y, the grader is Z, its audited false-pass rate is A, the reward variance is B, the known exploit risks are C, and the release claim is limited to D.</code> 如果缺少其中任意一个字段，则强化学习实验尚不具备规模化条件。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 优化器只会放大奖励。资深对齐工程师首先证明奖励经过校准、难以被利用、并且与真实任务相关联；然后他们才会把强化学习曲线当作改进的证据。</div></div>
+  <p>奖励曲线应视为一个假设，而非证据。模型可能学会写更长的答案、满足脆弱的格式检查器、利用单元测试、模仿评判器偏好的风格，或记忆公开示例。因此，一份可信的报告必须将奖励分数与目标行为区分开：最终答案准确率、过程有效性、安全/拒绝校准、延迟、token 成本以及分布外切片都应在优化后测量。</p>
+  <p>在本课程中，奖励设计段落应具有如下形式：<code>For task X, the answer space is Y, the grader is Z, its audited false-pass rate is A, the reward variance is B, the known exploit risks are C, and the release claim is limited to D.</code> 如果缺少其中任意一个字段，则强化学习实验还不具备规模化条件。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 优化器只会放大奖励。资深对齐工程师首先验证奖励经过校准、难以被利用、并且与真实任务相关联；然后才把强化学习曲线当作改进的证据。</div></div>
 </section><!-- ================================================================ -->
 <!-- Programming Exercise 3: DPO Loss -->
 <!-- ================================================================ --><section class="card" id="s9-7">
@@ -726,7 +726,7 @@ report = post_training_data_audit(records, thresholds={
   <div class="coding-exercise">
     <h4>练习 3：DPO 损失函数</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 DPO 损失函数以及一个辅助函数，用于计算序列的对数概率。</p>
+      <p><strong>任务：</strong>实现 DPO 损失函数和一个辅助函数，用于计算序列的对数概率。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>post_training_data_audit(records, thresholds)</code> 在 DPO / GRPO 之前检查覆盖率、标签质量、数据泄漏和安全性</li>
@@ -808,47 +808,47 @@ def dpo_train_step(model, ref_model, batch, optimizer, beta=0.1):
 </section><!-- ================================================================ -->
 <!-- 9.8 GRPO Theory -->
 <!-- ================================================================ --><section class="card" id="s9-8">
-  <h3>9.8 GRPO——组相对策略优化 (DeepSeek-R1)</h3>
-  <p><strong>GRPO（组相对策略优化）</strong>是DeepSeek-R1使用的核心强化学习算法。它与PPO最大的不同在于：<strong>不再需要Critic模型（价值网络）</strong>。</p>
-  <p>常见的PPO式RLHF流水线需要Actor、Critic、Reference和Reward Model等组件。GRPO去掉了Critic，用组内相对优势代替价值网络估计，从而减少了一个容易引入额外方差、内存和调优成本的组件。</p>
+  <h3>9.8 GRPO：组相对策略优化 (DeepSeek-R1)</h3>
+  <p><strong>GRPO（组相对策略优化）</strong>是 DeepSeek-R1 使用的核心强化学习算法。它与 PPO 的关键区别是：<strong>不再需要 Critic 模型（价值网络）</strong>。</p>
+  <p>标准的 PPO 式 RLHF 流程需要 Actor、Critic、Reference 和 Reward Model 等组件。GRPO 去掉了 Critic，用组内相对优势代替价值网络估计，从而去掉了这个容易引入额外方差、增加内存和调优负担的组件。</p>
 
-  <h4>GRPO的核心思想：组内白化</h4>
-  <p>对于每个提示，从当前策略中采样 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 个回复（通常 <span class="katex-inline" data-expr="G = 8" aria-label="G = 8" role="img"></span>），并使用这组回复的<strong>内部相对排名</strong>作为优势函数：</p>
+  <h4>GRPO 的核心思想：组内白化</h4>
+  <p>对于每个提示，从当前策略中采样 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 个回复（通常 <span class="katex-inline" data-expr="G = 8" aria-label="G = 8" role="img"></span>），然后用这组回复的<strong>组内相对排名</strong>作为优势函数：</p>
   <div class="math-box"><div class="label">公式9.8 GRPO优势函数</div>
     <div class="katex" data-expr="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}" aria-label="A_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="r_i" aria-label="r_i" role="img"></span> 是第i个回复的奖励，<span class="katex-inline" data-expr="\mu_r, \sigma_r" aria-label="\mu_r, \sigma_r" role="img"></span> 是组内均值和标准差。这种“组内白化”使得优势函数主要反映同一提示下候选回复的<strong>相对表现</strong>，可以缓解不同提示间奖励尺度不一致的问题；它不能替代奖励设计、KL控制或采样质量。</p>
+  <p>其中 <span class="katex-inline" data-expr="r_i" aria-label="r_i" role="img"></span> 是第 i 个回复的奖励，<span class="katex-inline" data-expr="\mu_r, \sigma_r" aria-label="\mu_r, \sigma_r" role="img"></span> 是组内均值和标准差。这种“组内白化”让优势函数主要反映同一提示下候选回复的<strong>相对表现</strong>，从而缓解不同提示之间奖励尺度不一致的问题。需要注意，这并不能替代奖励设计、KL 控制或采样质量这些环节。</p>
 
-  <h4>GRPO与PPO对比</h4>
+  <h4>GRPO 与 PPO 对比</h4>
   <ul>
-    <li><strong>PPO：</strong>Critic网络估计价值函数，优势通常由奖励和价值基线推导而来。Critic增加了训练状态、内存和调优复杂度，其估计质量也会影响策略更新。</li>
-    <li><strong>GRPO：</strong>组内回复的相对奖励替代了独立的Critic价值估计，减少了组件数量，并且对同一组内候选奖励尺度更具鲁棒性；但仍需要控制奖励噪声、KL、样本数量和任务覆盖范围。</li>
+    <li><strong>PPO：</strong>Critic 网络负责估计价值函数，优势函数通常由奖励和价值基线计算得出。Critic 增加了训练状态、内存和调优的复杂度，其估计质量也会影响策略更新。</li>
+    <li><strong>GRPO：</strong>用组内回复的相对奖励替代独立的 Critic 价值估计，减少了组件数量，对同一组内奖励尺度的差异也更鲁棒；但它仍然需要控制奖励噪声、KL 散度、样本数量和任务覆盖范围。</li>
   </ul>
 
-  <h4>R1-Zero的“啊哈时刻”</h4>
-  <p>根据DeepSeek-R1报告，DeepSeek-R1-Zero没有使用人工标注的CoT SFT冷启动阶段，而是使用GRPO在数学推理任务上进行训练。报告观察到模型在训练过程中表现出<strong>自我反思和自我纠正</strong>等行为，输出中包含诸如"Wait, let me re-examine..."之类的短语。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>洞察：</strong>R1-Zero表明，奖励驱动的RL可以在某些任务分布上引发复杂的推理行为，但其效果取决于奖励设计、任务覆盖、模型基础和安全边界。不能简化为“只要能判断输出就够了”，也不能替代对奖励漏洞、泛化性和对齐风险的评估。</div></div>
+  <h4>R1-Zero 的“啊哈时刻”</h4>
+  <p>根据 DeepSeek-R1 报告，DeepSeek-R1-Zero 没有使用人工标注的 CoT SFT 冷启动，而是直接用 GRPO 在数学推理任务上进行训练。报告发现模型在训练过程中表现出<strong>自我反思和自我纠正</strong>等行为，输出中出现了诸如 "Wait, let me re-examine..." 这样的短语。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>洞察：</strong>R1-Zero 表明，奖励驱动的 RL 可以在某些任务分布上激发出复杂的推理行为，但这高度依赖于奖励设计、任务覆盖、模型基础和安全边界。它既不是简单的“只要能判断输出就够了”，也不能省去对奖励漏洞、泛化性和对齐风险的评估。</div></div>
 </section><!-- ================================================================ -->
 <!-- 9.8A Worked Example -->
 <!-- ================================================================ --><section class="card" id="s9-8a">
   <h3>9.8A 示例：GRPO组内白化的尺度账本</h3>
-  <p>假设一个batch中有2个prompt，每个prompt采样<code>G=3</code>个响应，奖励矩阵排列为<code>[group, batch]</code>：</p>
+  <p>假设一个batch有2个prompt，每个prompt采样<code>G=3</code>个响应，奖励矩阵为<code>[group, batch]</code>：</p>
   <div class="code-block" data-lang="text">
 rewards =
 [[ 1, 10],
  [ 2, 20],
  [ 3, 30]]</div>
-  <p>GRPO不会将所有6个奖励混合在一起归一化，而是分别计算每个prompt的3个候选的组内均值和标准差。第一列奖励<code>[1,2,3]</code>的均值为2，总体标准差为 <span class="katex-inline" data-expr="\sqrt{2/3}\approx0.816" aria-label="\sqrt{2/3}\approx0.816" role="img"></span>；第二列<code>[10,20,30]</code>的均值为20，总体标准差为 <span class="katex-inline" data-expr="\sqrt{200/3}\approx8.165" aria-label="\sqrt{200/3}\approx8.165" role="img"></span>。因此，两列的advantage变成了相同的相对形状：</p>
+  <p>GRPO并不把所有6个奖励混在一起归一化，而是对每个prompt分别计算其3个候选的组内均值和标准差。第一列奖励<code>[1,2,3]</code>的均值为2，总体标准差为 <span class="katex-inline" data-expr="\sqrt{2/3}\approx0.816" aria-label="\sqrt{2/3}\approx0.816" role="img"></span>；第二列<code>[10,20,30]</code>的均值为20，总体标准差为 <span class="katex-inline" data-expr="\sqrt{200/3}\approx8.165" aria-label="\sqrt{200/3}\approx8.165" role="img"></span>。因此，两列的advantage变成相同的相对形状：</p>
   <div class="code-block" data-lang="text">
 advantages ≈
 [[-1.225, -1.225],
  [ 0.000,  0.000],
  [ 1.225,  1.225]]</div>
-  <p>这个示例说明：组内白化消除了不同prompt之间奖励尺度的差异，但不改变同一prompt内候选者的相对排序。实现时，使用与总体标准差对应的<code>std(unbiased=False)</code>，使得每列白化后的总体标准差为1；如果使用PyTorch默认的样本标准差，当组内样本量较小时，advantage的幅度会被额外减小。</p>
-  <p>完整的GRPO策略损失还需要将每个completion的序列级advantage扩展到有效的completion token上，然后与旧/新策略比率结合形成PPO裁剪替代目标，同时计算当前策略相对于参考策略的token log-probs的掩码近似KL。一份GRPO损失报告应包含<code>policy_loss</code>、<code>kl_loss</code>、<code>loss</code>、<code>clip_fraction</code>、<code>mean_ratio</code>和<code>mean_advantage</code>；这些量区分了相对较高的奖励、被裁剪约束的策略更新，以及偏离参考策略的策略漂移。</p>
+  <p>这个示例说明：组内白化消除了不同prompt之间的奖励尺度差异，但不改变同一prompt内候选者的相对排序。实现时，使用与总体标准差对应的<code>std(unbiased=False)</code>，使得每列白化后的总体标准差为1；如果使用PyTorch默认的样本标准差，当组内样本量较小时，advantage的幅度会被额外压缩。</p>
+  <p>完整的GRPO策略损失还需将每个completion的序列级advantage扩展到有效的completion token上，再与旧/新策略比率结合形成PPO裁剪替代目标，同时计算当前策略相对于参考策略的token log-probs的掩码近似KL。一份GRPO损失报告应包含<code>policy_loss</code>、<code>kl_loss</code>、<code>loss</code>、<code>clip_fraction</code>、<code>mean_ratio</code>和<code>mean_advantage</code>；这些量分别对应：相对较高的奖励、被裁剪约束的策略更新，以及偏离参考策略的策略漂移。</p>
 </section><section class="card" id="s9-8b">
   <h3>9.8B 从 GRPO 到 DAPO / GSPO：推理强化学习的工程实践配方</h3>
-  <p>2025 年后，推理强化学习的焦点从“GRPO 能否用于训练推理”转向了“如何稳定、可复现且可扩展地训练”。DAPO 将大规模 LLM RL 的隐藏细节拆解为更明确的配方，例如 Clip-Higher、动态采样、token 级策略梯度损失以及超长奖励塑造；GSPO 将重要性比率从 token 级改为序列似然级，强调长训练和 MoE RL 中的稳定性。关键的工程问题包括 rollout 分布、长度增长、熵、KL、裁剪行为、MoE 路由波动以及奖励完整性；它们共同决定了 RL 训练是否可信。</p>
+  <p>2025 年后，推理强化学习的焦点从“GRPO 能否用于训练推理”转向了“如何稳定、可复现且可扩展地训练”。DAPO 将大规模 LLM RL 的隐藏细节拆解为更明确的配方，例如 Clip-Higher、动态采样、token 级策略梯度损失以及超长奖励塑造；GSPO 将重要性比率从 token 级改为序列似然级，强调长训练和 MoE RL 中的稳定性。关键的工程问题包括 rollout 分布、长度增长、熵、KL、裁剪行为、MoE 路由波动以及奖励完整性，它们共同决定 RL 训练是否可信。</p>
 
   <div class="table-wrap">
     <table>
@@ -862,10 +862,10 @@ advantages ≈
   <p>DAPO 的几项工程要点可以逐一对应到训练日志中。<strong>Clip-Higher</strong> 关系到探索空间：如果上界裁剪过紧，低概率但可能正确的 token 的概率难以提升，熵会过早崩溃；如果过松，可能导致过度探索和重复。<strong>动态采样</strong> 关系到有效梯度：如果同一个 prompt 的所有 rollout 全部正确或全部错误，组内 advantage 接近 0，继续采样就是浪费。<strong>token 级策略梯度损失</strong> 关系到长 CoT：序列平均损失会混淆短答案和长答案的权重，而 token 级聚合更容易看出长度对梯度的影响。<strong>超长奖励塑造</strong> 关系到成本和噪声：过长的补全不能简单截断后当作普通负样本处理，否则模型可能学会“写得越长越安全”或“触达长度限制就失去奖励”。</p>
 
   <p>将这些方法纳入第 09 章的原因是它们都指向同一个教训：RL 算法的名称本身无法证明推理能力的提升。一份可信的报告至少应同时展示 reward、pass@k 或任务成功率、平均补全 token 数、P95 补全长度、熵、近似 KL、裁剪比例、有效 rollout 比例以及失败类型。如果准确率提升伴随着输出长度持续增长、熵崩溃、裁剪比例极端或仅在训练题目类型上有效，那么工程结论应是“奖励/采样/长度控制需要重新设计”，而非“扩大训练规模”。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统性判断：</strong>DAPO/GSPO 并不是 GRPO 的替代记忆点，而是连接了 Ch07 的训练稳定性、Ch08 的测试时计算、Ch09 的奖励诊断以及 Ch10 的部署成本。高级训练工程师必须能够解读这些日志并判断 RL 训练是在学习可泛化的推理能力，还是在利用评分机制、长度或路由噪声。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统性判断：</strong>DAPO/GSPO 不是 GRPO 的替代记忆点，而是连接了 Ch07 的训练稳定性、Ch08 的测试时计算、Ch09 的奖励诊断以及 Ch10 的部署成本。高级训练工程师必须能够解读这些日志并判断 RL 训练是在学习可泛化的推理能力，还是在利用评分机制、长度或路由噪声。</div></div>
 </section><section class="card" id="s9-8c">
   <h3>9.8C 从推理RL研究到可部署的证据链</h3>
-  <p><a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1报告</a>在这里的价值不是作为可背诵的配方，而是因为它揭示了一个完整的后训练系统问题。修订后的arXiv版本报告，在可验证任务上进行大规模RL时，推理能力可以涌现，同时也强调了在模型变得可部署之前，为什么需要冷启动数据、可读性、语言一致性、蒸馏和评估。对于训练工程师而言，教训是：推理RL必须从数据和奖励到rollout行为、能力保持以及推理成本进行审计。</p>
+  <p><a href="https://arxiv.org/abs/2501.12948" target="_blank">DeepSeek-R1报告</a>的价值不在于提供一个可背诵的配方，而在于它揭示了一个完整的后训练系统问题。修订后的arXiv版本指出，在可验证任务上进行大规模RL时，推理能力可以涌现；同时，它也强调了模型在变得可部署之前，为什么需要冷启动数据、可读性、语言一致性、蒸馏和评估。对于训练工程师而言，要点是：推理RL必须从数据和奖励到rollout行为、能力保持以及推理成本进行审计。</p>
 
   <div class="foundation-graph" role="img" aria-label="推理RL可部署证据链">
     <svg viewBox="0 0 900 270">
@@ -902,19 +902,19 @@ advantages ≈
     <table>
       <tr><th>证据层</th><th>需要证明什么</th><th>最小信号</th><th>什么情况下拒绝该论断</th></tr>
       <tr><td>任务分布</td><td>RL提示代表了预期的推理负载</td><td>领域组合、难度分级、训练/评估重叠、提示模板版本</td><td>仅一个基准或一种提示风格得到提升</td></tr>
-      <tr><td>奖励有效性</td><td>评分器测量最终正确性，且不能被廉价地利用</td><td>单元测试通过率、验证器假阳性审计、对抗性评分器探测</td><td>奖励上升，但人类或测试验证的准确率持平</td></tr>
+      <tr><td>奖励有效性</td><td>评分器测量最终正确性，且不能被低成本地利用</td><td>单元测试通过率、验证器假阳性审计、对抗性评分器探测</td><td>奖励上升，但人类或测试验证的准确率持平</td></tr>
       <tr><td>优化稳定性</td><td>策略更新保持在受控的行为区域内</td><td>近似KL、clip比例、熵、奖励标准差、rollout数量、有效样本比率</td><td>KL尖峰、熵崩溃，或大多数组奖励方差为零</td></tr>
-      <tr><td>推理行为</td><td>更长的输出对应更正确的解决方案，而不仅仅是冗长</td><td>pass@k、最终答案准确率、P95完成长度、无效格式率</td><td>在控制token预算后准确率提升消失</td></tr>
-      <tr><td>能力保持</td><td>通用助手、安全和领域能力没有不可接受地退化</td><td>切片评估、拒绝校准、代码/数学保持、多语言或租户特定检查</td><td>模型变窄、过度拒绝，或在旧生产切片上失败</td></tr>
-      <tr><td>服务可行性</td><td>RL后的模型可以在目标SLO和预算下提供服务</td><td>平均输出token数、TTFT/TPOT、每个正确答案的成本、降级率</td><td>模型仅在不可承受的推理预算下才更准确</td></tr>
+      <tr><td>推理行为</td><td>更长的输出对应更正确的解决方案，而非仅仅冗长</td><td>pass@k、最终答案准确率、P95完成长度、无效格式率</td><td>在控制token预算后准确率提升消失</td></tr>
+      <tr><td>能力保持</td><td>通用助手、安全和领域能力没有出现不可接受的退化</td><td>切片评估、拒绝校准、代码/数学保持、多语言或租户特定检查</td><td>模型变窄、过度拒绝，或在旧生产切片上失败</td></tr>
+      <tr><td>服务可行性</td><td>RL后的模型可以在目标SLO和预算下提供服务</td><td>平均输出token数、TTFT/TPOT、每个正确答案的成本、降级率</td><td>模型只在不可承受的推理预算下才更准确</td></tr>
     </table>
   </div>
 
-  <p>这条证据链直接连接到第8章和第10章。第8章提供pass@k、自一致性、验证器重新排序和思考预算核算。第10章询问更长的completion和多样本解码是否仍能满足延迟、排队和成本约束。因此，如果一份推理RL报告只停留在奖励曲线或基准分数上，它就是不完整的；它还必须解释训练好的模型将如何在服务中被路由、预算、监控和回滚。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>高级要求：</strong>将推理RL视为一个耦合的数据、奖励、优化器、评估和服务系统。一个模型并非因为它表现出自我反思就达到生产就绪；只有当证据链显示在受限成本和可接受的退化风险下，可衡量的正确性提升时，模型才算生产就绪。</div></div>
+  <p>这条证据链直接连接到第8章和第10章。第8章提供pass@k、自一致性、验证器重新排序和思考预算核算。第10章讨论更长的completion和多样本解码是否仍能满足延迟、排队和成本约束。因此，如果一份推理RL报告只停留在奖励曲线或基准分数上，它就是不完整的；它必须进一步解释训练好的模型将如何在服务中被路由、预算、监控和回滚。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>高级要求：</strong>将推理RL视为一个耦合的数据、奖励、优化器、评估与服务系统。一个模型并非因为表现出自我反思就达到生产就绪；只有当证据链显示，在受限成本和可接受的退化风险下，可衡量的正确性得到提升时，模型才算生产就绪。</div></div>
 </section><section class="card" id="s9-8d">
   <h3>9.8D 后训练强化学习系统：Rollout、权重同步与陈旧性</h3>
-  <p>推理强化学习不仅仅是一个优化器公式。一旦每个prompt需要多个长补全、工具调用、验证器执行、奖励计算和重复的策略更新，瓶颈就从“如何编写GRPO损失”转移到“如何保持生成、评分、训练和权重同步的忙碌，而不会破坏学习信号”。现代开源系统从不同角度展示了相同方向：verl集成了PyTorch FSDP、Megatron-LM、vLLM和SGLang等训练和推理框架；OpenRLHF结合了Ray、vLLM、DeepSpeed和智能体式执行；SGLang强调后训练特性，如refit、推迟生成、睡眠/唤醒控制、确定性推理和缓存感知rollout；slime特意将Megatron训练与SGLang rollout耦合在一起；AReaL探索了完全异步的rollout和训练，并显式控制数据陈旧性。</p>
+  <p>强化学习后训练不止是一个优化器公式。一旦每个prompt需要多个长补全、工具调用、验证器执行、奖励计算和重复的策略更新，瓶颈就从“如何编写GRPO损失”转移到“如何保持生成、评分、训练和权重同步的忙碌，而不会破坏学习信号”。不同开源系统从各自角度展示了相同趋势：verl整合了PyTorch FSDP、Megatron-LM、vLLM和SGLang等训练和推理框架；OpenRLHF结合了Ray、vLLM、DeepSpeed和智能体执行；SGLang突出后训练特性，如refit、推迟生成、睡眠/唤醒控制、确定性推理和缓存感知rollout；slime特意将Megatron训练与SGLang rollout耦合在一起；AReaL探索了完全异步的rollout和训练，并显式控制数据陈旧性。</p>
 
   <div class="foundation-graph" role="img" aria-label="后训练强化学习系统数据流">
     <svg viewBox="0 0 940 360">
@@ -950,7 +950,7 @@ advantages ≈
   </div>
 
   <h4>强化学习系统边界</h4>
-  <p>生产级RL后训练运行至少包含四个有状态组件。<strong>actor策略</strong>生成候选答案；<strong>参考策略</strong>提供KL或对数概率基线；<strong>奖励路径</strong>通过人工标签、奖励模型、测试、工具或验证器对答案评分；<strong>训练器</strong>更新权重并保存完整训练状态的检查点。如果rollout使用服务引擎而训练使用FSDP、DeepSpeed或Megatron，系统还必须同步训练表示和推理表示之间的权重。这就是为什么后训练框架越来越多地暴露显式的rollout引擎、refit或权重传输API、暂停/恢复行为以及检查点所有权，而不再将生成视为本地Python函数。</p>
+  <p>生产级RL后训练至少包含四个有状态组件。<strong>actor策略</strong>生成候选答案；<strong>参考策略</strong>提供KL或对数概率基线；<strong>奖励路径</strong>通过人工标签、奖励模型、测试、工具或验证器对答案评分；<strong>训练器</strong>更新权重并保存完整训练状态的检查点。如果rollout使用服务引擎而训练使用FSDP、DeepSpeed或Megatron，系统还必须同步训练表示和推理表示之间的权重。正因为如此，后训练框架越来越多地暴露显式的rollout引擎、refit或权重传输API、暂停/恢复行为以及检查点所有权，而不再把生成当作本地Python函数。</p>
 
   <div class="table-wrap">
     <table>
@@ -963,7 +963,7 @@ advantages ≈
   </div>
 
   <h4>同步、同地、解耦与异步设计</h4>
-  <p>没有普遍最优的RL系统拓扑。同步设计更简单，能保持策略数据的新鲜度，但通常需要等待批次中最长的补全。同地设计将actor、参考策略、奖励和rollout放在同一批GPU上以提高小型集群利用率，但需要仔细处理睡眠/唤醒或内存共享。解耦设计将rollout和训练放在独立的GPU池中，提高了利用率并允许利用服务引擎优化，但权重同步成为首要成本。完全异步设计通过让rollout工作器持续生成、训练器在数据到达时更新来提高吞吐量，但必须控制样本陈旧性，并使用能容忍较旧策略版本的目标或过滤器。</p>
+  <p>不存在普遍最优的RL系统拓扑。同步设计更简单，能保持策略数据的新鲜度，但往往要等批次中最长的补全完成。同地设计将actor、参考策略、奖励和rollout放在同一批GPU上以提高小型集群利用率，但需要仔细处理睡眠/唤醒或内存共享。解耦设计将rollout和训练放在独立的GPU池中，提高了利用率并允许利用服务引擎优化，但权重同步成为首要成本。完全异步设计通过让rollout工作器持续生成、训练器在数据到达时更新来提高吞吐量，但必须控制样本陈旧性，并使用能容忍较旧策略版本的目标或过滤器。</p>
 
   <div class="table-wrap">
     <table>
@@ -976,13 +976,13 @@ advantages ≈
   </div>
 
   <h4>RL扩展的最小运行台账</h4>
-  <p>一位资深训练工程师应该能够阅读RL运行台账并判断系统是在学习还是仅仅在烧rollout token。至少需要记录：prompt切片、生成时使用的策略版本、当前训练器版本、回答token数、奖励、奖励来源、rollout logprobs、参考logprobs、工具/测试结果、样本年龄、无效格式标志、超时标志以及消耗该样本的训练步骤。没有这份台账，就无法调试奖励提升究竟来自更好的推理、更长的输出、陈旧策略伪影、验证器bug还是环境捷径。</p>
+  <p>资深训练工程师应该能通过阅读RL运行台账，判断系统是在真正学习，还是只是在消耗rollout token。至少需要记录：prompt切片、生成时使用的策略版本、当前训练器版本、回答token数、奖励、奖励来源、rollout logprobs、参考logprobs、工具/测试结果、样本年龄、无效格式标志、超时标志以及消耗该样本的训练步骤。没有这份台账，就无法调试奖励提升究竟来自更好的推理、更长的输出、陈旧策略伪影、验证器bug还是环境捷径。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>对于高级后训练，“RL有效”不能仅凭奖励曲线证明。证明需要一份系统台账：rollout新鲜度、权重同步正确性、奖励完整性、token成本、吞吐量、检查点恢复以及留出行为都必须指向同一结论。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>在高级后训练中，“RL有效”不能只靠奖励曲线证明。证明需要一份系统台账：rollout新鲜度、权重同步正确性、奖励完整性、token成本、吞吐量、检查点恢复以及留出行为都必须指向同一结论。</div></div>
 </section><section class="card" id="s9-8e">
   <h3>9.8E Agentic RL with Tools and Environments: From One Answer to a Trajectory</h3>
-  <p>单轮RLVR将每个补全视为一个答案。Agentic RL则将模型视为部分可观测环境中的策略：它观察用户任务，决定是思考、回答、调用工具、检查结果、调用另一个工具，最终停止。训练样本不再只是<code>(prompt, response, reward)</code>；而是变成一条包含消息、工具调用、环境观测、中间错误、最终奖励、token logprobs、策略版本和重放元数据的轨迹。</p>
-  <p>这种区分很重要，因为工具使用成功可能因错误原因而提升。模型可能会学会过于频繁地调用搜索工具、利用弱的模拟器、记忆基准数据库ID、忽略失败的工具结果，或者生成语法正确但语义不安全的JSON。最近的工具如<a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html" target="_blank">verl Agentic RL</a>、<a href="https://verl.readthedocs.io/en/latest/sglang_multiturn/multiturn.html" target="_blank">verl multi-turn rollout</a>和<a href="https://arxiv.org/html/2509.01055v1" target="_blank">VerlTool</a>反映了相同的工程方向：智能体训练需要异步rollout、多轮工具调用、奖励服务、追踪和标准化轨迹接口，而不是本地<code>model.generate()</code>循环。</p>
+  <p>单轮RLVR将每个补全视为一个答案。Agentic RL则把模型看作一个在部分可观测环境里运行的策略：它观察用户任务，然后决定是思考、回答、调用工具、检查结果、调用另一个工具，还是最终停止。训练样本不再只是<code>(prompt, response, reward)</code>，而是一条完整的轨迹，包含消息、工具调用、环境观测、中间错误、最终奖励、token logprobs、策略版本以及重放元数据。</p>
+  <p>区分这两点很重要，因为工具使用成功有时来自错误的理由。模型可能学会过于频繁地调用搜索工具、利用弱的模拟器、记住基准数据库ID、忽略失败的工具结果，或者生成语法正确但语义不安全的JSON。近期的工具，如<a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html" target="_blank">verl Agentic RL</a>、<a href="https://verl.readthedocs.io/en/latest/sglang_multiturn/multiturn.html" target="_blank">verl multi-turn rollout</a>和<a href="https://arxiv.org/html/2509.01055v1" target="_blank">VerlTool</a>，都指向同一个工程方向：智能体训练需要异步rollout、多轮工具调用、奖励服务、追踪和标准化的轨迹接口，而不是本地的<code>model.generate()</code>循环。</p>
 
   <div class="foundation-graph" role="img" aria-label="从任务经工具调用、环境观测、奖励到训练更新的Agentic RL轨迹">
     <svg viewBox="0 0 980 410">
@@ -1033,22 +1033,22 @@ advantages ≈
       <path class="ag-line" d="M778 301 H820"/>
     </svg>
   </div>
-  <p class="diagram-caption">图9-6：Agentic RL在轨迹上训练，而非孤立的答案。奖励必须考虑最终任务成功、工具行为、环境有效性、延迟和安全性。</p>
+  <p class="diagram-caption">图9-6：Agentic RL在轨迹上训练，而不是孤立的答案。奖励必须考虑最终任务成功、工具行为、环境有效性、延迟和安全性。</p>
 
   <h4>1. 工具进入RL循环时有什么变化</h4>
   <div class="table-wrap">
     <table>
       <tr><th>维度</th><th>单轮RLVR</th><th>带工具的Agentic RL</th><th>工程后果</th></tr>
-      <tr><td>训练单元</td><td>提示、补全、最终奖励</td><td>消息、工具调用、观测、错误和最终答案的轨迹</td><td>存储完整的可重放轨迹，而不仅仅是最终文本</td></tr>
+      <tr><td>训练单元</td><td>提示、补全、最终奖励</td><td>消息、工具调用、观测、错误和最终答案的轨迹</td><td>存储完整的可重放轨迹，而不仅是最终文本</td></tr>
       <tr><td>动作空间</td><td>直到答案的下一个token</td><td>下一个token加上结构化工具调用、停止决策，有时还有环境命令</td><td>验证工具schema并保留token级别的logprobs用于策略更新</td></tr>
-      <tr><td>奖励</td><td>精确答案、单元测试、评分器分数</td><td>最终成功、工具结果、成本、无效调用惩罚、安全约束</td><td>将最终奖励与过程惩罚分开，使模型不会通过不安全的捷径获胜</td></tr>
+      <tr><td>奖励</td><td>精确答案、单元测试、评分器分数</td><td>最终成功、工具结果、成本、无效调用惩罚、安全约束</td><td>将最终奖励与过程惩罚分开，防止模型通过不安全的捷径获胜</td></tr>
       <tr><td>Rollout瓶颈</td><td>模型生成吞吐量</td><td>模型生成、工具延迟、外部环境差异和长尾任务</td><td>使用异步rollout、负载均衡、超时和痕迹采样</td></tr>
-      <tr><td>失败分析</td><td>错误答案、格式错误、奖励黑客</td><td>错误工具、过期观测、隐藏的模拟器泄漏、权限违规、重复调用</td><td>按决策步骤和环境状态分类失败，而不仅仅是最终答案</td></tr>
+      <tr><td>失败分析</td><td>错误答案、格式错误、奖励黑客</td><td>错误工具、过期观测、隐藏的模拟器泄漏、权限违规、重复调用</td><td>按决策步骤和环境状态分类失败，而不仅是最终答案</td></tr>
     </table>
   </div>
 
   <h4>2. 必须记录的轨迹字段</h4>
-  <p>Agentic RL运行难以调试，除非每个采样的轨迹都可以重放。最小记录应包含：prompt id、环境id和版本、策略版本、参考版本、随机种子、消息历史、生成的token、token logprobs、工具调用JSON、工具响应、工具延迟、无效调用标志、安全过滤标志、最终答案、奖励成分、总token数、墙钟时间、样本年龄，以及消费该轨迹的训练器步骤。OpenAI的<a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">reinforcement fine-tuning</a>工作流同样将评分器定义、prompt数据集、验证集划分、检查点监控和部署决策视为一个统一的训练系统，而不是孤立的损失函数。</p>
+  <p>Agentic RL运行很难调试，除非每个采样的轨迹都可以重放。最小记录应包含：prompt id、环境id和版本、策略版本、参考版本、随机种子、消息历史、生成的token、token logprobs、工具调用JSON、工具响应、工具延迟、无效调用标志、安全过滤标志、最终答案、奖励成分、总token数、墙钟时间、样本年龄，以及消费该轨迹的训练器步骤。OpenAI的<a href="https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning" target="_blank">reinforcement fine-tuning</a>工作流也把评分器定义、prompt数据集、验证集划分、检查点监控和部署决策视为一个统一的训练系统，而不是孤立的损失函数。</p>
 
   <div class="table-wrap">
     <table>
@@ -1062,26 +1062,26 @@ advantages ≈
   </div>
 
   <h4>3. 评估必须具有轨迹意识</h4>
-  <p>对于agentic RL，一份好的评估报告不能只回答“最终答案通过了吗？”，还需要问模型是否选择了正确的工具、处理了工具错误、遵守了权限、避免了不必要的调用、在替代环境种子下保持鲁棒性，并在训练环境之外保留了通用助手行为。这就是为什么围绕工具使用RL的基准和系统越来越强调多轮任务、真实或模拟工具、浏览器/搜索/数据库/代码环境、痕迹检查以及分布外环境版本。</p>
-  <p>实际的发布规则是保守的：除非在控制工具调用次数、推理token预算、模拟器版本和prompt模板后，留出成功率增益仍然存在，否则不要推广一个agentic RL检查点。否则模型可能学会了环境框架，而非底层技能。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键要点：</strong>Agentic RL将后训练变成了环境工程。模型策略、工具schema、模拟器、奖励服务、轨迹账本和部署权限必须一起评估，否则奖励曲线不可信。</div></div>
+  <p>对于agentic RL，一份好的评估报告不能只回答"最终答案通过了吗？"，还需要看模型是否选了正确的工具、处理了工具错误、遵守了权限、避免了不必要的调用、在替代环境种子下保持鲁棒性，以及在训练环境之外保留了通用助手行为。因此，围绕工具使用RL的基准和系统越来越强调多轮任务、真实或模拟工具、浏览器/搜索/数据库/代码环境、痕迹检查以及分布外环境版本。</p>
+  <p>实际的发布规则是保守的：只有控制好工具调用次数、推理token预算、模拟器版本和prompt模板后，留出成功率增益仍然存在，才应该推广一个agentic RL检查点。否则，模型可能学会了环境框架，而非底层技能。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键要点：</strong>Agentic RL把后训练变成了环境工程。模型策略、工具schema、模拟器、奖励服务、轨迹账本和部署权限必须一起评估，否则奖励曲线不可信。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习4：GRPO 优势 -->
 <!-- ================================================================ --><section class="card" id="s9-9">
-  <h3>9.9 编程练习4：实现PPO裁剪目标和GRPO优势估计</h3>
+  <h3>9.9 编程练习4：实现PPO裁剪目标与GRPO优势估计</h3>
 
   <div class="coding-exercise">
     <h4>练习4：GRPO组内白化 + 损失计算</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现PPO裁剪策略目标、GRPO组内白化优势估计以及带有KL惩罚的策略梯度损失。</p>
+      <p><strong>任务：</strong>实现PPO裁剪目标、GRPO组内白化优势估计，以及带KL惩罚的策略梯度损失。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>grpo_advantages(rewards, group_size)</code> 计算组内白化优势函数</li>
         <li><code>ppo_clipped_policy_loss(new_logps, old_logps, advantages, mask, clip_range)</code> 计算 <code>min(ratio * A, clipped_ratio * A)</code>，并报告 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code></li>
         <li><code>approx_kl_from_logps(policy_logps, ref_logps, mask)</code> 计算有效补全 token 上的近似 KL</li>
-        <li><code>grpo_policy_loss(new_logps, old_logps, ref_logps, rewards, completion_mask, clip_range, kl_beta)</code> 将组内白化、PPO裁剪和参考KL结合为完整的训练目标</li>
+        <li><code>grpo_policy_loss(new_logps, old_logps, ref_logps, rewards, completion_mask, clip_range, kl_beta)</code> 将组内白化、PPO裁剪和参考KL合并为完整的训练目标</li>
         <li>对每组G个响应的奖励执行z-score标准化（减去组均值，除以组标准差）</li>
-        <li>PPO裁剪必须同时处理正优势和负优势，不能简单地将所有超出范围的比率视为奖励增加</li>
+        <li>PPO裁剪必须同时处理正负优势，不能简单地把所有超出范围的比率都当作奖励增加</li>
         <li>包含KL惩罚（使用近似KL：<span class="katex-inline" data-expr="e^{\log q - \log p} - (\log q - \log p) - 1" aria-label="e的(log q - log p)次方减去(log q - log p)再减1" role="img"></span>）</li>
       </ul>
       <pre># Expected usage
@@ -1224,12 +1224,12 @@ def grpo_loss(model, ref_model, prompt_ids, prompt_mask,
   <div class="coding-exercise">
     <h4>练习5：在玩具偏好数据集上比较DPO和GRPO</h4>
     <div class="task">
-      <p><strong>任务：</strong>创建一个简单的偏好数据集，分别使用DPO和GRPO训练模型，并比较两种方法的效果。</p>
+      <p><strong>任务：</strong>创建一个小型偏好数据集，分别用DPO和GRPO训练模型，然后比较效果。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>创建100个偏好对：<code>[{"prompt": "...", "chosen": "...", "rejected": "..."}]</code></li>
-        <li>分别为DPO和GRPO实现训练循环（各5个epoch）</li>
-        <li>训练期间跟踪偏好准确率（chosen的log prob大于rejected的log prob的比例）</li>
+        <li>为DPO和GRPO各实现一个训练循环（各5个epoch）</li>
+        <li>训练时跟踪偏好准确率（即chosen的log prob大于rejected的log prob的比例）</li>
         <li>比较两种方法的收敛速度和最终准确率</li>
       </ul>
       <pre># Expected output
@@ -1327,21 +1327,21 @@ print("=== DPO Training ===")
 train_dpo(model, ref_model, toy_data, tokenizer)
 print("\n=== GRPO Training ===")
 train_grpo(model, ref_model, toy_data, tokenizer)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>对比分析：</strong>DPO 训练更快（每步只需一次前向传播），但在分布外的 prompt 上可能泛化不如 GRPO。GRPO 通过组内采样获得对奖励尺度变化的鲁棒性，但训练较慢（需要生成 G 个回答）。实际选择取决于你的数据量、计算预算以及对模型质量的要求。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>对比分析：</strong>DPO 训练更快（每步只需要一次前向传播），但在未见过的 prompt 上泛化可能不如 GRPO。GRPO 通过组内采样，对奖励尺度的变化更稳健，但训练较慢（需要生成 G 个回答）。实际使用时，你需要根据数据量、计算预算和质量要求来选择。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 9.10A 对齐评估协议 -->
 <!-- ================================================================ --><section class="card" id="s9-10a">
   <h3>9.10A 对齐评估协议：偏好准确率并不足够</h3>
-  <p>DPO 或 GRPO 的训练日志中显示的偏好准确率、reward 均值和 KL 值只能说明模型按照训练目标发生了变化，但并不能说明模型变成了更好的助手。工程评估必须将<strong>目标函数</strong>与<strong>评估问题</strong>区分开来：训练优化的是一个代理目标，而最终重要的是模型是否有用（helpful）、诚实（honest）、无害（harmless），以及原有能力是否下降。</p>
+  <p>DPO 或 GRPO 的训练日志中显示的偏好准确率、reward 均值和 KL 值只能说明模型在训练目标上发生了变化，但并不能代表模型真正变成了更好的助手。工程评估必须把<strong>目标函数</strong>和<strong>评估问题</strong>分开来看：训练优化的是代理目标，而最终重要的是模型是否有用（helpful）、诚实（honest）、无害（harmless），以及原有能力是否下降。</p>
 
-  <h4>为什么单一的胜率不够</h4>
+  <h4>为什么单靠胜率不够</h4>
   <ul>
-    <li><strong>偏好胜率可能包含风格偏差：</strong>较长、更有礼貌、更自信的回答往往胜出，但它们未必更正确。</li>
-    <li><strong>安全分数可能掩盖过度拒绝：</strong>模型拒绝危险请求是进步，但拒绝普通的医学、法律知识或历史问题则代表能力损失。</li>
-    <li><strong>reward model 可能被利用：</strong>模型学会了触发 reward model 偏好的措辞，而不是解决用户的任务。</li>
-    <li><strong>对齐可能改变基础能力：</strong>数学、代码、多轮跟随、长上下文和多语言任务的能力都可能在对齐后下降。</li>
+    <li><strong>偏好胜率可能包含风格偏差：</strong>更长、更有礼貌、更自信的回答往往胜出，但不一定更正确。</li>
+    <li><strong>安全分数可能掩盖过度拒绝：</strong>模型拒绝危险请求是进步，但连普通的医学、法律知识或历史问题也拒绝，就说明能力受损了。</li>
+    <li><strong>reward model 可能被利用：</strong>模型学会了迎合 reward model 偏好的措辞，而不是真正解决用户的任务。</li>
+    <li><strong>对齐可能改变基础能力：</strong>数学、代码、多轮对话、长上下文和多语言任务的能力都可能在对齐后下降。</li>
   </ul>
 
   <h4>评估矩阵</h4>
@@ -1351,29 +1351,29 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
       <tr><td>Helpfulness（有用性）</td><td>它是否真正完成了用户的任务？</td><td>任务成功率、两两对比胜率、人类偏好</td><td>回答流畅但没有解决问题</td></tr>
       <tr><td>Honesty（诚实性）</td><td>当它不知道时是否承认不确定性？</td><td>事实准确性、校准误差、可追溯引用</td><td>幻觉、编造来源、过度自信</td></tr>
       <tr><td>Harmlessness（无害性）</td><td>危险请求是否被拒绝或安全改写？</td><td>不安全完成率、安全拒绝率</td><td>提供了可执行的危害步骤</td></tr>
-      <tr><td>Over-refusal（过度拒绝）</td><td>正常请求是否被错误拒绝？</td><td>良性请求完成率、错误拒绝率</td><td>把一般科学、创意写作或分析误判为危险</td></tr>
-      <tr><td>Capability retention（能力保留）</td><td>原有能力是否保留？</td><td>数学/代码/阅读理解/多语言任务得分</td><td>对齐后更安全但解题能力下降</td></tr>
+      <tr><td>Over-refusal（过度拒绝）</td><td>正常请求是否被错误拒绝？</td><td>良性请求完成率、错误拒绝率</td><td>把一般的科学、创意写作或分析误判为危险</td></tr>
+      <tr><td>Capability retention（能力保留）</td><td>原有能力是否保留？</td><td>数学/代码/阅读理解/多语言任务得分</td><td>对齐后更安全，但解题能力下降</td></tr>
       <tr><td>Style control（风格控制）</td><td>是否按要求控制了长度、语气和格式？</td><td>格式遵循率、长度分布、冗余率</td><td>模板化、冗长、过度解释拒绝原因</td></tr>
     </tbody>
   </table>
 
-  <h4>最简但系统的评估设计</h4>
+  <h4>最简而系统的评估设计</h4>
   <ol>
     <li><strong>固定比较对象：</strong>比较至少三个检查点：base、SFT 和 DPO/GRPO。保持生成参数固定，例如 temperature、top-p、max tokens 和系统提示一致。</li>
     <li><strong>按切片组织提示：</strong>将提示分为通用问答、数学、代码、长上下文、多语言、安全/危险请求、良性/敏感请求。避免单个总分掩盖局部退化。</li>
-    <li><strong>同时记录自动指标和人工判断：</strong>对于有标准答案的任务使用准确率；对于开放式任务使用两两偏好；对于安全任务区分“应该拒绝”和“不应拒绝”。</li>
+    <li><strong>同时记录自动指标和人工判断：</strong>对有标准答案的任务使用准确率；对开放式任务使用两两偏好；对安全任务区分“应该拒绝”和“不应拒绝”的请求。</li>
     <li><strong>报告失败类型：</strong>将错误归类为幻觉、错误拒绝、未遵循指令、能力退化、reward hacking 或风格偏差，而不仅仅是报告平均分。</li>
   </ol>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>对齐评估不是问“模型看起来更像偏好数据了吗？”，而是问“模型是否更可靠地对用户有用，同时在危险场景中保持边界，并且没有明显牺牲已有能力？”</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>对齐评估不是问“模型看起来更像偏好数据了吗？”，而是问“模型是否更可靠地帮助用户，同时在危险场景中守住边界，并且没有明显牺牲已有能力？”</div></div>
 </section><!-- ================================================================ -->
 <!-- 9.10B 偏好优化运行日志 -->
 <!-- ================================================================ --><section class="card" id="s9-10b">
   <h3>9.10B 偏好优化训练日志：连接 log-ratio、KL 与行为变化</h3>
-  <p>偏好优化训练中最常见的误解是将 <code>preference_accuracy</code> 的提升视为最终成功。DPO、PPO 和 GRPO 的训练日志应同时回答三个问题：模型是否根据偏好对改变了 chosen/rejected 的相对概率？策略是否偏离参考模型过远？输出行为是否真的改善了，而不仅仅是变得更长、更模板化或更容易拒绝？</p>
+  <p>偏好优化训练中一个常见的误解是：只要 <code>preference_accuracy</code> 提升了，训练就成功了。DPO、PPO 和 GRPO 的训练日志应该能回答三个问题：模型是否根据偏好改变了 chosen/rejected 的相对概率？策略是否偏离参考模型太远？输出行为是否真的改善了，而不是变得更长、更模板化或更容易拒绝？</p>
 
   <h4>DPO 至少需要记录的内容</h4>
-  <p>DPO 的核心不是比较 <code>log pi(chosen)</code> 和 <code>log pi(rejected)</code> 的绝对值，而是比较策略相对于参考模型的改进。一个训练步骤日志至少应包括：</p>
+  <p>DPO 不直接比较 <code>log pi(chosen)</code> 和 <code>log pi(rejected)</code> 的绝对值，而是看策略相对于参考模型的改进。一个训练步骤的日志至少应包括：</p>
   <table class="metrics-table">
     <thead>
       <tr><th>字段</th><th>定义</th><th>如何解读</th></tr>
@@ -1387,10 +1387,10 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
       <tr><td><code>heldout_preference_acc</code></td><td>在未见过的偏好对上的边际准确率</td><td>如果训练准确率上升但留出准确率不升，通常表明过拟合或数据偏差</td></tr>
     </tbody>
   </table>
-  <p>DPO 奖励余量报告应明确返回这些量。训练工程师应关注分布而非仅看均值：如果少数长响应贡献了大部分正余量，模型可能在学习“更长的回答更容易赢”；如果策略相对于参考模型同时大幅提升了 chosen 和 rejected，则 KL 锚点可能过弱，模型并未真正抑制低质量响应。</p>
+  <p>DPO 训练日志应明确输出这些值。训练工程师应关注分布而不是只看均值：如果少数长响应贡献了大部分正余量，模型可能在学习"更长的回答更容易赢"；如果策略相对于参考模型同时大幅提升了 chosen 和 rejected，则 KL 锚点可能过弱，模型并未真正抑制低质量响应。</p>
 
   <h4>PPO/GRPO 还需要监控 Ratio 和 Clipping</h4>
-  <p>GRPO 使用了组内白化优势值，但策略更新仍通过 PPO 风格的 clipped surrogate 控制步长。日志中的 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code> 是判断训练稳定性的关键。如果使用 DAPO 或 GSPO 风格方案，动态采样、完成长度、熵、序列级 ratio 和 MoE 路由波动性也应包含在同一日志表中；否则无法判断收益来自更好的策略更新还是来自采样、长度或路由的副作用。</p>
+  <p>GRPO 使用了组内白化优势值，但策略更新仍通过 PPO 风格的 clipped surrogate 控制步长。日志中的 <code>mean_ratio</code>、<code>clip_fraction</code> 和 <code>approx_kl</code> 是判断训练稳定性的关键。如果使用 DAPO 或 GSPO 风格方案，动态采样、完成长度、熵、序列级 ratio 和 MoE 路由波动性也应包含在同一日志表中；否则你无法区分收益来自更好的策略更新还是来自采样、长度或路由的副作用。</p>
   <table class="metrics-table">
     <thead>
       <tr><th>现象</th><th>可能含义</th><th>优先措施</th></tr>
@@ -1407,7 +1407,7 @@ train_grpo(model, ref_model, toy_data, tokenizer)</div>
   </table>
 
   <h4>从训练日志到行为回归</h4>
-  <p>偏好优化后的模型至少应在相同条件下与 base/SFT 检查点进行比较。以下记录比“DPO loss 下降了”更有信息量：</p>
+  <p>偏好优化后的模型至少应在相同条件下与 base/SFT 检查点进行比较。以下记录比单纯一句"DPO loss 下降了"更有用：</p>
   <div class="code-block" data-lang="text">
 checkpoint: sft_step_20000 -> dpo_step_3000
 decoding: temperature=0.2, top_p=0.9, max_new_tokens=512
@@ -1416,59 +1416,59 @@ behavior: task_success, hallucination_rate, unsafe_completion_rate, over_refusal
 retention: math/code/readcomp slices compared against SFT baseline</div>
   <p>如果 <code>approx_kl</code> 非常低但行为没有变化，偏好训练可能太弱。如果 <code>approx_kl</code> 非常高且数学/代码能力下降，则出现了 alignment tax。如果安全拒绝率上升但良性敏感请求完成率下降，模型可能学到了过度拒绝。如果 DAPO/GSPO 风格的 RL 曲线看起来更好，还必须检查收益是否在留出 prompt、不同长度桶和 MoE 路由状态下保持。完整的结果表应将这些行为切片和优化日志放在一起，以判断对齐方法是否值得扩大规模。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节要点：</strong>偏好优化的训练记录必须同时包含内部目标函数量值和外部行为量值。内部量值表明优化是否按照公式进行；外部行为量值表明它是否真正使模型更有用、更诚实、更安全，且不过度牺牲原有能力。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节要点：</strong>偏好优化的训练记录需要同时包含内部目标函数值和外部行为指标。内部值说明优化是否按预期推进；外部指标说明它是否真正让模型更有用、更诚实、更安全，且不过度牺牲原有能力。</div></div>
 </section><!-- ================================================================ -->
 <!-- 9.11 在策略蒸馏（On-Policy Distillation） -->
 <!-- ================================================================ --><section class="card" id="s9-11">
   <h3>9.11 On-Policy Distillation、Rejection Sampling 与 Adjustable Inference Budget</h3>
-  <p><strong>On-policy distillation</strong> 是一种将蒸馏数据与当前学生模型的行为分布尽可能对齐的方法。它聚焦于一个问题：学生模型在实际推理过程中生成了哪些候选回答，犯了什么错误，以及教师模型、专家模型、规则验证器或人工审核应如何在这些候选上提供改进信号。现代推理后训练通常将高预算推理、拒绝采样、验证器过滤以及通过学生模型的反向传播结合起来：首先，一个更强的模型或更高的测试时计算量生成多个候选，然后只保留那些可验证、格式正确且风险可控的样本供学生模型学习。</p>
+  <p><strong>On-policy distillation</strong> 是一种方法，核心是把蒸馏数据和当前学生模型的行为分布对齐。它要回答一个问题：学生模型在推理时生成了哪些候选回答，在哪犯了错，然后教师模型、专家模型、规则验证器或人工审核应该怎样在这些候选结果上给出改进反馈。当前推理后训练的常见做法是，把高预算推理、拒绝采样、验证器过滤和学生模型的反向传播结合起来：先用更强的模型或更多的测试时计算生成多个候选答案，然后只保留那些可验证、格式正确、风险可控的样本，拿来训练学生模型。</p>
 
   <h4>传统蒸馏的问题</h4>
-  <p>传统方法让学生模型学习教师模型的静态输出分布。然而，“蒸馏后”的模型往往在特定领域表现不如原始专家模型——因为学生模型只看到了教师的<strong>静态输出</strong>，而没有参与教师的“思考过程”。更关键的是，如果教师输出未经验证器检查、去重、权限检查和评估集重叠检测，学生模型会高效地复制教师的错误、风格偏差以及泄漏的样本。</p>
+  <p>传统方法是让学生模型学习教师模型的一个静态输出分布。结果“蒸馏过后”的模型在特定领域上往往不如原始的专家模型——因为学生模型只看到了教师的<strong>静态输出</strong>，没看到教师的思考过程。更关键的是，如果教师的输出没有经过验证器检查、去重、权限检查和评估集重叠检测，学生模型会很高效地把教师的错误、表述偏差以及泄漏的样本都学过去。</p>
 
-  <h4>On-Policy Distillation 的核心思想</h4>
+  <h4>On-Policy Distillation 的核心思路</h4>
   <ol>
-    <li><strong>学生模型生成候选：</strong> 使用当前学生模型为提示生成多个候选回答，暴露其实际访问的错误区域。</li>
-    <li><strong>教师或专家评分/修正：</strong> 教师模型、领域专家模型、规则验证器或人工审核对这些候选进行排序、修正或生成目标答案。</li>
-    <li><strong>拒绝采样过滤：</strong> 保留通过答案验证、格式约束、安全规则以及重复/污染检查的候选。丢弃无法验证或可能泄漏的样本。</li>
-    <li><strong>反向传播训练：</strong> 使用在学生模型分布上获得的信号进行 SFT、偏好优化或蒸馏损失训练，逐步将学生模型导向更好的行为。</li>
+    <li><strong>学生模型生成候选：</strong> 用当前的学生模型对提示生成多个候选回答，暴露它实际会出错的地方。</li>
+    <li><strong>教师或专家评分/修正：</strong> 教师模型、领域专家模型、规则验证器或人工审核对这些候选进行排序、修正，或者直接生成目标答案。</li>
+    <li><strong>拒绝采样过滤：</strong> 只保留那些通过答案验证、格式约束、安全规则以及重复/污染检查的候选。丢掉的样本要么无法验证，要么有泄漏风险。</li>
+    <li><strong>反向传播训练：</strong> 用这些从学生模型分布上得来的信号做 SFT、偏好优化或蒸馏损失训练，把学生模型一步步往更好的行为方向拉。</li>
   </ol>
 
-  <h4>合成数据进入课程报告时必须明确记录的内容</h4>
+  <h4>合成数据进课程报告时，必须写清楚的内容</h4>
   <div class="table-wrap">
     <table>
       <tr><th>问题</th><th>最低证据要求</th><th>缺失风险</th></tr>
-      <tr><td>由谁生成？</td><td>教师/生成器版本、提示模板、采样参数和候选数量</td><td>无法复现数据分布，也无法判断是否只是复制教师风格</td></tr>
-      <tr><td>由谁过滤？</td><td>验证器规则、人工抽检比例、错误类型和通过/失败分布</td><td>低质量或错误的推理链被当作高质量监督信号使用</td></tr>
-      <tr><td>覆盖了什么？</td><td>任务切片、难度等级、长度分布、语言/领域比例和安全切片</td><td>模型仅在少数高频模板上提升，在泛化任务上退化</td></tr>
-      <tr><td>哪些内容不可泄漏？</td><td>近似重复、题库来源、评估集重叠、数据所有权和安全风险记录</td><td>基准评测分数被污染，或训练数据无法发布/商业使用</td></tr>
+      <tr><td>由谁生成？</td><td>教师/生成器版本、提示模板、采样参数和候选数量</td><td>无法复现数据分布，也说不清是不是只复制了教师风格</td></tr>
+      <tr><td>由谁过滤？</td><td>验证器规则、人工抽检比例、错误类型和通过/失败分布</td><td>低质量或错误的推理链被当成高质量监督信号用了</td></tr>
+      <tr><td>覆盖了什么？</td><td>任务切片、难度等级、长度分布、语言/领域比例和安全切片</td><td>模型只在少数高频模板上提升，泛化任务上反而退步</td></tr>
+      <tr><td>哪些内容不能泄漏？</td><td>近似重复、题库来源、评估集重叠、数据所有权和安全风险记录</td><td>基准评测分数被污染，或者训练数据无法发布、不能商用</td></tr>
     </table>
   </div>
-  <p>这些字段属于第9章，因为合成数据现在是常规的后训练工具，而不是课程之外的“数据增强技巧”。它直接改变了 SFT 的监督目标、DPO 的偏好分布、GRPO/RLVR 的探索边界，以及在发布时需要在第10章解释的模型来源风险。</p>
+  <p>这些字段放在第9章，是因为合成数据现在已经是后训练阶段的常规工具，不是课程之外的一个“数据增强技巧”。它直接影响 SFT 的监督目标、DPO 的偏好分布、GRPO/RLVR 的探索边界，以及在发布时需要在第10章说明的模型来源风险。</p>
 
   <h4>可调节的推理预算</h4>
-  <p>许多推理系统将测试时计算量分为不同层级。在课程中，这可以理解为质量、延迟和成本之间的选择：</p>
+  <p>很多推理系统把测试时计算量分成不同层级。在课程里，可以把它理解成质量、延迟和成本之间的权衡：</p>
   <ul>
-    <li><strong>快速模式（Fast mode）：</strong> 更少的样本或更短的推理链，优先考虑较低的延迟和成本。</li>
-    <li><strong>深度模式（Deep mode）：</strong> 更多的中间推理 token、自洽性采样或重排序，提高难题的成功率。</li>
-    <li><strong>高预算模式（High-budget mode）：</strong> 多个候选、多个工具或多轮反思，适合竞赛题、代码修复或高价值任务。</li>
+    <li><strong>快速模式（Fast mode）：</strong> 少采样或短推理链，优先压低延迟和成本。</li>
+    <li><strong>深度模式（Deep mode）：</strong> 增加中间推理 token、自洽性采样或重排序，提高难题的解决率。</li>
+    <li><strong>高预算模式（High-budget mode）：</strong> 多候选、多工具或多轮反思，适合竞赛题、代码修复或高价值任务。</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>方法边界：</strong> On-policy distillation、拒绝采样、GRPO/RL 和测试时计算是不同层面的技术：蒸馏改变训练数据分布，拒绝采样改变进入训练集的候选质量，GRPO/RL 改变策略优化信号，推理预算改变部署时消耗的 token 数量和计算量。课程报告必须明确记录质量提升、token 成本、延迟、数据来源、过滤证据以及适用任务。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>方法边界：</strong> On-policy distillation、拒绝采样、GRPO/RL 和测试时计算是几个不同层面的技术。蒸馏改变训练数据的分布，拒绝采样改变进训练集的候选质量，GRPO/RL 改变策略优化的信号，推理预算改变部署时消耗的 token 数量和计算量。课程报告必须写清楚质量提升了多少、token 成本和延迟是多少、数据来源和过滤证据是什么，以及这些方法适合哪些任务。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 6：加载 LoRA 适配器 -->
 <!-- ================================================================ --><section class="card" id="s9-12">
   <h3>9.12 编程练习 6：加载 LoRA 适配器并合并进行推理</h3>
-  <p>在实际应用中，LoRA 适配器通常作为独立的权重文件分发。推理时，将适配器加载并合并回基础模型。</p>
+  <p>LoRA 适配器通常作为独立的权重文件分发。推理时，需加载适配器并合并回基础模型。</p>
   <div class="coding-exercise">
     <h4>练习 6：LoRA 合并推理</h4>
     <div class="task">
-      <p><strong>任务：</strong>模拟加载一个 LoRA 适配器，将其合并到基础模型中进行推理。</p>
+      <p><strong>任务：</strong>模拟加载 LoRA 适配器，将其合并到基础模型后执行推理。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>创建 LoRA 适配器（A、B 矩阵分开存储）</li>
         <li>实现 <code>merge_lora(base_model, lora_weights, scaling)</code> 函数</li>
-        <li>验证合并后的推理输出与合并前一致</li>
-        <li>合并后的模型应支持保存与加载（<code>torch.save</code> / <code>torch.load</code>）</li>
+        <li>验证合并前后推理输出一致</li>
+        <li>合并后的模型应支持保存和加载（<code>torch.save</code> / <code>torch.load</code>）</li>
       </ul>
       <pre># Expected usage
 lora_weights = {
@@ -1542,43 +1542,43 @@ merged_model = merge_lora(base_model, loaded_lora)
 
 # 5. 保存合并后的完整模型（可选）
 torch.save(merged_model.state_dict(), "model_merged.pt")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>LoRA 的生产优势：</strong> LoRA 适配器通常只有 1-10 MB（仅 A、B 矩阵），而一个 7B 参数的基础模型大约 14 GB。分发适配器比分发完整模型轻量得多。用户可以拥有多个任务的 LoRA 适配器，在推理时按需加载并合并。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>LoRA 的生产优势：</strong> LoRA 适配器通常只有 1-10 MB（仅 A、B 矩阵），而一个 7B 参数的基础模型约 14 GB。分发适配器比分发完整模型轻量得多。用户可以维护多个任务对应的适配器，推理时按需加载并合并。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 9.13 Alignment Tax -->
 <!-- ================================================================ --><section class="card" id="s9-13">
   <h3>9.13 Alignment Tax（对齐惩罚）</h3>
-  <p><strong>Alignment tax</strong> 指的是模型在对齐后变得更安全、更服从，但某些能力却<strong>减弱</strong>的现象。</p>
+  <p><strong>Alignment tax</strong> 指模型在对齐后虽然更安全、更顺从，但某些能力反而<strong>减弱</strong>的现象。</p>
   <ul>
-    <li><strong>数学推理能力下降：</strong>RLHF 倾向于生成“安全、社会可接受”的回答，但数学要求精确——“安全”与“精确”有时相互矛盾</li>
-    <li><strong>创造力降低：</strong>对齐后的模型不再那么“跳出框框”，但也没那么“出彩”</li>
-    <li><strong>过度保守：</strong>模型宁愿拒绝回答“可能敏感”的问题，也不愿冒险给出正确但可能被误解的回答</li>
+    <li><strong>数学推理能力下降：</strong>RLHF 倾向于生成“安全、符合社会期望”的回答，但数学需要精确——“安全”与“精确”有时互相冲突。</li>
+    <li><strong>创造力降低：</strong>对齐后的模型不再那么“跳出框框”，但也没那么“出彩”了。</li>
+    <li><strong>过度保守：</strong>模型宁愿拒绝回答“可能敏感”的问题，也不愿冒险给出正确但可能被误解的回答。</li>
   </ul>
-  <p>缓解方法：1) 将推理任务与安全对齐分开处理；2) 在 RLHF 数据中包含“安全但强大”的边缘案例；3) 使用按任务划分的奖励模型，分别评估不同维度的质量。</p>
+  <p>缓解方法：1) 把推理任务和安全对齐分开处理；2) 在 RLHF 数据中加入“安全但强大”的边缘案例；3) 使用按任务划分的奖励模型，分别评估不同维度的质量。</p>
 </section><section class="card" id="s9-13a">
   <h3>9.13A RLVR / RFT：可验证奖励并非通用奖励</h3>
-  <p>像 DeepSeek-R1、Kimi k1.5、OpenAI o1/RFT 这样的工作，将推理后训练推向了工业前沿：模型不再仅仅是模仿答案，而是对同一个 prompt 采样多个候选，使用可验证奖励、评分器或基于规则的评估作为反馈，然后通过 RL 风格的更新来增加高分答案的概率。这个方向的关键不在于“打开 PPO/GRPO”，而在于判断任务是否真的具有稳定、可审计且难以作弊的奖励。</p>
+  <p>像 DeepSeek-R1、Kimi k1.5、OpenAI o1/RFT 这类工作，把推理后训练推到了工业前沿：模型不再只是模仿答案，而是对同一个 prompt 采样多个候选，用可验证奖励、评分器或基于规则的评估做反馈，再通过 RL 更新来增加高分答案的概率。这个方向的关键不是选 PPO 还是 GRPO，而是判断任务是否真的有稳定、可审计且难以作弊的奖励。</p>
 
   <h4>RLVR / RFT 何时适用</h4>
   <div class="table-wrap">
     <table>
       <tr><th>条件</th><th>适合信号</th><th>不适合信号</th></tr>
       <tr><td>答案可验证</td><td>最终数学答案、代码测试、JSON 模式、工具调用结果、检索到的文档</td><td>开放式写作风格、主观的“看起来更好”、没有标准答案的咨询</td></tr>
-      <tr><td>奖励有方差</td><td>同个 prompt 的多次 rollout 有高有低，模型有探索空间</td><td>全0分或全满分，RL 无可学习梯度</td></tr>
-      <tr><td>靠猜测难以得分</td><td>需要中间约束、测试用例或引用证据</td><td>选择题、可猜测的简答题、评分器只看关键词</td></tr>
+      <tr><td>奖励有方差</td><td>同一个 prompt 的多次 rollout 得分有高有低，模型有探索空间</td><td>全都0分或满分，RL 没有可学习的梯度</td></tr>
+      <tr><td>靠猜测难以得分</td><td>需要中间步骤约束、测试用例或引用证据</td><td>选择题、可猜测的简答题、评分器只看关键词</td></tr>
       <tr><td>成本可控</td><td>能限制推理 token、rollout 数量和训练 epoch</td><td>准确率提升只来自无限延长 CoT 或大量重试</td></tr>
     </table>
   </div>
 
   <h4>评分器可靠性：先验证奖励，再训练策略</h4>
-  <p>RLVR/RFT 的工程顺序应该是：先对一组固定 prompt 运行，采样多个候选，记录奖励、通过/失败、输出长度、评分器错误和可疑的 hack 行为；只有在奖励信号、成本和完整性检查都可信时，才进行策略更新。一份评分器可靠性报告应提供三类证据：</p>
+  <p>RLVR/RFT 的工程流程应该是：先在一组固定 prompt 上运行，采样多个候选，记录奖励、通过/失败、输出长度、评分器错误和可疑的 hack 行为；只有当奖励信号、成本和完整性检查都可信时，才进行策略更新。评分器可靠性报告需要提供三类证据：</p>
   <ul>
     <li><strong>奖励信号：</strong>通过率不应接近 0 或 1，奖励标准差不应接近 0，否则没有有效的学习信号。</li>
     <li><strong>成本：</strong>平均完成 token 数、rollout 数量和训练 epoch 应受控；长 CoT 改进必须同时报告 token 成本。</li>
     <li><strong>完整性：</strong>检查奖励 hack、格式绕过、测试泄漏、评分器-模型同质偏差，以及“答案正确但推理错误”的情况。</li>
   </ul>
-  <p>最终答案奖励对于数学、代码和工具任务来说是必要的，但它不是推理得到改进的充分证据。模型可能猜出最终答案、利用弱的单元测试，或生成无效的思维链却碰巧以正确的数字结尾。最近的 <a href="https://arxiv.org/abs/2506.14245" target="_blank">RLVR 评估工作</a>明确了这一界限：当任务声称改进了推理时，评估应区分最终答案和推理轨迹的有效性。</p>
+  <p>最终答案奖励在做数学、代码和工具任务时是必要的，但不能充分证明推理得到了改进。模型可能猜出最终答案、利用弱的单元测试，或者生成无效的思维链却碰巧以正确的数字结尾。最近的 <a href="https://arxiv.org/abs/2506.14245" target="_blank">RLVR 评估工作</a> 明确了这一点：任务如果声称改进了推理，评估就要区分最终答案和推理轨迹的有效性。</p>
   <div class="table-wrap">
     <table>
       <tr><th>评估层次</th><th>能证明什么</th><th>不能证明什么</th><th>最低诊断要求</th></tr>
@@ -1590,8 +1590,8 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
   </div>
 
   <h4>与 SFT / DPO / GRPO 的关系</h4>
-  <p>SFT 适用于教授格式和基本任务行为；DPO 适用于将 chosen/rejected 偏好转化为参考相关的更新；GRPO/RLVR 更适用于有可验证奖励、需要探索多条推理路径的任务；后续的 DAPO/GSPO 等工作则强调如何让 RL 运行稳定、长期且可复现。工业系统通常不是三选一：首先用 SFT 建立可读性和格式，然后用偏好或基于规则的奖励进行后训练，最后用固定 eval、红队测试、安全/格式回归和成本核算来决定是否发布。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>高级对齐工程师必须能够证明奖励本身是可靠的。一条漂亮的 RL 曲线，如果来自于可猜测的答案、泄漏的测试、更长的输出或评分器漏洞，就不是能力提升，而是奖励 hack。</div></div>
+  <p>SFT 适合教授格式和基本任务行为；DPO 适合把 chosen/rejected 偏好转化为与参考相关的更新；GRPO/RLVR 更适合有可验证奖励、需要探索多条推理路径的任务；后续的 DAPO/GSPO 等工作则强调如何让 RL 运行稳定、长期且可复现。工业系统通常不是三选一：先用 SFT 建立可读性和格式，再用偏好或基于规则的奖励做后训练，最后靠固定 eval、红队测试、安全/格式回归和成本核算来决定是否发布。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>高级对齐工程师必须能证明奖励本身是可靠的。一条漂亮的 RL 曲线，如果来自可猜测的答案、泄漏的测试、更长的输出或评分器漏洞，就不是能力提升，而是奖励 hack。</div></div>
 </section><!-- ================================================================ -->
 <!-- 9.14 小结 -->
 <!-- ================================================================ --><section class="card" id="s9-14">
@@ -1604,7 +1604,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>编程练习2：LoRA</strong> — 低秩适配，节省99%参数量</li>
     <li>✅ <strong>DPO数学等价性</strong> — 策略log比值作为隐式奖励函数</li>
     <li>✅ <strong>偏好数据质量</strong> — 长度偏差、标注不一致、参考模型与reward hacking边界</li>
-    <li>✅ <strong>后训练数据审计</strong> — 覆盖率、标签质量、泄漏与安全性纳入相同的预训练审计表</li>
+    <li>✅ <strong>后训练数据审计</strong> — 覆盖率、标签质量、数据泄漏与安全性统一纳入预训练审计表</li>
     <li>✅ <strong>编程练习3：DPO Loss</strong> — 直接偏好优化</li>
     <li>✅ <strong>DPO隐式奖励诊断</strong> — 使用策略/参考log-ratio报告chosen/rejected的边际</li>
     <li>✅ <strong>PPO裁剪目标</strong> — 新旧策略比值、advantage、裁剪比例与近似KL</li>
@@ -1616,7 +1616,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <li>✅ <strong>编程练习6：LoRA合并推理</strong> — 适配器加载与合并</li>
     <li>✅ <strong>RLVR / RFT评分器可靠性</strong> — 验证奖励信号、成本与reward hacking风险</li>
     <li>✅ <strong>使用工具和环境的Agentic RL</strong> — 训练并评估多轮工具使用轨迹，包含可回放日志、奖励组件与服务约束</li>
-    <li>✅ <strong>在策略蒸馏 / 拒绝采样 + 可调推理预算</strong> — 训练分布、教师信号、筛选证据与测试时计算之间的关系</li>
+    <li>✅ <strong>在策略蒸馏 / 拒绝采样 + 可调推理预算</strong> — 训练分布、教师信号、筛选结果与测试时计算之间的关系</li>
     <li>✅ <strong>对齐税</strong> — SS/OS评估与缓解策略</li>
   </ul>
   <div class="info-box key"><span class="icon">📚</span><div><strong>进一步阅读：</strong>
@@ -1631,15 +1631,15 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
 </section><!-- ================================================================ -->
 <!-- 概念练习 -->
 <!-- ================================================================ --><section class="card">
-  <h3>概念实践巩固</h3>
+  <h3>概念巩固练习</h3>
 
-  <div class="exercise" data-answer="1" data-explain="SFT 只在答案部分计算损失，因为指令由用户提供，模型不需要学习生成它。如果对整个序列计算损失，模型会试图学习生成“用户指令”，浪费计算资源并可能导致分布偏移。">
-    <h4>练习 1：在 SFT 中，为什么损失只在答案部分（而不是整个序列）上计算？</h4>
+  <div class="exercise" data-answer="1" data-explain="SFT 只在答案部分计算损失，因为指令是用户提供的，模型不需要学习生成指令。如果对整个序列计算损失，模型会尝试学习生成用户指令，浪费计算资源，还可能引发分布偏移。">
+    <h4>练习 1：为什么 SFT 只在答案部分计算损失，而不是整个序列？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q1" value="0"> A. 因为指令部分的 token 太多</label>
-      <label><input type="radio" name="q1" value="1"> B. 因为指令由用户提供，模型不需要学习生成它</label>
-      <label><input type="radio" name="q1" value="2"> C. 因为只有答案部分有正确结果</label>
-      <label><input type="radio" name="q1" value="3"> D. 因为指令部分没有正确答案</label>
+      <label><input type="radio" name="q1" value="0"> A. 指令部分的 token 太多</label>
+      <label><input type="radio" name="q1" value="1"> B. 指令由用户提供，模型不需要学习生成它</label>
+      <label><input type="radio" name="q1" value="2"> C. 只有答案部分包含正确结果</label>
+      <label><input type="radio" name="q1" value="3"> D. 指令部分没有正确答案</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q1')">检查答案</button>
     <button class="btn btn-outline" onclick="LLM.showHint(this)">提示</button>
@@ -1659,7 +1659,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="GRPO 不训练独立的 Critic 模型，而是使用“组内白化”来计算相对优势。对于同一 prompt 采样的 G 个 response，它利用组内奖励的均值和标准差进行归一化，从而减少了一个复杂组件；稳定性仍然取决于奖励、KL、采样和优化设置。">
+  <div class="exercise" data-answer="0" data-explain="GRPO 不训练独立的 Critic 模型，而是用“组内白化”计算相对优势。对同一 prompt 采样的 G 个 response，它用组内奖励的均值和标准差做归一化，从而省去一个复杂组件；稳定性仍取决于奖励、KL、采样和优化设置。">
     <h4>练习 3：GRPO 与 PPO 最大的区别是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q3" value="0"> A. GRPO 不需要 Critic 模型，使用组内白化后的奖励作为优势函数</label>
@@ -1672,7 +1672,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="DPO 的核心数学洞见是：在 Bradley-Terry 偏好模型下，奖励函数可以表示为策略模型的闭式函数，因此无需显式训练一个 Reward Model。">
+  <div class="exercise" data-answer="2" data-explain="DPO 的核心数学思想是：在 Bradley-Terry 偏好模型下，奖励函数可以表示为策略模型的闭式函数，因此不需要显式训练一个 Reward Model。">
     <h4>练习 4：为什么 DPO 不需要训练单独的奖励模型？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 因为 DPO 使用直接的人工评分来替代奖励模型</label>
@@ -1685,7 +1685,7 @@ torch.save(merged_model.state_dict(), "model_merged.pt")</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="Alignment tax 指的是模型在对齐后变得更加安全，但在数学推理、创造力等能力上变弱的现象。SS/OS 分别衡量对有害请求的拒绝率和对无害请求的过度拒绝率。">
+  <div class="exercise" data-answer="0" data-explain="Alignment tax 指的是模型在对齐后变得更安全，但在数学推理、创造力等能力上反而变弱的现象。SS/OS 分别衡量对有害请求的拒绝率和对无害请求的过度拒绝率。">
     <h4>练习 5：“Alignment Tax”指的是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q5" value="0"> A. 模型在对齐后变得更安全，但某些能力变弱</label>

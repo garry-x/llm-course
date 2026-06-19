@@ -6,3 +6,4 @@ venv/
 .tmp-screens/
 browser-shots/
 .translation-cache/
+.polish-cache/

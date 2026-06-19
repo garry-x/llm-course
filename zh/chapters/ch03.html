@@ -23,8 +23,8 @@
 <main class="main">
 <article class="chapter">
   <h2>第3章 单头自注意力</h2>
-  <p class="subtitle">从头实现缩放点积注意力——现代大语言模型的核心操作</p>
-  <div class="reading-time">⏱ 预计阅读时间：120分钟 · 19 个小节 · 6个编程练习 · 6个概念练习</div>
+  <p class="subtitle">从头实现缩放点积注意力——大语言模型的核心机制</p>
+  <div class="reading-time">⏱ 阅读时间：120分钟 · 19个小节 · 6个编程练习 · 6个概念练习</div>
   <div class="font-controls"><span>字号：</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -39,7 +39,7 @@
     <li><strong>完成标准：</strong>你能解释为什么生成第 t 个 token 时不能看到未来的 token。</li>
     <li><strong>练习产出：</strong>提交手写的注意力、掩码单元测试、缩放因子的方差推导以及注意力热图分析；使用 <a href="../../assignments/ch03_attention/" target="_blank">第 3 章 Attention Assignment Tests</a> 检查核心实现。</li>
   </ul>
-  <div class="dependency-note"><strong>必备技能：</strong>矩阵乘法、softmax、掩码语义、概率归一化、基础广播规则。<br><strong>本章内化：</strong>这些基础将在实现 <code>QK^T / sqrt(d)</code>、mask-before-softmax、注意力行和、padding/causal 区分以及数值稳定的 softmax 时得到检验。<br><strong>验证信号：</strong>你能将注意力错误定位为 score 形状、掩码时机、概率归一化或可见性约束，并解释它如何影响 Ch04 多头分割、Ch06 causal LM 以及 Ch08 生成。</div>
+  <div class="dependency-note"><strong>必备技能：</strong>矩阵乘法、softmax、掩码语义、概率归一化、基础广播规则。<br><strong>本章内化：</strong>这些基础会在实现 <code>QK^T / sqrt(d)</code>、mask-before-softmax、注意力行和、padding/causal 区分以及数值稳定的 softmax 时得到检验。<br><strong>验证信号：</strong>你能将注意力错误定位为 score 形状、掩码时机、概率归一化或可见性约束，并解释它如何影响 Ch04 多头分割、Ch06 causal LM 以及 Ch08 生成。</div>
   <p class="system-role"><strong>本章在本课程中的位置：</strong>本章是 Transformer 的计算核心：将每个 token 的表征变为可微检索。它向前依赖 Ch02 的向量与位置，向后支持多头压缩、GPT 因果训练、生成可见性以及长上下文服务成本。</p>
   <div class="foundation-map">
     <h4>学习者思维导图：先了解什么 / 本章教什么 / 接下来读什么</h4>
@@ -74,13 +74,13 @@
         <tr><td>复杂度预算</td><td>将 score 矩阵写为 <code>[B,H,T,T]</code>，直接关联到内存、长上下文和服务成本。</td><td><strong>资料：</strong>Longformer、Performer、线性注意力、Mamba/SSM 综述。<br><strong>知识点：</strong>稀疏注意力、线性注意力、混合架构。</td></tr>
       </table>
     </div>
-    <p><strong>本章覆盖范围：</strong>本章清晰解释了注意力的概率、掩码、形状和复杂度；如需深入学习，可以阅读 FlashAttention 的 IO-aware 视角和长序列稀疏注意力，但这些属于性能扩展，不影响本章主线的理解。</p>
+    <p><strong>本章覆盖范围：</strong>本章讲清了注意力的概率、掩码、形状和复杂度。如需深入学习，可以阅读 FlashAttention 的 IO-aware 视角和长序列稀疏注意力，但这些属于性能扩展，不影响本章主线的理解。</p>
   </div>
 </section><!-- ================================================================ -->
 <!-- 3.1 为什么需要注意力 -->
 <!-- ================================================================ --><section class="card" id="s3-1">
   <h3>3.1 为什么需要注意力——RNN的局限与注意力机制的突破</h3>
-  <p>在Transformer（2017）出现之前，序列建模长期由RNN/LSTM主导。理解它们在并行性和长距离依赖方面的<strong>结构局限性</strong>，是真正理解注意力机制为何成为后续架构关键选择的要点。</p>
+  <p>在Transformer（2017）出现之前，序列建模长期由RNN/LSTM主导。理解它们在并行性和长距离依赖方面的<strong>结构局限性</strong>，对于理解注意力机制为何成为后续架构的关键选择至关重要。</p>
 
   <h4>RNN的工作原理：迭代压缩</h4>
   <p>RNN将序列处理视为一个逐步"压缩"的过程：每次读取一个token <span class="katex-inline" data-expr="\mathbf{x}_t" aria-label="\mathbf{x}_t" role="img"></span>时，它会把之前的所有信息（存储在隐藏状态 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span>中）与当前输入"融合"，生成一个新的隐藏状态：</p>
@@ -90,7 +90,7 @@
 
   <h4>两个结构性缺陷</h4>
   <p><strong>缺陷1：顺序瓶颈。</strong>计算 <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> 需要先知道 <span class="katex-inline" data-expr="\mathbf{h}_{t-1}" aria-label="\mathbf{h}_{t-1}" role="img"></span>，这造成了严格的顺序依赖。在GPU上，这意味着1000个token需要1000个串行步骤——你无法并行处理序列中的不同位置。训练时间随序列长度线性增长。</p>
-  <p><strong>缺陷2：长距离依赖衰减。</strong>隐藏状态是一个固定维度的"瓶颈"——无论前文信息多么丰富，都必须压缩成一个固定大小的向量。当信息从位置1传播到位置1000时，必须经过999次非线性变换。在这个过程中，梯度会指数级衰减（梯度消失）或指数级增长（梯度爆炸）：</p>
+  <p><strong>缺陷2：长距离依赖衰减。</strong>隐藏状态是一个固定维度的"瓶颈"——无论前文信息多么丰富，都始终必须压缩成一个固定大小的向量。当信息从位置1传播到位置1000时，必须经过999次非线性变换。在这个过程中，梯度会指数级衰减（梯度消失）或指数级增长（梯度爆炸）：</p>
   <div class="math-box"><div class="label">梯度传播（简化）</div>
     <div class="katex" data-expr="\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \cdot \prod_{t=2}^{T} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}" aria-label="\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \cdot \prod_{t=2}^{T} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}" role="img"></div>
   </div>
@@ -98,32 +98,32 @@
 
   <h4>注意力机制的突破：检索代替记忆</h4>
   <p>Transformer的核心洞察是：<strong>不要强制信息在到达目标位置之前必须经过中间位置。</strong>每个位置应该能够直接读取序列中任意其他位置，并从源位置提取信息。</p>
-  <p>与RNN相比——RNN中第一个token的信息必须通过隐藏状态一步一步传递——注意力机制为每个位置提供了直接读取同一层中其他位置的路径。这缩短了信息路径，使长距离依赖更容易被表示。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>注意力的优势：同一层内任意两个位置之间的信息路径长度是O(1)。</strong>一个位置可以直接读取同一层中另一个位置的值，而无需沿着时间步逐个传递。这有利于并行训练和长距离依赖建模；它实际能处理的上下文长度也取决于注意力的复杂度、位置编码、训练分布和推理系统。</div></div>
+  <p>与RNN相比，RNN中第一个token的信息必须通过隐藏状态一步一步传递，而注意力机制则为每个位置提供了直接读取同一层中其他位置的路径。这缩短了信息路径，使长距离依赖更容易被捕获。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>注意力的优势：同一层内任意两个位置之间的信息路径长度是O(1)。</strong>一个位置可以直接读取同一层中另一个位置的值，而无需沿着时间步逐个传递。这有利于并行训练和长距离依赖建模；它实际能处理的上下文长度还取决于注意力的复杂度、位置编码、训练分布和推理系统。</div></div>
 </section><!-- ================================================================ -->
 <!-- 3.2 QKV 原理 -->
 <!-- ================================================================ --><section class="card" id="s3-2">
   <h3>3.2 Q/K/V 三元组 —— 注意力的检索接口</h3>
   <p>缩放点积注意力的核心思想可以类比为<strong>数据库检索</strong>：</p>
   <ul>
-    <li><strong>Query (Q)：</strong>“我在找什么？”——每个位置根据当前上下文主动发出一个“问题”。例如在翻译任务中，“I”想知道它对应哪个中文词。</li>
-    <li><strong>Key (K)：</strong>“我有什么信息？”——每个位置生成一个“标签”来描述它能提供什么。Query 与所有 Key 进行匹配，以找到最相关的信息来源。</li>
-    <li><strong>Value (V)：</strong>“我的具体内容。”——匹配完成后，从匹配位置中提取实际的信息内容。Value 最终被聚合到输出中。</li>
+    <li><strong>Query (Q)：</strong>“我在找什么？”——每个位置根据当前上下文会发出一条“问题”。例如在翻译任务中，“I”想知道它对应哪个中文词。</li>
+    <li><strong>Key (K)：</strong>“我有什么信息？”——每个位置生成一个“标签”来说明自己能提供什么。Query 与所有 Key 做匹配，找到最相关的信息来源。</li>
+    <li><strong>Value (V)：</strong>“我的具体内容。”——匹配完成后，从对应位置提取实际的信息内容。Value 最终被聚合到输出中。</li>
   </ul>
-  <p><strong>为什么需要三个不同的向量？</strong>关键在于 Q 与 K 的<strong>分离</strong>。当一个 token 同时扮演“信息消费者”（发出 Q）和“信息提供者”（提供 K）时，其关注点不同。例如在句子“The cat sat on the mat”中，处理“sat”时：</p>
+  <p><strong>为什么需要三个不同的向量？</strong>关键在于 Q 与 K 的<strong>分离</strong>。一个 token 同时扮演“信息消费者”（发出 Q）和“信息提供者”（提供 K）时，它们关心的东西不一样。例如在句子“The cat sat on the mat”中，处理“sat”时：</p>
   <ul>
     <li>作为 Query，“sat”想问“谁坐着？”——所以它的 Q 应该靠近代表主语（名词）的 Key</li>
     <li>作为 Key，“sat”想告诉别人“这是一个动作”——所以它的 K 应该靠近代表动作的 Query</li>
   </ul>
-  <p>Q 和 K 的不对称性使注意力能够学习<strong>有向</strong>依赖关系——“A 关注 B”和“B 关注 A”是不同的。</p>
+  <p>Q 和 K 的不对称性让注意力能学到<strong>有向</strong>依赖关系——“A 关注 B”和“B 关注 A”是不同的。</p>
 
   <h4>从输入到 Q、K、V：线性投影</h4>
-  <p>给定输入序列 <span class="katex-inline" data-expr="\mathbf{X} \in \mathbb{R}^{n \times d}" aria-label="\mathbf{X} \in \mathbb{R}^{n \times d}" role="img"></span>（n 个 token，每个 d 维），Q、K、V 都通过<strong>可学习的线性变换</strong>从同一输入生成：</p>
+  <p>设输入序列 <span class="katex-inline" data-expr="\mathbf{X} \in \mathbb{R}^{n \times d}" aria-label="\mathbf{X} \in \mathbb{R}^{n \times d}" role="img"></span>（n 个 token，每个 d 维），Q、K、V 都由<strong>可学习的线性变换</strong>对同一个输入 X 算出来：</p>
   <div class="math-box"><div class="label">线性投影</div>
     <div class="katex" data-expr="\mathbf{Q} = \mathbf{X}\mathbf{W}^Q,\quad \mathbf{K} = \mathbf{X}\mathbf{W}^K,\quad \mathbf{V} = \mathbf{X}\mathbf{W}^V" aria-label="\mathbf{Q} = \mathbf{X}\mathbf{W}^Q,\quad \mathbf{K} = \mathbf{X}\mathbf{W}^K,\quad \mathbf{V} = \mathbf{X}\mathbf{W}^V" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" aria-label="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" role="img"></span> 是可训练的权重矩阵。投影的目的不是“创造信息”，而是<strong>重组信息</strong>——让同一输入在不同角色（查询者、被查询者、信息提供者）下表现出不同的特性。</p>
-  <p>这就是“self-attention”中“self”的含义：Q、K、V 都来自<strong>同一个序列 X</strong>——每个 token 与自身及其他 token 建立联系。</p>
+  <p>其中 <span class="katex-inline" data-expr="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" aria-label="\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d \times d_k}" role="img"></span> 是可训练的权重矩阵。投影的目的不是“创造信息”，而是<strong>重组信息</strong>——让同一个输入在扮演不同角色（查询者、被查询者、信息提供者）时，呈现出不同的特性。</p>
+  <p>这就是“self-attention”中“self”的含义：Q、K、V 都来自<strong>同一个序列 X</strong>——每个 token 跟自身及其余 token 产生关联。</p>
 </section><!-- ================================================================ --><section class="card">
 <div class="svg-diagram" style="max-width:900px">
   <img src="../../images/attention-flow.svg?v=en-20260613b" alt="缩放点积注意力数据流" style="width:100%">
@@ -173,22 +173,22 @@ class QKVProjection(nn.Module):
         K = self.W_k(x)  # (batch, seq_len, d_k)
         V = self.W_v(x)  # (batch, seq_len, d_k)
         return Q, K, V</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 bias=False？</strong> 在自注意力中，QKV 投影通常不使用 bias。bias 引入了一个绝对的“中心点”，而注意力机制关心的是 token 之间的<strong>相对关系</strong>（Q 和 K 的点积）。添加 bias 可能会干扰对这种关系的学习。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 bias=False？</strong> 在自注意力中，QKV 投影通常不加 bias。bias 会引入一个固定的偏移，而注意力机制依赖的是 token 之间的<strong>相对关系</strong>（Q 和 K 的点积）。加上 bias 可能干扰这种关系的学习。</p>
     </div>
   </div>
 </section><section class="card" id="s3-3a">
   <h3>3.3A 实操示例：Q/K/V 形状与参数量台账</h3>
-  <p>假设教学配置为 <code>B=2</code>、<code>T=3</code>、<code>d_model=4</code>、<code>d_k=2</code>。输入张量 <code>X</code> 的形状为 <code>[2,3,4]</code>，三个投影矩阵为 <code>W_Q, W_K, W_V</code>，每个的形状为 <code>[4,2]</code>。因此：</p>
+  <p>设教学配置为 <code>B=2</code>、<code>T=3</code>、<code>d_model=4</code>、<code>d_k=2</code>。输入张量 <code>X</code> 的形状为 <code>[2,3,4]</code>，三个投影矩阵为 <code>W_Q, W_K, W_V</code>，每个形状为 <code>[4,2]</code>。因此：</p>
   <div class="code-block" data-lang="text">
 Q = X @ W_Q  -> [2, 3, 2]
 K = X @ W_K  -> [2, 3, 2]
 V = X @ W_V  -> [2, 3, 2]</div>
-  <p>参数量不是 <code>B*T*d_model*d_k</code>，因为 batch 和序列长度不是模型参数；它们只是同一组权重被应用的次数。无 bias 时，参数量为：</p>
+  <p>注意，参数量不是 <code>B*T*d_model*d_k</code>，因为 batch 和序列长度只是同一组权重被重复使用的次数，它们本身不是模型参数。无 bias 时，参数量为：</p>
   <div class="math-box"><div class="label">QKV 投影参数量</div>
     <div class="katex" data-expr="3 \times d_{\text{model}} \times d_k = 3 \times 4 \times 2 = 24" aria-label="3乘以d_model乘以d_k等于24" role="img"></div>
   </div>
-  <p>然后注意力分数来自 <code>QK^T</code>。对于每个 batch 样本，<code>Q[3,2]</code> 与 <code>K[3,2]</code> 相乘得到 <code>[3,3]</code> 的 token 间分数矩阵；整个 batch 的分数形状为 <code>[2,3,3]</code>。乘以 <code>V[2,3,2]</code> 后，输出回到 <code>[2,3,2]</code>。第 04 章的多头注意力将在多个头上复制此过程，然后将每个头的输出拼接回 <code>d_model</code>。</p>
-  <p>此示例对应第 03 章家庭作业中 <code>QKVProjection</code> 的测试：权重参数仅来自三个线性层，输出形状与 batch/序列对齐，后续注意力分数的二次项来自 <code>T*T</code>，而非参数量增长。</p>
+  <p>注意力分数由 <code>QK^T</code> 得到。对每个 batch 样本，<code>Q[3,2]</code> 与 <code>K[3,2]</code> 相乘，得到 <code>[3,3]</code> 的 token 间分数矩阵；整个 batch 的分数形状为 <code>[2,3,3]</code>。乘以 <code>V[2,3,2]</code> 后，输出形状回到 <code>[2,3,2]</code>。第 04 章的多头注意力会在多个头上重复这一过程，然后将每个头的输出拼接回 <code>d_model</code>。</p>
+  <p>本示例对应第 03 章家庭作业中 <code>QKVProjection</code> 的测试：权重参数只来自三个线性层，输出形状与 batch 和序列长度对齐；后续注意力分数的二次项来自 <code>T*T</code>，而非参数量增长。</p>
 </section><!-- ================================================================ -->
 <!-- 编程练习2：缩放点积注意力（Scaled Dot-Product Attention） -->
 <!-- ================================================================ --><section class="card" id="s3-4">
@@ -204,7 +204,7 @@ V = X @ W_V  -> [2, 3, 2]</div>
       <ul>
         <li>输入 Q、K、V 的形状均为 <code>(batch, seq_len, d_k)</code></li>
         <li>返回形状为 <code>(batch, seq_len, d_k)</code> 的 <code>output</code>，以及形状为 <code>(batch, seq_len, seq_len)</code> 的 <code>attn_weights</code></li>
-        <li>支持可选的 <code>mask</code> 参数（形状为 <code>(seq_len, seq_len)</code> 或 <code>(batch, seq_len, seq_len)</code>），在 softmax 之前将 mask==0 的位置设为 -1e9</li>
+        <li>支持一个可选的 <code>mask</code> 参数（形状为 <code>(seq_len, seq_len)</code> 或 <code>(batch, seq_len, seq_len)</code>），在 softmax 前把 mask 值为 0 的位置设为 -1e9</li>
         <li><strong>不要</strong>使用 PyTorch 内置的 <code>F.scaled_dot_product_attention</code>——请手动编写每一步</li>
       </ul>
       <pre># Expected usage
@@ -237,7 +237,7 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     # 5. Weighted aggregation of Values
     output = torch.matmul(attn_weights, V)  # (batch, seq_len, d_k)
     return output, attn_weights</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么用 -1e9 而不是 -inf？</strong> 浮点数 -inf 在某些硬件上会导致 NaN。使用足够小的负数（如 -1e9）既安全又高效，因为在精度范围内 exp(-1e9) ≈ 0。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么用 -1e9 而不是 -inf？</strong> 在某些硬件上，浮点数的 -inf 可能导致 NaN。用足够小的负数（如 -1e9）既安全又高效，因为 -1e9 在精度范围内经过 exp 后约等于 0。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
@@ -254,11 +254,11 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
       <tr><td>3</td><td>[2, 0]</td><td>[5, 5]</td><td>未来token，已掩码</td></tr>
     </table>
   </div>
-  <p>设查询为 <code>q=[1,1]</code>。未缩放的点积为 <code>[1, 1, 2, 2]</code>；除以 <span class="katex-inline" data-expr="\sqrt{2}" aria-label="\sqrt{2}" role="img"></span> 后，我们得到约 <code>[0.707, 0.707, 1.414, 1.414]</code>。因果掩码必须在 softmax 之前将未来位置 3 设置为一个非常大的负数：</p>
+  <p>查询为 <code>q=[1,1]</code>。未缩放的点积为 <code>[1, 1, 2, 2]</code>；除以 <span class="katex-inline" data-expr="\sqrt{2}" aria-label="\sqrt{2}" role="img"></span> 后得到约 <code>[0.707, 0.707, 1.414, 1.414]</code>。因果掩码在 softmax 之前将未来位置 3 设为一个非常大的负数：</p>
   <div class="math-box"><div class="label">掩码后的 logits</div>
     <div class="katex" data-expr="[0.707,\;0.707,\;1.414,\;-\infty]" aria-label="[0.707,0.707,1.414,-infty]" role="img"></div>
   </div>
-  <p>Softmax 仅对可见位置进行归一化，因此分母不是四个位置的总和，而是前三个位置的总和：</p>
+  <p>Softmax 只对可见位置归一化，因此分母不是四个位置的和，而是前三个位置的和：</p>
   <div class="math-box"><div class="label">Softmax 分母</div>
     <div class="katex" data-expr="Z=e^{0.707}+e^{0.707}+e^{1.414}\approx2.028+2.028+4.113=8.169" aria-label="Z=e^{0.707}+e^{0.707}+e^{1.414}\approx2.028+2.028+4.113=8.169" role="img"></div>
   </div>
@@ -266,19 +266,19 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
   <div class="math-box"><div class="label">加权值求和</div>
     <div class="katex" data-expr="o=0.248[2,0]+0.248[0,3]+0.504[1,1]+0[5,5]\approx[1.000,\;1.248]" aria-label="o=0.248[2,0]+0.248[0,3]+0.504[1,1]+0[5,5]\approx[1.000,1.248]" role="img"></div>
   </div>
-  <p>这个例子强调了三个实现细节：掩码必须在 softmax 之前应用；被掩码的位置不参与 softmax 分母；即使某个值很大，只要其对应的键被掩码，权重就是 0，它就不会对输出产生贡献。</p>
-</section>请提供需要翻译的 HTML 片段，当前消息中未包含内容。<section class="card" id="s3-4b">
+  <p>本例强调三个实现细节：掩码必须在 softmax 之前应用；被掩码的位置不参与 softmax 分母；即使某个值很大，只要对应的键被掩码，权重就是 0，就不会对输出产生贡献。</p>
+</section><section class="card" id="s3-4b">
   <h3>3.4B 自注意力的排列等变性：为什么位置仍需要单独编码</h3>
   <p>没有位置编码且不使用因果遮罩时，自注意力只关注 token 内容之间的相似性。将输入序列乘以一个置换矩阵 <span class="katex-inline" data-expr="P" aria-label="P" role="img"></span> 会以相同方式重新排列 Q、K、V 的行，注意力输出也会以相同方式重新排列：</p>
   <div class="math-box"><div class="label">自注意力排列等变性</div>
     <div class="katex" data-expr="\text{Attn}(PX)=P\,\text{Attn}(X)" aria-label="\text{Attn}(PX)=P\,\text{Attn}(X)" role="img"></div>
   </div>
-  <p>这并非坏性质：它表明注意力对集合式的输入很自然。然而，语言序列需要区分"I hit you"和"you hit me"，因此 Transformer 必须通过绝对位置嵌入、RoPE、ALiBi 或因果遮罩等机制引入顺序信息。Ch03 作业中的 <code>self_attention_permutation_error(x, permutation)</code> 函数数值验证了无位置或遮罩时自注意力的等变性：比较 <code>Attention(Px)</code> 和 <code>P Attention(x)</code> 之间的最大误差。</p>
+  <p>这不是一个坏性质：它表明自注意力对于集合形式的输入很自然。然而，语言序列需要区分 "I hit you" 和 "you hit me"，所以 Transformer 必须通过绝对位置嵌入、RoPE、ALiBi 或因果遮罩等机制引入顺序信息。Ch03 作业中的 <code>self_attention_permutation_error(x, permutation)</code> 函数数值验证了无位置或遮罩时自注意力的等变性：比较 <code>Attention(Px)</code> 和 <code>P Attention(x)</code> 之间的最大误差。</p>
 </section><!-- ================================================================ -->
 <!-- 3.5 Theory: √dₖ -->
 <!-- ================================================================ --><section class="card" id="s3-5">
   <h3>3.5 详细分析：为什么要除以 √dₖ？—— 方差分析与梯度行为</h3>
-  <p>这个设计细节看似微小，却直接影响 softmax 的饱和程度和梯度流动。我们可以从概率论的角度来理解它。</p>
+  <p>这个细节看似微小，但直接影响 softmax 的饱和程度和梯度流动。我们可以从概率论的角度来理解它。</p>
 
   <h4>问题：不做缩放会怎样？</h4>
   <p>假设 Q 和 K 的每个元素独立同分布，均值为 0，方差为 1。那么点积 <span class="katex-inline" data-expr="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" aria-label="s_{ij} = \mathbf{q}_i \cdot \mathbf{k}_j = \sum_{m=1}^{d_k} q_{im} k_{jm}" role="img"></span> 是 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 个独立随机变量之和。</p>
@@ -290,43 +290,43 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 
   <h4>输入很大时 softmax 会发生什么？</h4>
   <p>softmax 的梯度与 <span class="katex-inline" data-expr="p_i(1-p_i)" aria-label="p_i(1-p_i)" role="img"></span> 成正比。当输入值很大时，softmax 的输出会逼近<strong>one‑hot 分布</strong>（一个位置概率 ≈1，其余 ≈0），此时梯度几乎为零——模型无法学习。</p>
-  <p>除以 <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span> 能将点积的方差归一化为 1，使 softmax 的输入保持在合理范围内，从而确保梯度能够正常流动。</p>
+  <p>除以 <span class="katex-inline" data-expr="\sqrt{d_k}" aria-label="\sqrt{d_k}" role="img"></span> 将点积的方差归一化为 1，让 softmax 的输入落在合理范围内，从而保证梯度正常流动。</p>
 
   <h4>实证验证</h4>
   <p>你可以自行验证：使用 <code>torch.randn</code> 生成两组随机向量，计算它们点积的方差，观察除以 √dₖ 前后的分布变化。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>关键洞察：</strong> √dₖ 并非随意选择的“魔法数字”，而是从概率论中的方差传播严格推导出来的。这种“先分析统计特性，再有针对性地修正”的思路，是设计深度学习模块的核心技能。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>关键洞察：</strong> √dₖ 不是随意选的“魔法数字”，它来自概率论中方差传播的严格推导。这种思路——先分析统计特性，再有针对性地修正——是设计深度学习模块的核心技能。</div></div>
 </section><!-- ================================================================ -->
 <!-- 3.6 理论：Softmax Temperature -->
 <!-- ================================================================ --><section class="card" id="s3-6">
   <h3>3.6 详细分析：Softmax 温度、梯度饱和与注意力分布的“尖锐度”</h3>
-  <p>在实现了基本的缩放点积注意力后，让我们深入探讨 softmax 在此过程中的数学行为。</p>
+  <p>实现基本的缩放点积注意力后，下面深入分析 softmax 的数学行为。</p>
 
   <h4>Softmax 函数的梯度</h4>
-  <p>设 <span class="katex-inline" data-expr="\mathbf{p} = \text{softmax}(\mathbf{z})" aria-label="\mathbf{p} = \text{softmax}(\mathbf{z})" role="img"></span>。softmax 关于其输入的雅可比矩阵为：</p>
+  <p>令 <span class="katex-inline" data-expr="\mathbf{p} = \text{softmax}(\mathbf{z})" aria-label="\mathbf{p} = \text{softmax}(\mathbf{z})" role="img"></span>，则 softmax 对输入的雅可比矩阵为：</p>
   <div class="math-box"><div class="label">Softmax 梯度（雅可比矩阵）</div>
     <div class="katex" data-expr="\frac{\partial p_i}{\partial z_j} = \begin{cases} p_i(1-p_i) & i=j \\ -p_i p_j & i \neq j \end{cases}" aria-label="\frac{\partial p_i}{\partial z_j} = \begin{cases} p_i(1-p_i) & i=j \\ -p_i p_j & i \neq j \end{cases}" role="img"></div>
   </div>
   <p>这意味着：</p>
   <ul>
-    <li>当 <span class="katex-inline" data-expr="p_i \approx 1" aria-label="p_i \approx 1" role="img"></span>（即注意力极度集中于一个 token 上）时，<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0" aria-label="p_i(1-p_i) \approx 0" role="img"></span> — 梯度消失，学习停止</li>
+    <li>当 <span class="katex-inline" data-expr="p_i \approx 1" aria-label="p_i \approx 1" role="img"></span>（注意力极度集中于一个 token）时，<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0" aria-label="p_i(1-p_i) \approx 0" role="img"></span> — 梯度消失，学习停止</li>
     <li>当 <span class="katex-inline" data-expr="p_i \approx 0.5" aria-label="p_i \approx 0.5" role="img"></span>（注意力分散）时，<span class="katex-inline" data-expr="p_i(1-p_i) \approx 0.25" aria-label="p_i(1-p_i) \approx 0.25" role="img"></span> — 梯度最大</li>
   </ul>
 
   <h4>温度参数 τ 的作用</h4>
-  <p>如果在 softmax 之前除以一个温度 τ：<span class="katex-inline" data-expr="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" aria-label="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" role="img"></span></p>
+  <p>如果在 softmax 前除以一个温度 τ：<span class="katex-inline" data-expr="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" aria-label="p_i = \frac{e^{z_i/\tau}}{\sum_j e^{z_j/\tau}}" role="img"></span></p>
   <ul>
     <li><strong>τ &lt; 1：</strong>分布更尖（更尖锐），模型更“确定”，但梯度更小</li>
     <li><strong>τ &gt; 1：</strong>分布更平滑，模型更“不确定”，梯度更大</li>
   </ul>
-  <p>在训练过程中，温度固定为1，但在推理时调整温度可以<strong>控制生成文本的随机性</strong>——这一点将在第8章实践中应用。</p>
+  <p>训练时温度固定为1，推理时调整温度可以控制生成文本的随机性（第8章实践）。</p>
 
   <h4>√dₖ 与温度的等价性</h4>
   <p>除以 √dₖ 等价于对注意力 logits 使用一个温度 <span class="katex-inline" data-expr="\tau = \sqrt{d_k}" aria-label="\tau = \sqrt{d_k}" role="img"></span>。在初始化假设下，Q/K 的各个维度近似独立且方差约为1，未缩放的点积的方差随 <span class="katex-inline" data-expr="d_k" aria-label="d_k" role="img"></span> 增长；缩放将 logits 的幅度带回更稳定的范围，防止 softmax 过早饱和。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：√dₖ 是一种 <em>logit 缩放控制机制</em>。</strong>它不会改变给定 query 下 key 的相对顺序（因为除以正数是单调变换），但确实会改变 softmax 分布的尖锐度和梯度的尺度。它有助于训练稳定性，但不能保证梯度在所有层和数据分布上“始终有效”。</div></div>
-  <p>第3章作业中的 <code>attention_entropy(attn_weights)</code> 函数使用 <span class="katex-inline" data-expr="H(p)=-\sum_i p_i\log p_i" aria-label="H(p)=-\sum_i p_i\log p_i" role="img"></span> 来量化注意力分布的尖锐度。one-hot 注意力的熵接近0，而均匀关注 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 个位置的熵为 <span class="katex-inline" data-expr="\log T" aria-label="\log T" role="img"></span>。这不是一个“好或坏的分数”，而是一个判断 softmax 是否过早饱和的数值信号。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>√dₖ 是一种 <em>logit 缩放控制机制</em>。</strong>它不会改变给定 query 下 key 的相对顺序（除以正数是单调变换），但会改变 softmax 分布的尖锐度和梯度的尺度。它有助于训练稳定性，但不能保证梯度在所有层和数据分布上“始终有效”。</div></div>
+  <p>第3章作业中的 <code>attention_entropy(attn_weights)</code> 函数使用 <span class="katex-inline" data-expr="H(p)=-\sum_i p_i\log p_i" aria-label="H(p)=-\sum_i p_i\log p_i" role="img"></span> 来量化注意力分布的尖锐度。one-hot 注意力的熵接近0，均匀关注 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 个位置的熵为 <span class="katex-inline" data-expr="\log T" aria-label="\log T" role="img"></span>。这不是一个“好或坏的分数”，而是一个数值信号，用于判断 softmax 是否过早饱和。</p>
 
   <h4>将梯度从输出反向传播到注意力 Logits</h4>
-  <p>对于单个 query，注意力输出为 <span class="katex-inline" data-expr="\mathbf{o}=\sum_i p_i\mathbf{v}_i" aria-label="\mathbf{o}=\sum_i p_i\mathbf{v}_i" role="img"></span>，其中 <span class="katex-inline" data-expr="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" aria-label="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" role="img"></span>。如果上游梯度为 <span class="katex-inline" data-expr="\mathbf{g}=\partial L/\partial \mathbf{o}" aria-label="\mathbf{g}=\partial L/\partial \mathbf{o}" role="img"></span>，则我们首先有：</p>
+  <p>对于单个 query，注意力输出为 <span class="katex-inline" data-expr="\mathbf{o}=\sum_i p_i\mathbf{v}_i" aria-label="\mathbf{o}=\sum_i p_i\mathbf{v}_i" role="img"></span>，其中 <span class="katex-inline" data-expr="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" aria-label="\mathbf{p}=\mathrm{softmax}(\mathbf{z})" role="img"></span>。若上游梯度为 <span class="katex-inline" data-expr="\mathbf{g}=\partial L/\partial \mathbf{o}" aria-label="\mathbf{g}=\partial L/\partial \mathbf{o}" role="img"></span>，则首先有：</p>
   <div class="math-box"><div class="label">注意力反向传播路径</div>    <div class="katex" data-expr="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" aria-label="\frac{\partial L}{\partial p_i}=\mathbf{g}^{\top}\mathbf{v}_i,\qquad \frac{\partial L}{\partial z_j}=p_j\left(\frac{\partial L}{\partial p_j}-\sum_i p_i\frac{\partial L}{\partial p_i}\right)" role="img"></div>
   </div>
   <div class="worked-example">
@@ -346,30 +346,30 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     <pre>dL/dz_1 = 0.2 * ( 0.5 - (-1.8)) =  0.46
 dL/dz_2 = 0.3 * (-3.0 - (-1.8)) = -0.36
 dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
-    <p>三个 logits 梯度之和为零，这是 softmax 的平移不变性：对所有 logits 同时加上同一个常数不会改变概率分布。此例子对应于作业中的 <code>attention_logits_gradient</code>，同时也说明了 value 内容会影响哪些注意力 logits 被推高或推低。</p>
+    <p>三个 logits 梯度之和为零，体现了 softmax 的平移不变性：对所有 logits 加上同一常数不影响概率分布。此例对应作业中的 <code>attention_logits_gradient</code>，也说明 value 内容会影响哪些注意力 logits 被推高或推低。</p>
   </div>
-  <p>第3章作业中的 <code>softmax_jacobian</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 对应这一路径。你不需要手动编写整个 Transformer 的反向传播，但应该能够解释梯度如何先经过 value 加权求和，然后经过 softmax 雅可比矩阵，最后回到 Q/K 点积。</p>
+  <p>第3章作业中的 <code>softmax_jacobian</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 对应这一路径。不需要手动编写整个 Transformer 的反向传播，但需要能解释梯度如何先经过 value 加权求和，然后经过 softmax 雅可比矩阵，最后回到 Q/K 点积。</p>
   <div class="math-box"><div class="label">从 logits 梯度回到 Q/K/V</div>
     <div class="katex" data-expr="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" aria-label="S=\frac{QK^{\top}}{\sqrt{d_k}},\quad O=PV,\quad \frac{\partial L}{\partial V}=P^{\top}\frac{\partial L}{\partial O},\quad \frac{\partial L}{\partial Q}=\frac{\partial L}{\partial S}K/\sqrt{d_k},\quad \frac{\partial L}{\partial K}=\left(\frac{\partial L}{\partial S}\right)^{\top}Q/\sqrt{d_k}" role="img"></div>
   </div>
-  <p>这里的关键不是记忆公式，而是将链式法则与矩阵乘法方向对齐：<code>dV</code> 来自注意力权重对 value 的加权，<code>dQ</code> 和 <code>dK</code> 来自 score 矩阵关于点积两边的梯度，并且两者都必须携带 <code>1/sqrt(d_k)</code> 因子。这也是为什么课程要求手写梯度与 PyTorch autograd 数值对齐。</p>
+  <p>这里的重点不是记忆公式，而是将链式法则与矩阵乘法方向对齐：<code>dV</code> 来自注意力权重对 value 的加权，<code>dQ</code> 和 <code>dK</code> 来自 score 矩阵关于点积两边的梯度，并且两者都必须携带 <code>1/sqrt(d_k)</code> 因子。这也是为什么课程要求手写梯度与 PyTorch autograd 数值对齐。</p>
 </section><!-- ================================================================ -->
 <!-- 3.6A 注意力诊断记录簿 -->
 <!-- ================================================================ --><section class="card" id="s3-6a">
   <h3>3.6A 注意力诊断记录：logits、熵、梯度与掩码</h3>
-  <p>在训练 Transformer 时，注意力热图很直观，但它不是首选诊断工具。真正需要首先检查的是一组数值量：它们可以告诉你注意力是否在正确的位置归一化、logits 是否过大、掩码是否泄露、梯度是否仍能通过 softmax 传播，以及当前序列长度是否已经触发了内存瓶颈。</p>
+  <p>训练 Transformer 时，注意力热图很直观，但不是首选的诊断工具。真正该先检查的是一组数值量——它们能直接告诉你注意力是否在正确位置做了归一化、logits 是否过大、掩码有没有泄露、梯度能否通过 softmax 传播，以及当前序列长度是否已经触发了内存瓶颈。</p>
 
   <h4>首先应记录哪些量</h4>
-  <p>对于某一层的单个 batch，可以按每个注意力头和每个序列位置记录以下量。它们不需要改变模型结构，只需在调试模式下从 <code>scores = QK^T / sqrt(d_k)</code>、掩码后的 logits、softmax 权重和反向梯度中读取。</p>
+  <p>对于某一层的单个 batch，可以按每个注意力头和每个序列位置记录以下量。它们不需要修改模型结构，只需在调试模式下从 <code>scores = QK^T / sqrt(d_k)</code>、掩码后的 logits、softmax 权重和反向梯度中读取。</p>
   <table class="metrics-table">
     <thead>
       <tr><th>量</th><th>含义</th><th>异常通常表示的问题</th></tr>
     </thead>
     <tbody>
       <tr><td><code>score_mean/std/max/min</code></td><td>注意力 logits 的尺度</td><td>缺少 <code>1/sqrt(d_k)</code>，Q/K 初始化或 LayerNorm 分布异常</td></tr>
-      <tr><td><code>max_attention_prob</code></td><td>每个 query 最关注的 key 的概率</td><td>当接近 1 且广泛出现时，softmax 可能过早饱和</td></tr>
+      <tr><td><code>max_attention_prob</code></td><td>每个 query 最关注的 key 的概率</td><td>如果很多 query 都接近 1，说明 softmax 可能过早饱和</td></tr>
       <tr><td><code>attention_entropy</code></td><td>注意力分布的熵</td><td>长期接近 0 表示极度尖锐；接近 <code>log(visible_keys)</code> 表示接近均匀</td></tr>
-      <tr><td><code>masked_position_prob_sum</code></td><td>分配给掩码位置的总体概率</td><td>非零通常表示掩码方向、广播维度或应用顺序错误</td></tr>
+      <tr><td><code>masked_position_prob_sum</code></td><td>分配给掩码位置的总体概率</td><td>非零通常表示掩码方向、广播维度或应用顺序有误</td></tr>
       <tr><td><code>all_masked_rows</code></td><td>某些 query 是否没有可见的 key</td><td>Softmax 可能产生 NaN，常见于 padding mask 和 causal mask 组合不当</td></tr>
       <tr><td><code>grad_norm_q/k/v</code></td><td>Q/K/V 路径的梯度范数</td><td>当 Q/K 梯度消失但 V 正常时，常见原因是 softmax 饱和或掩码切断了得分路径</td></tr>
       <tr><td><code>score_memory_bytes</code></td><td>密集得分张量 <code>[B,H,T,T]</code> 的显式化成本</td><td>长上下文训练或推理需要使用 FlashAttention、分块或 KV cache 策略</td></tr>
@@ -377,10 +377,10 @@ dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
   </table>
 
   <h4>用熵判断分布尖锐度</h4>
-  <p>对于单个 query，如果它可以看见 <code>m</code> 个 key，则完全均匀的注意力分布的熵为 <span class="katex-inline" data-expr="\log m" aria-label="\log m" role="img"></span>；接近 one-hot 分布的熵接近 0。注意力熵并非“越高越好”或“越低越好”：复制、括号匹配、分隔符定位等行为自然会生成低熵；但如果训练初期所有层和所有头都熵值偏低，请检查 logits 缩放、掩码和数值精度。</p>
+  <p>对于单个 query，如果它可以看见 <code>m</code> 个 key，则完全均匀的注意力分布的熵为 <span class="katex-inline" data-expr="\log m" aria-label="\log m" role="img"></span>；接近 one-hot 分布的熵接近 0。注意力熵不是“越高越好”或“越低越好”：复制、括号匹配、分隔符定位等行为自然会生成低熵；但如果训练初期所有层和所有头的熵都偏低，请检查 logits 缩放、掩码和数值精度。</p>
   <div class="worked-example">
     <h4>实例：两个 logits 向量的诊断差异</h4>
-    <p>假设某个 query 的掩码后 logits 为 <code>[0.0, 0.0, 0.0, -inf]</code>。最后一个位置被掩码，softmax 后前三个可见位置得到均匀分布 <code>[1/3, 1/3, 1/3, 0]</code>，熵为 <code>log(3) ≈ 1.099</code>。这表明模型对任何 key 都没有偏向，但掩码本身有效。</p>
+    <p>假设某个 query 的掩码后 logits 为 <code>[0.0, 0.0, 0.0, -inf]</code>。最后一个位置被掩码，softmax 后前三个可见位置得到均匀分布 <code>[1/3, 1/3, 1/3, 0]</code>，熵为 <code>log(3) ≈ 1.099</code>。这说明模型对任何 key 都没有偏向，但掩码本身有效。</p>
     <p>如果 logits 为 <code>[8.0, 0.0, -1.0, -inf]</code>，softmax 近似为 <code>[0.9995, 0.0003, 0.0001, 0]</code>，熵接近 0。此时热图看起来“非常确定”，但 softmax Jacobian 中的大多数项也接近 0，Q/K 路径的梯度可能非常微弱。如果训练一开始这种模式就广泛出现，首先检查是否缺少 <code>sqrt(d_k)</code> 缩放，或者在混合精度下掩码 sentinel 是否导致数值异常。</p>
   </div>
 
@@ -399,7 +399,7 @@ dL/dz_3 = 0.5 * (-2.0 - (-1.8)) = -0.10</pre>
     </tbody>
   </table>
 
-  <p>Ch03 作业中的 <code>attention_entropy</code>、<code>attention_score_memory_bytes</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 对应上表中的分布尖锐度、内存估计、logits 反向路径以及 Q/K/V 梯度路径。完成这些函数后，你应该能从一段注意力训练日志中诊断出问题是掩码错误、logits 尺度错误、softmax 饱和抑制梯度，还是长上下文的高计算开销。</p>
+  <p>Ch03 作业中的 <code>attention_entropy</code>、<code>attention_score_memory_bytes</code>、<code>attention_logits_gradient</code> 和 <code>attention_qkv_gradients</code> 对应上表中的分布尖锐度、内存估计、logits 反向路径以及 Q/K/V 梯度路径。完成这些函数后，你应该能从一段注意力训练日志中诊断出：问题是掩码错误、logits 尺度错误、softmax 饱和抑制梯度，还是长上下文的高计算开销。</p>
 </section><!-- ================================================================ -->
 <!-- 编程练习 3：因果掩码 (Causal Mask) -->
 <!-- ================================================================ --><section class="card" id="s3-7">
@@ -513,10 +513,10 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
 <!-- 3.7A Attention 实现边界 -->
 <!-- ================================================================ --><section class="card" id="s3-7a">
   <h3>3.7A 注意力实现的边界：从教学函数到真实模型</h3>
-  <p>教学版的注意力只需几十行代码就能运行，但真实模型常常在边界条件上出问题，而不是公式本身。工程师需要知道哪些部分可以简化，哪些不能：掩码语义、dtype、广播、全掩码查询、混合精度标记值、增量解码，以及高性能核的 API 约定。</p>
+  <p>教学版的注意力只需几十行代码就能运行，但实际工程中，边界条件往往比公式本身更容易出问题。工程师需要知道哪些部分可以简化，哪些不能：掩码语义、dtype、广播、全掩码查询、混合精度标记值、增量解码，以及高性能核的 API 约定。</p>
 
   <h4>1. 掩码语义必须先固定</h4>
-  <p>不同库对掩码的约定并不完全一致。课程作业规定 <code>True/1 = visible</code>、<code>False/0 = masked</code>，并将被掩码位置在 softmax 之前设为一个很大的负数。有些 PyTorch API 或模型实现使用加性掩码：可见位置加上 <code>0</code>，被掩码位置加上 <code>-inf</code>。这两种形式等价，但不能混用。</p>
+  <p>不同库对掩码的约定不完全一致。课程作业规定 <code>True/1 = visible</code> 和 <code>False/0 = masked</code>，并在 softmax 之前将被掩码位置设为很大的负数。而有些 PyTorch API 或模型实现使用加性掩码：可见位置加 <code>0</code>，被掩码位置加 <code>-inf</code>。这两种方式等价，但不能混用。</p>
   <div class="table-wrap">
     <table>
       <tr><th>掩码类型</th><th>形状</th><th>语义</th><th>常见错误</th></tr>
@@ -528,14 +528,14 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
   </div>
 
   <h4>2. 掩码必须在 Softmax 之前进入 Logits</h4>
-  <p>如果先应用 softmax，再将掩码位置的权重乘以 0，则剩余可见位置的概率之和会小于 1，输出规模会随掩码位置数量变化。正确流程是：</p>
+  <p>如果先做 softmax，再把掩码位置的权重乘以 0，剩余可见位置的概率之和会小于 1，输出规模也会随掩码位置数量变化。正确做法是：</p>
   <div class="math-box"><div class="label">被掩码的注意力 logits</div>
     <div class="katex" data-expr="P=\mathrm{softmax}\left(\frac{QK^\top}{\sqrt{d_k}} + M\right),\quad M_{ij}=0\text{ if visible},\;-\infty\text{ if masked}" aria-label="P 等于 softmax(QK^T 除以 sqrt(d_k) 加上 M)，M_ij 等于 0 如果可见，负无穷如果被掩码" role="img"></div>
   </div>
-  <p>这样，softmax 的分母只包含可见的键。在 Ch03 的示例中，即使未来 token 的值很大，也不会进入输出，因为它已经在 softmax 之前被从概率分布中移除。</p>
+  <p>这样 softmax 只对可见键计算。在 Ch03 的示例中，即使未来 token 的值很大，也不会进入输出——因为它在 softmax 之前就已经被移除。</p>
 
   <h4>3. 全掩码查询需要单独处理</h4>
-  <p>如果某一行 logits 全部是 <code>-inf</code> 或等效的很大负数，那么 softmax 的数学分母为 0，许多实现会产生 NaN。训练中最常见的来源是填充查询行：这个查询本身是填充，不应产生损失，但它仍然会通过注意力的前向传播。课程作业选择只掩码填充键，而不将填充查询行整体置零，正是为了避免这个问题。</p>
+  <p>如果某一行 logits 全部是 <code>-inf</code> 或等效的极大负数，softmax 分母为 0，许多实现会产出 NaN。训练中最常见的来源是填充查询行：该查询是填充 token，不应产生损失，但仍会参与注意力前向传播。课程作业只掩码填充键，而不把填充查询行整体置零，就是为了避免这个问题。</p>
   <p>生产实现通常使用双层机制：</p>
   <ul>
     <li><strong>注意力掩码：</strong>确保真实查询不读取未来或填充键。</li>
@@ -543,7 +543,7 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
   </ul>
 
   <h4>4. 混合精度中的标记值不是随便选的</h4>
-  <p>教学代码常用 <code>-1e9</code>，但在 fp16/bf16、FlashAttention 或融合 SDPA 核中，推荐做法因实现而异。关键原则是掩码值必须足够小，使得在当前 dtype 中 <code>exp(masked_logit)</code> 近似为 0，同时还要避免 NaN 和 dtype 溢出。</p>
+  <p>教学代码常用 <code>-1e9</code>，但在 fp16/bf16、FlashAttention 或融合 SDPA 核中，推荐做法并不固定。关键原则是掩码值要足够小，使得在当前 dtype 下 <code>exp(masked_logit)</code> 近似为 0，同时避免 NaN 和 dtype 溢出。</p>
   <div class="table-wrap">
     <table>
       <tr><th>方法</th><th>优点</th><th>风险</th></tr>
@@ -554,24 +554,24 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
   </div>
 
   <h4>5. 训练注意力和增量解码注意力的形状不同</h4>
-  <p>训练时通常一次性处理完整序列；Q/K/V 形状类似 <code>[B,T,D]</code>，分数为 <code>[B,T,T]</code>。增量解码时，每步只给一个新查询；Q 的形状更像 <code>[B,1,D]</code>，K/V 来自历史缓存，形状为 <code>[B,T_cache,D]</code>，分数变为 <code>[B,1,T_cache]</code>。此时 causal 掩码不再是完整的 <code>[T,T]</code> 下三角，而是“当前查询只能看到已有缓存和自身”。如果 position_ids、缓存长度或前缀缓存不匹配，模型仍能输出 token，但相对位置和可见上下文已经错了。</p>
+  <p>训练时通常一次性处理完整序列，Q/K/V 形状类似 <code>[B,T,D]</code>，分数为 <code>[B,T,T]</code>。增量解码时，每步只给一个新查询，Q 的形状更像 <code>[B,1,D]</code>，K/V 来自历史缓存，形状为 <code>[B,T_cache,D]</code>，分数变为 <code>[B,1,T_cache]</code>。此时 causal 掩码不再是完整的 <code>[T,T]</code> 下三角，而是"当前查询只能看到已有缓存和自身"。如果 position_ids、缓存长度或前缀缓存不匹配，模型虽然能输出 token，但相对位置和可见上下文已经错了。</p>
 
   <h4>6. 高性能 API 的等价条件</h4>
-  <p>PyTorch 的 <code>scaled_dot_product_attention</code>、FlashAttention 和推理引擎核可以替代手写注意力，但只有在以下条件一致时才等价：</p>
+  <p>PyTorch 的 <code>scaled_dot_product_attention</code>、FlashAttention 以及推理引擎核都可以替代手写注意力，但必须满足以下条件才等价：</p>
   <ul>
     <li><strong>缩放一致：</strong>默认是否除以 <code>sqrt(d_k)</code>，是否有额外缩放。</li>
     <li><strong>掩码一致：</strong>causal 标志、填充掩码和加性掩码的语义是否一致。</li>
-    <li><strong>Dropout 一致：</strong>训练时是否启用注意力 dropout；推理时必须禁用。</li>
+    <li><strong>Dropout 一致：</strong>训练时是否启用注意力 dropout；推理时必须关闭。</li>
     <li><strong>精度一致：</strong>softmax 是否用 fp32 累加，输出 dtype 如何写回。</li>
     <li><strong>布局一致：</strong>输入是 <code>[B,T,H,D]</code>、<code>[B,H,T,D]</code> 还是打包的 varlen 格式。</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>注意力公式只有一行，但可靠的实现依赖于掩码语义、数值稳定性和形状约定。能写出教学版注意力是第一步；能判断其是否与融合核、KV 缓存和填充批次等价，才是工程能力。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>注意力公式只有一行，但一个可靠的实现还需要考虑掩码语义、数值稳定性和形状约定。写出教学版注意力只是第一步；能判断它是否与融合核、KV 缓存和填充批次等价，才是真正的工程能力。</div></div>
 </section><!-- ================================================================ -->
 <!-- 3.7B 打包序列注意力 -->
 <!-- ================================================================ --><section class="card" id="s3-7b">
   <h3>3.7B 打包序列（Packed Sequences）、文档边界与可变长度注意力（Variable-Length Attention）</h3>
-  <p>真实的训练流水线经常将多个短样本打包成一个较长的 token 行，以减少填充浪费。这会改变注意力掩码的含义。一个 token 应该关注同一打包段中更早的 token，但不应关注恰好拼接在它前面的、来自前一个文档或样本的 token。如果实现仅使用简单的因果掩码，模型会暗中学习跨样本的信息泄露。</p>
-  <p>现代融合注意力库通过不同的接口暴露这个问题。PyTorch 的 <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html" target="_blank">scaled_dot_product_attention</a> 区分了因果标志和注意力掩码；NVIDIA Transformer Engine 为可变长度的 FlashAttention 风格后端记录了 <code>cu_seqlens</code>；PyTorch 也正朝着显式可变长度注意力 API 迈进。共同的工程经验是：去除填充、文档边界掩码和高性能内核必须描述相同的可见性关系。</p>
+  <p>实际训练中常将多个短样本打包成一个较长的 token 行，以减少填充浪费。打包改变了注意力掩码的含义：一个 token 只应关注同一打包段内更早的 token，而不应关注前面拼接的前一个文档的 token。如果只用简单因果掩码，模型会无意中学到跨样本信息泄露。</p>
+  <p>现代融合注意力库通过不同接口处理这个问题。PyTorch 的 <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html" target="_blank">scaled_dot_product_attention</a> 区分了因果标志和注意力掩码；NVIDIA Transformer Engine 为可变长度的 FlashAttention 风格后端记录了 <code>cu_seqlens</code>；PyTorch 也正朝着显式可变长度注意力 API 迈进。工程上的共识是：去除填充、文档边界掩码和高性能内核必须描述相同的可见性关系。</p>
 
   <div class="svg-diagram" style="max-width:980px">
     <svg viewBox="0 0 980 390" role="img" aria-label="Packed sequence attention mask showing document boundaries and variable length attention">
@@ -610,50 +610,50 @@ print("Attention for position 3:", attn[0, 3])  # [0,1,2,3] should all be > 0</d
       <path class="pa-line" d="M360 121 C300 155 250 196 219 242"/>
     </svg>
   </div>
-  <p class="diagram-caption">图 3-2：打包序列注意力。打包节省了填充计算，但可见性关系必须通过块因果掩码或可变长度内核元数据在文档边界处重置。</p>
+  <p class="diagram-caption">图 3-2：打包序列的注意力。打包节省了填充计算，但可见性关系必须通过块因果掩码或可变长度内核元数据在文档边界处重置。</p>
 
   <h4>1. 打包（Packing）不同于填充（Padding）</h4>
-  <p>填充会保持样本在不同行中，并用填充 token 填充未使用的位置。打包则将多个样本拼接成一行，并使用所有位置。使用填充时，关键问题是“不要关注填充键（padding keys）”。使用打包时，关键问题是“不要跨文档边界关注”。对填充批次正确的掩码，对打包批次可能是错误的。</p>
+  <p>填充保持每个样本独立一行，用填充 token 填满剩余位置。打包则将多个样本拼接成一行，所有位置都被使用。对填充批次，关键是不要关注填充键；对打包批次，关键是不要跨文档边界关注。适用于填充批次的掩码，对打包批次可能错误。</p>
   <div class="table-wrap">
     <table>
       <tr><th>批次形式</th><th>可见性规则</th><th>主要优势</th><th>主要风险</th></tr>
-      <tr><td>填充批次（Padded batch）</td><td>每个样本在其所在行中看到过去的 token；填充键被隐藏</td><td>形状 <code>[B,T]</code> 简单，易于调试</td><td>在填充上浪费计算；完全掩码的 query 行可能产生 NaN</td></tr>
-      <tr><td>打包批次（Packed batch）with dense mask</td><td>每个 token 仅看到同一打包段中更早的 token</td><td>高 token 利用率，同时保持文档隔离</td><td>密集的 <code>[T,T]</code> 掩码可能代价高昂；边界错误导致数据泄露</td></tr>
+      <tr><td>填充批次（Padded batch）</td><td>每个样本在其所在行内看到过去的 token；填充键被隐藏</td><td>形状 <code>[B,T]</code> 简单，易于调试</td><td>在填充上浪费计算；完全掩码的 query 行可能产生 NaN</td></tr>
+      <tr><td>打包批次（Packed batch）with dense mask</td><td>每个 token 仅看到同一打包段内更早的 token</td><td>高 token 利用率，同时保持文档隔离</td><td>密集的 <code>[T,T]</code> 掩码可能代价高昂；边界错误导致数据泄露</td></tr>
       <tr><td>可变长度注意力（Variable-length attention）</td><td>通过累积长度（如 <code>cu_seqlens</code>）编码段边界</td><td>避免填充并能高效使用融合内核</td><td>内核元数据、位置 id 和损失掩码必须保持一致</td></tr>
     </table>
   </div>
 
   <h4>2. 位置 id 和损失掩码必须在同一边界处重置</h4>
-  <p>对于仅解码器的语言建模，文档边界至少影响三个张量：注意力可见性关系、位置 id 和损失掩码。如果文档 B 打包在文档 A 之后，B 的第一个 token 通常应具有局部位置 0 或模型的位杠机制所要求的适当重置行为，并且损失不应训练模型从 A 的最后一个 token 预测 B 的第一个 token，除非数据集明确需要跨文档延续。</p>
+  <p>对仅解码器的语言模型，文档边界至少影响三个张量：注意力可见性关系、位置 id 和损失掩码。如果文档 B 打包在文档 A 之后，B 的第一个 token 通常应具有局部位置 0 或模型的位杠机制所要求的适当重置行为，并且损失不应训练模型从 A 的最后一个 token 预测 B 的第一个 token，除非数据集明确需要跨文档延续。</p>
   <div class="table-wrap">
     <table>
       <tr><th>张量 / 元数据</th><th>必须与……一致</th><th>错误症状</th><th>诊断方法</th></tr>
-      <tr><td>注意力掩码或 <code>cu_seqlens</code></td><td>打包行中的文档边界</td><td>验证损失看起来太好，因为后面的文档读取了前面的文档</td><td>替换前一个段的 token，验证当前段的 logits 没有变化</td></tr>
-      <tr><td>位置 id</td><td>注意力使用的相同段起始点</td><td>RoPE 或学习的位置在打包后对距离编码错误</td><td>在每个边界附近打印位置 id；检查是否重置或使用了预期的偏移</td></tr>
-      <tr><td>损失掩码 / 标签</td><td>预测边界和被忽略的 token</td><td>模型被训练为从前一个段预测一个段的第一个 token</td><td>检查边界位置的标签以及 <code>ignore_index</code> 的使用</td></tr>
-      <tr><td>序列长度元数据</td><td>内核布局与展平的 Q/K/V 顺序</td><td>融合内核输出仅在打包批次上与密集参考不同</td><td>将一个小型打包示例与显式的块因果密集掩码进行比较</td></tr>
+      <tr><td>注意力掩码或 <code>cu_seqlens</code></td><td>打包行中的文档边界</td><td>验证损失异常低，因为后面的文档读到了前面的文档</td><td>替换前一个段的 token，检查当前段 logits 是否不变</td></tr>
+      <tr><td>位置 id</td><td>注意力使用的相同段起始点</td><td>RoPE 或学习的位置在打包后距离编码错误</td><td>在每个边界附近打印位置 id，检查是否重置或使用了预期偏移</td></tr>
+      <tr><td>损失掩码 / 标签</td><td>预测边界和被忽略的 token</td><td>模型被训练成从前一段预测后一段的第一个 token</td><td>检查边界位置的标签以及 <code>ignore_index</code> 的使用</td></tr>
+      <tr><td>序列长度元数据</td><td>内核布局与展平的 Q/K/V 顺序</td><td>融合内核输出在打包批次上与密集参考不同</td><td>比较一个小型打包示例与显式块因果密集掩码的输出</td></tr>
     </table>
   </div>
 
   <h4>3. 高性能内核需要一个参考测试</h4>
-  <p>当用 SDPA、FlashAttention 或可变长度后端替换密集的教学用注意力实现时，首先用两三个打包段构建一个小型参考案例。先用显式的块因果密集掩码计算一次输出，再用融合内核及其元数据计算一次输出。最大输出差值应在数值容差范围内。如果输出仅在段边界附近有差异，问题几乎总是掩码对齐、因果方向、位置重置或序列长度元数据。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>打包提高了 token 利用率，但也使注意力语义变得不那么直观。一位资深训练工程师必须证明因果掩码、文档边界、位置 id、损失标签和融合内核元数据描述了相同的序列结构。</div></div>
+  <p>用 SDPA、FlashAttention 或可变长度后端替换密集的教学用注意力实现时，先用两三个打包段构建一个小型参考案例。先用显式块因果密集掩码计算一次输出，再用融合内核及其元数据计算一次输出。两者的最大输出差值应在数值容差范围内。如果差异仅出现在段边界附近，问题通常出在掩码对齐、因果方向、位置重置或序列长度元数据上。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>打包提高了 token 利用率，但也让注意力语义变得不那么直观。一位资深训练工程师必须确保因果掩码、文档边界、位置 id、损失标签和融合内核元数据描述的是相同的序列结构。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 6：可视化 -->
 <!-- ================================================================ --><section class="card" id="s3-8">
   <h3>3.8 编程练习6：注意力权重可视化</h3>
-  <p>理解注意力机制的<strong>行为</strong>与理解其数学公式同样重要。在本练习中，你将使用matplotlib来可视化注意力权重矩阵。</p>
+  <p>除了理解注意力机制的数学公式，你还需要观察它的实际行为。本练习中，你将用matplotlib可视化注意力权重矩阵。</p>
 
   <div class="coding-exercise">
     <h4>🖥️ 练习6：可视化注意力热力图</h4>
     <div class="task">
-      <p><strong>任务：</strong> 编写一个函数，该函数接受一个注意力权重矩阵<code>(seq_len, seq_len)</code>和一个token列表，并绘制热力图。</p>
+      <p><strong>任务：</strong> 编写函数，接收注意力权重矩阵<code>(seq_len, seq_len)</code>和token列表，绘制热力图。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>使用<code>plt.imshow</code>或<code>seaborn.heatmap</code></li>
         <li>x轴是Key位置，y轴是Query位置</li>
-        <li>使用token文本进行标注</li>
-        <li>观察：在因果掩码下，热力图应为下三角形状</li>
+        <li>用token文本标注坐标</li>
+        <li>观察：在因果掩码下，热力图呈下三角形状</li>
       </ul>
     </div>
     <button class="solution-toggle" onclick="LLM.toggleSolution(this)">📝 查看参考解答</button>
@@ -682,56 +682,56 @@ tokens = ['&lt;s&gt;', 'The', 'cat', 'sat', 'on', 'the', 'mat']
 Q = K = V = torch.randn(1, 7, 64)
 _, attn = causal_attention(Q, K, V)
 plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>观察目标：</strong> 热力图应呈现清晰的<strong>下三角形状</strong>——每个位置只关注自身及之前的token。对角线通常最亮（token倾向于关注自身），但你也应看到显著的非对角线注意力。</p>    </div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>观察目标：</strong> 热力图应呈清晰的下三角——每个位置只关注自身及之前的token。对角线通常最亮（token更关注自身），但非对角线的注意力也值得关注。</p>    </div>
   </div>
-</section>您没有附上需要翻译的 HTML 片段，请补充完整后重新发送。<section class="card" id="s3-8a">
+</section><section class="card" id="s3-8a">
   <h3>3.8A 注意力热图解读的边界：注意力权重不是因果解释</h3>
-  <p>注意力热图是非常有用的诊断工具：它们可以告诉你某个层、某个头或某个查询位置在聚合数值时分配了多少权重。然而，在严格的分析中，<strong>注意力权重不能直接等同于“模型为什么这样回答”</strong>。原因是Transformer的最终输出不是由单个注意力矩阵决定的，而是由多个层、多个头、残差路径、MLP以及输出层的共同作用决定的。</p>
+  <p>注意力热图是很有用的诊断工具：它们可以告诉你某个层、某个头或某个查询位置在聚合数值时分配了多少权重。但在严格分析中，<strong>注意力权重并不等于“模型为什么这样回答”</strong>。因为Transformer的最终输出由多个层、多个头、残差路径、MLP和输出层共同决定，而非单个注意力矩阵。</p>
 
   <h4>为什么注意力权重不是解释</h4>
   <ul>
-    <li><strong>Value才是实际被混合的信息。</strong>热图展示的是 <span class="katex-inline" data-expr="\mathrm{softmax}(QK^\top/\sqrt{d_k})" aria-label="\mathrm{softmax}(QK^\top/\sqrt{d_k})" role="img"></span>，但实际进入下一层的是 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的加权和。高权重位置的value可能不具备最终预测所需的语义方向。</li>
+    <li><strong>实际被混合的是Value中的信息。</strong>热图展示的是 <span class="katex-inline" data-expr="\mathrm{softmax}(QK^\top/\sqrt{d_k})" aria-label="\mathrm{softmax}(QK^\top/\sqrt{d_k})" role="img"></span>，但进入下一层的是 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的加权和。高权重位置的Value可能并不携带最终预测所需的语义方向。</li>
     <li><strong>多个头和多个层会重新组合信息。</strong>某个头的高亮区域可能只是一个局部模式；后续的头、残差连接和MLP会放大、抵消或重写这些信息。</li>
-    <li><strong>相同的输出可以对应不同的注意力分布。</strong>如果替换、扰动或重排某些注意力权重后logits几乎不变，说明热图并不是唯一的因果解释。</li>
-    <li><strong>自注意力只描述层内路由，而非训练目标。</strong>模型学到的事实、偏见和能力主要来自训练数据和损失函数；单张热图无法解释这些知识是如何形成的。</li>
+    <li><strong>相同的输出可能对应不同的注意力分布。</strong>如果替换、扰动或重排某些注意力权重后logits几乎不变，说明热图并不是唯一的因果解释。</li>
+    <li><strong>自注意力只描述层内信息路由，并不直接反映训练目标。</strong>模型学到的事实、偏见和能力主要来自训练数据和损失函数；单张热图无法解释这些知识是如何形成的。</li>
   </ul>
 
   <h4>热图能解释什么，不能单独解释什么</h4>
   <div class="table-wrap">
     <table>
       <tr><th>观察结果</th><th>可支持的分析</th><th>需要什么对比</th></tr>
-      <tr><td>因果热图是下三角</td><td>掩码方向很可能正确；未来token不会被读取</td><td>改变未来token，比较当前位置的logits是否不变</td></tr>
+      <tr><td>因果热图呈下三角</td><td>掩码方向很可能正确；未来token不会被读取</td><td>改变未来token，比较当前位置的logits是否不变</td></tr>
       <tr><td>某些头聚焦于分隔符、换行符或句子结尾</td><td>该头可能学习了结构边界或格式位置</td><td>掩码这些位置，比较loss、logits或下游指标的变化</td></tr>
       <tr><td>长距离位置获得高权重</td><td>该层存在跨距离的信息路由</td><td>检查对应的value、后续层激活以及最终token概率的变化</td></tr>
       <tr><td>与答案相关的词获得高权重</td><td>热图与人类直觉一致</td><td>进行反事实提示：替换相关词，观察预测是否系统性变化</td></tr>
     </table>
   </div>
 
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>实践原则：</strong>将注意力热图视为调试入口，而非最终解释。严谨的做法是结合消融（ablation）、反事实提示（counterfactual prompts）、logit归因（logit attribution）或激活修补（activation patching），来比较“修改前后模型行为是否真的发生了变化”。</div></div>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>实践原则：</strong>把注意力热图当作调试起点，而不是最终解释。严谨的做法是结合消融（ablation）、反事实提示（counterfactual prompts）、logit归因（logit attribution）或激活修补（activation patching），比较修改前后模型行为是否真的发生了变化。</div></div>
 </section><!-- ================================================================ -->
 <!-- 3.9 O(n²) + MLA -->
 <!-- ================================================================ --><section class="card" id="s3-9">
   <h3>3.9 注意力复杂度的代价与出路——从 O(n²) 到 MLA</h3>
-  <p>现在你已经完整理解并实现了单头注意力，让我们坦诚面对它最大的问题。</p>
+  <p>你已经理解并实现了单头注意力。接下来看它最大的问题：计算和内存瓶颈。</p>
 
   <h4>计算与内存瓶颈</h4>
   <p>注意力分数矩阵 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> 的大小是 <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>，其中 n 是序列长度。当 n=128K 时（例如 GPT-4 的上下文窗口）：</p>
   <ul>
     <li>注意力矩阵：128K × 128K = <strong>160 亿个元素</strong></li>
     <li>在 FP16 下：需要 32 GB 显存——仅用来存储注意力分数</li>
-    <li>这与 embedding 层（d×n）和 FFN（4d²）的 O(n) 内存开销形成鲜明对比</li>
+    <li>相比之下，embedding 层（d×n）和 FFN（4d²）的内存开销是 O(n)</li>
   </ul>
   <p>作业函数 <code>attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes)</code> 对应稠密注意力分数张量 <code>[B,H,T,T]</code> 的显式物化代价：<span class="katex-inline" data-expr="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" aria-label="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" role="img"></span>。它只估算分数矩阵本身，不包括 Q/K/V、softmax 输出、dropout mask、activation checkpointing 或 FlashAttention 的重计算策略。</p>
 
   <h4>FlashAttention：一种 IO 感知的解决方案</h4>
-  <p>FlashAttention（Dao 等人，2022）的核心洞察是：在许多实际 GPU 配置中，注意力的性能瓶颈不只是 FLOPs，还有 HBM（高带宽内存）与 SRAM（片上缓存）之间的数据搬运。传统实现会显式物化完整的注意力矩阵，而 FlashAttention 采用分块（tiling）技术将计算拆分为多个 block，在 SRAM 内完成 softmax——全程无需将完整注意力矩阵写入 HBM。</p>
+  <p>FlashAttention（Dao 等人，2022）指出，在许多实际 GPU 配置中，注意力的性能瓶颈在于 HBM（高带宽内存）与 SRAM（片上缓存）之间的数据搬运，而不只是 FLOPs。传统实现会显式物化完整的注意力矩阵，FlashAttention 则采用分块（tiling）技术，将计算拆分为多个 block，在 SRAM 内完成 softmax——全程无需将完整注意力矩阵写入 HBM。</p>
   <p>这既节省了内存（从 O(n²) 降到 O(n)），而且通常<strong>更快</strong>，因为它减少了 HBM 的读写次数。</p>
 
   <h4>DeepSeek MLA：从“减少计算”到“减少存储”</h4>
-  <p>DeepSeek-V2 提出的 MLA（Multi-head Latent Attention，多头潜在注意力）走了一条不同的路：它并不优化 softmax 计算，而是<strong>从根源上减小 KV Cache 的尺寸</strong>。</p>
-  <p>MLA 的核心思想：将多头 Q、K、V 的高维表示投影到<strong>低维潜在空间</strong>，推理时只缓存压缩后的潜在向量，使用时再解压。这将 KV Cache 大小减少了 93%——从每个 token 需要存储 h 组 K 和 V 向量，降为只需存储一个低维向量。</p>
+  <p>DeepSeek-V2 提出的 MLA（Multi-head Latent Attention，多头潜在注意力）用了不同的思路：它不直接优化 softmax 计算，而是<strong>从根源上减小 KV Cache 的尺寸</strong>。</p>
+  <p>MLA 的核心思想：将多头 Q、K、V 的高维表示投影到<strong>低维潜在空间</strong>，推理时只缓存压缩后的潜在向量，使用时再解压。这能将 KV Cache 大小减少 93%——从每个 token 存储 h 组 K 和 V 向量，压缩成只存一个低维向量。</p>
   <p>我们将在第 4 章深入讲解如何实现 MLA。</p>
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) 是注意力机制一直面临的紧张矛盾。</strong>FlashAttention 和 MLA 分别从“计算 I/O”和“KV 存储”两个维度缓解了问题，但标准稠密注意力的两两分数仍然随序列长度平方增长。长上下文系统还会使用稀疏注意力、滑动窗口、全局 token、压缩注意力或外部检索等方法；任何具体收益都必须结合模型、上下文长度、硬件、kernel 和评估任务来综合判断。</div></div>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) 是注意力机制一直面临的核心问题。</strong>FlashAttention 和 MLA 分别从“计算 I/O”和“KV 存储”两个方向缓解了问题，但标准稠密注意力的两两分数仍然随序列长度平方增长。长上下文系统还会使用稀疏注意力、滑动窗口、全局 token、压缩注意力或外部检索等方法；具体收益取决于模型、上下文长度、硬件、kernel 和评估任务。</div></div>
 </section><!-- ================================================================ -->
 <!-- 3.10 可微字典 -->
 <!-- ================================================================ --><section class="card" id="s3-10">
@@ -740,7 +740,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
 
   <h4>类比：字典查找（哈希表）</h4>
   <p>传统字典查找：给定一个查询键（query key），在字典中找到<strong>完全相同的</strong>键并返回对应的值。这是一种硬匹配——要么匹配，要么不匹配。</p>
-  <p>注意力机制作为字典查找：给定一个查询向量（query vector），与<strong>所有</strong>键进行<strong>软匹配</strong>（点积 + softmax），并返回所有值的<strong>加权平均</strong>。每个值都有一定程度的贡献，贡献大小由相似度决定。</p>
+  <p>注意力机制作为字典查找：给定一个查询向量（query vector），与<strong>所有</strong>键进行<strong>软匹配</strong>（点积 + softmax），并返回所有值的<strong>加权平均</strong>。每个值的贡献比例由查询与对应键的相似度决定。</p>
 
   <h4>数学对应关系</h4>
   <div class="table-wrap">
@@ -755,7 +755,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
   </div>
 
   <h4>为什么可微性很重要</h4>
-  <p>如果匹配是硬性的（0或1），梯度就无法传播——你不会知道“稍微改变匹配程度”会如何影响输出。Softmax将匹配转化为<strong>连续概率分布</strong>，允许梯度从输出平滑地传播到Q、K、V的投影矩阵 <span class="katex-inline" data-expr="W^Q, W^K, W^V" aria-label="W^Q, W^K, W^V" role="img"></span>。这是为什么注意力机制可以端到端训练的数学基础。</p>
+  <p>如果匹配是硬性的（0或1），梯度就无法传播——无法知道“稍微改变匹配程度”会如何影响输出。Softmax将匹配转化为<strong>连续概率分布</strong>，允许梯度从输出平滑地传播到Q、K、V的投影矩阵 <span class="katex-inline" data-expr="W^Q, W^K, W^V" aria-label="W^Q, W^K, W^V" role="img"></span>。这就是注意力机制能够端到端训练的数学基础。</p>
 
   <h4>与卷积的比较</h4>
   <p><strong>卷积：</strong>每个位置只关注<strong>固定窗口</strong>内的邻居。窗口大小是预先确定的（例如3×3），不会根据内容而变化。计算复杂度为 O(n·k²)，其中k是窗口大小。</p>
@@ -764,17 +764,17 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：</strong>注意力 = 可微字典查找 = 软性内容寻址。这不是“魔法”，而是<strong>使数据库检索操作可微的一个巧妙技巧</strong>。</div></div>
 </section><section class="card" id="s3-11">
   <h3>3.11 章节总结：你的实现内容</h3>
-  <p>在本章中，你从零构建了大语言模型的<strong>核心计算引擎</strong>：</p>
+  <p>这一章，你从零实现了大语言模型的<strong>核心计算引擎</strong>：</p>
   <ul>
     <li>✅ <strong>QKVProjection</strong> — 将输入投影为查询、键、值三元组</li>
     <li>✅ <strong>Scaled Dot-Product Attention</strong> — 实现了完整的“查询→匹配→聚合”流水线</li>
     <li>✅ <strong>Causal Mask</strong> — 确保自回归生成中的因果约束</li>
-    <li>✅ <strong>Masked softmax contract</strong> — 理解了填充键、填充查询和全遮蔽行的数值风险</li>
+    <li>✅ <strong>Masked softmax contract</strong> — 理解了填充键、填充查询和全遮蔽行带来的数值风险</li>
     <li>✅ <strong>Attention Visualization</strong> — 建立对注意力行为的直观理解</li>
     <li>✅ <strong>Attention Heatmap Interpretation Boundaries</strong> — 理解热力图可以诊断路由模式，但不能作为独立的因果解释</li>
     <li>✅ <strong>对√dₖ的深入理解</strong> — 从方差分析和梯度角度掌握了缩放因子</li>
   </ul>
-  <p>这些代码总共约<strong>60行</strong>，但它们却是所有现代大语言模型（如GPT、Llama和Claude）的共同基础。在第4章中，我们将把单头注意力扩展到<strong>多头注意力</strong>，并深入实现DeepSeek的MLA。</p>
+  <p>这些代码总共约<strong>60行</strong>，但它们是所有现代大语言模型（如GPT、Llama和Claude）的共同基础。第4章会把单头注意力扩展到<strong>多头注意力</strong>，并实现DeepSeek的MLA。</p>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
     <a href="https://arxiv.org/abs/1706.03762" target="_blank">Vaswani et al. (2017) — Attention Is All You Need (§3.2)</a> ·
     <a href="http://nlp.seas.harvard.edu/annotated-transformer/" target="_blank">The Annotated Transformer（哈佛NLP经典教程）</a> ·

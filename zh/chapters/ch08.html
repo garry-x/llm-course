@@ -30,17 +30,17 @@
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
   </div><section class="card">
-  <h3>如何学习本章：生成就是反复选择下一个 Token</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong> 先掌握四种采样方法：贪心、温度、top-k、top-p。推测解码、MTP 和 Attention Sink 是推理加速或长上下文优化；初学时，关注动机而非工业级实现。</div></div>
+  <h3>本章学习路径：生成即反复选择下一个 Token</h3>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者重点：</strong> 先掌握四种采样方法：贪心、温度、top-k、top-p。推测解码、MTP 和 Attention Sink 属于推理加速或长上下文优化；初学时，关注动机而非工业级实现。</div></div>
   <ul>
     <li><strong>前置知识：</strong> 第6章的 logits、softmax、概率采样。</li>
-    <li><strong>学习目标：</strong> 解释自回归生成、prefill/decode、采样分布截断、重复陷阱、曝光偏差、推测解码和结构化解码的数学基础。</li>
+    <li><strong>学习目标：</strong> 理解自回归生成、prefill/decode、采样分布截断、重复陷阱、曝光偏差、推测解码和结构化解码的数学基础。</li>
     <li><strong>本章产出：</strong> 一个能够使用不同采样策略生成文本的 Generator。</li>
     <li><strong>完成标准：</strong> 你能解释为什么较低的温度更保守，以及为什么 top-p 比 top-k 更具适应性。</li>
     <li><strong>练习成果：</strong> 构建一个生成器，比较采样策略，测量 distinct-n/repetition rate，应用受限 token mask，并分析推测解码的接受率。可选练习文件位于 <a href="../../assignments/ch08_generation/">assignments/ch08_generation/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>必备前置知识：</strong> 概率分布、logits 变换、采样方差、自回归状态、KV cache 直觉、基本质量/延迟指标。<br><strong>本章内化：</strong> temperature、top-k、top-p、beam、self-consistency、reasoning budget 和 speculative decoding 都将被写成可测量的策略，即“改变候选分布、重新计算或接受率”，而不是孤立的调参技巧。<br><strong>验证信号：</strong> 你能将一个生成策略部署决策分解为质量、输出 token、P95 延迟、成本、边际增益和回退策略，并将其与第10章的服务 SLO 相关联。</div>
-  <p class="system-role"><strong>本章定位：</strong> 本章将训练好的 logits 转化为用户可见的行为。采样、reasoning budgets 和推测解码共同影响质量、延迟、token 成本和安全边界，使本章成为第9章对齐评估与第10章服务 SLO 之间的桥梁。</p>
+  <div class="dependency-note"><strong>必备前置知识：</strong> 概率分布、logits 变换、采样方差、自回归状态、KV cache 直觉、基本质量/延迟指标。<br><strong>本章内化：</strong> temperature、top-k、top-p、beam、self-consistency、reasoning budget 和 speculative decoding 都应作为可测量的策略来掌握：改变候选分布、重新计算或接受率，而不是孤立的调参技巧。<br><strong>验证信号：</strong> 你能将一个生成策略部署决策分解为质量、输出 token、P95 延迟、成本、边际增益和回退策略，并将其与第10章的服务 SLO 相关联。</div>
+  <p class="system-role"><strong>本章定位：</strong> 本章将训练好的 logits 转化为用户可见的行为。采样、reasoning budgets 和推测解码共同决定了质量、延迟、token 成本和安全边界，因此本章是连接第9章对齐评估与第10章服务 SLO 的关键环节。</p>
   <div class="foundation-map">
     <h4>学习者知识图谱：本章之前须知 / 本章教授内容 / 后续阅读</h4>
     <div class="foundation-graph" role="img" aria-label="第8章知识图谱：本章之前，理解 logit 分布、自回归状态和 KV cache；本章学习解码策略；之后阅读推测解码和验证器相关内容。">
@@ -68,10 +68,10 @@
     <div class="table-wrap foundation-table">
       <table>
         <tr><th>本章之前须知</th><th>本章将阐明</th><th>扩展阅读资料/知识点</th></tr>
-        <tr><td>logits 到分布</td><td>将 temperature、top-k、top-p、min-p 和 repetition penalty 放置在 softmax 之前和之后的正确位置。</td><td><strong>资料：</strong> contrastive decoding、typical sampling、grammar decoding。<br><strong>知识点：</strong> logit bias、constrained decoding、采样分布校准。</td></tr>
+        <tr><td>logits 到分布</td><td>temperature、top-k、top-p、min-p 和 repetition penalty 应作用于 softmax 之前还是之后。</td><td><strong>资料：</strong> contrastive decoding、typical sampling、grammar decoding。<br><strong>知识点：</strong> logit bias、constrained decoding、采样分布校准。</td></tr>
         <tr><td>自回归循环</td><td>每步追加一个 token，更新位置和 KV cache，并明确定义停止条件、EOS 和 max tokens。</td><td><strong>资料：</strong> streaming generation、continuous batching、decode profiling。<br><strong>知识点：</strong> stop sequence、EOS、解码侧延迟。</td></tr>
         <tr><td>搜索 vs. 采样</td><td>比较贪心、beam、随机采样、self-consistency 和 best-of-n 的质量与计算成本。</td><td><strong>资料：</strong> self-consistency、best-of-n、Tree-of-Thought。<br><strong>知识点：</strong> verifier/reranker、pass@k、搜索成本。</td></tr>
-        <tr><td>Reasoning budget</td><td>将思考 token、并行采样、验证器、早停和边际增益转化为可控预算。</td><td><strong>资料：</strong> test-time scaling、speculative decoding、EAGLE/MTP。<br><strong>知识点：</strong> draft model、接受率、成本-质量曲线。</td></tr>
+        <tr><td>Reasoning budget</td><td>将思考 token、并行采样、验证器、早停和边际增益整合为可控推理预算。</td><td><strong>资料：</strong> test-time scaling、speculative decoding、EAGLE/MTP。<br><strong>知识点：</strong> draft model、接受率、成本-质量曲线。</td></tr>
       </table>
     </div>
     <p><strong>本章范围：</strong> 本章将 logits 变换、自回归循环、采样、搜索、reasoning budgets 和成本指标纳入同一框架；扩展阅读可深入探讨推测解码、draft models、验证器和 test-time scaling。</p>
@@ -80,22 +80,22 @@
 <!-- 8.1 自回归生成原理 -->
 <!-- ================================================================ --><section class="card" id="s8-1">
   <h3>8.1 自回归生成的数学原理</h3>
-  <p>在第七章训练之后，我们得到了一个能够预测下一个 token 的模型。然而，模型本身只是一个“评分器”：给定前缀，它输出一个概率分布。如何将这个概率分布转化为实际的文本序列，是<strong>文本生成</strong>的核心问题。</p>
+  <p>第七章训练结束后，我们得到了一个能预测下一个 token 的模型。但模型本身只是一个“评分器”：给定前缀，它输出一个概率分布。怎么把这个概率分布变成实际的文本序列，是<strong>文本生成</strong>的核心问题。</p>
 
   <h4>自回归分解</h4>
-  <p>生成的数学基础仍然是<strong>自回归分解</strong>——序列的联合概率被分解为条件概率的乘积：</p>
+  <p>生成的数学基础是<strong>自回归分解</strong>——序列的联合概率被拆解成条件概率的乘积：</p>
   <div class="math-box"><div class="label">公式 8.1 自回归生成</div>
     <div class="katex" data-expr="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})" aria-label="P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{&lt;t})" role="img"></div>
   </div>
-  <p>在每个步骤中，模型基于已有的前缀 <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" aria-label="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" role="img"></span>，输出一个词表上的概率分布 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})" aria-label="P(x_t \mid x_{&lt;t})" role="img"></span>。然后，通过从该分布中<strong>采样</strong>或<strong>取最大值</strong>得到 <span class="katex-inline" data-expr="x_t" aria-label="x_t" role="img"></span>。这个过程逐个 token 进行，直到生成结束 token 或达到最大长度。</p>
+  <p>每一步，模型根据已有的前缀 <span class="katex-inline" data-expr="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" aria-label="x_{&lt;t} = [x_1, x_2, \ldots, x_{t-1}]" role="img"></span>，输出词表上的概率分布 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t})" aria-label="P(x_t \mid x_{&lt;t})" role="img"></span>。然后从该分布中<strong>采样</strong>或<strong>取最大值</strong>得到 <span class="katex-inline" data-expr="x_t" aria-label="x_t" role="img"></span>。这个过程逐个 token 进行，直到生成结束 token 或达到最大长度。</p>
 
   <h4>两个阶段：预填充和解码</h4>
-  <p>生成过程分为两个计算特征完全不同的阶段：</p>
+  <p>生成过程分为两个计算特征不同的阶段：</p>
   <ul>
-    <li><strong>预填充：</strong>用户的输入 prompt 一次性送入模型。这是一个<strong>计算密集型</strong>阶段——大量矩阵乘法并行执行。瓶颈是 GPU 算力（FLOPS）。首 token 时间（TTFT）由该阶段主导。</li>
-    <li><strong>解码：</strong> token 逐个生成。每步只输入一个 token，利用 KV Cache 进行增量计算。这通常是<strong>带宽密集型</strong>阶段——在小批量或低并发下，GPU 计算利用率可能显著低于预填充阶段。后续吞吐量（TPS/TPOT）由该阶段主导。</li>
+    <li><strong>预填充：</strong>用户的输入 prompt 一次性送入模型。这是<strong>计算密集型</strong>阶段——大量矩阵乘法并行执行。瓶颈是 GPU 算力（FLOPS）。首 token 时间（TTFT）由该阶段主导。</li>
+    <li><strong>解码：</strong> token 逐个生成。每步只输入一个 token，利用 KV Cache 做增量计算。这通常是<strong>带宽密集型</strong>阶段——在小批量或低并发下，GPU 计算利用率可能明显低于预填充阶段。后续吞吐量（TPS/TPOT）由该阶段主导。</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>重要概念：</strong> TTFT（Time to First Token）主要受预填充、排队、网络和路由影响；用户的体验是“等待第一个字符出现的时间”。TPS/TPOT 主要受解码、批处理、KV cache 和带宽影响；用户的体验是“打字速度”。不同模型、上下文长度、并发级别和服务提供商之间数值差异很大。可复现的生成基准测试应在固定的模型、prompt 集合、上下文长度、并发级别和服务配置下报告这些指标。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>重要概念：</strong> TTFT（Time to First Token）主要受预填充、排队、网络和路由影响；用户等待第一个字符出现的时间就是 TTFT。TPS/TPOT 主要受解码、批处理、KV cache 和带宽影响；对应的是用户的“打字速度”。不同模型、上下文长度、并发级别和服务提供商之间，这些数值差异很大。可复现的生成基准测试应该在固定的模型、prompt 集合、上下文长度、并发级别和服务配置下报告这些指标。</div></div>
 </section><!-- ================================================================ -->
 <!-- 8.2 为什么贪婪解码会失败 -->
 <!-- ================================================================ --><section class="card">
@@ -105,13 +105,13 @@
 <p class="diagram-caption">图 8-1：四种采样策略对比——从贪婪到核采样</p>
 </section><section class="card" id="s8-2">
   <h3>8.2 为什么贪心解码会失败——重复陷阱与曝光偏差</h3>
-  <p>贪心解码每一步都选择概率最高的 token：<span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>。这是最简单的策略，但有两个根本缺陷。</p>
+  <p>贪心解码每一步都选择概率最高的 token：<span class="katex-inline" data-expr="x_t = \arg\max P(x \mid x_{&lt;t})" aria-label="x_t = \arg\max P(x \mid x_{&lt;t})" role="img"></span>。这是最简单的策略，但存在两个根本缺陷。</p>
 
   <h4>缺陷 1：重复循环</h4>
-  <p>一旦模型进入一个高概率的局部模式，后续的 <code>argmax</code> 步骤可能会持续选择相似或相同的 token。这在训练数据中的常见短语、标点或功能词附近尤其明显。原因通常是多种因素的组合：过于尖锐的条件分布、上下文中已存在的重复模式、没有随机探索以及弱停止约束。这些因素可能会使贪心解码陷入重复循环；不应将其简化为单个 Key/Query 自强化故事。</p>
+  <p>一旦模型进入一个高概率的局部模式，后续的 <code>argmax</code> 步骤可能会持续选择相似或相同的 token。这在训练数据中的常见短语、标点或功能词附近尤其明显。原因通常包括：过于尖锐的条件分布、上下文中的重复模式、缺少随机探索、以及弱停止约束。这些因素共同作用可能导致贪心解码陷入重复循环——不能简单地归结为单个 Key/Query 自强化故事。</p>
 
   <h4>缺陷 2：曝光偏差</h4>
-  <p>训练时，模型每一步看到的是<strong>真实</strong>的真实 token。然而推理时，模型看到的是<strong>自己生成</strong>的 token。这两种情境下的分布不同——训练时的条件分布是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{true}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{true}})" role="img"></span>，而推理时是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{generated}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{generated}})" role="img"></span>。某一步的误差会在后续步中被放大；这就是<strong>误差累积</strong>。</p>
+  <p>训练时，模型每一步看到的是<strong>真实</strong>的 token。推理时，模型看到的是<strong>自己生成</strong>的 token。这两种情境下的分布不同——训练时的条件分布是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{true}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{true}})" role="img"></span>，而推理时是 <span class="katex-inline" data-expr="P(x_t \mid x_{&lt;t}^{\text{generated}})" aria-label="P(x_t \mid x_{&lt;t}^{\text{generated}})" role="img"></span>。某一步的误差会在后续步中被放大，这就是<strong>误差累积</strong>。</p>
 
   <h4>温度参数的熵控制视角</h4>
   <p>一个常见的补救方法是引入<strong>随机性</strong>：从概率分布中采样，而不是总是取最大值。温度参数 <span class="katex-inline" data-expr="T" aria-label="T" role="img"></span> 控制这种随机性的程度：</p>
@@ -123,12 +123,12 @@
     <li><span class="katex-inline" data-expr="T = 1" aria-label="T = 1" role="img"></span>：原始分布</li>
     <li><span class="katex-inline" data-expr="T \to \infty" aria-label="T \to \infty" role="img"></span>：退化为均匀分布（完全随机）</li>
   </ul>
-  <p>温度的"热力学类比"：在玻尔兹曼分布中，温度控制着系统的"探索"程度——高温度使系统探索更多状态（更丰富的词汇），低温度使系统利用已知的高概率模式（输出更确定）。</p>
+  <p>温度的热力学类比：在玻尔兹曼分布中，温度控制系统的探索程度——高温时探索更多状态（词汇更丰富），低温时倾向于已知的高概率模式（输出更确定）。</p>
 </section><!-- ================================================================ -->
 <!-- Programming Exercise 1: Greedy Decoding -->
 <!-- ================================================================ --><section class="card" id="s8-3">
   <h3>8.3 编程练习一：实现贪心解码</h3>
-  <p>尽管贪心解码有缺陷，但它是理解所有其他采样策略的起点。实现它，然后观察其问题。</p>
+  <p>贪心解码虽然简单有缺陷，但它是理解所有其他采样策略的基础。实现一次，就能看到它的问题。</p>
 
   <div class="coding-exercise">
     <h4>练习一：贪心解码</h4>
@@ -167,14 +167,14 @@ def generate_greedy(model, input_ids, max_new_tokens=100):
             break
 
     return input_ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>观察：</strong>即使在小型模型上，贪心解码也极易陷入重复。注意 <code>-1</code> 中的 <code>logits[:, -1, :]</code> —— 我们取“最后一个位置”的 logits，即模型对 <strong>下一个 token</strong> 的预测。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>观察：</strong>即使在小模型上，贪心解码也容易陷入重复。注意 <code>-1</code> 中的 <code>logits[:, -1, :]</code> —— 我们取“最后一个位置”的 logits，也就是模型对 <strong>下一个 token</strong> 的预测。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 2: Temperature Sampling -->
 <!-- ================================================================ --><section class="card" id="s8-4">
   <h3>8.4 编程练习 2：实现 Temperature Sampling</h3>
-  <p>Temperature sampling 通过对 logits 施加除法 <span class="katex-inline" data-expr="z_i / T" aria-label="z_i / T" role="img"></span> 来控制分布的"尖锐度"。核心变化是：<strong>argmax → softmax + multinomial</strong>。</p>
+  <p>Temperature sampling 将 logits 除以温度 T，控制分布的“尖锐度”。核心变化是从 <strong>argmax</strong> 转为 <strong>softmax + multinomial</strong>。</p>
 
   <div class="coding-exercise">
     <h4>练习 2：Temperature Sampling</h4>
@@ -182,9 +182,9 @@ def generate_greedy(model, input_ids, max_new_tokens=100):
       <p><strong>任务：</strong>实现 <code>generate_temperature(model, input_ids, max_new_tokens, temperature)</code>。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>在应用 softmax 之前，将 logits 除以 temperature</li>
-        <li>使用 <code>torch.multinomial</code> 从分布中采样</li>        <li>处理 <span class="katex-inline" data-expr="T=0" aria-label="T=0" role="img"></span> 的特殊情况：退化为 argmax（避免除以零）</li>
-        <li>在相同 prompt 下多次运行应产生不同结果（由于随机采样）</li>
+        <li>先将 logits 除以 temperature，再应用 softmax</li>
+        <li>使用 <code>torch.multinomial</code> 从分布中采样</li>        <li>处理 <span class="katex-inline" data-expr="T=0" aria-label="T=0" role="img"></span> 特殊情况：退化为 argmax（避免除零）</li>
+        <li>相同 prompt 下多次运行应产生不同结果（由于随机采样）</li>
       </ul>
       <pre># Expected usage
 prompt = tokenizer.encode("The future of artificial intelligence", return_tensors='pt')
@@ -227,23 +227,23 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
             break
 
     return input_ids</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>处理 T=0：</strong>当 T→0 时，<span class="katex-inline" data-expr="z_i/0 \to \infty" aria-label="z_i/0 \to \infty" role="img"></span> 可能导致数值溢出。实际上，我们从不除以真正的 0——在 T=0 时直接使用 argmax，仅在 T>0 时进行采样。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>处理 T=0：</strong>当 T→0 时，<span class="katex-inline" data-expr="z_i/0 \to \infty" aria-label="z_i/0 \to \infty" role="img"></span> 会趋于无穷，可能导致数值溢出。因此 T=0 时不进行除法，直接使用 argmax；仅在 T>0 时采样。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 8.5 从温度到Top-K/Top-P -->
 <!-- ================================================================ --><section class="card" id="s8-5">
   <h3>8.5 从 Temperature 到 Top-K / Top-P：截断低概率尾部</h3>
-  <p>Temperature 采样有帮助，但词汇量大的情况下，softmax 尾部仍然有一长串概率极低的 token。即便使用 <span class="katex-inline" data-expr="T=0.8" aria-label="T=0.8" role="img"></span>，模型仍可能采样到低质量或离题的 token。Top-K 和 Top-P 通过截断低概率尾部来降低这种风险。</p>
+  <p>Temperature 采样可优化生成质量，但词汇量大时，softmax 尾部仍会包含一长串概率极低的 token。即使使用 <span class="katex-inline" data-expr="T=0.8" aria-label="T=0.8" role="img"></span>，模型仍可能采样到低质量或离题的 token。Top-K 和 Top-P 通过截断低概率尾部来降低这种风险。</p>
 
   <h4>Top-K 的逻辑</h4>
-  <p>只保留概率最高的 K 个 token，重新归一化，然后从这个集合中采样。K 是一个固定值（GPT-2 默认 K=40）。</p>
+  <p>保留概率最高的 K 个 token，重新归一化后只从这个集合中采样。K 是一个固定值（GPT-2 默认 K=40）。</p>
 
   <h4>Top-K 的固有问题</h4>
-  <p>K 是<strong>固定的</strong>。在某些上下文中，可能只有 3 个合理的选择（K=40 引入了太多噪声）；而在另一些上下文中，可能有 100 个合理的延续（K=40 截断了太多可能性）。例如：</p>
+  <p>K 是<strong>固定的</strong>。如果某个上下文只有 3 个合理的选择，K=40 会引入太多噪声；反之，如果存在 100 个合理的延续，K=40 又会截断过多可能性。例如：</p>
   <ul>
-    <li><strong>"美国的首都是____"</strong> — 分布极其尖锐；"Washington" 的概率可能超过 90%。使用 K=40 时，你仍从 40 个 token 中采样，有很小概率选到 "New York"（明显错误）</li>
-    <li><strong>"为她写一首关于____的诗"</strong> — 分布非常平坦；K=40 可能对创造性限制过强</li>
+    <li><strong>"美国的首都是____"</strong> — 分布非常尖锐；"Washington" 的概率可能超过 90%。使用 K=40 时，你仍从 40 个 token 中采样，有小概率选到 "New York"（明显错误）</li>
+    <li><strong>"为她写一首关于____的诗"</strong> — 分布非常平坦；K=40 可能过度限制创造性</li>
   </ul>
 
   <h4>Top-P（Nucleus）的自适应方案</h4>
@@ -253,7 +253,7 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
     <li>从最高概率开始累加，直到累积概率 <span class="katex-inline" data-expr="\geq P" aria-label="\geq P" role="img"></span>（典型值 0.9 或 0.95）</li>
     <li>只从这个“核心集”中采样</li>
   </ol>
-  <p>当分布尖锐时，核心集很小（"Washington" 例子可能只有 1-3 个 token）；当分布平坦时，核心集会自动扩大。它不需要手动固定 K，是开放文本生成中常用的采样策略之一；实际部署时仍需结合 temperature、重复惩罚、停止条件和任务约束来调整参数。</p>
+  <p>当分布尖锐时，核心集很小（"Washington" 例子可能只有 1-3 个 token）；当分布平坦时，核心集会自动扩大。它无需手动设定 K，是开放文本生成中常用的采样策略。实际部署时仍需结合 temperature、重复惩罚、停止条件和任务约束来调整参数。</p>
 
   <h4>示例：同一分布下 Top-K 与 Top-P 的候选集对比</h4>
   <p>假设在某生成步骤中只有 6 个候选 token，logits 为 <code>[4, 3, 2, 1, 0, -1]</code>。使用 temperature <code>T=1</code> 后，softmax 概率近似为：</p>
@@ -265,14 +265,14 @@ def generate_temperature(model, input_ids, max_new_tokens=100,
       <tr><td>cumulative</td><td>0.634</td><td>0.867</td><td>0.953</td><td>0.985</td><td>0.996</td><td>1.000</td></tr>
     </table>
   </div>
-  <p><code>top-k=3</code> 总是保留 <code>A,B,C</code>，然后重新归一化得到近似 <code>[0.718, 0.264, 0.097]</code>。<code>top-p=0.9</code> 从最高概率开始累加，直到累积概率超过 0.9；这里 <code>A+B=0.867</code> 不够，加上 <code>C</code> 后达到 <code>0.953</code>，所以候选集也是 <code>A,B,C</code>。如果改为 <code>top-p=0.8</code>，则候选集只需要 <code>A,B</code>。</p>
-  <p>关键区别不在于这个单独例子，而在于分布形状变化时的行为。如果分布非常尖锐，例如 <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>，<code>top-p=0.9</code> 只保留概率最高的 token；如果分布平坦，例如 <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>，<code>top-p=0.9</code> 需要保留前 5 个 token。固定的 <code>top-k</code> 不能根据上下文不确定性自动调整候选集大小。</p>
+  <p><code>top-k=3</code> 总是保留 <code>A,B,C</code>，然后重新归一化，得到近似 <code>[0.718, 0.264, 0.097]</code>。<code>top-p=0.9</code> 从最高概率开始累加，直到累积概率超过 0.9。这里 <code>A+B=0.867</code> 不够，加上 <code>C</code> 后达到 <code>0.953</code>，所以候选集为 <code>A,B,C</code>。如果将 P 改为 <code>top-p=0.8</code>，则候选集只需要 <code>A,B</code>。</p>
+  <p>关键区别不在于这个具体例子，而在于分布形状变化时的行为。如果分布非常尖锐，例如 <code>[0.92, 0.04, 0.02, 0.01, 0.01]</code>，<code>top-p=0.9</code> 只保留概率最高的 token；如果分布平坦，例如 <code>[0.22, 0.20, 0.18, 0.16, 0.14, 0.10]</code>，<code>top-p=0.9</code> 需要保留前 5 个 token。固定的 <code>top-k</code> 无法根据上下文不确定性自动调整候选集大小。</p>
 </section><section class="card" id="s8-5a">
   <h3>8.5A 采样分布记录：从原始logits到最终token</h3>
-  <p>实际的生成系统不会直接对原始logits做softmax。一个生成步骤通常先应用多种变换：重复惩罚、有效token约束、temperature、top-k/top-p截断，然后才重新归一化和采样。顺序写错会改变最终分布，也会使logprob、entropy和调参结论失去意义。</p>
+  <p>实际的生成系统不会直接对原始logits做softmax。一个生成步骤通常先应用多种变换：重复惩罚、有效token约束、temperature、top-k/top-p截断，然后才重新归一化和采样。顺序写错会改变最终分布，也会让logprob、entropy和调参结论变得不可靠。</p>
 
   <h4>1. 推荐的处理顺序</h4>
-  <p>一个可复现的生成策略应该使用明确声明的处理顺序。实际系统可能有更多处理器，但每一步都应该显式写入生成策略：</p>
+  <p>一个可复现的生成策略应该使用明确声明的处理顺序。实际系统可能有更多处理器，但每一步都应在生成策略中明确说明：</p>
   <div class="code-block" data-lang="text">
 raw logits
   -> repetition penalty / frequency penalty
@@ -281,7 +281,7 @@ raw logits
   -> top-k or top-p filtering
   -> softmax over remaining tokens
   -> sample or argmax</div>
-  <p>重复惩罚应在截断前应用；否则，已出现的token可能先进入top-k/top-p候选集，惩罚就不能及时生效。约束mask应在归一化前应用，将非法token的logits设为<code>-inf</code>；后续的softmax只在有效候选中分配概率。Temperature改变分布的尖锐度，而top-k/top-p改变候选集；它们不是同一类操作。</p>
+  <p>重复惩罚应在截断前应用；否则，已出现的token可能先进入top-k/top-p候选集，惩罚就不能及时生效。约束mask应在归一化前应用，将非法token的logits设为<code>-inf</code>；后续的softmax只在有效候选中分配概率。Temperature改变分布的尖锐度，top-k/top-p改变候选集；两者不是同一类操作。</p>
 
   <h4>2. 实例：同一步骤logits的处理轨迹</h4>
   <p>假设当前词表只有5个token，原始logits为：</p>
@@ -298,20 +298,20 @@ raw logits:  4.0   3.0   2.0   1.0  -1.0</div>
       <tr><td>top-p=0.8</td><td>2.0</td><td>3.0</td><td>2.0</td><td>-inf</td><td>-inf</td><td>B的概率最高，加上A或C达到阈值</td></tr>
     </table>
   </div>
-  <p>最终概率不是原始logits的softmax，而是经过处理的logits在保留候选上的softmax。如果top-p在概率相等时保留 <code>B, A</code>，则候选概率约为 <code>B=0.731, A=0.269</code>；如果实现保留 <code>B, C</code>，概率同构但候选token不同。因此，稳定的平局处理、token id顺序以及报告候选集都很重要。</p>
+  <p>最终概率不是原始logits的softmax，而是经过处理后的logits在保留候选上的softmax。如果top-p在概率相等时保留 <code>B, A</code>，则候选概率约为 <code>B=0.731, A=0.269</code>；如果实现保留 <code>B, C</code>，概率同构但候选token不同。因此，稳定的平局处理、token id顺序以及报告候选集都很重要。</p>
 
   <h4>3. logprob、entropy和候选集必须绑定到同一分布</h4>
   <p>生成API常常返回 <code>logprobs</code>、top token列表或entropy。必须说明这些量来自哪个分布：</p>
   <ul>
-    <li><strong>原始模型logprob：</strong>无约束、未截断，适合比较模型自身对token的偏好。</li>
-    <li><strong>处理后logprob：</strong>经过惩罚、mask、temperature和截断后的概率，适合解释本次实际采样。</li>
-    <li><strong>entropy：</strong>如果在截断后计算，它只代表候选集内的不确定性，不能直接与原始全词表entropy比较。</li>
-    <li><strong>选中token：</strong>token id、文本片段、处理后概率以及是否受约束影响都应报告。</li>
+    <li><strong>原始模型logprob：</strong>无约束、未截断，适用于比较模型自身对token的偏好。</li>
+    <li><strong>处理后logprob：</strong>经过惩罚、mask、temperature和截断后的概率，用于解释本次实际采样。</li>
+    <li><strong>entropy：</strong>如果在截断后计算，则只代表候选集内的不确定性，不能与原始全词表entropy直接比较。</li>
+    <li><strong>选中token：</strong>应报告token id、文本片段、处理后概率以及是否受约束影响。</li>
   </ul>
-  <p>如果一个系统声称“模型对这个答案很有信心”，但引用的是top-p截断和JSON语法mask之后的概率，这个说法是不严谨的。约束分布中的高概率仅表示“它在有效集内可能性最大”，并不等同于模型在开放词表上信心很高。</p>
+  <p>如果一个系统声称“模型对这个答案很有信心”，但引用的是top-p截断和JSON语法mask之后的概率，这个说法不严谨。约束分布中的高概率只表示“它在有效集内可能性最大”，并不等同于模型在开放词表上信心很高。</p>
 
   <h4>4. 调参时关注什么</h4>
-  <p>调参temperature、top-p和重复惩罚时，不要仅凭少数几个生成文本做判断。至少同时记录以下内容：</p>
+  <p>调参temperature、top-p和重复惩罚时，不要只凭少数几个生成文本做判断。至少同时记录以下内容：</p>
   <div class="code-block" data-lang="text">
 kept_token_count / vocab_size
 selected_token_probability
@@ -321,7 +321,7 @@ stop reason: eos / stop string / max_new_tokens / constraint failure
 generated tokens and latency</div>
   <p>这些量有助于区分几种问题类型：枯燥的输出可能因为温度过低或候选集太小；跑题的输出可能因为温度过高或top-p过宽；重复可能需要重复惩罚、停止条件或训练数据处理；格式错误更适合用约束解码而不是继续降低温度。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节要点：</strong> 生成并不是“softmax后采样”那么简单。严谨的生成实验必须报告从原始logits到处理分布的变换链；否则实验无法复现，也无法判断质量变化来自模型、采样策略还是约束系统。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>本节要点：</strong>生成并不是“softmax后采样”那么简单。严谨的生成实验必须报告从原始logits到处理分布的变换链；否则实验无法复现，也无法判断质量变化来自模型、采样策略还是约束系统。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习3：Top-K和Top-P -->
 <!-- ================================================================ --><section class="card" id="s8-6">
@@ -333,9 +333,9 @@ generated tokens and latency</div>
       <p><strong>任务：</strong>实现 <code>generate_topk(model, input_ids, max_new_tokens, k, temperature)</code>。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>使用 <code>torch.topk</code> 取概率最高的K个logits</li>
-        <li>对Top-K子集进行softmax归一化</li>
-        <li>采样后，使用 <code>gather</code> 将索引映射回原始词汇表ID</li>
+        <li>用 <code>torch.topk</code> 取概率最高的K个logits</li>
+        <li>对Top-K子集做softmax归一化</li>
+        <li>采样后，用 <code>gather</code> 将索引映射回原始词汇表ID</li>
       </ul>
       <pre># Expected usage
 prompt = tokenizer.encode("Tell me a story", return_tensors='pt')
@@ -379,8 +379,8 @@ def generate_topk(model, input_ids, max_new_tokens=100,
       <p><strong>要求：</strong></p>
       <ul>
         <li>将概率分布按降序排序，计算累积概率</li>
-        <li><strong>关键：</strong>首先使用 <code>cumsum &gt;= p</code> 标记超过nucleus的位置，然后将掩码右移一位——确保第一个达到或超过p的token被保留，并且nucleus尽可能小</li>
-        <li>掩码后，重新归一化剩余概率（确保它们之和为1）</li>
+        <li><strong>关键：</strong>首先用 <code>cumsum &gt;= p</code> 标记累积概率超过阈值p的位置，然后将掩码右移一位——这样确保第一个达到或超过p的token被保留，并且nucleus尽可能小</li>
+        <li>掩码后，对剩余概率重新归一化（确保它们之和为1）</li>
         <li>从归一化后的分布中采样</li>
       </ul>
       <pre># Expected usage
@@ -430,17 +430,17 @@ def generate_topp(model, input_ids, max_new_tokens=100,
 <!-- Programming Exercise 4: Compare Strategies -->
 <!-- ================================================================ --><section class="card" id="s8-7">
   <h3>8.7 编程练习5：四种采样策略的对比实验</h3>
-  <p>现在把实现的四种策略放在一起比较。使用相同的 prompt 和相同的模型，观察输出差异。同时使用定量指标评估质量。</p>
+  <p>将已实现的四种采样策略放在一起比较：使用相同的 prompt 和模型，观察输出差异，并用定量指标评估质量。</p>
 
   <div class="coding-exercise">
     <h4>练习5：策略比较与多样性评估</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现一个 <code>Generator</code> 类，统一封装四种策略。然后用同一个 prompt 生成文本，并计算多样性指标。</p>
+      <p><strong>任务：</strong>实现一个 <code>Generator</code> 类，统一封装四种策略。使用相同的 prompt 生成文本，并计算多样性指标。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>Generator</code> 类接收 model 和 tokenizer，提供统一的 <code>generate(prompt, strategy, ...)</code> 接口</li>
         <li>支持四种策略：<code>"greedy"</code>、<code>"temperature"</code>、<code>"top-k"</code>、<code>"top-p"</code></li>
-        <li>每种策略生成 200 个 token 的文本并打印</li>
+        <li>每种策略生成 200 个 token 的文本并打印输出</li>
         <li>计算并比较每种策略的 distinct-1 和 distinct-2 分数</li>
       </ul>
       <pre># Expected output structure
@@ -528,21 +528,21 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
     print(f"=== {strategy} ===")
     print(text[:200])
     print(f"   distinct-1: {d1:.2f}, distinct-2: {d2:.2f}\n")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>Greedy 更容易重复；Top-P 通常会增加候选多样性，但 distinct 分数和人工质量并不总是一致。实际部署时往往将 Top-P、temperature、repetition penalty 和停止条件组合调参，不应仅凭单一指标断定质量好坏。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong>Greedy 更容易产生重复文本；Top-P 通常会增加候选多样性，但 distinct 分数与人工质量并不总是一致。实际部署时通常需要组合调参 Top-P、temperature、repetition penalty 和停止条件，不应仅凭单一指标判断生成质量。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 8.7A 生成评估边界 -->
 <!-- ================================================================ --><section class="card" id="s8-7a">
   <h3>8.7A 如何评估生成策略：多样性不等于质量，低重复率不等于正确性</h3>
-  <p>在比较解码策略时，最常见的错误是只看一两个例子，或者只报告 distinct-n。生成质量是一个多目标问题：同一策略可能在提高多样性的同时降低事实性、格式稳定性或可复现性。严格的实验需要固定 <strong>任务类型、采样参数、随机种子、输出长度和评估指标</strong>。</p>
+  <p>比较解码策略时，最常见的错误是只看一两个例子，或者只报告 distinct-n。生成质量涉及多个目标：同一策略可能在提高多样性的同时降低事实性、格式稳定性或可复现性。严格的实验应固定 <strong>任务类型、采样参数、随机种子、输出长度和评估指标</strong>。</p>
 
   <h4>这些指标回答什么问题？</h4>
   <div class="table-wrap">
     <table>
       <tr><th>指标/方法</th><th>主要回答的问题</th><th>不解释的内容</th><th>适用场景</th></tr>
-      <tr><td>distinct-1 / distinct-2</td><td>输出n-gram多样性和重复程度</td><td>事实正确性、逻辑连贯性或任务完成度</td><td>开放式生成、退化重复分析</td></tr>
-      <tr><td>Repetition Rate / self-BLEU</td><td>模型是否在样本内或样本间重复</td><td>高重复是否一定错误</td><td>长文本、故事、对话生成</td></tr>
+      <tr><td>distinct-1 / distinct-2</td><td>输出n-gram的多样性和重复程度</td><td>事实正确性、逻辑连贯性或任务完成度</td><td>开放式生成、退化重复分析</td></tr>
+      <tr><td>Repetition Rate / self-BLEU</td><td>模型在样本内或样本间是否重复</td><td>高重复是否一定错误</td><td>长文本、故事、对话生成</td></tr>
       <tr><td>exact match / F1 / pass@k</td><td>是否完成有明确答案的任务</td><td>开放式文本中的风格和偏好</td><td>问答、抽取、代码、简短数学答案</td></tr>
       <tr><td>Human Preference or Pairwise Ranking</td><td>人类更喜欢哪个输出</td><td>偏好原因是事实性、风格还是长度</td><td>对话、摘要、创意写作</td></tr>
       <tr><td>Latency and Cost Metrics</td><td>TTFT、TPOT、tokens/s、每1M tokens成本</td><td>语义质量</td><td>服务部署和策略调优</td></tr>
@@ -550,21 +550,21 @@ for strategy in ["greedy", "temperature", "top-k", "top-p"]:
   </div>
 
   <h4>为什么要进行参数扫描</h4>
-  <p>Temperature、top-k 和 top-p 不是独立的开关。较高的 temperature 通常增加熵；较低的 top-p 截断尾部；它们的组合可能相互抵消或放大。合理的实验应在同一提示集上比较多组参数，例如：</p>
+  <p>Temperature、top-k 和 top-p 不是独立的参数。较高的 temperature 通常增加输出熵；较低的 top-p 会截断尾部概率；组合使用时可能相互抵消或放大。合理的实验应在同一组提示上比较多组参数，例如：</p>
   <div class="code-block" data-lang="text">
 temperature in {0.2, 0.7, 1.0}
 top_p       in {0.8, 0.9, 0.95}
 max_tokens  fixed
 seeds       at least 3
 metrics     distinct-2, repetition rate, task score, latency</div>
-  <p>如果结论仅来自一个提示、一个种子和一个样本输出，通常不足以确定策略优劣。对于开放式生成，还应保存失败案例：重复循环、提前停止、跑题、事实错误、格式损坏和过于保守都是不同的失败模式。</p>
+  <p>如果结论仅来自一个提示、一个种子和一个样本输出，通常不足以判断策略优劣。对于开放式生成，还应该保存失败案例：重复循环、提前停止、跑题、事实错误、格式损坏和过于保守都是不同的失败模式。</p>
 
   <h4>重复惩罚的作用</h4>
-  <p>重复惩罚不是新的概率分布也不是训练目标；它是在 softmax 和采样之前应用于 logits 的一个处理器。常见规则是：对于前缀中已出现的 token，如果 logit 为正，则除以惩罚值；如果 logit 为负，则乘以惩罚值，从而相对降低这些 token 的概率。正确的实现应在贪心、top-k 或 top-p 选择之前应用此变换，然后验证它确实改变了候选排名。</p>
+  <p>重复惩罚不是新的概率分布，也不是训练目标；它是在 softmax 和采样之前作用于 logits 的一个处理器。常见规则是：对于前缀中已经出现的 token，如果 logit 为正，则除以惩罚值；如果 logit 为负，则乘以惩罚值，从而降低这些 token 被选中的概率。正确的实现应该在贪心、top-k 或 top-p 选择之前应用这个变换，然后验证它确实改变了候选词的排名。</p>
 
   <h4>工作示例：从 Logits 处理器到最终采样分布</h4>
-  <p>给定 logits <code>[4.0, 3.0, -1.0]</code>，生成的 token ids 为 <code>[0,2]</code>，重复惩罚为 <code>2.0</code>。首先，处理重复 token：token 0 的正 logit 从 <code>4.0</code> 变为 <code>2.0</code>，token 2 的负 logit 从 <code>-1.0</code> 变为 <code>-2.0</code>，得到 <code>[2.0,3.0,-2.0]</code>。如果随后使用 <code>top_p=0.8</code>，经过 softmax 后，token 1 的概率约为 <code>0.721</code>，尚未达到 0.8；加上 token 0 后累积概率约为 <code>0.986</code>，因此核心词为 tokens <code>{1,0}</code>，token 2 被截断。</p>
-  <p>在最终采样之前，对保留集重新归一化：token 0 和 token 1 的概率约为 <code>[0.269, 0.731]</code>，熵约为 <code>0.582</code>，概率最高的 token 是 1。一个有用的分布记录表会记录处理后的 logits、保留的候选集、归一化概率、熵和当前最高概率 token；这将“采样参数改变输出”的陈述变成可检查的概率迹。</p>
+  <p>给定 logits <code>[4.0, 3.0, -1.0]</code>，生成的 token ids 为 <code>[0,2]</code>，重复惩罚为 <code>2.0</code>。首先处理重复的 token：token 0 的正 logit 从 <code>4.0</code> 变为 <code>2.0</code>，token 2 的负 logit 从 <code>-1.0</code> 变为 <code>-2.0</code>，得到 <code>[2.0,3.0,-2.0]</code>。如果随后使用 <code>top_p=0.8</code>，经过 softmax 后，token 1 的概率约为 <code>0.721</code>，尚未达到 0.8；加上 token 0 后累积概率约为 <code>0.986</code>，因此核心词为 tokens <code>{1,0}</code>，token 2 被截断。</p>
+  <p>在最终采样之前，对保留集重新归一化：token 0 和 token 1 的概率约为 <code>[0.269, 0.731]</code>，熵约为 <code>0.582</code>，概率最高的 token 是 1。一个实用的分布记录表会记录处理后的 logits、保留的候选集、归一化概率、熵和当前最高概率 token；这样就把“采样参数改变输出”这个说法变成了可以检查的概率迹。</p>
 
   <h4>策略选择的实用判断</h4>
   <ul>
@@ -582,11 +582,11 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <p>贪心解码只保留每一步概率最高的 token，容易在早期陷入局部最优。束搜索保留 <code>num_beams</code> 条候选路径。每一步，将每条路径扩展出几个下一个 token，然后按累积对数概率排序，保留前几个。</p>
 
   <h4>长度偏置</h4>
-  <p>直接累积对数概率会天然偏向更短的序列，因为每多生成一个 token 就增加一个非正的 log 概率。在机器翻译、摘要和结构化候选生成中，通常使用长度归一化或长度惩罚来缓解这一问题：</p>
+  <p>直接累积对数概率会偏向更短的序列，因为每多生成一个 token 就增加一个非正的 log 概率。在机器翻译、摘要和结构化候选生成中，常用长度归一化或长度惩罚来缓解这一问题：</p>
   <div class="math-box"><div class="label">长度归一化束评分</div>
     <div class="katex" data-expr="s(y)=\frac{\sum_t \log p(y_t|y_{&lt;t},x)}{|y|^{\alpha}}" aria-label="s(y)=\frac{\sum_t \log p(y_t|y_{&lt;t},x)}{|y|^{\alpha}}" role="img"></div>
   </div>
-  <p><code>length_normalized_score</code> 和 <code>beam_search</code> 背后的概念对应这一过程。一个紧凑的 batch-size-1 实现足以展示束表、原始得分和归一化得分之间的关系，然后再引入生产级批处理和早停策略。</p>
+  <p><code>length_normalized_score</code> 和 <code>beam_search</code> 背后的概念对应这一过程。用一个紧凑的 batch-size-1 实现可以展示束表、原始得分和归一化得分之间的关系，之后引入生产级批处理和早停策略。</p>
 
   <div class="worked-example">
     <h4>示例：两步束搜索与长度归一化</h4>
@@ -602,20 +602,20 @@ metrics     distinct-2, repetition rate, task score, latency</div>
         <tr><td>2</td><td><code>A C</code></td><td>-1.0</td><td>-1.2</td><td>2</td><td>-0.600</td></tr>
       </tbody>
     </table>
-    <p>如果只考虑累积 logp，短答案 <code>EOS</code> 的 <code>-0.4</code> 高于 <code>A B</code> 的 <code>-0.5</code>，因此束可能会偏向过短的输出。使用 <code>s(y)=logp/|y|</code> 后，<code>A B</code> 的得分为 <code>-0.25</code>，优于 <code>EOS</code> 的 <code>-0.4</code>。这就是长度惩罚的作用：它不是无条件奖励长句，而是减少“每增加一个 token 就多加一个负数”导致的短句偏置。</p>
+    <p>如果只考虑累积 logp，短答案 <code>EOS</code> 的 <code>-0.4</code> 高于 <code>A B</code> 的 <code>-0.5</code>，因此束可能会偏向过短的输出。使用 <code>s(y)=logp/|y|</code> 后，<code>A B</code> 的得分为 <code>-0.25</code>，优于 <code>EOS</code> 的 <code>-0.4</code>。这就是长度惩罚的作用：它不会无条件奖励长句，而是减少“每增加一个 token 就多加一个负数”带来的短句偏置。</p>
   </div>
 
   <h4>何时使用束搜索</h4>
   <ul>
     <li><strong>适用场景：</strong>目标明确的任务，如翻译、抽取、代码候选、短数学答案、受模式约束的输出。</li>
-    <li><strong>不可盲目使用：</strong>在开放式聊天和创意写作中，束搜索可能产生高概率但平庸、重复或过短的输出。</li>
+    <li><strong>避免盲目使用：</strong>在开放式聊天和创意写作中，束搜索可能产生高概率但平庸、重复或过短的输出。</li>
     <li><strong>必须报告：</strong>束大小、长度惩罚、最大长度、是否使用早停，以及候选排序指标。</li>
   </ul>  <div class="info-box key"><span class="icon">🔑</span><div><strong>边界说明：</strong>束搜索是一种搜索策略，不是训练目标，也不能保证事实正确性。它能更系统地探索高概率区域，但如果模型本身的概率倾向于错误答案，束搜索只会更可靠地找到高概率错误。</div></div>
 </section><!-- ================================================================ -->
 <!-- 8.7C 推理生成与测试时计算 -->
 <!-- ================================================================ --><section class="card" id="s8-7c">
   <h3>8.7C 推理生成：用更多测试时计算换取更高准确率</h3>
-  <p>对于数学、代码、规划以及多跳问答，生成策略并不仅仅是"选择哪个 token"。模型可能先生成中间推理步骤，然后再选出最终答案。近期的推理方法可以统一在同一个问题下：训练完成后，你是否愿意用更多的<strong>测试时计算（test-time compute）</strong>来换取更高的任务成功率？</p>
+  <p>对于数学、代码、规划以及多跳问答，生成策略不只是"选择哪个 token"。模型可能先生成中间推理步骤，然后再选出最终答案。近期的推理方法都可以归结为同一个问题：训练完成后，你是否愿意用更多的<strong>测试时计算（test-time compute）</strong>来换取更高的任务成功率？</p>
 
   <h4>常见方法</h4>
   <div class="table-wrap">
@@ -649,10 +649,10 @@ metrics     distinct-2, repetition rate, task score, latency</div>
     <li><strong>失败类型：</strong> 算术错误、遗漏条件、无效代码、错误投票、验证器误判。</li>
   </ul>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 推理能力并不是"输出更长的解释"。严谨的实验必须证明更多的中间 token 或更多候选确实能提升任务成功率，并且必须说明消耗了多少测试时计算。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 推理能力不等于"输出更长的解释"。严谨的实验必须证明更多的中间 token 或更多候选确实能提升任务成功率，并且必须说明消耗了多少测试时计算。</div></div>
 </section><section class="card" id="s8-7d">
   <h3>8.7D 思考模式、思考预算与运行时路由</h3>
-  <p>最近的推理模型已将“投入多少思考”变为一个推理时的控制变量，而不是模型的固定属性。<a href="https://arxiv.org/abs/2505.09388" target="_blank">Qwen3技术报告</a>描述了一个统一的框架，同时包含思考模式（thinking mode）和非思考模式（non-thinking mode），外加一个思考预算（thinking budget）机制，该机制根据任务复杂度分配更多或更少的生成推理token。对工程师而言，这应视为一个运行时策略问题：模型、提示模板、最大推理token数、候选数量、验证器、延迟目标和回退路径共同定义了用户可见的行为。</p>
+  <p>最近的推理模型将“投入多少思考”变成了推理时可调节的参数，而不是模型的固定属性。<a href="https://arxiv.org/abs/2505.09388" target="_blank">Qwen3技术报告</a>描述了一个统一的框架，同时包含思考模式（thinking mode）和非思考模式（non-thinking mode），以及一个思考预算（thinking budget）机制，该机制根据任务复杂度分配更多或更少的生成推理token。对工程师而言，这应该看作一个运行时策略问题：模型、提示模板、最大推理token数、候选数量、验证器、延迟目标和回退路径一起决定了用户看到的行为。</p>
 
   <div class="foundation-graph" role="img" aria-label="思考预算路由图">
     <svg viewBox="0 0 900 300">
@@ -697,13 +697,13 @@ metrics     distinct-2, repetition rate, task score, latency</div>
       <tr><td>验证器重排序</td><td>代码、数学、工具规划以及有可靠测试或评分器的受约束领域</td><td>验证器假阳性、评分器覆盖率、重排序后的top-1准确率</td><td>验证器奖励风格、长度或捷径模式而非正确性</td></tr>
     </table>
   </div>
-  <p>因此本课程将思考预算视为服务合约的一部分。发布说明应说明默认模式、预算上限、路由规则、停止条件、回退路径和测量切片。如果模型同时支持思考和非思考模式，评估必须报告质量与延迟的帕累托前沿（Pareto frontier），而不仅仅是在最大token预算下获得的最佳分数。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong> 思考模式并非一种神奇的能力标签。它是对生成token和验证工作的受控分配。高级推理工程师应该能够决定何时使用这些token、如何停止，以及如何证明额外的计算带来了真正的任务成功。</div></div>
+  <p>因此本课程把思考预算当作服务合约的一部分。发布说明需要写明默认模式、预算上限、路由规则、停止条件、回退路径和测量切片。如果模型同时支持思考和非思考模式，评估必须报告质量与延迟的帕累托前沿（Pareto frontier），而不仅仅是在最大token预算下获得的最佳分数。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong> 思考模式不是一种神奇的能力标签。它是对生成token和验证工作的受控分配。高级推理工程师应该能决定何时使用这些token、如何停止，以及如何证明额外的计算带来了真正的任务成功。</div></div>
 </section><!-- ================================================================ -->
 <!-- 8.7E Reasoning controller（推理控制器） -->
 <!-- ================================================================ --><section class="card" id="s8-7e">
   <h3>8.7E 推理控制器：Effort、隐藏 Token、不完整输出与工具延续</h3>
-  <p>当推理成为请求级别的控制时，生成系统需要一个控制器，而不是固定的解码方案。OpenAI 的 <a href="https://developers.openai.com/api/docs/guides/reasoning" target="_blank">推理模型文档</a> 将其具体化：<code>reasoning.effort</code> 在速度与 token 使用量之间权衡更深度的推理，隐藏推理 token 占用上下文并按输出 token 计费，如果在产生可见输出之前达到 token 上限，则响应可能不完整。Qwen3 的 thinking-budget 设计从开源模型的角度指向相同的工程模式：模型可能支持多种推理模式，但产品必须决定何时每种模式值得其成本。</p>
+  <p>当推理成为请求级别的控制时，生成系统需要控制器，而不是固定的解码方案。OpenAI 的 <a href="https://developers.openai.com/api/docs/guides/reasoning" target="_blank">推理模型文档</a> 给出了具体设计：<code>reasoning.effort</code> 在速度与 token 使用量之间权衡推理深度，隐藏推理 token 占用上下文并按输出 token 计费，如果达到 token 上限时还未产生可见输出，响应可能不完整。Qwen3 的 thinking-budget 设计从开源角度体现了相同的工程思路：模型可以支持多种推理模式，但产品需要决定何时使用哪种模式并承担相应成本。</p>
 
   <div class="svg-diagram" style="max-width:980px">
     <svg viewBox="0 0 980 390" role="img" aria-label="Reasoning controller lifecycle from task classification to effort selection, generation, monitoring, and fallback">
@@ -746,7 +746,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   <p class="diagram-caption">图 8-3：推理控制器生命周期。Effort 选择、隐藏 token 预算、不完整响应处理、工具延续和评估反馈是服务策略的一部分。</p>
 
   <h4>1. Effort 等级是一个评估旋钮，而非质量保证</h4>
-  <p>只有在代表性评估显示出可衡量的改进，足以证明延迟和成本合理时，增加 effort 才有用。低 effort 更适合短工具计划、提取和客服路由；中等 effort 通常是平衡的起点；高或超高 effort 应保留给困难推理、长期研究、调试、安全审查或异步智能体工作流。如果提示词的成功标准不明确、停止规则薄弱或工具访问不受限制，更多推理会导致过度思考、不必要的搜索和输出退化。</p>
+  <p>只有代表性评估显示可衡量的改进，且延迟和成本合理时，增加 effort 才有用。低 effort 更适合短工具计划、提取和客服路由；中等 effort 通常是平衡的起点；高或超高 effort 应留给困难推理、长期研究、调试、安全审查或异步智能体工作流。如果提示词的成功标准不明确、停止规则薄弱或工具访问不受限制，更多推理会导致过度思考、不必要的搜索和输出退化。</p>
   <div class="table-wrap">
     <table>
       <tr><th>控制器决策</th><th>使用时机</th><th>风险</th><th>所需证据</th></tr>
@@ -758,7 +758,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   </div>
 
   <h4>2. 隐藏推理 token 依然是容量和成本</h4>
-  <p>推理 token 可能在最终答案中不可见，但它们仍然消耗输出预算和上下文空间。这造成两个工程陷阱。首先，<code>max_output_tokens</code> 必须同时覆盖隐藏推理和可见答案 token；否则模型可能将整个预算用于思考并返回不完整的响应。其次，长提示词、检索到的上下文、工具痕迹和隐藏推理竞争同一个上下文窗口，因此长上下文 RAG 请求可能需要比短数学问题更低的推理预算。</p>
+  <p>推理 token 可能在最终答案中不可见，但它们仍然消耗输出预算和上下文空间。这会造成两个工程陷阱。首先，<code>max_output_tokens</code> 必须同时覆盖隐藏推理和可见答案 token；否则模型可能将整个预算用于思考并返回不完整的响应。其次，长提示词、检索到的上下文、工具痕迹和隐藏推理竞争同一个上下文窗口，因此长上下文 RAG 请求可能需要比短数学问题更低的推理预算。</p>
   <div class="table-wrap">
     <table>
       <tr><th>预算项</th><th>消耗什么</th><th>忽略的后果</th><th>监控项</th></tr>
@@ -770,38 +770,38 @@ metrics     distinct-2, repetition rate, task score, latency</div>
   </div>
 
   <h4>3. 生产级推理控制器需要回退机制</h4>
-  <p>一个健壮的控制器应该定义当运行不完整、验证器拒绝答案、工具调用超时或 token 预算耗尽时发生什么。典型的回退包括要求澄清、返回带有不确定性的部分答案、用更高 effort 或更小上下文重试一次、路由到专用模型、或推迟到异步工作流。重点是回退规则必须像解码参数一样被评估：衡量恢复成功率、增加的延迟、以及回退是否掩盖了系统性模型失败。</p>
+  <p>一个健壮的控制器应当定义以下场景的处理方式：运行不完整、验证器拒绝答案、工具调用超时、或 token 预算耗尽。典型的回退包括要求澄清、返回带不确定性的部分答案、用更高 effort 或更小上下文重试一次、路由到专用模型、或推迟到异步工作流。关键是回退规则必须像解码参数一样经过评估：衡量恢复成功率、延迟增加、以及回退是否掩盖了系统性模型失败。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong> 推理 effort 是服务策略的控制面，而不是通用的升级开关。高级推理工程师通过按切片评估、隐藏 token 核算、不完整响应处理、工具延续规则和回退指标来调优它。</div></div>
 </section><!-- ================================================================ -->
 <!-- 8.8 MTP 理论 -->
 <!-- ================================================================ --><section class="card" id="s8-8">
   <h3>8.8 DeepSeek MTP – 多 Token 预测的理论</h3>
-  <p><strong>多 Token 预测（Multi-Token Prediction, MTP）</strong>是 DeepSeek-V3 中使用的一种训练和推理技术。传统语言模型每次只预测<strong>一个</strong>未来 token，而 MTP 允许模型同时预测<strong>多个</strong>未来 token。</p>
+  <p><strong>多 Token 预测（Multi-Token Prediction, MTP）</strong>是 DeepSeek-V3 使用的一种训练和推理技术。传统语言模型每次只预测<strong>一个</strong>未来 token，MTP 则让模型同时预测<strong>多个</strong>未来 token。</p>
 
   <h4>训练阶段的 MTP：多输出头架构</h4>
   <p>标准语言模型只有一个输出头（LM Head），它将最后一个隐藏状态 <span class="katex-inline" data-expr="\mathbf{h}_t" aria-label="\mathbf{h}_t" role="img"></span> 映射到词汇 logits 来预测 <span class="katex-inline" data-expr="x_{t+1}" aria-label="x_{t+1}" role="img"></span>。MTP 增加了 <span class="katex-inline" data-expr="D" aria-label="D" role="img"></span> 个额外的输出头（MTP Heads），每个头预测不同偏移位置的未来 token：</p>
   <div class="math-box"><div class="label">公式 8.3 MTP 损失</div>
     <div class="katex" data-expr="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})" aria-label="\mathcal{L}_{\text{MTP}} = \sum_{d=1}^D \frac{1}{T-d} \sum_{t=1}^{T-d} \text{CE}(P_d(x_{t+d} \mid x_{&lt;t}), x_{t+d})" role="img"></div>
   </div>
-  <p>每个 MTP 头是一个小型 MLP + LayerNorm，参数量远少于主 Transformer。它们共享底层特征表示，仅在输出层有独立参数。</p>
+  <p>每个 MTP 头是一个小型 MLP + LayerNorm，参数量远少于主 Transformer。它们共享底层特征表示，只在输出层有独立参数。</p>
 
   <h4>双重好处</h4>
   <ul>
-    <li><strong>训练收益：</strong>更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测之后的 token。这有助于模型学习更长距离的依赖关系。DeepSeek-V3 报告提到了 MTP 带来的训练效率提升；具体幅度取决于模型、数据和训练设置，原文并未将其推广为一个通用比率。</li>
+    <li><strong>训练收益：</strong>更密集的监督信号。每个 token 位置不仅要预测下一个 token，还要预测之后多个 token。这有助于模型学习更长距离的依赖关系。DeepSeek-V3 报告提到了 MTP 带来的训练效率提升；具体幅度取决于模型、数据和训练设置，原文并未将其推广为一个通用比率。</li>
     <li><strong>推理收益：</strong>推理时，MTP 头可以用作<strong>推测解码的草稿模型</strong>。由于 MTP 头参数量远少于完整 Transformer，它可以快速生成候选 token，然后由主模型在单次前向传播中验证。</li>
   </ul>
-  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 报告选择了 <span class="katex-inline" data-expr="D = 1" aria-label="D = 1" role="img"></span>（预测 1 个额外 token），因为在他们的实验中，更大的 <span class="katex-inline" data-expr="D" aria-label="D"></span> 显示出边际收益递减。这里的要点是理解“多个预测头既可以服务于训练，也可以用于草稿生成”，而不是记住某个固定的收益比率。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>DeepSeek-V3 报告选择了 <span class="katex-inline" data-expr="D = 1" aria-label="D = 1" role="img"></span>（预测 1 个额外 token），因为在他们的实验中，更大的 <span class="katex-inline" data-expr="D" aria-label="D"></span> 显示出边际收益递减。这里需要理解的是：多个预测头既可以用于训练，也可以用于草稿生成，而不是记住某个固定的收益比率。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 5：推测解码 -->
 <!-- ================================================================ --><section class="card" id="s8-9">
   <h3>8.9 编程练习 6：实现一个简化的投机解码</h3>
-  <p><strong>投机解码</strong>的核心思想非常巧妙：使用一个<strong>小模型（草稿模型）</strong>快速生成候选 token，然后使用一个<strong>大模型（目标模型）</strong>并行验证这些候选。当满足拒绝采样条件时，可以保留目标模型的采样分布；实际加速取决于草稿模型的速度、接受率、批处理以及系统瓶颈，论文和系统报告中通常显示 1.x 到数倍的提升。</p>
+  <p><strong>投机解码</strong>的核心思想是：用一个<strong>小模型（草稿模型）</strong>快速生成候选 token，然后用一个<strong>大模型（目标模型）</strong>并行验证这些候选。通过拒绝采样，可以保证输出分布与直接使用目标模型采样一致；实际加速取决于草稿模型的速度、接受率、批处理以及系统瓶颈，论文和系统报告中的加速比通常在 1.x 到数倍之间。</p>
 
   <h4>算法流程</h4>
   <ol>
     <li><strong>草稿阶段：</strong>使用轻量级草稿模型（例如 100M）自回归生成 <span class="katex-inline" data-expr="\gamma" aria-label="γ" role="img"></span> 个候选 token（通常 <span class="katex-inline" data-expr="\gamma = 4" aria-label="γ = 4" role="img"></span> 或 5）</li>
     <li><strong>验证阶段：</strong>将候选 token + 前缀输入目标模型（例如 7B），一次前向传播得到所有位置的 logits</li>
-    <li><strong>拒绝采样：</strong>检查每个位置上目标/草稿模型的概率分布——如果差异过大，则拒绝并从修正后的分布重新采样</li>
+    <li><strong>拒绝采样：</strong>比较每个位置上目标模型与草稿模型的概率分布，若差异过大，则拒绝该 token 并从修正后的分布重新采样</li>
     <li><strong>接受：</strong>接受的 token 和重新采样的 token 一起添加到输出序列中</li>
   </ol>
 
@@ -816,7 +816,7 @@ metrics     distinct-2, repetition rate, task score, latency</div>
       <p><strong>要求：</strong></p>
       <ul>
         <li>草稿模型使用 Top-P 采样生成 <code>gamma</code> 个候选 token</li>
-        <li>目标模型验证：一次前向传播计算所有候选位置的目标概率和草稿概率</li>
+        <li>目标模型验证：一次前向传播计算出所有候选位置的目标概率和草稿概率</li>
         <li>拒绝采样：以概率 <code>min(1, p_target / p_draft)</code> 接受每个候选</li>
         <li>拒绝时，从 <code>max(0, p_target - p_draft)</code> 重新采样</li>
         <li>如果所有候选都被接受，则额外从目标模型采样一个 token</li>
@@ -889,14 +889,14 @@ def speculative_decoding(target_model, draft_model,
         "acceptance_rate": accepted_count / proposed if proposed else 0.0,
     }
     return prefix, stats</div>
-	      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>分布保持分析：</strong>当草稿/目标概率、采样温度和拒绝采样实现均满足论文假设时，最终输出分布可以与直接从目标模型采样保持一致。加速不能仅凭 <span class="katex-inline" data-expr="\gamma" aria-label="γ" role="img"></span> 判断：如果每轮生成 <span class="katex-inline" data-expr="\gamma" aria-label="γ" role="img"></span> 个草稿 token，目标模型验证一次，草稿模型每步成本是目标模型每步成本的 <span class="katex-inline" data-expr="\alpha" aria-label="α" role="img"></span> 倍，那么每轮时间约为 <span class="katex-inline" data-expr="1+\alpha\gamma" aria-label="1+αγ" role="img"></span> 个目标模型步长单位；真正的分子是该轮实际写入输出的 token 数，取决于接受率。</p>
-	    </div>
-	  </div>
-	</section><!-- ================================================================ -->
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>分布保持分析：</strong>当草稿/目标概率、采样温度和拒绝采样实现均满足论文假设时，最终输出分布与直接从目标模型采样一致。加速不能仅凭 <span class="katex-inline" data-expr="\gamma" aria-label="γ" role="img"></span> 判断：若每轮生成 <span class="katex-inline" data-expr="\gamma" aria-label="γ" role="img"></span> 个草稿 token，目标模型验证一次，且草稿模型每步成本是目标模型每步成本的 <span class="katex-inline" data-expr="\alpha" aria-label="α" role="img"></span> 倍，那么每轮耗时大约相当于 <span class="katex-inline" data-expr="1+\alpha\gamma" aria-label="1+αγ" role="img"></span> 个目标模型步长；实际加速取决于该轮实际写入输出的 token 数，即接受率。</p>
+    </div>
+  </div>
+</section><!-- ================================================================ -->
 <!-- 8.9A 详细示例 -->
 <!-- ================================================================ --><section class="card" id="s8-9a">
   <h3>8.9A 工作示例：推测解码的接受率与加速比核算</h3>
-  <p>设 <code>gamma=4</code>，草稿模型生成一个token的时间是目标模型执行一步所需时间的 <span class="katex-inline" data-expr="\alpha=0.2" aria-label="\alpha=0.2" role="img"></span> 倍。每一轮中，草稿模型先提出4个token，然后目标模型进行1次并行验证。考虑三轮生成：</p>
+  <p>设 <code>gamma=4</code>，草稿模型生成一个token的时间是目标模型一步时间的 <span class="katex-inline" data-expr="\alpha=0.2" aria-label="\alpha=0.2" role="img"></span> 倍。每一轮中，草稿模型先提出4个token，然后目标模型进行1次并行验证。考虑三轮生成：</p>
   <div class="table-wrap">
     <table>
       <tr><th>轮次</th><th>草稿提议数</th><th>接受的草稿token数</th><th>写入的输出token数</th><th>说明</th></tr>
@@ -905,42 +905,42 @@ def speculative_decoding(target_model, draft_model,
       <tr><td>3</td><td>4</td><td>3</td><td>4</td><td>接受3个然后拒绝1个，写入纠正token并进入下一轮</td></tr>
     </table>
   </div>
-  <p>在这三轮中，共提出 <code>12</code> 个草稿token，接受了 <code>9</code> 个，接受率为 <code>9/12=75%</code>；实际写入的输出token数为 <code>5+3+4=12</code>。如果没有推测解码，目标模型需要进行12次自回归前向传播。使用推测解码后，目标模型仅验证3次，但草稿模型运行12次，因此近似时间为：</p>
+  <p>在这三轮中，共提出了 <code>12</code> 个草稿token，接受了 <code>9</code> 个，接受率为 <code>9/12=75%</code>；实际写入的输出token数为 <code>5+3+4=12</code>。如果没有推测解码，目标模型需要进行12次自回归前向传播。使用推测解码后，目标模型只需验证3次，草稿模型运行了12次，因此近似时间为：</p>
   <div class="math-box"><div class="label">推测解码粗略加速比</div>
     <div class="katex" data-expr="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" aria-label="\text{time}_{\text{spec}}\approx 3\cdot1 + 12\cdot0.2=5.4,\qquad \text{speedup}\approx 12/5.4=2.22\times" role="img"></div>
   </div>
-  <p>这种核算解释了两种常见误解：第一，<code>gamma=4</code> 并不能保证固定的4倍加速，因为草稿模型也需要时间，且拒绝会减少每轮产生的token数。第二，高接受率并不自动转化为高的端到端吞吐量；实际服务还受到批处理、KV cache、内存带宽、网络和排队的影响。因此，实验报告应同时报告 <code>proposed</code>、<code>accepted</code>、<code>generated_tokens</code>、<code>acceptance_rate</code>、目标模型验证次数、草稿模型步数以及粗略加速比。一份推测解码报告应根据每轮的接受计数和输出token数计算出这些量，然后结合P95延迟、QPS、草稿开销、额外内存以及质量/分布检查，再决定是否启用推测解码。</p>
+  <p>这个核算可以澄清两种常见误解：第一，<code>gamma=4</code> 并不能保证固定的4倍加速，因为草稿模型本身也需要时间，而且拒绝会减少每轮产生的token数。第二，高接受率并不直接意味着高端到端吞吐量；实际服务还受到批处理、KV cache、内存带宽、网络和排队等因素的影响。因此，实验报告应同时报告 <code>proposed</code>、<code>accepted</code>、<code>generated_tokens</code>、<code>acceptance_rate</code>、目标模型验证次数、草稿模型步数以及粗略加速比。在编写推测解码报告时，应根据每轮的接受计数和输出token数计算出这些量，再结合P95延迟、QPS、草稿开销、额外内存以及质量/分布检查，最终决定是否启用推测解码。</p>
 </section><!-- ================================================================ -->
 <!-- 8.10 上下文窗口 -->
 <!-- ================================================================ --><section class="card" id="s8-10">
   <h3>8.10 上下文窗口与注意力汇聚</h3>
-  <p><strong>上下文窗口 (Context Window)</strong> 是模型单次生成时能够“看到”的最大 token 数量。窗口越长，帮助越大，但前提是模型仍能从中检索、优先处理并使用相关信息。</p>
+  <p><strong>上下文窗口 (Context Window)</strong> 是模型单次生成时能“看到”的最大 token 数量。窗口越长，模型能利用的信息就越多，但前提是它仍能有效地检索、优先处理并使用这些信息。</p>
   <ul>
-    <li><strong>长距离依赖：</strong> 小说中的伏笔可能跨越数百页后揭露；函数定义在文件开头，但调用在文件末尾。更长的上下文意味着更好的跨段落推理能力。</li>
-    <li><strong>少样本学习 (Few-shot Learning)：</strong> 在提示词中放置更多示例（上下文示例）能提升模型性能。上下文越长，容纳的示例就越多。</li>
-    <li><strong>多轮对话：</strong> 维持完整的对话历史。一个 128K 窗口大约可以容纳 10 万字符的对话记录。</li>
+    <li><strong>长距离依赖：</strong> 小说中的伏笔可能跨越数百页后揭露；函数定义在文件开头，但调用在文件末尾。更长的上下文有助于跨段落推理。</li>
+    <li><strong>少样本学习 (Few-shot Learning)：</strong> 在提示词中放置更多示例能提升模型性能。上下文越长，容纳的示例就越多。</li>
+    <li><strong>多轮对话：</strong> 保持完整的对话历史。一个 128K 窗口大约可以容纳 10 万字符的对话记录。</li>
   </ul>
 
   <h4>注意力汇聚 (Attention Sink)</h4>
-  <p>近期研究发现了一个有趣的现象——在长序列中，模型倾向于将大量注意力权重分配给初始 token（通常是 <code><code>&lt;BOS&gt;</code></code> 或句子起始 token），即使这些 token 与当前生成无关。这被称为 <strong>注意力汇聚 (Attention Sink)</strong>（Xiao et al., 2024）。</p>
-  <p>原因：训练时序列长度有限（例如 4K），导致模型形成一种“残余注意力偏差”——初始 token 吸收了过多的注意力分数。当推理时序列长度增加，这种偏差被放大，模型将大量注意力浪费在无关的早期 token 上。</p>
+  <p>近期研究发现了一个现象——在长序列中，模型会倾向于把大量注意力权重分配给初始 token（通常是 <code><code>&lt;BOS&gt;</code></code> 或句子起始 token），即使这些 token 与当前生成无关。这被称为 <strong>注意力汇聚 (Attention Sink)</strong>（Xiao et al., 2024）。</p>
+  <p>原因：训练时序列长度有限（例如 4K），模型会形成一种“残余注意力偏差”——初始 token 吸收了过多的注意力分数。推理时序列长度增加后，这种偏差被放大，模型就把大量注意力浪费在无关的早期 token 上。</p>
 
   <h4>上下文窗口示例</h4>
   <div class="table-wrap">
     <table>
       <tr><th>模型/报告示例</th><th>公开规格示例</th><th>教学目的</th></tr>
-      <tr><td>GPT-4 系列长上下文版本</td><td>数十万上下文</td><td>说明产品规格会随版本和 API 变化</td></tr>
-      <tr><td>Claude 3 系列</td><td>约 200K 上下文</td><td>说明长上下文仍受价格、延迟和召回质量的制约</td></tr>
-      <tr><td>Gemini 1.5 Pro</td><td>百万级上下文公开案例</td><td>说明上下文长度不等于稳定的检索能力</td></tr>
-      <tr><td>前沿长上下文模型卡</td><td>百万级上下文公开案例</td><td>说明前沿模型规格必须包含来源和日期</td></tr>
+      <tr><td>GPT-4 系列长上下文版本</td><td>数十万上下文</td><td>产品规格随版本和 API 变化</td></tr>
+      <tr><td>Claude 3 系列</td><td>约 200K 上下文</td><td>长上下文仍受价格、延迟和召回质量的制约</td></tr>
+      <tr><td>Gemini 1.5 Pro</td><td>百万级上下文公开案例</td><td>上下文长度不等于稳定的检索能力</td></tr>
+      <tr><td>前沿长上下文模型卡</td><td>百万级上下文公开案例</td><td>前沿模型规格必须包含来源和日期</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>阅读笔记：</strong> 长上下文的数值常随模型版本、API 形式和计费策略变化。学习时请将这些数值视为理解工程权衡的示例：窗口越长，就越需要综合分析注意力、KV Cache、检索质量、延迟和成本。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>阅读笔记：</strong> 长上下文的数值常随模型版本、API 形式和计费策略变化。学习时应把这些数值当作理解工程权衡的案例：窗口越长，越需要综合分析注意力、KV Cache、检索质量、延迟和成本。</div></div>
 </section><!-- ================================================================ -->
 <!-- 8.10A 生成策略部署决策 -->
 <!-- ================================================================ --><section class="card" id="s8-10a">
   <h3>8.10A 生成策略部署决策：将质量、格式、延迟和成本放在同一张表上</h3>
-  <p>课程中介绍的贪婪解码、top-p、束搜索、自一致性、推测解码和受约束解码并非一组互斥的按钮。实际服务通常将它们组合成一个生成策略：首先根据任务确定输出空间，然后选择采样/搜索方法，最后使用格式约束、停止条件和成本预算来保护系统。</p>
+  <p>课程中介绍的贪婪解码、top-p、束搜索、自一致性、推测解码和受约束解码不是一组互斥的按钮。实际服务通常将它们组合成一个生成策略：先根据任务确定输出空间，再选择采样/搜索方法，最后用格式约束、停止条件和成本预算保护系统。</p>
 
   <div class="table-wrap">
     <table>
@@ -953,25 +953,25 @@ def speculative_decoding(target_model, draft_model,
     </table>
   </div>
 
-  <h4>1. 首先确定输出空间</h4>
-  <p>如果输出必须是 JSON、SQL、函数调用或固定枚举，则应优先考虑受约束解码或结构化输出，而不是依靠提示词提醒模型"请只输出 JSON"。如果输出是开放式的解释，那么调整 temperature、top-p 和重复惩罚是主要关注点。如果任务有可验证的答案，例如代码或数学，采样多样性本身不是目标；必须通过 pass@k、单元测试或验证器将多样本生成转换为正确率。</p>
+  <h4>1. 先确定输出空间</h4>
+  <p>如果输出必须是 JSON、SQL、函数调用或固定枚举，优先考虑受约束解码或结构化输出，而不是靠提示词提醒模型"请只输出 JSON"。如果输出是开放式的解释，那么调整 temperature、top-p 和重复惩罚是主要关注点。如果任务有可验证的答案，例如代码或数学，采样多样性本身不是目标；必须用 pass@k、单元测试或验证器把多样本生成转换为正确率。</p>
 
-  <h4>2. 然后确定风险边界</h4>
-  <p>每个生成策略都应明确说明其失败边界。例如，在客户服务 RAG 中，低温度可以降低随机性，但不能保证引文忠实；束搜索可以搜索高概率候选，但不能修复遗漏的检索；自一致性可以减少单次推理错误的机会，但对于系统性误解可能导致多数投票错误；结构化解码可以保证语法有效性，但不能保证语义字段正确性。</p>
+  <h4>2. 再确定风险边界</h4>
+  <p>每个生成策略都应该明确说明其失败边界。例如，在客户服务 RAG 中，低温度可以降低随机性，但不能保证引文忠实；束搜索可以搜索高概率候选，但不能修复遗漏的检索；自一致性可以减少单次推理错误的机会，但对于系统性误解可能导致多数投票错误；结构化解码可以保证语法有效性，但不能保证语义字段正确性。</p>
 
   <h4>3. 成本必须按每个完整请求计算</h4>
-  <p>一份部署报告不能只写模型的 tokens/s。一个请求的端到端成本包括提示 token、生成的 token、推理样本、RAG 检索/重排序、工具调用、结构化解码开销、重试和排队。一个简化的核算可以描述为：</p>
+  <p>一份部署报告不能只写模型的 tokens/s。一个请求的端到端成本包括提示 token、生成的 token、推理样本、RAG 检索/重排序、工具调用、结构化解码开销、重试和排队。一个简化的核算可以写成：</p>
   <div class="code-block" data-lang="text">
 request_cost ~= prompt_tokens
              + generated_tokens * samples
              + reranker_calls * reranker_cost
              + tool_calls * tool_cost
              + retries * retry_cost</div>
-  <p>如果 <code>samples</code> 从 1 增加到 16，pass@k 可能会提高，但 P95 延迟和 token 成本也会几乎线性增加，除非系统执行并行采样并且具有足够的批量/硬件余量。推测解码可以减少目标模型验证的次数，但它也引入了草稿模型计算和调度复杂性。</p>
+  <p>如果 <code>samples</code> 从 1 增加到 16，pass@k 可能会提高，但 P95 延迟和 token 成本也会几乎线性增加，除非系统做了并行采样并且有足够的批量/硬件余量。推测解码可以减少目标模型验证的次数，但也会引入草稿模型计算和调度复杂性。</p>
 
   <h4>3A. 推理/测试时计算需要预算决策</h4>
-  <p>继 OpenAI o1、DeepSeek-R1 和 Kimi k1.5 之后，许多系统使用"多思考一会儿"作为质量改进方法：增加推理 token，采样多个解题路径，使用验证器或单元测试进行 Best-of-N 选择，或将长链蒸馏为短输出。工程报告不能只报告准确率的提升；还必须报告每问题样本数、平均输出 token 数、P95 延迟、验证器调用次数、每正确答案的成本以及边际收益。</p>
-  <p>测试时计算预算报告将这种判断形式化为部署决策。它比较贪婪解码、自一致性、Best-of-N、验证器重排序或推理模型层级，并输出质量、token 预算、延迟、成本和边际效率信号，以及推荐的部署策略。</p>
+  <p>继 OpenAI o1、DeepSeek-R1 和 Kimi k1.5 之后，许多系统用"多思考一会儿"作为质量改进方法：增加推理 token，采样多个解题路径，用验证器或单元测试做 Best-of-N 选择，或者把长链蒸馏为短输出。工程报告不能只报告准确率的提升；还必须报告每问题样本数、平均输出 token 数、P95 延迟、验证器调用次数、每正确答案的成本以及边际收益。</p>
+  <p>测试时计算预算报告将这种判断形式化为部署决策。它比较贪婪解码、自一致性、Best-of-N、验证器重排序或推理模型层级，输出质量、token 预算、延迟、成本和边际效率信号，以及推荐的部署策略。</p>
   <div class="code-block" data-lang="python">
 report = test_time_compute_budget_report(
     [
@@ -987,10 +987,10 @@ report = test_time_compute_budget_report(
     },
 )
 assert report["recommended_strategy"] == "self_consistency_5"</div>
-  <p>这种预算检查的目的不是取代基准测试，而是防止"用无限采样换取分数"的结论污染部署决策。如果 best-of-16 具有最高的准确率，但超出了 token 和延迟预算，部署报告应说明"需要蒸馏、路由到难题、优化并行采样或拒绝此策略"，而不是直接使用最高分数作为生产策略。</p>
+  <p>这种预算检查的目的不是取代基准测试，而是防止"用无限采样换取分数"的结论污染部署决策。如果 best-of-16 有最高的准确率，但超出了 token 和延迟预算，部署报告应说明"需要蒸馏、路由到难题、优化并行采样或拒绝此策略"，而不是直接拿最高分数当生产策略。</p>
 
   <h4>4. 合格策略描述的格式</h4>
-  <p>生产级生成策略应按以下形式编写：</p>
+  <p>生产级生成策略应该按以下形式编写：</p>
   <div class="code-block" data-lang="text">
 任务：中文客户服务 RAG
 输出：带引用文档ID的自然语言答案
@@ -1006,18 +1006,18 @@ assert report["recommended_strategy"] == "self_consistency_5"</div>
 <!-- ================================================================ --><section class="card" id="s8-11">
   <h3>8.11 章节总结</h3>
   <ul>
-    <li>✅ <strong>自回归生成原理</strong> — P(x)的自回归分解，Prefilling与Decoding</li>
-    <li>✅ <strong>编程练习1：贪心解码</strong> — argmax策略，暴露重复陷阱和暴露偏差</li>
-    <li>✅ <strong>编程练习2：温度采样</strong> — 温度控制分布熵，T→0退化为贪心</li>
-    <li>✅ <strong>编程练习3：Top-K采样</strong> — 固定K截断，缺点是无法自适应</li>
-    <li>✅ <strong>编程练习4：Top-P（核）采样</strong> — 基于累积概率的动态截断，开放生成常用策略之一</li>
-    <li>✅ <strong>编程练习5：策略对比</strong> — 统一Generator类 + distinct-n定量评估</li>
+    <li>✅ <strong>自回归生成原理</strong> — P(x) 自回归分解、Prefilling 与 Decoding</li>
+    <li>✅ <strong>编程练习1：贪心解码</strong> — argmax 策略，展示重复陷阱和暴露偏差</li>
+    <li>✅ <strong>编程练习2：温度采样</strong> — 温度控制分布熵，T→0 时退化为贪心</li>
+    <li>✅ <strong>编程练习3：Top-K 采样</strong> — 固定 K 截断，局限是无法自适应</li>
+    <li>✅ <strong>编程练习4：Top-P（核）采样</strong> — 按累积概率动态截断，开放生成常用策略之一</li>
+    <li>✅ <strong>编程练习5：策略对比</strong> — 统一 Generator 类 + distinct-n 定量评估</li>
     <li>✅ <strong>生成评估边界</strong> — 区分多样性、质量、事实性、延迟和任务完成率</li>
-    <li>✅ <strong>基于推理的生成</strong> — CoT、自一致性投票、pass@k、best-of-N、验证器、测试时计算权衡</li>
-    <li>✅ <strong>约束解码</strong> — 将非法token的logits掩码设为<code>-inf</code>，然后在合法集合上重新归一化</li>
-    <li>✅ <strong>编程练习6：投机解码</strong> — Draft + verify + rejection sampling，理解保持分布加速的适用条件</li>
-    <li>✅ <strong>MTP理论</strong> — 多个输出头，训练/推理双重收益</li>
-    <li>✅ <strong>上下文窗口与Attention Sink</strong></li>
+    <li>✅ <strong>推理型生成</strong> — CoT、自一致性投票、pass@k、best-of-N、验证器、测试时计算权衡</li>
+    <li>✅ <strong>约束解码</strong> — 将非法 token 的 logits 掩码设为 <code>-inf</code>，然后在合法集合上重新归一化</li>
+    <li>✅ <strong>编程练习6：投机解码</strong> — Draft + Verify + Rejection Sampling，理解保持分布的同时加速的适用条件</li>
+    <li>✅ <strong>MTP 理论</strong> — 多个输出头，训练和推理兼顾</li>
+    <li>✅ <strong>上下文窗口与 Attention Sink</strong></li>
   </ul>
   <div class="info-box key"><span class="icon">📚</span><div><strong>延伸阅读：</strong>
     <a href="https://arxiv.org/abs/1904.09751" target="_blank">Holtzman et al. (2020) — The Curious Case of Neural Text Degeneration (Top-P)</a> ·
@@ -1031,27 +1031,27 @@ assert report["recommended_strategy"] == "self_consistency_5"</div>
 <!-- 8.12 结构化解码 -->
 <!-- ================================================================ --><section class="card" id="s8-12">
   <h3>8.12 结构化解码——JSON 模式与约束生成</h3>
-  <p>在 API 和 Agent 场景中，我们常常需要 LLM 输出<strong>特定格式的结构化数据</strong>（JSON、YAML），而不是自由文本。仅让 LLM“尝试输出 JSON”是不够的——它偶尔会输出不完整的 JSON 或多余的文字。</p>
+  <p>在 API 和 Agent 场景中，LLM 经常需要输出<strong>特定格式的结构化数据</strong>（JSON、YAML），而非自由文本。仅仅让 LLM“尝试输出 JSON”不可靠——它偶尔会输出不完整的 JSON 或多余的文字。</p>
 
   <h4>约束解码原理</h4>
-  <p>约束解码根据目标语法在<strong>每一步采样时</strong>动态修改 logits：将不符合语法的 token 的概率设为 -inf，从而保证生成结果遵循指定格式。</p>
+  <p>约束解码在每一步采样时根据目标语法动态修改 logits：将不符合语法的 token 概率设为 -inf，从而保证生成结果遵循指定格式。</p>
   <div class="math-box"><div class="label">约束解码</div>
     <div class="katex" data-expr="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ is legal} \\ -\infty & \text{otherwise} \end{cases}" aria-label="\text{logits}_i' = \begin{cases} \text{logits}_i & \text{token } i \text{ is legal} \\ -\infty & \text{otherwise} \end{cases}" role="img"></div>
   </div>
 
   <h4>实现：基于 JSON Schema 的 Token 过滤</h4>
-  <p>以 JSON 为例：将 JSON Schema 编译成一个<strong>确定有限自动机（DFA）</strong>。在每个解码步骤，将词汇表中的每个 token 输入 DFA 判断是否合法——只有合法的 token 才能被采样。例如，当前缀是 <code>{"name":</code> 时，下一个 token 必须是 <code>"</code>。</p>
+  <p>以 JSON 为例：将 JSON Schema 编译成一个<strong>确定有限自动机（DFA）</strong>。在每个解码步骤，将词汇表中的每个 token 输入 DFA 检查是否合法——只有合法的 token 才能被采样。例如，当前缀是 <code>{"name":</code> 时，下一个 token 必须是 <code>"</code>。</p>
 
   <div class="coding-exercise">
     <h4>练习 7：实现 Token 约束掩码</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>apply_token_constraints(logits, allowed_token_ids)</code>，将每个批次行中非法 token 的 logits 设置为 <code>-inf</code>。</p>
+      <p><strong>任务：</strong>实现 <code>apply_token_constraints(logits, allowed_token_ids)</code>，将每个批次行中的非法 token 的 logits 设置为 <code>-inf</code>。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li>输入 logits 形状为 <code>[batch, vocab]</code></li>
-        <li><code>allowed_token_ids</code> 可以是一个所有样本共享的 token 集合，也可以是每个样本单独的集合</li>
-        <li>每行必须至少保留一个合法 token；如果非法 id 或空集则应报错</li>
-        <li>应用约束后，执行 greedy、top-k 或 top-p；概率仅重新归一化到合法 token 集合上</li>
+        <li><code>allowed_token_ids</code> 可以是所有样本共享的 token 集合，也可以是每个样本单独的集合</li>
+        <li>每行必须至少保留一个合法 token；如果遇到非法的 id 或空集，则应报错</li>
+        <li>应用约束后，执行 greedy、top-k 或 top-p；概率只重新归一化到合法 token 集合上</li>
       </ul>
       <pre># Example: In the second row, token 2 originally has the highest logit, but the grammar currently only allows 0 or 1
 logits = torch.tensor([[5.0, 4.0, 3.0],
@@ -1067,16 +1067,16 @@ next_token = sample_next_token(masked, strategy="greedy")
   <div class="table-wrap">
     <table>
       <tr><th>工具</th><th>原理</th><th>支持的引擎</th></tr>
-      <tr><td><strong>Outlines</strong></td><td>JSON Schema → 索引，高效的 token 过滤</td><td>vLLM, llama.cpp</td></tr>
-      <tr><td><strong>guidance</strong></td><td>正则自动机，每步过滤 token</td><td>HuggingFace, vLLM</td></tr>
+      <tr><td><strong>Outlines</strong></td><td>JSON Schema → 索引，实现高效 token 过滤</td><td>vLLM, llama.cpp</td></tr>
+      <tr><td><strong>guidance</strong></td><td>使用正则自动机，每步过滤 token</td><td>HuggingFace, vLLM</td></tr>
       <tr><td><strong>OpenAI Structured Outputs</strong></td><td>服务端结构化输出能力，提高 schema 遵循度；仍建议在客户端验证</td><td>OpenAI API</td></tr>
       <tr><td><strong>SGLang</strong></td><td>RadixAttention + 原生约束解码</td><td>SGLang</td></tr>
     </table>
   </div>
-  <div class="info-box tip"><span class="icon">💡</span><div>在构建 API 或 Agent 时，优先使用结构化输出或约束解码，并在应用侧执行 schema 验证。仅依赖 prompt 工程难以稳定保证 JSON 格式；可根据部署环境选择 outlines、vLLM、SGLang、llama.cpp 等工具。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div>构建 API 或 Agent 时，应优先使用结构化输出或约束解码，并在应用侧执行 schema 验证。仅靠 prompt 工程难以稳定保证 JSON 格式；可根据部署环境选择 outlines、vLLM、SGLang、llama.cpp 等工具。</div></div>
 </section><section class="card" id="s8-12a">
   <h3>8.12A 结构化输出的可靠性：模式合法性不等于语义正确性</h3>
-  <p>结构化输出应被理解为一个契约堆栈，而非单一功能。JSON模式、严格的JSON Schema、正则表达式/文法约束、工具调用模式、后验证以及重试修复各自保护不同的边界。OpenAI的<a href="https://developers.openai.com/api/docs/guides/structured-outputs" target="_blank">Structured Outputs</a>文档强调了模式遵循；vLLM和SGLang通过JSON schema、正则表达式、选项、文法或EBNF提供了类似的受限输出选项。这些机制使可解析性更加可靠，但它们并不能证明所选字段值是真实、完整、安全或允许执行的。</p>
+  <p>结构化输出是一组逐层保障的契约，而非单一功能。JSON模式、严格的JSON Schema、正则表达式/文法约束、工具调用模式、后验证和重试修复，各自覆盖不同的安全边界。OpenAI的<a href="https://developers.openai.com/api/docs/guides/structured-outputs" target="_blank">Structured Outputs</a>文档强调了模式遵循；vLLM和SGLang通过JSON schema、正则表达式、选项、文法或EBNF提供了类似的受限输出选项。这些机制提升了可解析性，但无法保证字段值是否真实、完整、安全或可以执行。</p>
 
   <div class="svg-diagram" style="max-width:980px">
     <svg viewBox="0 0 980 390" role="img" aria-label="Structured output reliability stack from schema to semantic validation and execution">
@@ -1116,7 +1116,7 @@ next_token = sample_next_token(masked, strategy="greedy")
       <path class="so-line" d="M849 142 C810 184 766 212 728 238"/>
     </svg>
   </div>
-  <p class="diagram-caption">图8-4：结构化输出可靠性堆栈。受限解码保护语法和模式，而语义验证和执行守护保障正确性和安全性。</p>
+  <p class="diagram-caption">图8-4：结构化输出可靠性堆栈。受限解码保证语法和模式正确，语义验证和执行守护确保正确性和安全性。</p>
 
   <h4>1. 根据下游操作选择约束级别</h4>
   <div class="table-wrap">
@@ -1130,7 +1130,7 @@ next_token = sample_next_token(masked, strategy="greedy")
     </table>
   </div>
 
-  <h4>2. 验证必须在解码后分层进行</h4>
+  <h4>2. 解码完成后，需要分层进行验证</h4>
   <p>即使解码器产生了符合schema的JSON，应用程序仍然需要语义验证。对于RAG，文档ID必须在检索到的文档中，且引用的文本片段必须支持该答案。对于数据提取，日期、货币、单位和实体ID必须匹配源证据。对于工具调用，参数必须通过权限检查、租户边界、速率限制和幂等性规则。对于代码或SQL，语法可能合法，但程序可能不安全或语义错误。</p>
   <div class="table-wrap">
     <table>
@@ -1144,13 +1144,13 @@ next_token = sample_next_token(masked, strategy="greedy")
   </div>
 
   <h4>3. 同时报告模式质量和语义质量</h4>
-  <p>结构化输出实验不应止步于“JSON合法性为99%”。一份有用的报告应包括模式通过率、重试次数、延迟开销、语义字段准确率、无支持引文率、工具授权失败率以及执行后失败率。如果受限解码提高了可解析性，但增加了延迟或隐藏了系统性的提取错误，那么在发布结论中必须提及这一边界。</p>
-  <p>对于资深推理工程师而言，正确的部署声明是狭隘的：<code>structured decoding guarantees the output shape under the supported schema; application validation decides whether the content is true and safe to execute.</code> 混淆这两个层级是智能体事件的常见原因：一个合法的工具调用JSON对象仍然可能删除错误的资源、引用不支持该主张的文档或提交不安全的查询。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>使用受限解码使输出可解析，然后使用验证器和执行守护来判断其是否正确、经授权且安全。模式一致性是必要的基础设施，而非任务评估的替代品。</div></div>
+  <p>结构化输出实验不能只报告“JSON合法性达到99%”。有用的报告还应包含模式通过率、重试次数、延迟开销、语义字段准确率、无支持引文率、工具授权失败率以及执行后失败率。如果受限解码提升了可解析性，却增加了延迟或掩盖了系统性的提取错误，则发布结论中必须说明这一点。</p>
+  <p>对于资深推理工程师而言，正确的部署声明应限定于：<code>structured decoding guarantees the output shape under the supported schema; application validation decides whether the content is true and safe to execute.</code> 混淆这两个层次是智能体事故的常见原因：一个合法的工具调用JSON对象仍然可能删除错误的资源、引用不支持该主张的文档或提交不安全的查询。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>先通过受限解码让输出可解析，再用验证器和执行守护判断其正确性、授权性和安全性。模式一致性是必要的基础设施，不能替代任务评估。</div></div>
 </section><section class="card" id="s8-12b">
   <h3>8.12B 约束解码引擎：CFG、FSM、Schema 和服务成本</h3>
-  <p>结构化输出不仅仅是一种提示技术。在生产推理中，它通常作为服务时的约束引擎实现：请求提供 schema、正则表达式、选项集合、语法或工具签名；后端将该契约编译成约束状态；每个解码步在采样前屏蔽非法 token。OpenAI Structured Outputs、vLLM Structured Outputs、SGLang Structured Outputs、Outlines 类库和 guidance 类库都遵循这个大模式，尽管它们在支持的 schema 特性、语法后端、批处理行为和延迟开销上有所不同。</p>
-  <p>本节补充了之前的可靠性讨论。约束解码能让表面格式有效，但不能让内容真实。推理工程师仍然需要在解码器返回可解析对象之后，运行验证器、证据检查、权限检查和失败指标。</p>
+  <p>结构化输出不只是提示技术。在生产推理中，它通常作为服务时的约束引擎实现：请求提供 schema、正则表达式、选项集合、语法或工具签名；后端将该契约编译成约束状态；每个解码步在采样前屏蔽非法 token。OpenAI Structured Outputs、vLLM Structured Outputs、SGLang Structured Outputs、Outlines 类库和 guidance 类库都遵循这个通用模式，尽管它们在支持的 schema 特性、语法后端、批处理行为和延迟开销上有所不同。</p>
+  <p>本节是对之前可靠性讨论的补充。约束解码能保证表面格式有效，但不能保证内容真实。推理工程师仍需在解码器返回可解析对象之后，运行验证器、证据检查、权限检查和失败指标。</p>
 
   <div class="svg-diagram" style="max-width:1040px">
     <svg viewBox="0 0 1040 520" role="img" aria-label="Constrained decoding engine pipeline from request schema to token mask and validation">
@@ -1212,7 +1212,7 @@ next_token = sample_next_token(masked, strategy="greedy")
       <text x="104" y="466" class="ce-small">Measure: compile ms, per-token mask overhead, schema pass rate, semantic accuracy, retry rate, p95 latency delta, no-legal-token rate.</text>
     </svg>
   </div>
-  <p class="diagram-caption">图 8-5：约束解码引擎将格式契约转换为解析器状态和 token 掩码。服务栈仍需处理不支持的 schema、tokenizer 边界情况、延迟、流式处理和语义验证。</p>
+  <p class="diagram-caption">图 8-5：约束解码引擎将格式契约转换为解析器状态和 token 掩码。服务栈还需处理不支持的 schema、tokenizer 边界情况、延迟、流式传输和语义验证。</p>
 
   <h4>1. 约束类型及其适用场景</h4>
   <div class="table-wrap">
@@ -1220,7 +1220,7 @@ next_token = sample_next_token(masked, strategy="greedy")
       <tr><th>约束类型</th><th>适合场景</th><th>控制内容</th><th>工程注意事项</th></tr>
       <tr><td>JSON 模式</td><td>灵活的日志、宽松的应用状态、探索性工具</td><td>鼓励生成有效 JSON</td><td>不保证必填字段、枚举值或业务规则；仍需运行 schema 验证</td></tr>
       <tr><td>严格 JSON Schema</td><td>信息抽取、API 响应、工具参数、类型化工作流状态</td><td>对象结构、必要键、基本类型、枚举、数组（在支持的 schema 特性内）</td><td>不支持的 schema 特性和冷编译延迟可能影响性能；建议按 schema 哈希缓存已编译约束</td></tr>
-      <tr><td>选择/枚举</td><td>分类、路由、审核标签、小型控制决策</td><td>允许的标签表面形式</td><td>选中的标签仍可能语义错误；需单独评估标签准确率</td></tr>
+      <tr><td>选择/枚举</td><td>分类、路由、审核标签、小型控制决策</td><td>允许的标签表面形式</td><td>选中的标签仍可能有语义错误；需单独评估标签准确率</td></tr>
       <tr><td>正则/FSM</td><td>标识符、简短 DSL 片段、简单格式、受约束前缀</td><td>正则语言表面结构</td><td>嵌套递归结构难以或不可能实现；tokenizer 边界可能给自动机带来意外</td></tr>
       <tr><td>CFG/EBNF</td><td>嵌套 JSON、类 SQL 片段、类代码 DSL、递归语法</td><td>上下文无关语法结构</td><td>编译和允许 token 的计算比简单的选择或正则更复杂</td></tr>
       <tr><td>后验证与修复</td><td>语义检查、证据绑定、权限、领域不变性</td><td>超越语法的正确性</td><td>重试会增加延迟并可能形成循环；需定义有界的失败策略</td></tr>
@@ -1233,7 +1233,7 @@ next_token = sample_next_token(masked, strategy="greedy")
       <tr><th>失败模式</th><th>发生原因</th><th>实际应对</th></tr>
       <tr><td>Schema 编译延迟</td><td>大型 schema、递归语法或大量一次性 schema 需要后端编译</td><td>规范化 schema、按哈希缓存、预热常用契约、单独报告冷启动延迟</td></tr>
       <tr><td>Tokenizer 不匹配</td><td>语法基于字符定义，而解码器发射的是 tokenizer 特有 token</td><td>使用实际服务 tokenizer 测试；包含引号、转义、Unicode 和长数字等边界情况</td></tr>
-      <tr><td>合法 token 集为空</td><td>当前前缀在约束下无法到达任何有效最终字符串</td><td>失败关闭、返回验证错误、或用修正后的 prompt 和 schema 重新开始；不要静默生成非法 token</td></tr>
+      <tr><td>合法 token 集为空</td><td>当前前缀在约束下无法到达任何有效最终字符串</td><td>失败时关闭，返回验证错误，或用修正后的 prompt 和 schema 重新开始；不要静默生成非法 token</td></tr>
       <tr><td>批处理差异</td><td>同一批次中不同请求使用不同 schema 或约束，解析器开销不同</td><td>按 schema 复杂度分桶、保持常用 schema 热缓存、对比 p50 和 p95 延迟与无约束解码</td></tr>
       <tr><td>流式部分 JSON</td><td>早期 token 可能是有效前缀但不是完整应用对象</td><td>流式传输分帧事件、仅流式传输已完成字段、或等待验证成功后再释放对象</td></tr>
       <tr><td>语义不匹配</td><td>合法 schema 的对象可能包含不支持的事实、错误的单位或未授权的工具参数</td><td>使用证据绑定、业务验证器、租户检查和显式用户确认来处理副作用</td></tr>
@@ -1242,16 +1242,16 @@ next_token = sample_next_token(masked, strategy="greedy")
 
   <h4>3. 默认启用前需测量的内容</h4>
   <p>生产报告应包括 <code>schema_compile_ms</code>、每个 token 的掩码开销、schema 通过率、语义字段准确率、重试率、无合法 token 率、不支持的 schema 率，以及与无约束解码相比的 p95 延迟增量。对于高吞吐服务，还需报告约束请求对连续批处理和 KV-cache 利用率的影响。</p>
-  <p>值得进一步阅读的主要参考资料有 <a href="https://developers.openai.com/api/docs/guides/structured-outputs" target="_blank">OpenAI Structured Outputs</a>、<a href="https://docs.vllm.ai/en/latest/features/structured_outputs/" target="_blank">vLLM Structured Outputs</a>、<a href="https://docs.sglang.io/docs/advanced_features/structured_outputs" target="_blank">SGLang Structured Outputs</a>，以及用于评估结构化输出可靠性和效率的 <a href="https://arxiv.org/abs/2501.10868" target="_blank">JSONSchemaBench</a> 基准。</p>
+  <p>进一步阅读的主要参考资料包括 <a href="https://developers.openai.com/api/docs/guides/structured-outputs" target="_blank">OpenAI Structured Outputs</a>、<a href="https://docs.vllm.ai/en/latest/features/structured_outputs/" target="_blank">vLLM Structured Outputs</a>、<a href="https://docs.sglang.io/docs/advanced_features/structured_outputs" target="_blank">SGLang Structured Outputs</a>，以及用于评估结构化输出可靠性和效率的 <a href="https://arxiv.org/abs/2501.10868" target="_blank">JSONSchemaBench</a> 基准。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>关键要点：</strong> 约束解码是服务时的控制平面。它将格式可靠性转化为状态机问题，但任务正确性仍取决于验证器、证据、权限和有界的失败处理。</div></div>
 </section><section class="card">
   <h3>概念练习回顾</h3>
 
-  <div class="exercise" data-answer="1" data-explain="Top-K 使用固定的 K 值，无法根据不同上下文的需要调整候选数量。Top-P 通过累积概率动态调整候选集合——当分布尖锐时，候选集合小；当分布平坦时，候选集合自动扩大。">
-    <h4>练习 1：与 Top-P 采样相比，Top-K 采样的主要缺点是什么？</h4>
+  <div class="exercise" data-answer="1" data-explain="Top-K 使用固定的 K 值，不能根据上下文动态调整候选数量。Top-P 按累积概率动态调整候选集合：当分布尖锐时候选集合小，分布平坦时自动扩大。">
+    <h4>练习 1：Top-K 相比于 Top-P 采样，主要缺点是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q1" value="0"> A. Top-K 计算速度较慢</label>
-      <label><input type="radio" name="q1" value="1"> B. 固定的 K 无法适应不同上下文的需求</label>
+      <label><input type="radio" name="q1" value="1"> B. 固定 K 值无法适应不同上下文的需求</label>
       <label><input type="radio" name="q1" value="2"> C. Top-K 不支持温度调节</label>
       <label><input type="radio" name="q1" value="3"> D. Top-K 需要更多 GPU 内存</label>
     </div>
@@ -1261,7 +1261,7 @@ next_token = sample_next_token(masked, strategy="greedy")
   </div>
 
   <div class="exercise" data-answer="0" data-explain="当 T→0 时，softmax 退化为 argmax——概率最高的 token 的概率接近 1，其余接近 0，因此等价于贪心解码。">
-    <h4>练习 2：当温度参数 T 趋近于 0 时，温度采样退化为哪种策略？</h4>
+    <h4>练习 2：温度参数 T 趋近 0 时，温度采样退化成哪种策略？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q2" value="0"> A. 贪心解码 (Greedy Decoding)</label>
       <label><input type="radio" name="q2" value="1"> B. Top-K 采样</label>
@@ -1273,12 +1273,12 @@ next_token = sample_next_token(masked, strategy="greedy")
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="当论文的假设成立时，推测解码使用拒绝采样来保持目标模型的采样分布。接受/拒绝准则 min(1, p/q) 是分布校正的关键；实际系统中的收益仍取决于接受率、草稿模型速度和调度实现。">
+  <div class="exercise" data-answer="2" data-explain="当论文假设成立时，推测解码用拒绝采样保持目标模型的采样分布。接受/拒绝准则 min(1, p/q) 负责分布校正；实际系统中的收益取决于接受率、草稿模型速度和调度实现。">
     <h4>练习 3：推测解码如何保持目标采样分布？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q3" value="0"> A. 因为它使用量化来降低精度</label>
       <label><input type="radio" name="q3" value="1"> B. 因为它只在简单上下文中加速</label>
-      <label><input type="radio" name="q3" value="2"> C. 因为当论文的假设成立时，拒绝采样校正了草稿分布，使最终采样分布与目标模型的采样一致</label>
+      <label><input type="radio" name="q3" value="2"> C. 因为当论文假设成立时，拒绝采样校正了草稿分布，使最终采样分布与目标模型一致</label>
       <label><input type="radio" name="q3" value="3"> D. 因为它跳过了某些不必要的注意力计算</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q3')">检查答案</button>
@@ -1286,11 +1286,11 @@ next_token = sample_next_token(masked, strategy="greedy")
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="Prefilling 阶段并行处理整个 prompt，涉及大矩阵乘法，更容易饱和计算能力。Decoding 阶段每步只处理少量新 token；在低并发或小 batch 情况下，通常受限于权重/KV Cache 读取和调度开销，因此更可能受内存带宽限制。">
-    <h4>练习 4：为什么 Decoding 阶段的 GPU 利用率远低于 Prefilling 阶段？</h4>
+  <div class="exercise" data-answer="1" data-explain="Prefilling 阶段并行处理整个 prompt，使用大矩阵乘法，更容易占满计算能力。Decoding 阶段每步只处理少量新 token；低并发或小 batch 时，瓶颈是权重/KV Cache 读取和调度开销，因此通常受内存带宽限制。">
+    <h4>练习 4：为什么 Decoding 阶段的 GPU 利用率比 Prefilling 阶段低很多？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 因为 Decoding 需要更多层的计算</label>
-      <label><input type="radio" name="q4" value="1"> B. 因为 Decoding 每步只处理一个 token，计算量小，瓶颈是内存带宽</label>
+      <label><input type="radio" name="q4" value="1"> B. 因为 Decoding 每步只处理一个 token，计算量小，瓶颈在内存带宽</label>
       <label><input type="radio" name="q4" value="2"> C. 因为 Decoding 阶段使用更高精度</label>
       <label><input type="radio" name="q4" value="3"> D. 因为 Decoding 阶段禁用了矩阵乘法</label>
     </div>
@@ -1299,10 +1299,10 @@ next_token = sample_next_token(masked, strategy="greedy")
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="Attention Sink 指的是模型将大量注意力分配给初始 token（BOS 或句子起始 token）的现象，即使这些 token 与当前输出无关。这导致长序列上的注意力分布不健康，浪费注意力在无关的早期 token 上。">
-    <h4>练习 5：Attention Sink 现象指的是什么？</h4>
+  <div class="exercise" data-answer="0" data-explain="Attention Sink 指模型将大量注意力分配给初始 token（BOS 或句子起始 token）的现象，即使这些 token 与当前输出无关。这会导致长序列上的注意力分布不健康，浪费注意力在无关的早期 token 上。">
+    <h4>练习 5：Attention Sink 现象是什么？</h4>
     <div class="opts" role="radiogroup">
-      <label><input type="radio" name="q5" value="0"> A. 模型将过多注意力分配给初始 token</label>
+      <label><input type="radio" name="q5" value="0"> A. 模型把过多注意力分配给初始 token</label>
       <label><input type="radio" name="q5" value="1"> B. 注意力权重在深层网络中消失</label>
       <label><input type="radio" name="q5" value="2"> C. 注意力分数溢出，导致 NaN</label>
       <label><input type="radio" name="q5" value="3"> D. KV Cache 溢出 GPU 内存</label>    </div>

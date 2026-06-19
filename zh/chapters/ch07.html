@@ -29,9 +29,11 @@
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
     <button class="font-btn" data-size="large" onclick="LLM.setFontSize('large')">L</button>
-  </div><section class="card">
+  </div>
+</article>
+</main><section class="card">
   <h3>如何学习本章：先让损失下降，再研究训练优化</h3>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者关注：</strong> 训练的主线只有四步：取一段 token，让模型预测下一个 token，用交叉熵计算误差，反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练是大规模优化课题；第一次阅读时，重点关注为什么需要它们。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者关注：</strong> 训练的主线只有四步：取一段 token，让模型预测下一个 token，用交叉熵计算误差，反向传播更新参数。Muon、FP8/FP4、DualPipe 和分布式训练是大规模优化课题；初学时先理解为什么需要这些优化。</div></div>
   <ul>
     <li><strong>前置知识：</strong> 第6章的基本概念：GPTModel、cross-entropy、optimizer。</li>
     <li><strong>学习目标：</strong> 从最大似然推导 next-token loss，构建可复现的训练循环，解释数据整理诊断、perplexity、calibration/ECE、AdamW、warmup、gradient clipping、混合精度以及训练异常诊断。</li>
@@ -40,7 +42,7 @@
     <li><strong>练习输出：</strong> 提交训练脚本、固定种子的 loss 曲线、checkpoint/resume 证明、异常诊断 runbook、tokens/s 和 GPU/CPU 成本估算；配套作业见 <a href="../../assignments/ch07_training/">assignments/ch07_training/</a>。</li>
   </ul>
   <div class="dependency-note"><strong>前置技能：</strong> 自回归概率分解、交叉熵、优化器状态、随机性控制、训练/验证拆分、实验统计。<br><strong>本章内化：</strong> 这些基础将直接服务于数据整理诊断、loss/ppl、AdamW/Muon、学习率调度、gradient clipping、checkpoint resume、data packing、seed 和消融报告。<br><strong>验证信号：</strong> 你不仅要让 loss 下降，还要能解释数据来源、过滤/去重、曲线方差、基线、恢复点、token 预算和训练成本，并将这些结果传递给第8章生成质量和第9章对齐实验。</div>
-  <p class="system-role"><strong>本章定位：</strong> 本章将第6章的模型转化为可复现的训练运行。它将优化器与数据整理、污染检查、完整 checkpoint、实验统计、成本核算以及第9章后训练工作流连接起来。</p>
+  <p class="system-role"><strong>本章定位：</strong> 本章将第6章的模型搭建为可复现的训练运行。它将优化器与数据整理、污染检查、完整 checkpoint、实验统计、成本核算以及第9章后训练工作流连接起来。</p>
   <div class="foundation-map">
     <h4>学习者心智图：学习前需知 / 本章教授内容 / 后续阅读建议</h4>
     <div class="foundation-graph" role="img" aria-label="第7章知识图谱：学习本章前，理解自回归概率、交叉熵、数据拆分和优化器状态；本章学习预训练循环；之后阅读扩展定律和数据混合。">
@@ -68,8 +70,8 @@
     <div class="table-wrap foundation-table">
       <table>
         <tr><th>学习前需了解</th><th>本章将阐明</th><th>拓展阅读资料/知识点</th></tr>
-        <tr><td>MLE / CE / PPL</td><td>将 next-token 负对数似然、交叉熵和 perplexity 表示为统一的指标集。</td><td><strong>资料：</strong> Kaplan/Chinchilla 扩展定律。<br><strong>知识点：</strong> loss-to-capability、领域 perplexity、eval loss 分层。</td></tr>
-        <tr><td>数据拆分与污染</td><td>解释为什么训练/验证/测试集、去重、近似去重和基准污染决定了曲线的可信度。</td><td><strong>资料：</strong> MinHash/SimHash、污染检测研究。<br><strong>知识点：</strong> 数据混合、去重、质量过滤、基准污染。</td></tr>
+        <tr><td>MLE / CE / PPL</td><td>用 next-token 负对数似然、交叉熵和 perplexity 构成统一指标集。</td><td><strong>资料：</strong> Kaplan/Chinchilla 扩展定律。<br><strong>知识点：</strong> loss-to-capability、领域 perplexity、eval loss 分层。</td></tr>
+        <tr><td>数据拆分与污染</td><td>说明训练/验证/测试集、去重、近似去重和基准污染如何影响曲线可信度。</td><td><strong>资料：</strong> MinHash/SimHash、污染检测研究。<br><strong>知识点：</strong> 数据混合、去重、质量过滤、基准污染。</td></tr>
         <tr><td>优化器状态</td><td>将权重、梯度、动量、调度器、scaler 和随机状态一并纳入 checkpoint。</td><td><strong>资料：</strong> AdamW、Muon、ZeRO/FSDP、混合精度文档。<br><strong>知识点：</strong> 优化器内存、checkpoint resume、容错训练。</td></tr>
         <tr><td>随机性与统计</td><td>要求记录 seed、方差、基线、消融和置信区间，避免单次运行叙述。</td><td><strong>资料：</strong> 消融研究指南、置信区间/bootstrap。<br><strong>知识点：</strong> 运行间方差、训练实验报告标准。</td></tr>
       </table>
@@ -84,21 +86,21 @@
 <p class="diagram-caption">图 7-1：LLM 训练循环——从 DataLoader 到 Optimizer 更新</p>
 </section><!-- ================================================================ --><section class="card" id="s7-1">
   <h3>7.1 语言建模 = 最大似然估计（MLE）</h3>
-  <p>大语言模型的核心训练目标是<strong>下一个 token 预测</strong>。更准确地说，这个任务实现了<strong>最大似然估计（Maximum Likelihood Estimation, MLE）</strong>。理解这一联系就能解释为什么该损失函数是自回归语言建模正确的统计目标。</p>
+  <p>大语言模型的核心训练目标是<strong>下一个 token 预测</strong>。更准确地说，这个任务实现了<strong>最大似然估计（Maximum Likelihood Estimation, MLE）</strong>。理解这一联系就能明白为什么该损失函数是自回归语言建模正确的统计目标。</p>
 
   <h4>自回归分解：链式法则</h4>
   <p>给定一个 token 序列 <span class="katex-inline" data-expr="(x_1, x_2, \ldots, x_T)" aria-label="(x_1, x_2, \ldots, x_T)" role="img"></span>，其联合概率可以通过概率<strong>链式法则</strong>分解为：</p>
   <div class="math-box"><div class="label">公式 7.1 自回归分解</div>
     <div class="katex" data-expr="p(x_1, x_2, \ldots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, x_2, \ldots, x_{t-1})" aria-label="p(x_1, x_2, \ldots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, x_2, \ldots, x_{t-1})" role="img"></div>
   </div>
-  <p>这就是“自回归”的严格数学定义——模型的输出依赖于它自身之前的输出。这个分解是<strong>精确的</strong>，不含任何近似（从概率意义上看）。</p>
+  <p>这就是“自回归”的严格数学定义——模型的输出依赖于它自身之前的输出。这个分解是<strong>精确的</strong>，不含任何近似（在概率意义上）。</p>
 
   <h4>从联合概率到 MLE 目标</h4>
   <p>假设我们的训练数据 <span class="katex-inline" data-expr="\mathcal{D} = \{\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(N)}\}" aria-label="\mathcal{D} = \{\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(N)}\}" role="img"></span> 包含 N 个独立序列。在 MLE 框架下，我们希望寻找参数 <span class="katex-inline" data-expr="\theta" aria-label="\theta" role="img"></span> 使得观测数据的似然最大：</p>
   <div class="math-box"><div class="label">公式 7.2 最大似然估计</div>
     <div class="katex" data-expr="\theta_{\text{MLE}} = \arg\max_\theta \prod_{i=1}^{N} p(\mathbf{x}^{(i)}; \theta)" aria-label="\theta_{\text{MLE}} = \arg\max_\theta \prod_{i=1}^{N} p(\mathbf{x}^{(i)}; \theta)" role="img"></div>
   </div>
-  <p>取对数可将乘积转化为求和（更方便优化）：</p>
+  <p>取对数可将乘积转化为求和（优化更方便）：</p>
   <div class="math-box"><div class="label">公式 7.3 对数似然</div>    <div class="katex" data-expr="\mathcal{L}(\theta) = \sum_{i=1}^{N} \log p(\mathbf{x}^{(i)}; \theta) = \sum_{i=1}^{N} \sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})" aria-label="\mathcal{L}(\theta) = \sum_{i=1}^{N} \log p(\mathbf{x}^{(i)}; \theta) = \sum_{i=1}^{N} \sum_{t=1}^{T} \log p_\theta(x_t^{(i)} \mid x_{&lt;t}^{(i)})" role="img"></div>
   </div>
   <p>这等价于最小化<strong>负对数似然（Negative Log-Likelihood, NLL）</strong>：</p>
@@ -124,53 +126,53 @@
     &amp;= -\underbrace{\sum_x p_{\text{data}}(x) \log p_\theta(x)}_{\text{交叉熵}} + \underbrace{H(p_{\text{data}})}_{\text{常数}}
     \end{aligned}" role="img"></div>
   </div>
-  <p>由于 <span class="katex-inline" data-expr="H(p_{\text{data}})" aria-label="H(p_{\text{data}})" role="img"></span> 是常数（与 <span class="katex-inline" data-expr="\theta" aria-label="\theta" role="img"></span> 无关），最小化 KL 散度等价于最小化交叉熵，等价于 MLE。<strong>这三种视角是同一个目标。</strong></p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键洞察：</strong> 语言建模中的“预测下一个 token”任务并非人为设计的任务，而是 MLE 框架下对离散序列分布建模的<strong>自然结果</strong>。如果你改变任务（例如去噪自编码、填空），你实际上改变了概率分解方式，从而改变了模型学习的内容。</div></div>
+  <p>由于 <span class="katex-inline" data-expr="H(p_{\text{data}})" aria-label="H(p_{\text{data}})" role="img"></span> 是常数（与 <span class="katex-inline" data-expr="\theta" aria-label="\theta" role="img"></span> 无关），最小化 KL 散度等价于最小化交叉熵，等价于 MLE。<strong>这三种视角指向同一个目标。</strong></p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键洞察：</strong> 语言建模中的“预测下一个 token”任务并不是随意设定的，而是 MLE 框架下对离散序列分布建模的<strong>自然结果</strong>。如果你改变任务（例如去噪自编码、填空），你实际上改变了概率分解方式，从而改变了模型学习的内容。</div></div>
 </section><!-- ================================================================ -->
 <!-- 7.2 困惑度（Perplexity） -->
 <!-- ================================================================ --><section class="card" id="s7-2">
   <h3>7.2 困惑度（Perplexity）</h3>
-  <p><strong>困惑度（PPL）</strong>是语言模型最常用的评估指标，定义为指数化后的NLL：</p>
+  <p><strong>困惑度（PPL）</strong>是语言模型最常用的评估指标，定义为 NLL 的指数值：</p>
   <div class="math-box"><div class="label">公式 7.7 困惑度</div>
     <div class="katex" data-expr="\text{PPL}(\mathbf{x}) = \exp\left(-\frac{1}{T}\sum_{t=1}^{T} \log p_\theta(x_t \mid x_{&lt;t})\right) = \exp(\mathcal{L}_{\text{NLL}})" aria-label="\text{PPL}(\mathbf{x}) = \exp\left(-\frac{1}{T}\sum_{t=1}^{T} \log p_\theta(x_t \mid x_{&lt;t})\right) = \exp(\mathcal{L}_{\text{NLL}})" role="img"></div>
   </div>
-  <p>PPL的直观含义可以大致理解为：给定这个数据集和分词方法，模型在每个位置上平均有多大的不确定性。这种解释只是为了方便记忆的一种启发式理解；不应将PPL看作是候选token数量或事实准确度。</p>
+  <p>直观上，PPL 表示在给定数据集和分词方法下，模型在每个位置上平均的不确定性大小。这只是一个便于记忆的直观理解，不能将 PPL 等同于候选 token 数量或事实准确度。</p>
   <ul>
-    <li><strong>PPL = 1</strong> — 真实token的概率在评估样本上被推高到1；真实语言数据通常存在固有不确定性，因此这只是一个极限情况</li>
-    <li><strong>PPL = 50</strong> — 平均NLL为 <span class="katex-inline" data-expr="\log 50" aria-label="\log 50" role="img"></span>，大致可以理解为不确定性较高</li>
+    <li><strong>PPL = 1</strong> — 真实 token 的概率在评估样本上被推高到 1；真实语言数据通常存在固有不确定性，因此这只是一个极限情况</li>
+    <li><strong>PPL = 50</strong> — 平均 NLL 为 <span class="katex-inline" data-expr="\log 50" aria-label="\log 50" role="img"></span>，大致对应较高的不确定性</li>
     <li><strong>PPL = V</strong> — 如果模型在大小为 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span> 的词表上输出均匀分布，则困惑度为 <span class="katex-inline" data-expr="V" aria-label="V" role="img"></span></li>
   </ul>
-  <p>一个更深刻的性质：如果模型分布是 <span class="katex-inline" data-expr="p_\theta" aria-label="p_\theta" role="img"></span>，真实分布是 <span class="katex-inline" data-expr="p_{\text{data}}" aria-label="p_{\text{data}}" role="img"></span>，那么 <span class="katex-inline" data-expr="\text{PPL} = e^{\text{CE}} = e^{H(p_{\text{data}}, p_\theta)}" aria-label="\text{PPL} = e^{\text{CE}} = e^{H(p_{\text{data}}, p_\theta)}" role="img"></span>。当 <span class="katex-inline" data-expr="p_\theta = p_{\text{data}}" aria-label="p_\theta = p_{\text{data}}" role="img"></span> 时，<span class="katex-inline" data-expr="\text{PPL} = e^{H(p_{\text{data}})}" aria-label="\text{PPL} = e^{H(p_{\text{data}})}" role="img"></span> — 这意味着完美模型的困惑度就是数据的<strong>固有熵</strong>。因此，PPL的下界是数据的固有不确定性。</p>
+  <p>从信息论角度看，如果模型分布是 <span class="katex-inline" data-expr="p_\theta" aria-label="p_\theta" role="img"></span>，真实分布是 <span class="katex-inline" data-expr="p_{\text{data}}" aria-label="p_{\text{data}}" role="img"></span>，那么 <span class="katex-inline" data-expr="\text{PPL} = e^{\text{CE}} = e^{H(p_{\text{data}}, p_\theta)}" aria-label="\text{PPL} = e^{\text{CE}} = e^{H(p_{\text{data}}, p_\theta)}" role="img"></span>。当 <span class="katex-inline" data-expr="p_\theta = p_{\text{data}}" aria-label="p_\theta = p_{\text{data}}" role="img"></span> 时，<span class="katex-inline" data-expr="\text{PPL} = e^{H(p_{\text{data}})}" aria-label="\text{PPL} = e^{H(p_{\text{data}})}" role="img"></span> — 这意味着完美模型的困惑度就是数据的<strong>固有熵</strong>。因此，PPL 的下界由数据的固有不确定性决定。</p>
 
   <h4>解读PPL时必须固定评估条件</h4>
   <div class="table-wrap">
     <table>
       <tr><th>影响因素</th><th>为何影响PPL</th><th>如何报告</th></tr>
-      <tr><td>Tokenizer / 词表</td><td>不同的token粒度会改变序列长度和平均NLL</td><td>说明tokenizer和词表大小</td></tr>
+      <tr><td>Tokenizer / 词表</td><td>不同的 token 粒度会改变序列长度和平均 NLL</td><td>说明 tokenizer 和词表大小</td></tr>
       <tr><td>数据集和划分</td><td>同一模型在新闻、代码、对话、书籍上的难度不同</td><td>说明数据集、划分和过滤规则</td></tr>
-      <tr><td>上下文长度</td><td>更长的上下文可能会降低局部困惑度，或引入截断差异</td><td>说明上下文窗口和stride</td></tr>
-      <tr><td>评估实现方式</td><td>是否包含BOS/EOS、padding、滑动窗口和loss mask会改变数值</td><td>提供命令、seed和loss mask规则</td></tr>
+      <tr><td>上下文长度</td><td>更长的上下文可能会降低局部困惑度，或引入截断差异</td><td>说明上下文窗口和 stride</td></tr>
+      <tr><td>评估实现方式</td><td>是否包含 BOS/EOS、padding、滑动窗口和 loss mask 会改变数值</td><td>提供命令、seed 和 loss mask 规则</td></tr>
     </table>
   </div>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>注意：</strong>PPL只衡量模型对给定token序列概率的拟合程度，并不直接对应生成文本的事实准确性、指令遵循能力或安全性。报告PPL时必须同时报告评估条件；不同tokenizer或数据划分下的数值不能直接横向比较。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>注意：</strong>PPL 只衡量模型对给定 token 序列概率的拟合程度，不直接反映生成文本的事实准确性、指令遵循能力或安全性。报告 PPL 时必须同时报告评估条件；不同 tokenizer 或数据划分下的数值不能直接横向比较。</div></div>
 </section><!-- ================================================================ -->
 <!-- Programming Exercise 1: DataLoader -->
 <!-- ================================================================ --><section class="card" id="s7-3">
   <h3>7.3 编程练习1：实现一个DataLoader</h3>
-  <p>训练的第一步是将文本数据转换为模型可消费的格式。核心流程：</p>
+  <p>训练的第一步是把文本数据转成模型能读的格式。核心流程：</p>
   <p><strong>文本 → 分词器 → Token ID → 切分成固定长度块 → 批次 → 模型</strong></p>
-  <p>关键设计：每个样本的<strong>输入和目标</strong>通过<strong>右移一位</strong>相关联——输入是 <span class="katex-inline" data-expr="t_1, t_2, \ldots, t_{n-1}" aria-label="t_1, t_2, \ldots, t_{n-1}" role="img"></span>，目标是 <span class="katex-inline" data-expr="t_2, t_3, \ldots, t_n" aria-label="t_2, t_3, \ldots, t_n" role="img"></span>。这是因为模型在位置t的任务是预测位置t+1的token。</p>
+  <p>关键设计是输入和目标错开一位：输入是 <span class="katex-inline" data-expr="t_1, t_2, \ldots, t_{n-1}" aria-label="t_1, t_2, \ldots, t_{n-1}" role="img"></span>，目标是 <span class="katex-inline" data-expr="t_2, t_3, \ldots, t_n" aria-label="t_2, t_3, \ldots, t_n" role="img"></span>。模型在位置 t 的任务是预测位置 t+1 的 token。</p>
 
   <div class="coding-exercise">
     <h4>练习1：构建一个DataLoader</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现一个PyTorch <code>Dataset</code> 和一个对应的 <code>DataLoader</code> 工厂函数。</p>
+      <p><strong>任务：</strong>实现一个 PyTorch <code>Dataset</code> 和一个对应的 <code>DataLoader</code> 工厂函数。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>TextDataset.__init__</code> 接收文本文件路径和一个分词器，并在初始化时一次性对整个语料库进行分词</li>
-        <li><code>__getitem__</code> 返回一个 <code>(x, y)</code> 对，其中x是 <code>block_size</code> 个token，y是相同长度但右移一位的结果</li>
+        <li><code>__getitem__</code> 返回一个 <code>(x, y)</code> 对，其中 x 是 <code>block_size</code> 个 token，y 是相同长度但右移一位的结果</li>
         <li><code>create_dataloader</code> 支持 <code>batch_size</code>、<code>shuffle</code>、<code>pin_memory</code>、<code>drop_last</code></li>
-        <li>不要在 <code>__getitem__</code> 内部使用for循环进行分词——在 <code>__init__</code> 中一次性完成</li>
+        <li>不要在 <code>__getitem__</code> 内部使用 for 循环进行分词——在 <code>__init__</code> 中一次性完成</li>
       </ul>
       <pre># Expected usage
 loader = create_dataloader(
@@ -214,24 +216,24 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
     return DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle,
         num_workers=2, pin_memory=torch.cuda.is_available(), drop_last=True,    )</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么在 <code>__init__</code> 中分词而不是 <code>__getitem__</code>？</strong>每次调用 <code>__getitem__</code> 时进行分词会慢几百倍。一次性对整个语料库进行分词，然后通过整数索引切片是标准做法，也是官方PyTorch教程推荐的方法。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么在 <code>__init__</code> 中分词而不是 <code>__getitem__</code>？</strong>每次调用 <code>__getitem__</code> 时分词会慢几百倍。一次性对整个语料库分词，然后通过整数索引切片是标准做法，也是官方 PyTorch 教程推荐的方法。</p>
     </div>
   </div>
-</section>请提供需要翻译的 HTML 片段。你提到“HTML 片段如下：”，但未附上具体内容。<section class="card" id="s7-3a">
+</section><section class="card" id="s7-3a">
   <h3>7.3A 数据混合、Token预算与尺度定律</h3>
   <p>编写DataLoader只是训练系统的第一步。真正的大模型训练必须先回答三个问题：训练多少个token、这些token来自哪些数据源、在固定计算预算下如何平衡模型参数量和数据量。这个问题决定了损失曲线、模型能力边界和训练成本；它不能靠简单调一个<code>batch_size</code>来解决。</p>
 
   <h4>Token预算：训练步数不由epoch决定</h4>
-  <p>传统的小数据集训练常说“跑3个epoch”。LLM预训练更常用<strong>token budget</strong>来描述训练量，因为语料规模巨大，样本被打包成连续的token流，不同数据源可能按特定比例重复采样。令一次优化器步骤消耗的全局token数为：</p>
+  <p>传统的小数据集训练常说“跑3个epoch”。LLM预训练更常用<strong>token budget</strong>来描述训练量，因为语料规模巨大，样本被打包成连续的token流，不同数据源可能按特定比例重复采样。一次优化器步骤消耗的全局token数为：</p>
   <div class="math-box"><div class="label">式 7.8a 全局批大小（以token计）</div>
     <div class="katex" data-expr="B_{\text{tokens}} = B_{\text{micro}} \times T_{\text{seq}} \times A_{\text{grad}} \times N_{\text{dp}}" aria-label="B_{\text{tokens}} = B_{\text{micro}} \times T_{\text{seq}} \times A_{\text{grad}} \times N_{\text{dp}}" role="img"></div>
   </div>
-  <p>其中<span class="katex-inline" data-expr="B_{\text{micro}}" aria-label="B_{\text{micro}}" role="img"></span>是每张数据并行卡的微批大小，<span class="katex-inline" data-expr="T_{\text{seq}}" aria-label="T_{\text{seq}}" role="img"></span>是序列长度，<span class="katex-inline" data-expr="A_{\text{grad}}" aria-label="A_{\text{grad}}" role="img"></span>是梯度累积步数，<span class="katex-inline" data-expr="N_{\text{dp}}" aria-label="N_{\text{dp}}" role="img"></span>是数据并行副本数。如果你计划训练<span class="katex-inline" data-expr="D_{\text{tokens}}" aria-label="D_{\text{tokens}}" role="img"></span>个token，训练步数约为：</p>
+  <p>其中<span class="katex-inline" data-expr="B_{\text{micro}}" aria-label="B_{\text{micro}}" role="img"></span>是每张数据并行卡的微批大小，<span class="katex-inline" data-expr="T_{\text{seq}}" aria-label="T_{\text{seq}}" role="img"></span>是序列长度，<span class="katex-inline" data-expr="A_{\text{grad}}" aria-label="A_{\text{grad}}" role="img"></span>是梯度累积步数，<span class="katex-inline" data-expr="N_{\text{dp}}" aria-label="N_{\text{dp}}" role="img"></span>是数据并行副本数。如果计划训练<span class="katex-inline" data-expr="D_{\text{tokens}}" aria-label="D_{\text{tokens}}" role="img"></span>个token，训练步数约为：</p>
   <div class="math-box"><div class="label">式 7.8b 步数</div>
     <div class="katex" data-expr="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" aria-label="N_{\text{steps}} = \left\lceil \frac{D_{\text{tokens}}}{B_{\text{tokens}}} \right\rceil" role="img"></div>
   </div>
-  <p>Ch07作业中的<code>global_batch_tokens</code>和<code>training_steps_for_token_budget</code>对应这两个公式。例如：当<code>micro_batch=4</code>、<code>seq_len=2048</code>、<code>grad_accum=8</code>、<code>data_parallel=16</code>时，每步消耗<code>1,048,576</code>个token；如果训练预算为<code>20B</code>个token，大约需要<code>19,074</code>步优化器。纯解码器LM的粗略训练计算量常用<span class="katex-inline" data-expr="6ND" aria-label="6ND" role="img"></span>估计，其中<span class="katex-inline" data-expr="N" aria-label="N" role="img"></span>是参数量，<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span>是训练token数；作业中的<code>dense_lm_training_flops</code>利用这个近似来关联规模、数据和计算预算。</p>
-  <p>训练内存还必须包括优化器状态。AdamW通常为每个参数保存梯度、一阶动量<code>m</code>和二阶动量<code>v</code>；如果参数是bf16、梯度是bf16、动量是fp32，每个参数大约需要<code>2 + 2 + 2*4 = 12</code>字节。Ch07作业中的<code>optimizer_state_memory_bytes</code>分别估算参数、梯度、优化器状态以及ZeRO风格优化器状态分片的每GPU粗略估计；进一步的<code>distributed_training_strategy_report</code>将DDP、ZeRO-1/2/3、FSDP/FSDP2映射到每卡模型状态、全局批token数、通信模式、内存检查和MFU检查。</p>
+  <p>Ch07作业中的<code>global_batch_tokens</code>和<code>training_steps_for_token_budget</code>就对应这两个公式。例如：当<code>micro_batch=4</code>、<code>seq_len=2048</code>、<code>grad_accum=8</code>、<code>data_parallel=16</code>时，每步消耗<code>1,048,576</code>个token；如果训练预算为<code>20B</code>个token，大约需要<code>19,074</code>步优化器。纯解码器LM的粗略训练计算量常用<span class="katex-inline" data-expr="6ND" aria-label="6ND" role="img"></span>估计，其中<span class="katex-inline" data-expr="N" aria-label="N" role="img"></span>是参数量，<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span>是训练token数；作业中的<code>dense_lm_training_flops</code>利用这个近似来关联规模、数据和计算预算。</p>
+  <p>训练内存还需要包含优化器状态。AdamW通常为每个参数保存梯度、一阶动量<code>m</code>和二阶动量<code>v</code>；如果参数是bf16、梯度是bf16、动量是fp32，每个参数大约需要<code>2 + 2 + 2*4 = 12</code>字节。Ch07作业中的<code>optimizer_state_memory_bytes</code>分别估算参数、梯度、优化器状态以及ZeRO风格优化器状态分片的每GPU粗略估计；进一步的<code>distributed_training_strategy_report</code>将DDP、ZeRO-1/2/3、FSDP/FSDP2映射到每卡模型状态、全局批token数、通信模式、内存检查和MFU检查。</p>
 
   <h4>示例练习：AdamW内存计算与ZeRO-1分片</h4>
   <p>以一个<code>7B</code>参数的纯解码器LM为例，假设参数为bf16（2字节），梯度为bf16（2字节），AdamW的一阶/二阶动量<code>m, v</code>为fp32（每个4字节）。训练内存不能简单地估算为“7B × 2字节”，因为那只覆盖了模型权重本身：</p>
@@ -249,7 +251,7 @@ def create_dataloader(data_path, tokenizer, batch_size=8,
   <div class="math-box"><div class="label">ZeRO-1每rank状态内存</div>
     <div class="katex" data-expr="M_{\text{rank}}=14+14+\frac{56}{8}=35\text{ GB}" aria-label="M_{\text{rank}}=14+14+\frac{56}{8}=35\text{ GB}" role="img"></div>
   </div>
-  <p>因此，在这种配置下，ZeRO-1将每卡参数/梯度/优化器状态的内存从约84 GB降至约35 GB。这个数字仍未包含激活值、激活检查点、通信缓冲区、临时矩阵、CUDA分配器碎片以及检查点写入峰值；这些部分将持续限制实际的微批大小。</p>
+  <p>因此，在这种配置下，ZeRO-1将每卡参数/梯度/优化器状态的内存从约84 GB降至约35 GB。这个数字还不包含激活值、激活检查点、通信缓冲区、临时矩阵、CUDA分配器碎片以及检查点写入峰值；这些部分会持续限制实际的微批大小。</p>
   <div class="code-block" data-lang="python">
 report = distributed_training_strategy_report(
     num_params=7_000_000_000,
@@ -263,10 +265,10 @@ report = distributed_training_strategy_report(
     peak_flops_per_gpu=300e12,
 )
 assert report["decision"] == "strategy_ready_for_rehearsal"</div>
-  <p>这个练习要求学习者看到：在相同的8GPU训练下，DDP复制全部模型状态，而FSDP/ZeRO-3对参数、梯度和优化器状态都进行分片；然而，训练能否扩展还取决于激活内存、通信延迟、检查点开销和MFU，而不仅仅是每卡状态内存。</p>
+  <p>这个练习想让学习者看到：在相同的8GPU训练下，DDP复制全部模型状态，而FSDP/ZeRO-3对参数、梯度和优化器状态都进行分片；然而，训练能否扩展还取决于激活内存、通信延迟、检查点开销和MFU，而不仅仅是每卡状态内存。</p>
 
   <h4>检查点/恢复：不只是保存模型权重</h4>
-  <p>大规模训练经常被抢占、节点故障、OOM或集群维护打断。一个能恢复训练的可恢复检查点必须保存<code>model</code>、<code>optimizer</code>、<code>scheduler</code>、<code>global_step</code>、RNG、采样器/数据游标；低精度训练还需要保存GradScaler、FP8 scale或amax历史；FSDP/ZeRO等分片策略还需要保存分片元数据，并使用加载时能重新分片的格式。仅导出推理权重对服务来说是足够的，但不能证明训练可以从相同状态继续。</p>
+  <p>大规模训练常因抢占、节点故障、OOM或集群维护而打断。一个可恢复训练用的检查点必须保存<code>model</code>、<code>optimizer</code>、<code>scheduler</code>、<code>global_step</code>、RNG、采样器/数据游标；低精度训练还需要保存GradScaler、FP8 scale或amax历史；FSDP/ZeRO等分片策略还需要保存分片元数据，并使用加载时能重新分片的格式。仅导出推理权重对服务来说足够，但不能保证训练能从相同状态继续。</p>
   <p>Ch07作业中的<code>checkpoint_resume_integrity_report</code>将这些需求编码为检查：<code>state_completeness</code>验证训练状态是否完整，<code>write_integrity</code>检查原子写入和步数单调性，<code>distributed_reshard</code>检查分片/DCP格式是否支持不同world size下的恢复，<code>checkpoint_interval</code>控制抢占后最多损失的token数，<code>checkpoint_overhead</code>约束保存成本及异步/重叠策略。</p>
   <div class="code-block" data-lang="python">
 report = checkpoint_resume_integrity_report(
@@ -295,7 +297,7 @@ assert report["decision"] == "resume_checkpoint_ready"</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>为什么重要：</strong>学习率调度、检查点间隔、日志频率和训练成本都取决于步数。只报告epoch不足以复现LLM训练，因为同样的语料，在不同的打包方式、序列长度、重复采样和数据混合下，会产生不同的token分布。</div></div>
 
   <h4>数据混合：并非所有token都是平等的</h4>
-  <p>LLM语料通常来自多个来源：网页、书籍、代码、数学、百科、对话、领域文档等。训练时通常按照混合权重进行采样，而不是按原始体积直接拼接。令第<span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>个数据源的采样权重为<span class="katex-inline" data-expr="w_k" aria-label="w_k" role="img"></span>，且<span class="katex-inline" data-expr="\sum_k w_k = 1" aria-label="\sum_k w_k = 1" role="img"></span>。那么一个批次中来自每个源的token比例将大致遵循这些权重。</p>
+  <p>LLM语料通常来自多个来源：网页、书籍、代码、数学、百科、对话、领域文档等。训练时通常按照混合权重进行采样，而不是按原始体积直接拼接。设第<span class="katex-inline" data-expr="k" aria-label="k" role="img"></span>个数据源的采样权重为<span class="katex-inline" data-expr="w_k" aria-label="w_k" role="img"></span>，且<span class="katex-inline" data-expr="\sum_k w_k = 1" aria-label="\sum_k w_k = 1" role="img"></span>。那么一个批次中来自每个源的token比例会大致遵循这些权重。</p>
   <div class="table-wrap">
     <table>
       <tr><th>数据决策</th><th>影响</th><th>常见风险</th></tr>
@@ -305,25 +307,25 @@ assert report["decision"] == "resume_checkpoint_ready"</div>
       <tr><td>激进地去重和质量过滤</td><td>减少记忆、污染和低质量样本的影响</td><td>过度过滤可能丢失长尾语言、领域和风格覆盖</td></tr>
     </table>
   </div>
-  <p>不存在普遍最优的数据混合。一份严谨的训练报告应描述原始语料、过滤规则、去重粒度、tokenizer、混合权重、训练token数，以及评估集是否可能被污染。</p>
+  <p>没有普遍最优的数据混合。一份严谨的训练报告应描述原始语料、过滤规则、去重粒度、tokenizer、混合权重、训练token数，以及评估集是否可能被污染。</p>
 
   <h4>最小数据诊断：重复率与训练/评估重叠</h4>
   <p><code>ngram_repetition_rate</code>和<code>ngram_overlap_rate</code>是训练前的最小合理性检查。重复率衡量相同token n-gram在语料中重复出现的频率；训练/评估重叠率衡量开发集或测试集中的n-gram是否已在训练集中出现。</p>
   <div class="math-box"><div class="label">N-gram重复与重叠</div>
     <div class="katex" data-expr="\text{repeat\_rate}=\frac{\#\text{repeated n-gram occurrences}}{\#\text{all n-gram occurrences}},\qquad \text{overlap\_rate}=\frac{\#\{g\in G_{\text{eval}}:g\in G_{\text{train}}\}}{|G_{\text{eval}}|}" aria-label="\text{repeat\_rate}=\frac{\#\text{repeated n-gram occurrences}}{\#\text{all n-gram occurrences}},\qquad \text{overlap\_rate}=\frac{\#\{g\in G_{\text{eval}}:g\in G_{\text{train}}\}}{|G_{\text{eval}}|}" role="img"></div>
   </div>
-  <p>这并非完整的去重系统：真正的预训练还会使用近似重复检测、文档级哈希、MinHash/LSH、URL归一化和基准污染检查。这两个检查为学习者建立了一个核心判断：开发集损失低不一定意味着泛化好，也可能是由于分裂泄漏或重复样本让模型提前看到了答案。</p>
+  <p>这不是完整的去重系统：真正的预训练还会使用近似重复检测、文档级哈希、MinHash/LSH、URL归一化和基准污染检查。这两个检查帮学习者建立了一个核心判断：开发集损失低不一定代表泛化好，也可能是由于分裂泄漏或重复样本让模型提前看到了答案。</p>
 
   <h4>Chinchilla式缩放：模型大小和数据量必须平衡</h4>
-  <p>Hoffmann等人(2022)的Chinchilla结论改变了训练大模型的常见直觉：在固定训练计算预算下，不能单纯增加参数量；如果token数不足，大模型将处于欠训练状态。简化来说，训练成本主要随参数量<span class="katex-inline" data-expr="N" aria-label="N" role="img"></span>、训练token数<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span>以及前向和反向传播每个token的计算量缩放。一个常见的粗略量级写法为：</p>
+  <p>Hoffmann等人(2022)的Chinchilla结论改变了训练大模型的常见直觉：在固定训练计算预算下，不能单纯增加参数量；如果token数不足，大模型将处于欠训练状态。简化来说，训练成本主要随参数量<span class="katex-inline" data-expr="N" aria-label="N" role="img"></span>、训练token数<span class="katex-inline" data-expr="D" aria-label="D" role="img"></span>以及前向和反向传播每个token的计算量缩放。一个常见的粗略估计为：</p>
   <div class="math-box"><div class="label">式 7.8c 训练计算的粗略量级</div>
     <div class="katex" data-expr="C \propto N \times D" aria-label="C \propto N \times D" role="img"></div>
   </div>
   <p>因此，给定计算预算<span class="katex-inline" data-expr="C" aria-label="C" role="img"></span>，本课程应比较<strong>参数量、token数、数据质量和训练时长</strong>的组合，而不是孤立地比较“模型有多少B参数”。小模型训练项目也遵循相同原则：如果只增加模型大小而数据很少，训练损失可能下降，但开发集PPL和生成质量可能变差；如果数据很多但模型太小，模型容量可能成为瓶颈。</p>
-  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>不要过度外推：</strong>Chinchilla提供的是特定实验设置下的尺度定律，并非适用于任意tokenizer、数据质量、架构、训练目标和后训练管线的精确公式。本课程用它来建立“数据、参数和计算必须平衡”的判断，而不是记忆固定常数。</div></div>
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>不要过度外推：</strong>Chinchilla提供的是特定实验设置下的尺度定律，并非适用于任意tokenizer、数据质量、架构、训练目标和后训练管线的精确公式。本课程用它来培养“数据、参数和计算必须平衡”的判断，而不是记忆固定常数。</div></div>
 </section><section class="card" id="s7-3b">
   <h3>7.3B 预训练数据管道：质量、去重、隐私与采样比例</h3>
-  <p>Token 预算说明了“训练多少”，数据混合说明了“从哪里采样”，但训练工程师还必须回答“哪些 token 不应该进入训练”。预训练数据管道不仅仅是拼接网页、书籍、代码和对话；它必须在质量、覆盖范围、合规性、隐私、偏差、污染和成本之间做出权衡。许多训练失败并非优化器问题，而是数据管道稳定地向模型输入错误信号所致。</p>
+  <p>Token 预算告诉我们要训练多少 token，数据混合告诉我们要从哪些来源采样。但训练工程师还必须回答另一个问题：哪些 token 不应该进入训练。预训练数据管道不只是拼接网页、书籍、代码和对话；它需要在质量、覆盖范围、合规性、隐私、偏差、污染和成本之间做权衡。许多训练失败的根源不是优化器问题，而是数据管道持续向模型灌入了错误的信号。</p>
 
   <h4>1. 从原始语料到训练 token 的管道</h4>
   <div class="table-wrap">
@@ -340,7 +342,7 @@ assert report["decision"] == "resume_checkpoint_ready"</div>
   </div>
 
   <h4>2. 去重并非总是更好</h4>
-  <p>去重的目标是减少记忆和污染，而不是将语料压缩到尽可能小的集合。精确去重移除完全相同的文档；近似去重处理模板页面、镜像站点、转载和轻微改写；基准测试污染还检查公开的问答是否以近似形式出现在训练语料中。不同粒度有不同的风险：</p>
+  <p>去重是为了减少记忆和污染，不是为了把语料压缩到最小集合。精确去重移除完全相同的文档；近似去重处理模板页面、镜像站点、转载和轻微改写；基准测试污染还会检查公开的问答是否以近似形式出现在训练语料中。不同粒度有不同的风险：</p>
   <div class="table-wrap">
     <table>
       <tr><th>粒度</th><th>适合发现</th><th>潜在的附带损害</th><th>必须在报告中明确说明</th></tr>
@@ -363,10 +365,10 @@ report = training_data_curation_report(
                 "max_eval_overlap_rate": 0.005, "min_domain_count": 2},
 )
 assert report["decision"] == "data_ready_for_training_rehearsal"</div>
-  <p>这份报告不能取代大规模的 MinHash、基于模型打分过滤或人工抽样，但它强制训练报告首先回答基本问题：token 是否充足、重复率是否过高、开发集是否被污染、质量过滤是否过松、领域混合是否不平衡、PII/凭证风险是否处理。当这些问题被明确回答时，后续的损失曲线会更具可解释性。</p>
+  <p>这份报告不能取代大规模的 MinHash、基于模型打分过滤或人工抽样，但它迫使训练报告先回答这些基本问题：token 是否充足、重复率是否过高、开发集是否被污染、质量过滤是否过松、领域混合是否不平衡、PII/凭证风险是否处理。回答清楚这些问题后，后续的损失曲线才更有可解释性。</p>
 
   <h4>3. 数据整理是一个优化循环，而非一次性的清洗过程</h4>
-  <p>预训练语料并非单一的“干净”或“不干净”。每个过滤器都会改变批次中出现的 token 转换，这意味着它改变了梯度分布。因此，一个有用的数据管道行为类似于优化循环：提出一个过滤或采样方案，在小规模上训练，跨能力和风险切片进行评估，然后决定该方案是否应推广到完整运行。</p>
+  <p>预训练语料不能简单地用“干净”或“不干净”来分类。每个过滤器都会改变批次中出现的 token 转换，这意味着它改变了梯度分布。因此，数据管道的设计应该像一个优化循环：先提出一个过滤或采样方案，在小规模上训练，在多个能力和风险切片上评估，然后决定是否推广到完整运行。</p>
   <div class="svg-diagram" style="max-width:960px">
     <svg viewBox="0 0 940 360" role="img" aria-label="Data curation optimization loop from raw pool to full training run">
       <defs>
@@ -418,11 +420,11 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
       <tr><td>课程学习/重放调度</td><td>改变整个运行过程中梯度的时间顺序</td><td>已消耗 token 的时间线、按来源的损失、后期回归测试</td><td>后期高质量采样掩盖了早期污染或导致了领域遗忘</td></tr>
     </table>
   </div>
-  <p>现代数据集工作，如 DataComp-LM、FineWeb、Dolma 和 Llama 3 报告，都指向同一个工程经验：数据集设计必须通过实验和透明文档进行评估，而不仅仅是依靠启发式的干净分数。DataComp-LM 将数据整理框架化为受控的多尺度实验；FineWeb 记录并消融了过滤和去重选择；Dolma 强调可复现的语料库构建和工具；Llama 3 强调了将评估与清洗、去重、PII 过滤和污染分析结合解释的必要性。</p>
-  <p>对于本课程，最基本的要求是每次完整的训练运行都要附带一份数据台账进行报告：按来源消耗的 token、过滤方案版本、去重阈值、划分隔离方法、评估污染结果、隐私/凭证处理以及验证切片。没有这份台账，两个使用相同模型、优化器和 token 数量的运行可能仍然无法比较，因为它们从不同的梯度分布中学习。</p>
+  <p>现代数据集工作（如 DataComp-LM、FineWeb、Dolma 和 Llama 3 报告）都指向同一个工程经验：数据集设计必须通过实验和透明的文档来评估，而不能只靠启发式的干净分数。DataComp-LM 将数据整理框架化为受控的多尺度实验；FineWeb 记录并消融了过滤和去重选择；Dolma 强调可复现的语料库构建和工具；Llama 3 强调了将评估与清洗、去重、PII 过滤和污染分析结合解释的必要性。</p>
+  <p>本课程要求，每次完整训练运行都必须附带一份数据台账进行报告：按来源消耗的 token、过滤方案版本、去重阈值、划分隔离方法、评估污染结果、隐私/凭证处理以及验证切片。没有这份台账，两个使用相同模型、优化器和 token 数量的运行可能仍然无法比较，因为它们从不同的梯度分布中学习。</p>
 
   <h4>4. PII、凭证和版权风险必须进入训练台账</h4>
-  <p>本课程不会将法律判断简化为单一分类器，但工程上必须知道风险从何而来。PII 可能以电子邮件、电话号码、地址、身份证号、医疗记录、聊天日志的形式出现；代码语料可能包含 API 密钥、私有 token、密码或内部 URL；网页和书籍也涉及来源授权、引用、再分发和下游生成风险。数据报告至少应记录：过滤规则、命中率、保留/删除策略、人工抽样结果，以及当前规则无法覆盖的风险。</p>
+  <p>本课程不会把法律判断简化为一个分类器，但工程上需要知道风险来源。PII 可能以电子邮件、电话号码、地址、身份证号、医疗记录、聊天日志的形式出现；代码语料可能包含 API 密钥、私有 token、密码或内部 URL；网页和书籍也涉及来源授权、引用、再分发和下游生成风险。数据报告至少应记录：过滤规则、命中率、保留/删除策略、人工抽样结果，以及当前规则无法覆盖的风险。</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>工程边界：</strong> PII 或许可过滤不能仅靠训练后的安全对齐来弥补。一旦模型在预训练期间记住了敏感字符串，训练后的拒答只能降低触发概率，而不能证明信息没有进入参数。</div></div>
 
   <h4>5. 混合权重是一个优化信号，而非数据比例</h4>
@@ -433,13 +435,13 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
   <p>其中 <code>n_i</code> 是第 i 个数据源的 token 数量。<code>alpha=1</code> 近似于按原始体积采样；<code>alpha&lt;1</code> 则增加了较小数据源的相对权重。这可以防止低资源语言、数学、代码或领域文档被网络数据完全淹没，但也可能导致对小来源的过度采样，引发过拟合和风格偏移。</p>
 
   <h4>工作示例：相同的 20B token，不同的数据管道训练出不同的模型</h4>
-  <p>假设两个训练运行都使用 <code>20B</code> tokens、相同的模型和相同的优化器。运行 A 按原始体积直接混合网络、代码和百科全书；运行 B 首先进行文档级去重、PII/凭证过滤，然后使用温度采样，其中 <code>alpha=0.7</code> 以增加代码和数学小来源的权重。即使 token 预算相同，这两个运行的梯度分布也不同：运行 B 可能在代码和数学验证集上表现更好，重复的网络风格更少，但由于增加了过滤和分层采样的数据准备成本，训练吞吐量稍低。报告应将这种差异归因于数据管道差异，而不是简单归因于“模型训练时间更长”或“学习率更好”。</p>
+  <p>假设两个训练运行都使用 <code>20B</code> tokens、相同的模型和相同的优化器。运行 A 按原始体积直接混合网络、代码和百科全书；运行 B 首先进行文档级去重、PII/凭证过滤，然后使用温度采样，其中 <code>alpha=0.7</code> 以增加代码和数学小来源的权重。即使 token 预算相同，这两个运行的梯度分布也不同：运行 B 可能在代码和数学验证集上表现更好，重复的网络风格更少，但由于增加了过滤和分层采样的数据准备成本，训练吞吐量稍低。报告应该把这种差异归因于数据管道的不同，而不是简单地说“训练时间更长”或“学习率更好”。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 训练工程不仅仅是运行一个 DataLoader；它还必须能够解释训练 token 的来源、过滤、去重、风险、采样权重和划分隔离。数据管道定义了模型学习什么以及如何解释评估分数。</div></div>
 </section><section class="card" id="s7-3c">
-  <h3>7.3C 合成数据与蒸馏：将生成转化为可控训练信号</h3>
-  <p>合成数据如今已成为工业级大语言模型训练中的常规部分，但它并不能替代数据治理。一个生成的样本仍然包含源提示词、教师模型、解码策略、过滤器、验证器以及目标训练阶段。如果这些环节中的任何一个在记录中缺失，当模型性能提升、退化或对某个基准测试风格过拟合时，该样本将无法被后续解读。</p>
-  <p>关键的转变在于将合成数据视为<strong>一种受控的信号转换</strong>：原始任务和失败案例被转化为候选示范、推理轨迹、工具调用链路、偏好对或经验证器标注的样本。只有当生成数据的质量、多样性、污染风险以及对下游的影响能够通过真实的留出数据切片来衡量时，它才是有用的。Meta 的 <a href="https://ai.meta.com/blog/meta-llama-3-1/" target="_blank">Llama 3.1</a> 后训练报告描述了SFT、拒绝采样、DPO和合成数据过滤的迭代轮次；<a href="https://arxiv.org/html/2501.12948v1" target="_blank">DeepSeek-R1</a> 则展示了一种不同但相关的模式，其中RL、冷启动数据、拒绝采样和蒸馏在多阶段推理流程中相互交互。</p>
+  <h3>7.3C 合成数据与蒸馏：把生成转化为可控训练信号</h3>
+  <p>合成数据是工业级大语言模型训练的常规部分，但不能替代数据治理。一个生成的样本仍然包含源提示词、教师模型、解码策略、过滤器、验证器以及目标训练阶段。如果任何一个环节在记录中缺失，当模型性能提升、退化或对某个基准测试风格过拟合时，该样本就无法被后续解读。</p>
+  <p>关键是把合成数据当作<strong>一种受控的信号转换</strong>：原始任务和失败案例被转化为候选示范、推理轨迹、工具调用链路、偏好对或经验证器标注的样本。只有当生成数据的质量、多样性、污染风险和对下游的影响能用真实的留出数据切片衡量时，它才有用。Meta 的 <a href="https://ai.meta.com/blog/meta-llama-3-1/" target="_blank">Llama 3.1</a> 后训练报告描述了SFT、拒绝采样、DPO和合成数据过滤的迭代轮次；<a href="https://arxiv.org/html/2501.12948v1" target="_blank">DeepSeek-R1</a> 则展示了一种不同但相关的模式，其中RL、冷启动数据、拒绝采样和蒸馏在多阶段推理流程中相互配合。</p>
 
   <div class="svg-diagram" style="max-width:980px">
     <svg viewBox="0 0 980 430" role="img" aria-label="Synthetic data lifecycle from task source to training mixture and evaluation feedback">
@@ -493,14 +495,14 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
       <path class="sd-line" d="M395 392 C190 390 116 286 133 130"/>
     </svg>
   </div>
-  <p class="diagram-caption">图7-3：合成数据生命周期。有用的单元不仅仅是生成的单个样本，而是从源任务到教师模型、验证器、训练混合数据、留出评估以及提升决策的完整链路。</p>
+  <p class="diagram-caption">图7-3：合成数据生命周期。有用的不只是单个样本，而是从源任务到教师模型、验证器、训练混合数据、留出评估到提升决策的完整链路。</p>
 
   <h4>1. 合成数据在不同训练阶段扮演不同角色</h4>
   <div class="table-wrap">
     <table>
       <tr><th>阶段</th><th>典型合成信号</th><th>为何有帮助</th><th>主要控制措施</th></tr>
-      <tr><td>预训练 / 中期训练</td><td>高质量解释、代码、数学、领域文本或推理风格文档</td><td>提高稀缺或困难领域中有效 token 转换的密度</td><td>与自然数据混合，保持来源多样性，检查验证集增益不仅来自风格模仿</td></tr>
-      <tr><td>SFT</td><td>指令-回复示范、工具调用轨迹、结构化输出示例</td><td>教授接口行为、格式规范、任务分解及特定领域工作流程</td><td>分别验证提示词和答案；根据正确性过滤，而不仅仅是流畅度</td></tr>
+      <tr><td>预训练 / 中期训练</td><td>高质量解释、代码、数学、领域文本或推理风格文档</td><td>提高稀缺或困难领域中有效 token 的密度</td><td>与自然数据混合，保持来源多样性，检查验证集增益是否仅来自风格模仿</td></tr>
+      <tr><td>SFT</td><td>指令-回复示范、工具调用轨迹、结构化输出示例</td><td>教授接口行为、格式规范、任务分解及特定领域工作流程</td><td>分别验证提示词和答案；根据正确性过滤，而不只是流畅度</td></tr>
       <tr><td>偏好优化</td><td>选取/拒绝对、重写的回复、安全/有用性对比</td><td>在人类标签稀缺时创建对比行为信号</td><td>审计对比对的难度、长度偏差、标注者或评判者一致性以及奖励破解风险</td></tr>
       <tr><td>推理RL / RLVR</td><td>可验证问题、采样解、拒绝采样轨迹、可执行检查</td><td>让模型探索解决策略，同时基于规则的验证器提供奖励</td><td>在训练前衡量验证器的精度和误报率；将训练提示词与最终评估分开</td></tr>
       <tr><td>蒸馏</td><td>教师模型输出、推理过程、计划、工具决策或自我修正轨迹</td><td>将行为从更强或更昂贵的模型迁移到更便宜的模型</td><td>记录教师模型版本、temperature、采样次数、筛选规则以及学生模型失败的领域</td></tr>
@@ -508,11 +510,11 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
   </div>
 
   <h4>2. 拒绝采样是数据筛选，而非神奇的监督信号</h4>
-  <p>拒绝采样意味着生成多个候选结果，只保留那些通过筛选规则的样本。筛选器可以是单元测试、数学验证器、大语言模型评判者、奖励模型或人工审核。工程风险在于筛选器会变成真正的教师：如果它接受了冗长但错误的推理、奖励了针对基准测试的捷径或忽略了工具的副作用，那么训练过程将会放大这些错误。</p>
+  <p>拒绝采样意味着生成多个候选结果，只保留那些通过筛选规则的样本。筛选器可以是单元测试、数学验证器、大语言模型评判者、奖励模型或人工审核。工程风险是筛选器可能变成真正的教师：如果它接受了冗长但错误的推理、奖励了针对基准测试的捷径或忽略了工具的副作用，训练过程就会放大这些错误。</p>
   <div class="table-wrap">
     <table>
       <tr><th>筛选器</th><th>可靠的情况</th><th>失效的情况</th><th>所需的审计</th></tr>
-      <tr><td>单元测试 / 可执行检查器</td><td>任务具有确定性输出，且测试覆盖了预期行为</td><td>测试范围狭窄、规格不明确、不稳定或公开到足以被记忆</td><td>误判通过/误判拒绝的样本审查、隐藏测试、污染检查</td></tr>
+      <tr><td>单元测试 / 可执行检查器</td><td>任务具有确定性输出，且测试覆盖了预期行为</td><td>测试范围狭窄、规格不明确、不稳定或公开到可被记忆</td><td>误判通过/误判拒绝的样本审查、隐藏测试、污染检查</td></tr>
       <tr><td>数学或符号验证器</td><td>最终答案可以归一化并精确检查</td><td>推理路径无效但最终答案被猜对</td><td>最终答案准确度加上轨迹质量抽样</td></tr>
       <tr><td>大语言模型评判者</td><td>评分标准清晰且已根据人类标签进行校准</td><td>评判者偏好长度、语调、熟悉的模型风格或位置顺序</td><td>A/B交换、长度控制、分歧切片、人类一致性</td></tr>
       <tr><td>奖励模型</td><td>偏好对覆盖了目标行为和困难负样本</td><td>策略学习了奖励模型伪影或过度优化了狭窄风格</td><td>KL / 长度 / 拒绝 / 安全监控以及离线到在线验证</td></tr>
@@ -520,11 +522,11 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
   </div>
 
   <h4>3. 合成数据台账必须确保训练信号可复现</h4>
-  <p>一份有用的台账应允许其他工程师回答：生成了什么，由哪个教师模型生成，来自哪个任务源，在什么解码参数下生成，按什么规则过滤，以什么权重混合，以及在哪些留出数据切片上验证过。没有这些，"我们添加了合成数据"就不是一个科学声明，而是一个对梯度分布的未记录更改。</p>
+  <p>一份有用的台账应让其他工程师能回答：生成了什么，由哪个教师模型生成，来自哪个任务源，在什么解码参数下生成，按什么规则过滤，以什么权重混合，在哪些留出数据切片上验证过。没有这些，"我们添加了合成数据"就不是科学声明，而是对梯度分布的未记录更改。</p>
   <div class="table-wrap">
     <table>
       <tr><th>台账字段</th><th>示例</th><th>为何重要</th></tr>
-      <tr><td>源任务</td><td>来自三月份日志中失败的客服引用案例（已脱敏）</td><td>防止模糊宣称数据代表了产品分布</td></tr>
+      <tr><td>源任务</td><td>来自三月份日志中失败的客服引用案例（已脱敏）</td><td>防止模糊宣称数据代表产品分布</td></tr>
       <tr><td>教师模型与策略</td><td>教师模型版本、temperature、top-p、候选数量</td><td>控制生成样本的风格、多样性和可复现性</td></tr>
       <tr><td>验证器或筛选器</td><td>单元测试、schema 验证器、评分标准评判者、人工审核协议</td><td>定义了"质量"在筛选过程中的实际含义</td></tr>
       <tr><td>混合规则</td><td>SFT token 的 5%，按领域设置上限，每三个 epoch 等效 token 窗口重放一次</td><td>防止合成样本在 batch 分布中悄然占据主导</td></tr>
@@ -532,33 +534,33 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
     </table>
   </div>
 
-  <p>对于训练工程师来说，实用的规则很简单：合成数据应该<strong>积累经过验证的信号</strong>，而不是用教师模型的偏好风格来替代经验分布。如果添加生成的轨迹提高了数学能力，但增加了冗长度、降低了事实精度或削弱了多语言鲁棒性，正确的回应不是宣称合成流程成功，而是根据能力重新加权、重新过滤或拆分流程。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>将每个合成数据集视为一次模型生成的干预，需追溯其来源、验证器质量、混合权重和留出证据。问题不在于"合成数据好不好"，而在于"在哪些控制检查下，哪种合成信号能够改善哪种行为。"</div></div>
+  <p>对训练工程师来说，实用的规则很简单：合成数据应该<strong>积累经过验证的信号</strong>，而不是用教师模型的偏好风格替代经验分布。如果添加生成的轨迹提高了数学能力，但增加了冗长度、降低了事实精度或削弱了多语言鲁棒性，正确的回应不是宣称合成流程成功，而是根据能力重新加权、重新过滤或拆分流程。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>把每个合成数据集看作一次模型生成的干预，需要追溯来源、验证器质量、混合权重和留出证据。问题不是"合成数据好不好"，而是"在哪些控制检查下，哪种合成信号能改善哪种行为。"</div></div>
 </section><!-- ================================================================ -->
 <!-- 7.4 交叉熵理论 -->
 <!-- ================================================================ --><section class="card" id="s7-4">
   <h3>7.4 交叉熵的理论基础与数值稳定性</h3>
-  <p>语言建模使用的损失函数是<strong>交叉熵（cross-entropy）</strong>。此前我们已经从MLE和KL散度的角度推导了其正确性；现在深入探讨其数值计算的细节。</p>
+  <p>语言建模的损失函数是<strong>交叉熵（cross-entropy）</strong>。前面已经从MLE和KL散度的角度推导了它的合理性；这里重点看数值计算中的细节。</p>
 
   <h4>数值不稳定的根源</h4>
-  <p>直接使用"softmax后接log"在数值上不稳定。当logit值较大时（大语言模型最后层的logit可达30以上），<span class="katex-inline" data-expr="e^{30} \approx 1.07 \times 10^{13}" aria-label="e^{30} \approx 1.07 \times 10^{13}" role="img"></span> 已经是FP16上限（<span class="katex-inline" data-expr="6.5 \times 10^4" aria-label="6.5 \times 10^4" role="img"></span>）的10亿倍——FP16会直接溢出为inf。</p>
-  <p>标准解法是<strong>Log-Sum-Exp技巧</strong>：提取最大值 <span class="katex-inline" data-expr="z_{\max} = \max_j z_j" aria-label="z_{\max} = \max_j z_j" role="img"></span>：</p>
+  <p>直接计算softmax后再取对数在数值上不稳定。当logit值较大时（大语言模型最后一层的logit可达30以上），<span class="katex-inline" data-expr="e^{30} \approx 1.07 \times 10^{13}" aria-label="e^{30} \approx 1.07 \times 10^{13}" role="img"></span> 已经超过FP16上限（<span class="katex-inline" data-expr="6.5 \times 10^4" aria-label="6.5 \times 10^4" role="img"></span>）的10亿倍——FP16会直接溢出为inf。</p>
+  <p>标准解法是<strong>Log-Sum-Exp技巧</strong>：先提取最大值 <span class="katex-inline" data-expr="z_{\max} = \max_j z_j" aria-label="z_{\max} = \max_j z_j" role="img"></span>：</p>
   <div class="math-box"><div class="label">公式 7.8 数值稳定的LogSoftmax</div>
     <div class="katex" data-expr="\log\text{Softmax}(z_i) = z_i - z_{\max} - \log\sum_j e^{z_j - z_{\max}}" aria-label="\log\text{Softmax}(z_i) = z_i - z_{\max} - \log\sum_j e^{z_j - z_{\max}}" role="img"></div>
   </div>
-  <p>因为 <span class="katex-inline" data-expr="z_j - z_{\max} \leq 0" aria-label="z_j - z_{\max} \leq 0" role="img"></span>，<span class="katex-inline" data-expr="e^{z_j - z_{\max}} \leq 1" aria-label="e^{z_j - z_{\max}} \leq 1" role="img"></span>，在任何精度下都不会溢出。PyTorch的 <code>F.cross_entropy</code> 和 <code>F.log_softmax</code> 都内置了该技巧。</p>
+  <p>由于 <span class="katex-inline" data-expr="z_j - z_{\max} \leq 0" aria-label="z_j - z_{\max} \leq 0" role="img"></span>，<span class="katex-inline" data-expr="e^{z_j - z_{\max}} \leq 1" aria-label="e^{z_j - z_{\max}} \leq 1" role="img"></span>，在任何精度下都不会溢出。PyTorch的 <code>F.cross_entropy</code> 和 <code>F.log_softmax</code> 都内置了这个技巧。</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>另一个常见错误：</strong>计算交叉熵时，必须将 <code>(batch, seq_len, vocab_size)</code> 展平为 <code>(batch*seq_len, vocab_size)</code>。如果不对logits做 <code>.view(-1, vocab_size)</code>，<code>F.softmax</code> 会在错误的维度上做归一化——它会在整个batch+seq合并后的空间上执行softmax，而不是在每个token位置上独立进行。</div></div>
 </section><!-- ================================================================ -->
 <!-- 7.4A CE Gradient and Backward Pass Path -->
 <!-- ================================================================ --><section class="card" id="s7-4a">
   <h3>7.4A 训练实际更新的内容：解读交叉熵梯度</h3>
-  <p>手动实现交叉熵可以解决前向数值稳定性问题；理解训练还需要查看它的梯度。对于单个词元位置，令 logits 为 <span class="katex-inline" data-expr="z \in \mathbb{R}^{V}" aria-label="z ∈ R^V" role="img"></span>，softmax 概率为 <span class="katex-inline" data-expr="p_i = \exp(z_i) / \sum_j \exp(z_j)" aria-label="p_i = exp(z_i) / sum_j exp(z_j)" role="img"></span>，目标类别为 <span class="katex-inline" data-expr="y" aria-label="y" role="img"></span>。损失为 <span class="katex-inline" data-expr="L=-\log p_y" aria-label="L = -log p_y" role="img"></span>。</p>
+  <p>手动实现交叉熵能解决前向数值稳定性问题，但要理解训练过程，还需要查看它的梯度。对于单个词元位置，令 logits 为 <span class="katex-inline" data-expr="z \in \mathbb{R}^{V}" aria-label="z ∈ R^V" role="img"></span>，softmax 概率为 <span class="katex-inline" data-expr="p_i = \exp(z_i) / \sum_j \exp(z_j)" aria-label="p_i = exp(z_i) / sum_j exp(z_j)" role="img"></span>，目标类别为 <span class="katex-inline" data-expr="y" aria-label="y" role="img"></span>。损失为 <span class="katex-inline" data-expr="L=-\log p_y" aria-label="L = -log p_y" role="img"></span>。</p>
 
   <div class="math-box"><div class="label">方程 7.8A 交叉熵关于 logits 的梯度</div>
     <div class="katex" data-expr="\frac{\partial L}{\partial z_i}=p_i-\mathbf{1}[i=y]" aria-label="∂L/∂z_i = p_i - 1[i=y]" role="img"></div>
   </div>
 
-  <p>这个梯度恒等式至关重要：正确词元的梯度是 <span class="katex-inline" data-expr="p_y-1" aria-label="p_y - 1" role="img"></span>，通常是负值，因此梯度下降会增加正确词元的 logit。错误词元的梯度是 <span class="katex-inline" data-expr="p_i" aria-label="p_i" role="img"></span>；梯度下降会降低该 logit，降低幅度与模型当前分配给该词元的概率成正比。</p>
+  <p>这个梯度恒等式很关键：正确词元的梯度是 <span class="katex-inline" data-expr="p_y-1" aria-label="p_y - 1" role="img"></span>，通常是负值，因此梯度下降会增大正确词元的 logit。错误词元的梯度是 <span class="katex-inline" data-expr="p_i" aria-label="p_i" role="img"></span>；梯度下降会降低该 logit，降低的幅度和模型当前分配给该词元的概率成正比。</p>
   <h4>梯度如何流回 LM Head 和 Embedding</h4>
   <p>如果 logits 来自绑定的 LM head（即共享权重）：</p>
   <div class="math-box"><div class="label">LM Head</div>
@@ -568,26 +570,26 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
   <ul>
     <li><strong>LM head / 输出嵌入：</strong>目标词元对应的行被拉近当前的隐藏状态，而高概率错误预测词元对应的行则被推远。</li>
     <li><strong>Transformer 隐藏状态：</strong>梯度 <span class="katex-inline" data-expr="\partial L / \partial h_t" aria-label="∂L/∂h_t" role="img"></span> 继续向后传播，经过最后的归一化层、块、注意力和 FFN。</li>
-    <li><strong>输入嵌入：</strong>只有那些在 batch 中实际出现的词元所对应的行才会通过嵌入查找得到梯度；未出现的词元对应的行在输入侧不会被更新。</li>
+    <li><strong>输入嵌入：</strong>只有 batch 中实际出现的词元对应的行才能通过嵌入查找得到梯度；未出现的词元对应的行在输入侧不会被更新。</li>
   </ul>
 
   <h4>Masking 对梯度的影响</h4>
-  <p>在 padding、SFT 标签掩码或打包序列中，被设置为忽略索引的位置不应贡献损失或梯度。实现上，不是通过将这些位置的概率设为零，而是在求平均之前排除对应的 NLL 项。否则，模型会被迫预测 padding、提示或无意义的位置，导致训练目标偏离真实任务。</p>
-  <p>课程作业中的 <code>cross_entropy_logits_gradient</code> 函数要求以张量操作实现该规则：有效位置的梯度为 <code>(softmax(logits) - one_hot(target)) / N_valid</code>，而被忽略位置的整行梯度为零。该函数将理论推导与 PyTorch autograd 实际计算的梯度对齐。</p>
+  <p>在 padding、SFT 标签掩码或打包序列中，被设置为忽略索引的位置不应贡献损失或梯度。具体实现时，不是把这些位置的输出概率设为零，而是在求平均之前排除对应的 NLL 项。否则，模型会被迫去预测 padding、提示或无意义的位置，导致训练目标偏离真实任务。</p>
+  <p>课程作业中的 <code>cross_entropy_logits_gradient</code> 函数要求用张量操作实现这个规则：有效位置的梯度为 <code>(softmax(logits) - one_hot(target)) / N_valid</code>，而被忽略位置的整行梯度为零。该函数将理论推导与 PyTorch autograd 实际计算的梯度对齐。</p>
 
-  <h4>标签平滑：不把目标分布视为绝对的 one-hot</h4>
-  <p>标准 next-token CE 将正确词元的目标概率设为 1，其他词元设为 0。标签平滑将少量概率质量 <span class="katex-inline" data-expr="\epsilon" aria-label="epsilon" role="img"></span> 分配给非目标类别：</p>
+  <h4>标签平滑：目标分布不一定是绝对的 one-hot</h4>
+  <p>标准 next-token CE 把正确词元的目标概率设为 1，其他词元设为 0。标签平滑将少量概率质量 <span class="katex-inline" data-expr="\epsilon" aria-label="epsilon" role="img"></span> 分配给非目标类别：</p>
   <div class="math-box"><div class="label">标签平滑目标</div>
     <div class="katex" data-expr="q_i=\begin{cases}1-\epsilon, & i=y\\ \epsilon/(V-1), & i\ne y\end{cases},\qquad \mathcal{L}=-\sum_i q_i\log p_\theta(i)" aria-label="q_i = { 1-epsilon, i=y; epsilon/(V-1), i≠y }, L = -sum_i q_i log p_theta(i)" role="img"></div>
   </div>
-  <p>这降低了模型对单个标签的过度自信，常用于分类、机器翻译和早期 seq2seq 训练。其目的不是“让答案模糊”，而是在训练目标中表达标签噪声、同义候选和标注不确定性。Ch07 作业中的 <code>label_smoothed_cross_entropy</code> 函数要求学习者显式构造平滑后的目标分布，同时确保 <code>ignore_index</code> 位置不参与平均；这也是理解蒸馏软标签的前提步骤。</p>
+  <p>这样做是为了减少模型对单个标签的过度自信，常用于分类、机器翻译和早期 seq2seq 训练。目的不是让答案模糊，而是在训练目标中表达标签噪声、同义候选和标注不确定性。Ch07 作业中的 <code>label_smoothed_cross_entropy</code> 函数要求学习者显式构造平滑后的目标分布，同时确保 <code>ignore_index</code> 位置不参与平均；这也是理解蒸馏软标签的前提步骤。</p>
 
-  <h4>概率校准：当模型说“90%”时，真的正确率是 90% 吗？</h4>
-  <p>困惑度衡量模型分配给真实词元的平均概率，但它不能直接告诉我们模型的置信度是否可信。校准回答的是另一个问题：在所有置信度约为 0.9 的预测中，准确率是否也约为 0.9？如果模型经常以 0.95 的置信度预测错误，那么它就不适合直接使用 softmax 概率作为拒绝阈值、风险评分或自动化决策的依据。</p>
+  <h4>概率校准：当模型说“90%”时，它的正确率真的接近 90% 吗？</h4>
+  <p>困惑度衡量的是模型分配给真实词元的平均概率，但它不能直接告诉我们模型的置信度是否可信。校准回答的是另一个问题：在所有置信度约为 0.9 的预测中，准确率是否也约为 0.9？如果模型经常在 0.95 置信度下预测错误，那它的 softmax 概率就不适合直接作为拒绝阈值、风险评分或自动化决策的依据。</p>
   <div class="math-box"><div class="label">公式 7.8B 期望校准误差</div>
     <div class="katex" data-expr="\text{ECE}=\sum_{b=1}^{B}\frac{|S_b|}{N}\left|\text{acc}(S_b)-\text{conf}(S_b)\right|" aria-label="ECE = sum_{b=1}^B (|S_b|/N) |acc(S_b)-conf(S_b)|" role="img"></div>
   </div>
-  <p>其中 <span class="katex-inline" data-expr="S_b" aria-label="S_b" role="img"></span> 是第 <span class="katex-inline" data-expr="b" aria-label="b" role="img"></span> 个置信度桶，<span class="katex-inline" data-expr="\text{acc}(S_b)" aria-label="acc(S_b)" role="img"></span> 是该桶内的预测准确率，<span class="katex-inline" data-expr="\text{conf}(S_b)" aria-label="conf(S_b)" role="img"></span> 是该桶内最大 softmax 概率的平均值。Ch07 作业中的 <code>expected_calibration_error(logits, targets, n_bins)</code> 函数要求学习者根据 logits 计算置信度、预测、正确性以及分桶的 ECE，同时继续使用 <code>ignore_index</code> 防止 padding 或提示位置污染评估。</p>
+  <p>其中 <span class="katex-inline" data-expr="S_b" aria-label="S_b" role="img"></span> 是第 <span class="katex-inline" data-expr="b" aria-label="b" role="img"></span> 个置信度桶，<span class="katex-inline" data-expr="\text{acc}(S_b)" aria-label="acc(S_b)" role="img"></span> 是该桶内的预测准确率，<span class="katex-inline" data-expr="\text{conf}(S_b)" aria-label="conf(S_b)" role="img"></span> 是该桶内最大 softmax 概率的平均值。Ch07 作业中的 <code>expected_calibration_error(logits, targets, n_bins)</code> 函数要求学习者根据 logits 计算置信度、预测、正确性以及分桶的 ECE，同时继续用 <code>ignore_index</code> 防止 padding 或提示位置污染评估。</p>
 
   <div class="worked-example">
     <h4>示例：手动计算 ECE</h4>
@@ -610,15 +612,15 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
         <tr><td>4</td><td><code>[0.2, 0.0]</code></td><td>0</td><td>0</td><td>0.550</td><td>1</td></tr>
       </tbody>
     </table>
-    <p>对于二分类，最大 softmax 概率不可能小于 0.5，因此第一个桶为空，第二个桶包含所有 4 个样本。在该桶内，<span class="katex-inline" data-expr="\text{acc}=3/4=0.75" aria-label="acc = 3/4 = 0.75" role="img"></span>，平均置信度为 <span class="katex-inline" data-expr="\text{conf}=(0.953+0.953+0.953+0.550)/4\approx 0.853" aria-label="conf = (0.953+0.953+0.953+0.550)/4 ≈ 0.853" role="img"></span>，因此 <span class="katex-inline" data-expr="\text{ECE}=1.0\times |0.75-0.853|\approx 0.103" aria-label="ECE = 1.0 × |0.75-0.853| ≈ 0.103" role="img"></span>。这表明虽然模型的整体准确率并不低，但其分配的概率过于自信；如果使用置信度来控制拒绝或人工审核阈值，则需要额外的校准。</p>
+    <p>对于二分类，最大 softmax 概率不可能小于 0.5，因此第一个桶为空，第二个桶包含所有 4 个样本。在该桶内，<span class="katex-inline" data-expr="\text{acc}=3/4=0.75" aria-label="acc = 3/4 = 0.75" role="img"></span>，平均置信度为 <span class="katex-inline" data-expr="\text{conf}=(0.953+0.953+0.953+0.550)/4\approx 0.853" aria-label="conf = (0.953+0.953+0.953+0.550)/4 ≈ 0.853" role="img"></span>，因此 <span class="katex-inline" data-expr="\text{ECE}=1.0\times |0.75-0.853|\approx 0.103" aria-label="ECE = 1.0 × |0.75-0.853| ≈ 0.103" role="img"></span>。这表明虽然模型的整体准确率并不低，但它分配的概率过于自信；如果要用置信度来控制拒绝或人工审核阈值，则需要额外的校准。</p>
   </div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键洞察：</strong>交叉熵不仅仅是一个标量分数。它为 logits 提供了非常清晰的更新方向：增加正确词元的概率，降低模型自己认为很可能但实际上错误的词元的概率，并通过链式法则将这个信号反向传播到整个 Transformer 中。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>关键洞察：</strong>交叉熵不仅是一个标量分数，它还为 logits 定义了清晰的更新方向：增大正确词元的概率，减小模型自己认为很可能但实际上错误的词元的概率，并通过链式法则把这个信号反向传播到整个 Transformer 中。</div></div>
 </section><!-- ================================================================ -->
 <!-- Programming Exercise 2: Cross-Entropy Loss -->
 <!-- ================================================================ --><section class="card" id="s7-5">
   <h3>7.5 编程练习2：手动实现交叉熵损失</h3>
-  <p>现在你已经理解了交叉熵的数学原理和数值稳定性问题，请手动实现它——<strong>不要使用</strong> <code>torch.nn.CrossEntropyLoss</code> 或 <code>F.cross_entropy</code>。</p>
+  <p>你已了解交叉熵的数学原理和数值稳定性问题，现在请手动实现它——<strong>不要使用</strong> <code>torch.nn.CrossEntropyLoss</code> 或 <code>F.cross_entropy</code>。</p>
 
   <div class="coding-exercise">
     <h4>练习2：手动实现交叉熵损失</h4>
@@ -630,7 +632,7 @@ assert report["decision"] == "data_ready_for_training_rehearsal"</div>
         <li>输出一个标量损失（所有位置的平均负对数似然）</li>
         <li>必须先将 logits 展平为二维</li>
         <li>必须使用 Log-Sum-Exp Trick</li>
-        <li>与 PyTorch 内建交叉熵结果的差异必须小于 1e-5</li>
+        <li>与 PyTorch 内置交叉熵结果的差异必须小于 1e-5</li>
       </ul>
       <pre># Expected usage
 logits = torch.randn(4, 64, 50257)
@@ -674,31 +676,31 @@ def cross_entropy_manual(logits, targets):
 <!-- 7.6 Learning Rate Scheduling Theory -->
 <!-- ================================================================ --><section class="card" id="s7-6">
   <h3>7.6 学习率调度的理论理解</h3>
-  <p>许多现代大语言模型训练采用 <strong>Warmup + Cosine Decay</strong>（预热加余弦衰减）或类似的平滑衰减调度。这不是随意选择的：预热可以缓解训练早期的不稳定性，平滑衰减则减少了学习率突变带来的扰动。</p>
+  <p>许多现代大语言模型训练采用 <strong>Warmup + Cosine Decay</strong>（预热加余弦衰减）或类似的平滑衰减调度。原因在于：预热缓解了训练早期的不稳定性，平滑衰减减少了学习率突变带来的扰动。</p>
 
   <h4>为什么需要预热</h4>
   <p>在Adam的第一步，<span class="katex-inline" data-expr="m_1 = (1-\beta_1)g_1" aria-label="m_1 = (1-\beta_1)g_1" role="img"></span>，<span class="katex-inline" data-expr="v_1 = (1-\beta_2)g_1^2" aria-label="v_1 = (1-\beta_2)g_1^2" role="img"></span>。没有预热时，初始更新步长大约等价于：</p>
   <div class="math-box"><div class="label">公式 7.9 Adam 初始步长（无预热）</div>
     <div class="katex" data-expr="\Delta\theta_1 \approx -\eta \cdot \text{sign}(g_1) \cdot \frac{\sqrt{1-\beta_2}}{1-\beta_1} \approx -2\eta \cdot \text{sign}(g_1)" aria-label="\Delta\theta_1 \approx -\eta \cdot \text{sign}(g_1) \cdot \frac{\sqrt{1-\beta_2}}{1-\beta_1} \approx -2\eta \cdot \text{sign}(g_1)" role="img"></div>
-  </div>  <p>这意味着初始有效步长约 <span class="katex-inline" data-expr="2\eta" aria-label="2\eta" role="img"></span>（对于 <span class="katex-inline" data-expr="\beta_1=0.9, \beta_2=0.95" aria-label="\beta_1=0.9, \beta_2=0.95" role="img"></span>）。模型在训练早期使用了过大的步长，可能会直接发散。预热将学习率从0线性增加到 <span class="katex-inline" data-expr="\eta" aria-label="\eta" role="img"></span>，为动量提供了一个“预热”期。</p>
+  </div>  <p>所以初始有效步长约为 <span class="katex-inline" data-expr="2\eta" aria-label="2\eta" role="img"></span>（对于 <span class="katex-inline" data-expr="\beta_1=0.9, \beta_2=0.95" aria-label="\beta_1=0.9, \beta_2=0.95" role="img"></span>）。如果训练早期步长过大，模型可能直接发散。预热将学习率从0线性增加到 <span class="katex-inline" data-expr="\eta" aria-label="\eta" role="img"></span>，让动量有一个“预热”期。</p>
 
   <h4>为什么用余弦衰减而不是阶梯衰减？</h4>
-  <p>阶梯衰减（例如每30个epoch衰减10倍）导致学习率“跳跃”，会在损失函数中引起相应的振荡——当学习率突然降低时，模型从“探索”急剧转向“利用”，导致损失函数出现跳跃。余弦衰减连续平滑地改变学习率，因此损失函数也平滑下降。</p>
+  <p>阶梯衰减（例如每30个epoch衰减10倍）导致学习率“跳跃”，损失函数中相应出现振荡。学习率突然降低时，模型从“探索”急剧转向“利用”，损失函数出现跳跃。余弦衰减连续平滑地改变学习率，因此损失函数也平滑下降。</p>
 
   <h4>典型调度曲线形状</h4>
-  <p>余弦衰减在早期保持较高学习率（用于快速探索参数空间），中期快速下降（以找到好的局部区域），最后缓慢趋近于0（用于精细收敛）。这种“快-快-慢”模式在大规模训练中很常见；具体效果仍取决于批大小、模型规模、优化器、训练token预算以及是否需要继续预训练。</p>
+  <p>余弦衰减在早期保持较高学习率（用于快速探索参数空间），中期快速下降（以找到好的局部区域），最后缓慢趋近于0（用于精细收敛）。这种“快-快-慢”模式在大规模训练中很常见。具体效果取决于批大小、模型规模、优化器、训练token预算以及是否需要继续预训练。</p>
 
   <h4>计算示例：重新计算每个优化器步骤的学习率与消耗的token数</h4>
   <p>假设 <code>base_lr=0.2</code>、<code>num_warmup_steps=2</code>、<code>num_training_steps=6</code>、<code>min_lr_ratio=0.25</code>，每个优化器步骤消耗 <code>1000</code> 个token。在步骤0，仍处于预热起点，学习率乘数为 <code>0</code>，实际学习率为 <code>0</code>，累积token数为 <code>0</code>；在步骤1，乘数为 <code>1/2</code>，学习率为 <code>0.1</code>，累积token数为 <code>1000</code>；在步骤2，进入余弦阶段起点，乘数回到 <code>1.0</code>，学习率为 <code>0.2</code>；在步骤6，到达训练结束，乘数为 <code>0.25</code>，学习率为 <code>0.05</code>，累积token数为 <code>6000</code>。</p>
-  <p>这个例子强调调度器应基于<strong>成功的优化器步骤</strong>推进，而不是微批反向传播次数。如果 <code>grad_accum_steps=4</code> 但调度器每个微批都调用，那么预热和余弦衰减完成速度会比token进度快4倍。Ch07作业中的 <code>lr_schedule_trace</code> 要求明确列出每个步骤的阶段、学习率乘数、实际学习率和消耗的token数。</p>
+  <p>这个例子说明调度器应基于<strong>成功的优化器步骤</strong>推进，而不是微批反向传播次数。如果 <code>grad_accum_steps=4</code> 但调度器每个微批都调用，那么预热和余弦衰减完成速度会比token进度快4倍。Ch07作业中的 <code>lr_schedule_trace</code> 要求明确列出每个步骤的阶段、学习率乘数、实际学习率和消耗的token数。</p>
 </section><!-- ================================================================ -->
 <!-- 编程练习 3：AdamW 优化器 -->
 <!-- ================================================================ --><section class="card" id="s7-7">
   <h3>7.7 编程练习3：实现AdamW优化器</h3>
-  <p>AdamW 是目前LLM训练中使用最广泛的优化器。其核心创新是<strong>解耦权重衰减</strong>。</p>
+  <p>AdamW 是 LLM 训练中最常用的优化器。其核心创新是<strong>解耦权重衰减</strong>。</p>
 
   <h4>为什么解耦权重衰减很重要</h4>
-  <p>在标准Adam中，<span class="katex-inline" data-expr="L_2" aria-label="L_2" role="img"></span>正则化在损失函数中添加<span class="katex-inline" data-expr="\lambda \|\theta\|^2" aria-label="\lambda \|\theta\|^2" role="img"></span>，其梯度为<span class="katex-inline" data-expr="2\lambda\theta" aria-label="2\lambda\theta" role="img"></span>。但Adam的自适应学习率<strong>错误地缩放</strong>了这一正则化项——梯度大的参数正则化被削弱，而梯度小的参数正则化被放大。AdamW将权重衰减放在Adam更新<strong>之后</strong>，独立于梯度计算和动量：</p>
+  <p>标准Adam将L2正则化项<span class="katex-inline" data-expr="L_2" aria-label="L_2" role="img"></span>加入损失函数：<span class="katex-inline" data-expr="\lambda \|\theta\|^2" aria-label="\lambda \|\theta\|^2" role="img"></span>，其梯度为<span class="katex-inline" data-expr="2\lambda\theta" aria-label="2\lambda\theta" role="img"></span>。但Adam的自适应学习率会<strong>不恰当地缩放</strong>这一正则化项——梯度大的参数正则化被削弱，而梯度小的参数正则化被放大。AdamW将权重衰减放在Adam更新<strong>之后</strong>，独立于梯度计算和动量：</p>
 
   <div class="math-box"><div class="label">公式7.10 AdamW更新规则</div>
     <div class="katex" data-expr="\begin{aligned}
@@ -715,7 +717,7 @@ def cross_entropy_manual(logits, targets):
       \theta_t &amp;= \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} - \eta \lambda \theta_{t-1}
       \end{aligned}" role="img"></div>
   </div>
-  <p>最后一行中的<span class="katex-inline" data-expr="-\eta \lambda \theta_{t-1}" aria-label="-\eta \lambda \theta_{t-1}" role="img"></span>就是<strong>解耦权重衰减</strong>——它不参与动量计算，直接作用于参数。</p>
+  <p>最后一行中的<span class="katex-inline" data-expr="-\eta \lambda \theta_{t-1}" aria-label="-\eta \lambda \theta_{t-1}" role="img"></span>就是<strong>解耦权重衰减</strong>：它不参与动量计算，直接作用在参数上。</p>
 
   <div class="coding-exercise">
     <h4>练习3：实现AdamW优化器</h4>
@@ -765,7 +767,7 @@ class AdamW:
                 p.data *= (1 - self.lr * self.weight_decay)
             # 4. Adam 更新
             p.data -= self.lr * m_hat / (torch.sqrt(v_hat) + self.eps)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么需要偏差校正：</strong>Adam初始化<span class="katex-inline" data-expr="m_0 = 0, v_0 = 0" aria-label="m_0 = 0, v_0 = 0" role="img"></span>，因此最初几步的动量估计严重偏向0。偏差校正通过除以<span class="katex-inline" data-expr="1-\beta^t" aria-label="1-\beta^t" role="img"></span>来补偿这种偏差。随着t增大，<span class="katex-inline" data-expr="1-\beta^t \to 1" aria-label="1-\beta^t \to 1" role="img"></span>，校正自动消失。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么需要偏差校正：</strong>Adam初始化<span class="katex-inline" data-expr="m_0 = 0, v_0 = 0" aria-label="m_0 = 0, v_0 = 0" role="img"></span>，因此前几步的动量估计严重偏向0。偏差校正通过除以<span class="katex-inline" data-expr="1-\beta^t" aria-label="1-\beta^t" role="img"></span>来补偿这种偏差。随着t增大，<span class="katex-inline" data-expr="1-\beta^t \to 1" aria-label="1-\beta^t \to 1" role="img"></span>，校正自动失效。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
@@ -782,8 +784,8 @@ class AdamW:
         <li>阶段 1（预热，step < num_warmup_steps）：lr 从 0 线性增加到 max_lr</li>
         <li>阶段 2（余弦衰减）：lr 从 max_lr 余弦衰减到 <code>max_lr * min_lr_ratio</code></li>
         <li>函数返回一个 <code>torch.optim.lr_scheduler.LambdaLR</code> 实例</li>
-        <li>在预热结束时，lr 必须严格等于 max_lr（不能有跳变）</li>
-        <li>使用 <code>math.cos</code> 实现余弦曲线</li>
+        <li>预热结束时，lr 必须严格等于 max_lr（不能有跳变）</li>
+        <li>用 <code>math.cos</code> 计算余弦曲线</li>
       </ul>
       <pre># Expected usage
 scheduler = get_cosine_schedule_with_warmup(
@@ -813,30 +815,30 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
         return cosine_decay * (1 - min_lr_ratio) + min_lr_ratio
 
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>边界条件：</strong>在预热结束时，<code>progress</code> 为 0，因此 <code>cos(0) = 1</code>、<code>cosine_decay = 1</code>，返回值是 1——预热的最终 lr 正好是 max_lr。在训练结束时，<code>progress = 1</code>、<code>cos(pi) = -1</code>、<code>cosine_decay = 0</code>，返回值 = min_lr_ratio。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>边界条件：</strong>预热结束时，<code>progress</code> = 0，因此 <code>cos(0) = 1</code>、<code>cosine_decay = 1</code>，返回值为 1，即预热最终 lr 等于 max_lr。训练结束时，<code>progress = 1</code>、<code>cos(pi) = -1</code>、<code>cosine_decay = 0</code>，返回值 = min_lr_ratio。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 7.9 Muon优化器理论 -->
 <!-- ================================================================ --><section class="card" id="s7-9">
   <h3>7.9 Muon 优化器案例分析——矩阵正交化的威力</h3>
-  <p><strong>Muon</strong>（Keller Jordan, 2024）是一个优化器的案例分析，它会对矩阵参数的动量方向进行正交化。其核心思想与 AdamW <strong>有本质不同</strong>：AdamW 试图为每个参数自适应调整学习率，而 Muon 则试图<strong>对动量矩阵进行正交化</strong>，更直接地处理矩阵权重的方向更新。</p>
+  <p><strong>Muon</strong>（Keller Jordan, 2024）是一个优化器案例分析，它对矩阵参数的动量方向做正交化。其核心思路与 AdamW <strong>不同</strong>：AdamW 自适应调整每个参数的学习率，而 Muon 则<strong>对动量矩阵进行正交化</strong>，更直接地更新矩阵权重的方向。</p>
 
-  <h4>为什么正交化有助于优化？</h4>
-  <p>当权重矩阵的特征值分布不均匀（某些方向的变化幅度远大于其他方向）时，梯度下降效率低下——模型在“陡峭”方向上振荡，在“平坦”方向上进展缓慢。Muon 通过 <strong>Newton-Schulz 迭代</strong>将梯度矩阵投影到最近的正交矩阵上：</p>
+  <h4>正交化为什么有助于优化？</h4>
+  <p>当权重矩阵的特征值分布不均匀（某些方向的变化幅度远大于其他方向）时，梯度下降效率低下——模型在“陡峭”方向上振荡，在“平坦”方向上进展缓慢。Muon 用 <strong>Newton-Schulz 迭代</strong>将梯度矩阵投影到最近的正交矩阵上：</p>
   <div class="math-box"><div class="label">公式 7.11 Newton-Schulz 迭代</div>
     <div class="katex" data-expr="X_{k+1} = X_k \cdot \frac{3I - X_k^\top X_k}{2}" aria-label="X_{k+1} = X_k \cdot \frac{3I - X_k^\top X_k}{2}" role="img"></div>
   </div>
-  <p>该迭代快速收敛到 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 的极分解，<span class="katex-inline" data-expr="G = U \Sigma V^\top \to UV^\top" aria-label="G = U \Sigma V^\top \to UV^\top" role="img"></span>——即去掉了奇异值 <span class="katex-inline" data-expr="\Sigma" aria-label="\Sigma" role="img"></span>，只保留正交方向。通常迭代 5 次就足以收敛。直观上讲，它保留了梯度的<strong>方向信息</strong>，但丢弃了<strong>幅度信息</strong>——因为幅度已经由学习率控制。</p>
+  <p>该迭代快速收敛到 <span class="katex-inline" data-expr="G" aria-label="G" role="img"></span> 的极分解，<span class="katex-inline" data-expr="G = U \Sigma V^\top \to UV^\top" aria-label="G = U \Sigma V^\top \to UV^\top" role="img"></span>——即去掉奇异值 <span class="katex-inline" data-expr="\Sigma" aria-label="\Sigma" role="img"></span>，只保留正交方向。通常迭代 5 次就足以收敛。直观上，它保留了梯度的<strong>方向信息</strong>，丢弃了<strong>幅度信息</strong>——幅度由学习率控制。</p>
 
   <h4>Muon 与 AdamW 内存对比</h4>
-  <p>AdamW 需要维护两个状态 <span class="katex-inline" data-expr="m_t" aria-label="m_t" role="img"></span> 和 <span class="katex-inline" data-expr="v_t" aria-label="v_t" role="img"></span>——每个参数额外占用 2 个张量。Muon 只维护<strong>一个动量缓冲区</strong>（它对动量进行正交化，而不是原始梯度），因此优化器内存大约<strong>减半</strong>。训练 70B 模型时（每个状态 2 字节）：AdamW 需要约 <span class="katex-inline" data-expr="70\text{B}\times 2\times 2 = 280" aria-label="70\text{B}\times 2\times 2 = 280" role="img"></span> GB，Muon 约 140 GB——节省约 140GB。</p>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>适用范围：</strong> Muon 对于具有显式矩阵结构的参数（<code>nn.Linear</code> 权重、<code>nn.Embedding</code> 权重）更自然。偏置和 LayerNorm 的 gamma/beta 是一维的，不适合直接进行矩阵正交化；通常应回退到标准 SGD、AdamW 或单独的参数组。实际使用的参数、阈值和混合策略须由实验设置指定。</div></div>
+  <p>AdamW 需要维护两个状态 <span class="katex-inline" data-expr="m_t" aria-label="m_t" role="img"></span> 和 <span class="katex-inline" data-expr="v_t" aria-label="v_t" role="img"></span>，每个参数额外占用 2 个张量。Muon 只维护<strong>一个动量缓冲区</strong>（对动量进行正交化，而非原始梯度），因此优化器内存约<strong>减半</strong>。训练 70B 模型时（每个状态 2 字节）：AdamW 需要约 <span class="katex-inline" data-expr="70\text{B}\times 2\times 2 = 280" aria-label="70\text{B}\times 2\times 2 = 280" role="img"></span> GB，Muon 约 140 GB——节省约 140 GB。</p>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>适用范围：</strong> Muon 对具有显式矩阵结构的参数（<code>nn.Linear</code> 权重、<code>nn.Embedding</code> 权重）更自然。偏置和 LayerNorm 的 gamma/beta 是一维向量，不适合直接做矩阵正交化；通常应回退到标准 SGD、AdamW 或单独的参数组。实际使用的参数、阈值和混合策略需由实验确定。</div></div>
 </section><!-- ================================================================ -->
 <!-- 7.10 FP8/FP4 Theory -->
 <!-- ================================================================ --><section class="card" id="s7-10">
   <h3>7.10 FP8/FP4 混合精度训练——来自 DeepSeek-V3 的大规模案例分析</h3>
-  <p>DeepSeek-V3 技术报告强调 FP8 混合精度是其大规模训练效率的关键组成部分。与 BF16 相比，FP8 可以缩减激活值、通信以及部分矩阵计算的数据宽度，并在合适的硬件上提高吞吐量；实际收益取决于硬件、内核、缩放策略和误差控制，不能简单概括为固定 2 倍加速或完全无损质量。</p>
+  <p>DeepSeek-V3 技术报告把 FP8 混合精度当作大规模训练效率的关键。相比 BF16，FP8 能压缩激活值、通信和部分矩阵计算的数据宽度，在合适的硬件上提升吞吐量；具体收益要看硬件、内核、缩放策略和误差控制，不能简单说成固定 2 倍加速或完全无损。</p>
 
   <h4>两种 FP8 格式</h4>
   <ul>
@@ -852,11 +854,11 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
   <p>缩放因子 <span class="katex-inline" data-expr="s = \max(|x|) / \text{max}" aria-label="s = \max(|x|) / \text{max}" role="img"></span> 确保块内的最大值被映射到 FP8 可表示的最大值。不同的块有不同的缩放因子——数值大的区域精度较低，数值小的区域精度较高。这类似于 <strong>非均匀量化</strong>：缩放将信息集中在高分辨率区域。</p>
 
   <h4>FP4 QAT：一种更激进的低精度训练概念</h4>
-  <p>FP4 只有 16 个可表示的值，比 FP8 更为激进。量化感知训练 (QAT) 在训练过程中模拟量化误差（常见实现使用近似方法，如直通估计器），使模型逐渐适应低精度表示。本课程将 FP4 QAT 作为低精度训练的一个概念性扩展来介绍：它有可能减少权重存储和带宽压力，但误差控制、缩放元数据、内核支持以及任务质量都必须通过实验测量来验证。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>如何估算实际收益：</strong> 仅按权重位宽粗略计算，FP4 权重存储约为 BF16 的 1/4；然而，实际部署还必须考虑缩放/元数据、KV cache、激活值、通信缓冲区、并行分片以及框架开销。因此，课程报告应写为“按配置估算 + 实测内存”，而不应从单个模型卡的数据外推到所有模型。</div></div>
+  <p>FP4 只有 16 个可表示的值，比 FP8 更激进。量化感知训练 (QAT) 在训练过程中模拟量化误差（常见实现使用近似方法，如直通估计器），使模型逐渐适应低精度表示。本课程将 FP4 QAT 作为低精度训练的一个概念性扩展来介绍：它可能减少权重存储和带宽压力，但误差控制、缩放元数据、内核支持以及任务质量都必须通过实验测量来验证。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>如何估算实际收益：</strong> 仅按权重位宽粗略计算，FP4 权重存储约为 BF16 的 1/4；然而，实际部署还必须考虑缩放/元数据、KV cache、激活值、通信缓冲区、并行分片以及框架开销。因此，课程报告应写成“按配置估算 + 实测内存”，而不应从单个模型卡的数据外推到所有模型。</div></div>
 </section><section class="card" id="s7-10a">
-  <h3>7.10A 低精度训练总账：FP8、MXFP8、NVFP4 以及必须保持高精度的部分</h3>
-  <p>现代低精度训练并非简单地切换 dtype。它涉及张量角色、硬件支持、缩放粒度、累加 dtype、检查点元数据和验证切片之间的约定。DeepSeek-V3 展示了带有显式缩放和稳定性控制的大规模 FP8 训练。NVIDIA Transformer Engine 在 Hopper/Ada/Blackwell 上记录了 FP8，并在 Blackwell 上增加了 MXFP8 和 NVFP4 支持。最近的 MXFP8 预训练工作强调，只有当转换、块缩放和张量角色选择被视为训练方案的一部分时，窄位宽格式才会变得有用。</p>
+  <h3>7.10A 低精度训练总览：FP8、MXFP8、NVFP4 以及必须保持高精度的部分</h3>
+  <p>现代低精度训练不是简单地切换 dtype。它涉及张量角色、硬件支持、缩放粒度、累加 dtype、检查点元数据和验证切片之间的协调。DeepSeek-V3 展示了带有显式缩放和稳定性控制的大规模 FP8 训练。NVIDIA Transformer Engine 在 Hopper/Ada/Blackwell 上记录了 FP8，并在 Blackwell 上增加了 MXFP8 和 NVFP4 支持。最近的 MXFP8 预训练工作强调，只有当转换、块缩放和张量角色选择被视为训练方案的一部分时，窄位宽格式才有实际用途。</p>
 
   <div class="svg-diagram">
     <svg viewBox="0 0 980 390" role="img" aria-label="Low precision training ledger connecting tensor role, format choice, scale metadata, accumulation, and validation">
@@ -912,7 +914,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
       <path class="lp-line" d="M624 174 C600 206 522 217 448 229"/>
       <path class="lp-line" d="M873 154 C840 203 770 220 702 229"/>
     </svg>
-    <p class="diagram-caption">图 7-4：低精度训练是一种按张量角色和缩放比例的方案，而非通用的 dtype 替换。</p>
+    <p class="diagram-caption">图 7-4：低精度训练是按张量角色和缩放比例来设计的方案，而非通用的 dtype 替换。</p>
   </div>
 
   <h4>1. 根据张量角色和硬件选择格式，而非仅看位宽</h4>
@@ -958,7 +960,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
 <!-- 编程练习5：完整训练循环 -->
 <!-- ================================================================ --><section class="card" id="s7-11">
   <h3>7.11 编程练习5：实现完整的训练循环</h3>
-  <p>现在将你之前实现的组件组合起来——一个完整的训练循环，包括前向+反向+AMP+梯度裁剪+日志记录。实际的训练还需要处理梯度累积；下面的参考实现是一个最小版本，每批次执行一次优化器步骤。累积版本会在后面的工作示例中展示。</p>
+  <p>将之前实现的各组件组合成一个完整的训练循环，包含前向传播、反向传播、混合精度训练（AMP）、梯度裁剪和日志记录。实际训练还需要处理梯度累积。下面的参考实现是最小版本，每批次执行一次优化器步骤。累积版本将在后续工作示例中展示。</p>
 
   <div class="coding-exercise">
     <h4>练习5：训练循环</h4>
@@ -967,7 +969,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps,
       <p><strong>要求：</strong></p>
       <ul>
         <li>支持混合精度（BF16 或 FP16）<code>autocast</code></li>
-        <li>使用 GradScaler 防止 FP16 梯度下溢</li>
+        <li>使用 GradScaler 防止 FP16 下的梯度下溢</li>
         <li>梯度裁剪（<code>clip_grad_norm_</code>）</li>
         <li>每个批次后调用 <code>scheduler.step()</code></li>
         <li>每 <code>config.log_interval</code> 个批次打印 loss、PPL、LR、grad norm</li>
@@ -1042,14 +1044,14 @@ def train(model, dataloader, optimizer, scheduler, config,
         print(f"=== Epoch {epoch+1} | Avg Loss: {avg_loss:.4f} | "
               f"PPL: {math.exp(avg_loss):.2f} ===")
     return model</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>scaler.unscale_ 的位置：</strong>梯度裁剪必须在 <strong>去缩放之后</strong>（<code>unscale_</code>）但 <strong>在 optimizer.step 之前</strong> 执行。如果在去缩放之前裁剪，裁剪阈值和实际梯度范数不在同一尺度上。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>scaler.unscale_ 的位置：</strong>梯度裁剪必须在 <strong>去缩放之后</strong>（<code>unscale_</code>）但在 <strong>optimizer.step 之前</strong> 执行。如果在去缩放之前进行裁剪，裁剪阈值和实际梯度范数就不在同一尺度上。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 7.11A 工作示例 -->
 <!-- ================================================================ --><section class="card" id="s7-11a">
   <h3>7.11A 实例：一次优化器步骤的台账</h3>
-  <p>假设 <code>grad_accum_steps=4</code>，每个微批次的平均损失为 <code>[2.4, 2.0, 1.8, 2.2]</code>。为了使4个微批次累积的梯度等价于一个大批次的均值，你需要在每次反向传播前将损失除以4：</p>
+  <p>假设 <code>grad_accum_steps=4</code>，每个微批次的平均损失为 <code>[2.4, 2.0, 1.8, 2.2]</code>。为了使4个微批次累积的梯度等价于一个大批次的均值，需要在每次反向传播前将损失除以4：</p>
   <div class="math-box"><div class="label">梯度累积的损失缩放</div>
     <div class="katex" data-expr="\nabla_\theta \left(\frac{1}{4}\sum_{i=1}^4 \mathcal{L}_i\right)=\sum_{i=1}^4 \nabla_\theta\left(\frac{\mathcal{L}_i}{4}\right)" aria-label="\nabla_\theta \left(\frac{1}{4}\sum_{i=1}^4 \mathcal{L}_i\right)=\sum_{i=1}^4 \nabla_\theta\left(\frac{\mathcal{L}_i}{4}\right)" role="img"></div>
   </div>
@@ -1067,13 +1069,13 @@ scaler.unscale_(optimizer)
 grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 scaler.step(optimizer)
 scaler.update()
-scheduler.step()</div>  <p>如果你不将损失除以 <code>grad_accum_steps</code>，累积梯度将是大批次均值的4倍，相当于将学习率放大了4倍。如果使用 FP16 <code>GradScaler</code>，裁剪必须在 <code>unscale_</code> 之后进行；否则你裁剪的是经过缩放器放大的梯度，而 <code>max_norm=1.0</code> 不再对应真实的梯度范数。学习率调度器通常在一次成功的优化器步骤后推进一次，而不是在每个微批次之后；否则 warmup 和 cosine decay 会基于微步数过快完成。Ch07 作业中的 <code>gradient_accumulation_step_accounting</code> 明确计算了缩放后的损失、优化器步骤、调度器步骤以及消耗的 token。</p>
-  <p>这也是为什么训练日志中应该同时记录 <code>step</code> 和 <code>tokens</code> 的原因：4个微批次仅对应1个优化器步骤，但消耗的 token 是四个微批次的总和。PPL 应当基于原始的平均损失（未被累积除过的损失）来计算；用于反向传播的缩放损失只是一种梯度缩放技巧，并非模型困惑度。</p>
+scheduler.step()</div>  <p>如果不将损失除以 <code>grad_accum_steps</code>，累积梯度将是大批次均值的4倍，相当于把学习率放大了4倍。如果使用 FP16 <code>GradScaler</code>，梯度裁剪必须在 <code>unscale_</code> 之后进行；否则裁剪的是经缩放器放大后的梯度，而 <code>max_norm=1.0</code> 不再对应真实的梯度范数。学习率调度器通常在一次成功的优化器步骤后推进一次，而不是在每个微批次之后；否则 warmup 和 cosine decay 会基于微步数过快完成。Ch07 作业中的 <code>gradient_accumulation_step_accounting</code> 明确计算了缩放后的损失、优化器步骤、调度器步骤以及消耗的 token。</p>
+  <p>因此，训练日志中应同时记录 <code>step</code> 和 <code>tokens</code>：4个微批次只对应1个优化器步骤，但消耗的 token 是四个微批次的总和。PPL 应基于原始的平均损失（未被累积除过的损失）计算；缩放损失只用于反向传播的梯度缩放，并不代表模型的困惑度。</p>
 </section><!-- ================================================================ -->
 <!-- 7.11B Training Log Diagnostics -->
 <!-- ================================================================ --><section class="card" id="s7-11b">
   <h3>7.11B 如何阅读训练日志：从损失曲线到系统瓶颈</h3>
-  <p>让损失下降只是训练工程的起点。工程师需要解释曲线变化的<strong>原因</strong>：哪些现象是正常的随机波动，哪些表明优化器、数据、数值精度或系统吞吐量存在问题。训练日志应同时记录<code>train_loss</code>、<code>val_loss</code>、<code>lr</code>、<code>grad_norm</code>、<code>tokens/s</code>和step。</p>
+  <p>损失下降只是起点。工程师需要解释曲线变化的原因：哪些是正常的随机波动，哪些说明优化器、数据、数值精度或系统吞吐量有问题。训练日志应同时记录<code>train_loss</code>、<code>val_loss</code>、<code>lr</code>、<code>grad_norm</code>、<code>tokens/s</code>和step。</p>
 
   <h4>首先，区分三类问题</h4>
   <div class="table-wrap">
@@ -1089,34 +1091,34 @@ scheduler.step()</div>  <p>如果你不将损失除以 <code>grad_accum_steps</c
   </div>
 
   <h4>如何解读梯度范数</h4>
-  <p><code>grad_norm</code>并不因为更小或更大就更好。它代表当前批次提议的更新强度。与学习率一起解读最有意义：高<code>grad_norm</code>加上高lr可能导致尖峰；高<code>grad_norm</code>但一直被clip可能只是偶尔的难批次；低<code>grad_norm</code>加上停滞的loss通常发生在学习率太低、mask不正确或模型路径断开时。</p>
+  <p><code>grad_norm</code>并不是越小或越大就越好。它代表当前批次提议的更新强度。需要结合学习率一起看：高<code>grad_norm</code>加上高学习率可能导致损失尖峰；高<code>grad_norm</code>但经常被裁剪可能只是偶尔的难批次；低<code>grad_norm</code>加上损失停滞，通常说明学习率太低、mask不正确或模型路径断开。</p>
   <p>全局范数裁剪先将所有参数梯度视为一个长向量，计算 <span class="katex-inline" data-expr="\|g\|_2" aria-label="g的二范数" role="img"></span>，然后用相同系数缩放所有梯度：</p>
   <div class="math-box"><div class="label">全局梯度范数裁剪</div>
     <div class="katex" data-expr="g \leftarrow g \cdot \min\left(1,\frac{\tau}{\|g\|_2+\epsilon}\right)" aria-label="g 更新为 g 乘以 min(1, τ 除以 (g的二范数 + ε))" role="img"></div>
   </div>
-  <p>单独裁剪每个参数会改变不同层之间的梯度比例；全局裁剪保持方向，仅在总更新过大时缩短步长。对应的Ch07练习要求你手动计算这个系数，并返回裁剪前的总范数和实际裁剪系数。</p>
+  <p>逐参数裁剪会改变各层梯度之间的比例关系；全局裁剪保持梯度方向不变，只在总更新步长过大时缩短步长。对应的Ch07练习要求你手动计算这个系数，并返回裁剪前的总范数和实际裁剪系数。</p>
 
   <h4>实用的故障排除顺序</h4>
   <ol>
-    <li><strong>首先检查数据和标签偏移：</strong><code>x[:, 1:] == y[:, :-1]</code>是否成立，padding/ignore_index是否正确，是否存在空样本、超长样本或重复污染。</li>
-    <li><strong>然后检查数值：</strong>logits、loss和grad_norm是否有限；FP16下的scaler是否频繁跳跃；BF16是否更稳定。</li>
-    <li><strong>然后检查优化器：</strong>lr调度在warmup边界是否跳跃，AdamW weight decay是否作用于norm/bias，梯度裁剪是否在unscale之后。</li>
-    <li><strong>最后检查系统：</strong>tokens/s的瓶颈是否在数据加载、前向/反向、优化器步骤、评估或checkpoint写入磁盘。</li>
+    <li><strong>首先检查数据和标签偏移：</strong><code>x[:, 1:] == y[:, :-1]</code>是否成立，padding/ignore_index是否正确，是否存在空样本、超长样本或数据重复污染。</li>
+    <li><strong>然后检查数值稳定性：</strong>logits、loss和grad_norm是否有限；FP16下的scaler是否频繁跳跃；BF16是否更稳定。</li>
+    <li><strong>然后检查优化器：</strong>学习率调度在warmup边界是否跳跃，AdamW weight decay是否作用于norm/bias，梯度裁剪是否在unscale之后执行。</li>
+    <li><strong>最后检查系统瓶颈：</strong>tokens/s下降是因为数据加载、前向/反向传播、优化器更新、评估还是checkpoint写入磁盘。</li>
   </ol>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>课程要求：</strong>训练报告不能只贴一条损失曲线。它必须至少解释曲线的阶段、一次异常波动的可能原因、train/val是否发散、吞吐量瓶颈在哪里，以及你在修改特定因素后曲线如何变化。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>课程要求：</strong>训练报告不能只贴一条损失曲线。必须至少解释曲线的阶段、一次异常波动的可能原因、train/val是否发散、吞吐量瓶颈在哪里，以及修改特定因素后曲线如何变化。</div></div>
 </section><!-- ================================================================ -->
 <!-- 7.11C 训练异常处理手册 -->
 <!-- ================================================================ --><section class="card" id="s7-11c">
   <h3>7.11C 训练异常排查手册：从损失尖峰到可恢复的决策</h3>
-  <p>真正的大语言模型训练并不总是平滑下降的。工程技能在于异常出现后快速决策：继续训练、回退检查点、降低学习率、过滤数据、切换精度，或暂停任务修复系统。本课程强调<strong>异常分类、信号记录、根因假设、最小修复实验和恢复决策</strong>，而不是每次出现 NaN 就重启。</p>
+  <p>大语言模型训练过程中，损失曲线并不总是平滑下降。工程能力体现在异常出现后快速决策：继续训练、回退检查点、降低学习率、过滤数据、切换精度，或暂停任务修复系统。本课程强调<strong>异常分类、信号记录、根因假设、最小修复实验和恢复决策</strong>，而不是每次出现 NaN 就重启。</p>
 
   <h4>1. 首先，在时间和 token 坐标上定位异常</h4>
-  <p>训练日志应同时记录 <code>step</code>、<code>consumed_tokens</code>、<code>epoch_or_shard</code>、<code>lr</code>、<code>train_loss</code>、<code>val_loss</code>、<code>grad_norm</code>、<code>tokens/s</code>、<code>loss_scale</code>、<code>checkpoint_id</code> 以及一个数据批次的摘要。仅记录挂钟时间是不够的，因为 GPU 扩展、梯度累积或数据并行策略变化后，相同的挂钟时间不再对应相同的训练进度。</p>
+  <p>训练日志应同时记录 <code>step</code>、<code>consumed_tokens</code>、<code>epoch_or_shard</code>、<code>lr</code>、<code>train_loss</code>、<code>val_loss</code>、<code>grad_norm</code>、<code>tokens/s</code>、<code>loss_scale</code>、<code>checkpoint_id</code> 以及一个数据批次的摘要。仅记录挂钟时间是不够的，因为 GPU 数量、梯度累积或数据并行策略变化后，相同的挂钟时间对应的训练进度不同。</p>
   <div class="math-box"><div class="label">异常定位坐标</div>
     <div class="katex" data-expr="\text{tokens at incident}=s\cdot B_{\text{micro}}\cdot T_{\text{seq}}\cdot A_{\text{grad}}\cdot N_{\text{dp}}" aria-label="tokens_at_incident = s * B_micro * T_seq * A_grad * N_dp" role="img"></div>
   </div>
-  <p>例如，一个出现在第 <code>12,500</code> 步、全局 batch 大小为 <code>2M</code> tokens 的尖峰，对应大约 <code>25B</code> 个已消耗 token。如果恢复训练后，尖峰在相近的消耗 token 数附近再次出现，优先怀疑数据分片或学习率调度；如果位置显著偏移，优先检查随机性、精度或系统资源。</p>
+  <p>例如，如果尖峰出现在第 <code>12,500</code> 步，全局 batch 大小为 <code>2M</code> tokens，那么大约消耗了 <code>25B</code> 个 token。恢复训练后，若尖峰在相近的消耗 token 数处再次出现，优先排查数据分片或学习率调度；若位置明显偏移，优先检查随机性、精度或系统资源。</p>
 
   <h4>2. 将损失尖峰分为三类</h4>
   <div class="table-wrap">
@@ -1128,7 +1130,7 @@ scheduler.step()</div>  <p>如果你不将损失除以 <code>grad_accum_steps</c
     </table>
   </div>
 
-  <p>要判断一个尖峰是否可恢复，不要只看下一步的损失。要检查接下来几个评估窗口的训练/验证趋势、grad_norm 分布以及任务指标。如果开放生成或安全指标显著下降，即使困惑度恢复了，也应继续调查。</p>
+  <p>判断尖峰是否可恢复，不能只看下一步的损失。应检查接下来几个评估窗口的训练/验证趋势、grad_norm 分布以及任务指标。如果开放生成或安全指标明显下降，即使困惑度恢复，也应继续调查。</p>
 
   <h4>3. NaN/Inf 的最短调试路径</h4>
   <ol>
@@ -1140,7 +1142,7 @@ scheduler.step()</div>  <p>如果你不将损失除以 <code>grad_accum_steps</c
   </ol>
 
   <h4>4. 如果恢复后曲线不连续，首先检查状态完整性</h4>
-  <p>恢复训练后损失突然跳升并不总意味着模型坏了。一个常见原因是检查点只恢复了模型权重，但没有恢复优化器动量、调度器步数、随机数生成器和数据加载器位置。验证一个可恢复检查点的方法是：从同一个检查点运行“连续训练 20 步”和“训练 10 步，保存，恢复，再训练 10 步”，比较步数、学习率、损失序列、消耗 token 数和评估结果是否在允许的随机误差范围内一致。</p>
+  <p>恢复训练后损失突然跳升不一定说明模型坏了。常见原因是检查点只恢复了模型权重，而优化器动量、调度器步数、随机数生成器和数据加载器位置并未恢复。验证一个可恢复检查点的方法是：从同一个检查点运行“连续训练 20 步”和“训练 10 步，保存，恢复，再训练 10 步”，比较步数、学习率、损失序列、消耗 token 数和评估结果是否在允许的随机误差范围内一致。</p>
   <p>如果使用 DDP/FSDP/ZeRO，还需要检查检查点格式是否能保存分片的优化器状态和分片元数据，并且能在世界大小、rank 布局或封装策略改变时安全地重新分片。Ch07 作业中的 <code>checkpoint_resume_integrity_report</code> 将缺失状态、仅模型导出、非单调步数、不完整写入、过长的保存间隔和检查点开销转化为统一的操作项。</p>
 
   <div class="table-wrap">
@@ -1155,7 +1157,7 @@ scheduler.step()</div>  <p>如果你不将损失除以 <code>grad_accum_steps</c
   </div>
 
   <h4>5. 吞吐量下降不等于模型变慢</h4>
-  <p>当 <code>tokens/s</code> 下降时，将其分解为数据加载器、主机到设备拷贝、前向、反向、优化器、通信、评估和检查点写入磁盘。如果 GPU 利用率低但数据加载器队列为空，优先优化数据读取；如果反向传播后有长时间等待，优先检查 DDP/FSDP 通信；如果每次评估或检查点周期时速度都会下降，将慢速评估移到独立工作进程或降低检查点频率。</p>
+  <p>当 <code>tokens/s</code> 下降时，将其分解为数据加载、主机到设备拷贝、前向、反向、优化器、通信、评估和检查点写入等环节。如果 GPU 利用率低但数据加载器队列为空，优先优化数据读取；如果反向传播后有长时间等待，优先检查 DDP/FSDP 通信；如果每次评估或检查点周期时速度都会下降，将慢速评估移到独立工作进程或降低检查点频率。</p>
 
   <h4>6. 最小修复实验</h4>
   <p>修复训练异常时，避免同时更改多个配置。按以下顺序运行简短实验：</p>
@@ -1167,14 +1169,14 @@ scheduler.step()</div>  <p>如果你不将损失除以 <code>grad_accum_steps</c
     <li><strong>恢复一致性：</strong> 验证连续训练和保存-恢复训练是否在同一轨迹上。</li>
   </ol>
 
-  <p>最终报告应说明“我观察到了什么，排除了什么，改变了什么，以及为什么这个改变足以支持结论”。重点不仅是提交代码，而是用证据解释模型训练行为。</p>
+  <p>最终报告应说明“观察到了什么，排除了什么，改变了什么，以及为什么这个改变足以支撑结论”。重点不是提交代码，而是用证据解释模型训练行为。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 处理训练异常不是经验主义玄学。通过将异常绑定到 token 坐标，分离数据、数值、优化器、状态恢复和系统吞吐量，然后用最小消融实验验证假设，你可以决定是继续、回退还是重启。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 处理训练异常不是凭经验碰运气。将异常绑定到 token 坐标，分离数据、数值、优化器、状态恢复和系统吞吐量，再用最小消融实验验证假设，就能决定继续、回退还是重启。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习6：莎士比亚训练 -->
 <!-- ================================================================ --><section class="card" id="s7-12">
   <h3>7.12 编程练习 6：在莎士比亚文本上训练并生成文本</h3>
-  <p>将所有组件组合起来，在莎士比亚文本上训练一个微型 GPT 模型。</p>
+  <p>把前面各部分组合起来，在莎士比亚文本上训练一个微型 GPT 模型。</p>
 
   <div class="coding-exercise">
     <h4>练习 6：端到端训练 + 文本生成</h4>
@@ -1184,8 +1186,8 @@ scheduler.step()</div>  <p>如果你不将损失除以 <code>grad_accum_steps</c
       <ul>
         <li>使用字符级 tokenization（每个字符作为一个 token，词汇表大小约 65）</li>
         <li>模型配置：d_model=128, n_layers=4, n_heads=4, max_seq_len=128</li>
-        <li>训练 10 个 epoch，记录并返回 loss_history</li>
-        <li>使用你之前实现的 train 函数</li>
+        <li>训练 10 个 epoch，记录 loss_history 并返回</li>
+        <li>用你之前实现的 train 函数</li>
         <li>训练后，使用 matplotlib 绘制损失曲线（包含平滑移动平均版本）</li>
         <li>使用 temperature=0.8 生成 200+ 个 token</li>
       </ul>
@@ -1296,7 +1298,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
 <!-- 7.13 DualPipe -->
 <!-- ================================================================ --><section class="card" id="s7-13">
   <h3>7.13 DualPipe 流水线并行——减少流水线气泡</h3>
-  <p><strong>DualPipe</strong> 是 DeepSeek-V3 引入的一种流水线并行优化方法，目标是减少标准流水线并行中的<strong>气泡（bubble）</strong>问题。</p>
+  <p><strong>DualPipe</strong> 是 DeepSeek-V3 引入的一种流水线并行优化方法，用来减少标准流水线并行中的<strong>气泡（bubble）</strong>。</p>
 
   <h4>传统流水线存在的问题</h4>
   <p>在 GPipe 中，所有微批次（micro-batch）先完成前向传播，再启动反向传播。这导致流水线起始和末尾阶段有大量 GPU 处于空闲状态：</p>
@@ -1360,10 +1362,10 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
       <rect class="pipe-idle" x="748" y="152" width="28" height="18" rx="4"/><text x="784" y="166" class="pipe-sub">pipeline bubble</text>
     </svg>
   </div>
-  <p class="diagram-caption">图 7-4：GPipe 风格的调度产生了填充和排空气泡（fill and drain bubbles）。流水线早期和后期阶段在微批次经过流水线时处于等待状态。</p>
+  <p class="diagram-caption">图 7-4：GPipe 风格的调度产生了填充和排空气泡（fill and drain bubbles）。流水线早期和后期阶段的 GPU 在微批次经过流水线时处于等待状态。</p>
 
   <h4>DualPipe 的双向调度</h4>
-  <p>DualPipe 从流水线两端同时推进——前向传播从起始端开始，反向传播从末尾端开始，在中间汇合。它还通过重叠计算与 All-to-All 通信来减少空闲：</p>
+  <p>DualPipe 从流水线两端同时推进——前向传播从起始端开始，反向传播从末尾端开始，在中间汇合。它还通过重叠计算和 All-to-All 通信来减少空闲时间：</p>
   <div class="svg-diagram" style="max-width:960px">
     <svg viewBox="0 0 960 390" role="img" aria-label="DualPipe schedule showing bidirectional forward backward and communication overlap">
       <style>
@@ -1427,13 +1429,13 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
       <text x="686" y="268" class="dp-sub">parallel mesh, all-to-all cost, and kernel support.</text>
     </svg>
   </div>
-  <p class="diagram-caption">图 7-5：DualPipe 风格的调度通过交错执行前向、反向和通信工作来减少空闲气泡。该图为概念示意；实际重叠效果取决于硬件拓扑和实现方式。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>实际效果：</strong> DeepSeek-V3 技术报告提供了一个包含 2048 块 H800 GPU、MFU 为 54.2% 的训练系统案例；Llama 3 405B 报告中的训练集群和 MFU 数据来自另一套模型、硬件和调度配置。它们适合作为“并行调度影响有效计算”的案例，不宜直接用作优劣性的一般结论；成本和训练时间还取决于数据、硬件价格、通信拓扑、检查点策略和故障恢复等因素。</div></div>
+  <p class="diagram-caption">图 7-5：DualPipe 风格的调度通过交错执行前向、反向和通信工作来减少空闲（气泡）。该图为概念示意；实际重叠效果取决于硬件拓扑和实现方式。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>实际效果：</strong> DeepSeek-V3 技术报告给出了一个包含 2048 块 H800 GPU、MFU 为 54.2% 的训练系统案例；Llama 3 405B 报告中的训练集群和 MFU 数据来自另一套模型、硬件和调度配置。这两个案例适合说明“并行调度影响有效计算”，但不宜直接作为优劣性的一般结论。成本和训练时间还取决于数据、硬件价格、通信拓扑、检查点策略和故障恢复等因素。</div></div>
 </section><!-- ================================================================ -->
 <!-- 7.14 总结 -->
 <!-- ================================================================ --><section class="card" id="s7-14">
   <h3>7.14 单节点训练主线总结</h3>
-  <p>你已经完整学习了LLM训练循环：</p>
+  <p>你已经学完了LLM训练循环：</p>
   <ul>
     <li>✅ <strong>MLE框架</strong> — 语言建模 = 最大化对数似然 = 最小化交叉熵 = 最小化KL散度</li>
     <li>✅ <strong>Perplexity（困惑度）</strong> — PPL = exp(loss)，衡量有效分支因子</li>
@@ -1465,7 +1467,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
 <!-- 7.15 分布式训练 -->
 <!-- ================================================================ --><section class="card" id="s7-15">
   <h3>7.15 分布式训练——从单 GPU 到千 GPU 集群</h3>
-  <p>到目前为止，我们都假设所有训练在单张 GPU 上运行。但真实的大语言模型训练（例如 Llama 3 405B）需要在<strong>数千张 GPU</strong> 上并行运行数周。分布式训练并非“可选”的优化——它是使大模型训练<strong>成为可能</strong>的前提条件。</p>
+  <p>到目前为止，我们都假设所有训练在单张 GPU 上运行。但真实的大语言模型训练（例如 Llama 3 405B）需要在<strong>数千张 GPU</strong> 上并行运行数周。分布式训练不是可选的优化——而是让大模型训练<strong>成为可能</strong>的前提条件。</p>
 
   <h4>从两个问题开始：装得下吗？跑得快吗？</h4>
   <p>分布式训练的首要原则不是“GPU 越多越好”，而是拆解瓶颈：</p>
@@ -1474,10 +1476,10 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
     <li><strong>吞吐问题：</strong>tokens/s 是否受限于矩阵乘法、显存带宽、通信、数据加载或流水线气泡。</li>
     <li><strong>稳定性问题：</strong>全局 batch tokens、学习率、loss scale、checkpoint 频率和故障恢复是否匹配。</li>
   </ul>
-  <p>在工程实践中，先用单 GPU 或少量 GPU 确认 loss 曲线、数据和 checkpoint，再扩大并行度。如果小规模训练不稳定，增加 GPU 只会放大问题。</p>
+  <p>工程实践中，先用单 GPU 或少量 GPU 确认 loss 曲线、数据和 checkpoint，再扩大并行度。如果小规模训练不稳定，增加 GPU 只会放大问题。</p>
 
   <h4>每张 GPU 的显存账本：参数不是主要开销</h4>
-  <p>以 BF16 参数训练搭配 FP32 AdamW 优化器状态为例，单个参数通常对应：</p>
+  <p>以 BF16 参数训练搭配 FP32 AdamW 优化器状态为例，每个参数通常对应：</p>
   <div class="math-box"><div class="label">粗略的模型状态显存估计</div>    <div class="katex" data-expr="2\text{ bytes} + 2\text{ bytes} + 4\text{ bytes} + 4\text{ bytes} = 12\text{ bytes/parameter}" aria-label="2\text{ bytes} + 2\text{ bytes} + 4\text{ bytes} + 4\text{ bytes} = 12\text{ bytes/parameter}" role="img"></div>
   </div>
   <p>很多实现还会保留 FP32 主权重，额外增加 4 bytes/参数。粗略的显存预算可以写成：</p>
@@ -1509,7 +1511,7 @@ print(generate(model, "ROMEO: ", max_tokens=200, temperature=0.8))</div>
       <tr><td><strong>流水线并行</strong></td><td>不同 GPU 处理不同层</td><td>层间激活传递</td><td>模型很深，希望跨设备拆分层</td><td>微批次不够会导致流水线气泡</td></tr>
     </table>
   </div>
-  <p>真实训练通常组合这些策略。一个并行网格可以写成 <code>DP * TP * PP</code>，总 GPU 数等于三者乘积。例如 <code>DP=64, TP=8, PP=16</code> 对应 8192 张 GPU。工程师需要解释每个维度解决什么问题——容量、计算还是吞吐——而不是只记住乘法。</p>
+  <p>真实训练通常组合这些策略。一个并行网格可以写成 <code>DP * TP * PP</code>，总 GPU 数等于三者乘积。例如 <code>DP=64, TP=8, PP=16</code> 对应 8192 张 GPU。工程师需要理解每个维度解决什么问题——容量、计算还是吞吐——而不是只记住乘法。</p>
 
   <h4>ZeRO（DeepSpeed）</h4>
   <p>ZeRO 将优化器状态、梯度和模型参数<strong>分片</strong>到多张 GPU：</p>
@@ -1535,10 +1537,10 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <li><strong>AllGather：</strong>将各 GPU 的分片收集成完整张量。FSDP/ZeRO-3 需要在层计算前临时收集参数。</li>
     <li><strong>All-to-All：</strong>MoE 路由器常用它将 token 发送给不同专家；负载不均衡直接导致 straggler。</li>
   </ul>
-  <p>随着模型规模增大，tokens/s 不单由 FLOPs 决定。如果 profiler 显示 GPU kernel 之间存在较大空隙，常见原因包括通信等待、CPU 数据加载慢、checkpoint 写入阻塞或流水线气泡。</p>
+  <p>随着模型规模增大，tokens/s 不再只由 FLOPs 决定。如果 profiler 显示 GPU kernel 之间存在较大空隙，常见原因包括通信等待、CPU 数据加载慢、checkpoint 写入阻塞或流水线气泡。</p>
 
   <h4>激活 Checkpointing 和梯度累积</h4>
-  <p>FSDP/ZeRO 主要减少模型状态显存；激活 checkpointing 主要减少前向激活显存。它的做法是只保存部分激活值，在反向传播时重算前向传播，从而用额外 FLOPs 换取显存。</p>
+  <p>FSDP/ZeRO 主要减少模型状态显存；激活 checkpointing 主要减少前向激活显存。它只保存部分激活值，在反向传播时重算前向传播，用额外 FLOPs 换取显存。</p>
   <div class="math-box"><div class="label">全局 Batch Tokens</div>
     <div class="katex" data-expr="B_{\text{tokens}} = B_{\text{micro}} \cdot T_{\text{seq}} \cdot A_{\text{grad}} \cdot N_{\text{dp}}" aria-label="B_{\text{tokens}} = B_{\text{micro}} \cdot T_{\text{seq}} \cdot A_{\text{grad}} \cdot N_{\text{dp}}" role="img"></div>
   </div>
@@ -1556,7 +1558,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   <p>MFU 低不一定意味着模型代码有错。短序列、小 batch、跨节点通信、数据加载不足、频繁 eval/checkpoint、未融合的 kernel 以及填充浪费都会降低 MFU。诊断时应同时报告 tokens/s/GPU、GPU 利用率、网络利用率、dataloader 等待时间和 checkpoint 时长。</p>
 
   <h4>FP8/MXFP8 与 DeepSeek DualPipe</h4>
-  <p>低精度训练和流水线调度应一起考虑。NVIDIA Transformer Engine 使 FP8、MXFP8、NVFP4 等格式成为可用的接口；DeepSeek-V3 技术报告展示了 FP8 混合精度、MoE/MLA 和 DualPipe 的组合。本课程不将任何格式视为“免费加速”，而是要求学习者检查 scale/amax 历史、loss 尖峰、梯度范围、kernel 支持、通信数据宽度和状态恢复。传统流水线并行存在<strong>气泡</strong>。DualPipe 旨在通过<strong>双向流水线调度</strong>重叠前向、反向和 MoE 通信来减少气泡；具体重叠程度取决于模型分片、通信拓扑、微批次和实现细节。</p>
+  <p>低精度训练和流水线调度需要一起考虑。NVIDIA Transformer Engine 提供了 FP8、MXFP8、NVFP4 等格式的接口；DeepSeek-V3 技术报告展示了 FP8 混合精度、MoE/MLA 和 DualPipe 的组合。本课程不把任何格式看作“免费加速”，而是要求学习者检查 scale/amax 历史、loss 尖峰、梯度范围、kernel 支持、通信数据宽度和状态恢复。传统流水线并行存在<strong>气泡</strong>。DualPipe 旨在通过<strong>双向流水线调度</strong>重叠前向、反向和 MoE 通信来减少气泡；具体重叠程度取决于模型分片、通信拓扑、微批次和实现细节。</p>
 
   <h4>训练工程排查顺序</h4>
   <ol>
@@ -1570,7 +1572,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
 <!-- 7.15A 训练运行计划 -->
 <!-- ================================================================ --><section class="card" id="s7-15a">
   <h3>7.15A 训练运行计划——将实验变成可恢复的工程化流程</h3>
-  <p>训练工程师不能只写 <code>for batch in dataloader</code>。真实的大模型训练风险往往来自实验流程：数据版本变更、随机种子不一致、检查点无法恢复优化器、评估频率拖慢吞吐量、扩展后全局批量未重新计算、以及失败重启浪费的GPU机时。一份严谨的训练运行计划应将<strong>数据、配置、token进度、评估、检查点、恢复和扩展</strong>放在同一个工程账本上。</p>
+  <p>训练工程师不能只写 <code>for batch in dataloader</code>。大模型训练中的常见风险来自实验流程：数据版本变更、随机种子不一致、检查点无法恢复优化器、评估频率拖慢吞吐量、扩展后全局批量未重新计算、以及失败重启浪费的GPU机时。一份严谨的训练运行计划应将<strong>数据、配置、token进度、评估、检查点、恢复和扩展</strong>放在同一个工程账本上。</p>
 
   <h4>1. 首先，明确训练目标</h4>
   <p>运行计划的第一部分不是命令行，而是定义"本次训练究竟要训练什么"。至少应包含：</p>
@@ -1591,7 +1593,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   <div class="math-box"><div class="label">Token进度</div>
     <div class="katex" data-expr="\text{consumed\_tokens}(s)=s\cdot B_{\text{micro}}\cdot T_{\text{seq}}\cdot A_{\text{grad}}\cdot N_{\text{dp}}" aria-label="\text{consumed\_tokens}(s)=s\cdot B_{\text{micro}}\cdot T_{\text{seq}}\cdot A_{\text{grad}}\cdot N_{\text{dp}}" role="img"></div>
   </div>
-  <p>例如，<code>micro_batch=2</code>、<code>seq_len=4096</code>、<code>grad_accum=16</code>、<code>DP=64</code>，每个优化器步骤消耗<code>8,388,608</code>个token。如果目标是<code>300B</code>个token，大约需要<code>35,763</code>步。Warmup、评估、检查点和学习率衰减都应与此步数/token坐标对齐；否则，同一个"在300B token上训练"的实验，在不同并行配置下会遵循不同的优化轨迹。</p>
+  <p>例如，<code>micro_batch=2</code>、<code>seq_len=4096</code>、<code>grad_accum=16</code>、<code>DP=64</code>，每个优化器步骤消耗<code>8,388,608</code>个token。如果目标是<code>300B</code>个token，大约需要<code>35,763</code>步。Warmup、评估、检查点和学习率衰减都应与此步数/token坐标对齐；否则，同一个"在300B token上训练"的实验，在不同并行配置下会得到不同的优化轨迹。</p>
 
   <h4>3. 检查点保存训练状态，而不仅仅是模型权重</h4>
   <p>一个能够恢复训练的检查点至少应包含：</p>
@@ -1604,10 +1606,10 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <li><strong>数据加载器位置：</strong>数据分片、epoch/偏移量、shuffle种子、混合采样器状态。</li>
     <li><strong>运行配置：</strong>模型、数据、批量、优化器、精度和环境版本。</li>
   </ul>
-  <p>只保存<code>model.state_dict()</code>适用于推理导出，但不适用于中断后恢复训练。没有优化器状态，loss在恢复后可能暂时震荡；没有调度器状态，学习率会出错；没有数据采样位置，训练token分布会偏离原始计划。</p>
+  <p>只保存<code>model.state_dict()</code>适合推理导出，但不适合中断后恢复训练。没有优化器状态，loss在恢复后可能暂时震荡；没有调度器状态，学习率会出错；没有数据采样位置，训练token分布会偏离原始计划。</p>
 
   <h4>4. 评估节奏应为决策服务，而不是中断训练</h4>
-  <p>评估太少会错过过拟合和数据问题；评估太多会降低MFU并延长训练墙钟时间。训练计划应区分三种评估类型：</p>
+  <p>评估太少可能漏掉过拟合和数据问题；评估太多会降低MFU、增加训练墙钟时间。训练计划应区分三种评估类型：</p>
   <div class="table-wrap">
     <table>
       <tr><th>评估类型</th><th>频率</th><th>回答的问题</th><th>备注</th></tr>
@@ -1616,10 +1618,10 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
       <tr><td>人工或大模型评判</td><td>低频，接近里程碑</td><td>开放生成、指令遵循、安全拒答和风格是否可接受？</td><td>记录评判模型、评分标准、temperature和不确定性</td></tr>
     </table>
   </div>
-  <p>如果每次评估都在主训练过程中同步生成大量样本，tokens/s会周期性下降。一个常见的工程实践是：训练进程只保存检查点和轻量级验证loss；一个独立的评估工作进程异步加载检查点并运行较慢的基准测试。这样，训练吞吐量和质量观察互不阻塞。</p>
+  <p>如果每次评估都在主训练过程中同步生成大量样本，tokens/s就会周期性下降。一个常见的工程实践是：训练进程只保存检查点和轻量级验证loss；一个独立的评估工作进程异步加载检查点并运行较慢的基准测试。这样，训练吞吐量和质量观察互不阻塞。</p>
 
   <h4>5. 分阶段扩展</h4>
-  <p>从单GPU代码直接跳到数百个GPU，出现故障时难以定位问题。建议的扩展阶梯如下：</p>
+  <p>从单GPU直接跳到数百个GPU，出现故障时很难定位。建议的扩展阶梯如下：</p>
   <ol>
     <li><strong>单GPU，小数据过拟合：</strong>确认标签移位、loss mask、优化器和生成都正常。</li>
     <li><strong>单GPU，全数据短运行：</strong>确认数据加载器、数据过滤、验证loss、检查点和恢复。</li>
@@ -1634,7 +1636,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   <div class="math-box"><div class="label">预期重启浪费</div>
     <div class="katex" data-expr="\text{waste\_cost/hour}\approx C\cdot \frac{I}{2H}" aria-label="\text{waste\_cost/hour}\approx C\cdot \frac{I}{2H}" role="img"></div>
   </div>
-  <p>更频繁的检查点意味着故障时损失更少，但写入磁盘、网络和对象存储的成本增加；更稀疏的检查点意味着正常训练更快，但故障后重跑的成本更高。训练工程师的任务是选择一个吞吐量、存储和故障恢复都可接受的间隔，而不是盲目地"每步都保存"。</p>
+  <p>更频繁的检查点意味着故障时损失更少，但写入磁盘、网络和对象存储的成本增加；更稀疏的检查点意味着正常训练更快，但故障后重跑的成本更高。训练工程师的任务是选择一个在吞吐量、存储和故障恢复之间可接受的间隔，而不是盲目地"每步都保存"。</p>
 
   <h4>7. 完整的训练运行表</h4>
   <div class="table-wrap">
@@ -1649,9 +1651,9 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>训练工程能力不是"运行脚本"，而是能解释本次训练消耗了多少token和GPU小时、为什么这个检查点可恢复、为什么扩展后优化轨迹仍可比对、以及当loss、吞吐量或评估异常时先检查哪一层。</div></div>
 </section><section class="card" id="s7-15b">
   <h3>7.15B 工业训练系统检查：数据、并行、容错与评估循环</h3>
-  <p>最近的工业训练系统共享一个包含<strong>数据质量、模型并行、通信重叠、检查点保存、可观测性和评估检查</strong>的闭环，而非单一的优先并行策略。MegaScale 将 10K+ GPU 训练中的稳定性、掉队者诊断和容错视为核心问题；DeepSeek-V3 结合了 MLA、MoE、FP8、DualPipe 和稳定长程训练；PyTorch FSDP2/DTensor 和 Distributed Checkpoint 将分片状态转化为可组合接口；NVIDIA Transformer Engine 将 FP8/MXFP8/NVFP4 低精度训练落实到 kernel 和 scale 管理层面。你不需要复现这些系统，但需要学习它们所解决的同类问题。</p>
+  <p>工业训练系统通常围绕<strong>数据质量、模型并行、通信重叠、检查点保存、可观测性和评估检查</strong>构成闭环，而不是只选一种并行策略。MegaScale 把 10K+ GPU 训练中的稳定性、掉队者诊断和容错当作核心问题；DeepSeek-V3 组合了 MLA、MoE、FP8、DualPipe 和稳定长程训练；PyTorch FSDP2/DTensor 和 Distributed Checkpoint 把分片状态做成可组合接口；NVIDIA Transformer Engine 把 FP8/MXFP8/NVFP4 低精度训练落实到 kernel 和 scale 管理层面。你不需要复现这些系统，但需要学习它们所解决的同类问题。</p>
 
-  <h4>1. 训练系统不仅仅关乎选择 DDP/FSDP/TP/PP</h4>
+  <h4>1. 训练系统不只是选 DDP/FSDP/TP/PP</h4>
   <div class="table-wrap">
     <table>
       <tr><th>系统层</th><th>训练工程师必须回答的问题</th><th>最低证据要求</th></tr>
@@ -1664,11 +1666,11 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   </div>
 
   <h4>2. 并行策略必须与模型结构和集群拓扑绑定</h4>
-  <p>最优并行配置因 Dense Transformer、MoE、长上下文和多模态模型而异。Dense 模型通常先使用 FSDP/ZeRO 减少状态内存，再使用 TP/PP 扩展到多节点；MoE 额外需要 expert 并行和 all-to-all 负载均衡；长上下文会放大激活值、注意力机制和检查点保存的压力。不要把"启用 FSDP"视为训练系统设计；真正的问题是：哪个 tensor 太大，哪种通信太频繁，哪个阶段阻塞了关键路径。</p>
+  <p>最优并行配置因 Dense Transformer、MoE、长上下文和多模态模型而异。Dense 模型通常先用 FSDP/ZeRO 减少状态内存，再用 TP/PP 扩展到多节点；MoE 还需要 expert 并行和 all-to-all 负载均衡；长上下文会放大激活值、注意力机制和检查点保存的压力。不要把"启用 FSDP"当成训练系统设计；真正的问题是：哪个 tensor 太大，哪种通信太频繁，哪个阶段阻塞了关键路径。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>工业参考：</strong> <a href="https://arxiv.org/abs/2402.15627" target="_blank">MegaScale</a> 强调全栈可观测性和掉队者/故障诊断；<a href="https://arxiv.org/abs/2412.19437" target="_blank">DeepSeek-V3</a> 展示了 FP8、DualPipe、MoE/MLA 与稳定训练的组合；<a href="https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html" target="_blank">PyTorch FSDP2</a> 和 <a href="https://docs.pytorch.org/docs/stable/distributed.tensor.html" target="_blank">DTensor</a> 提供了分片训练的基础；<a href="https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/index.html" target="_blank">Transformer Engine</a> 涵盖了 FP8/MXFP8/NVFP4；<a href="https://docs.nvidia.com/megatron-core/developer-guide/0.16.0/user-guide/parallelism-guide.html" target="_blank">Megatron Core</a> 将 DP/TP/PP/SP/EP 视为可组合策略。</div></div>
 
   <h4>3. 检查点检查必须同时涵盖恢复和发布</h4>
-  <p>训练中断恢复关注优化器、调度器、RNG 和采样器；推理发布关注权重格式、tokenizer、模板、量化和 serving 参数。两者不应混淆。在分布式训练中，检查点还必须处理参数分片、优化器分片、world size 变化和异步保存开销。PyTorch Distributed Checkpoint 的价值在于将这些分片状态保存为可组合对象，而不是让每个训练脚本编写一套脆弱的 rank 本地保存逻辑。</p>
+  <p>训练中断恢复关注优化器、调度器、RNG 和采样器；推理发布关注权重格式、tokenizer、模板、量化和 serving 参数。这两个目的不要混在一起。在分布式训练中，检查点还必须处理参数分片、优化器分片、world size 变化和异步保存开销。PyTorch Distributed Checkpoint 的价值在于把这些分片状态保存为可组合对象，而不是让每个训练脚本自己写一套 rank 本地保存逻辑。</p>
   <div class="table-wrap">
     <table>
       <tr><th>检查项</th><th>通过标准</th><th>失败时优先检查</th></tr>
@@ -1680,24 +1682,24 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
   </div>
   <p>课程项目的最低要求是：至少执行一次检查点保存/恢复演示，并在报告中说明保存了哪些状态、未保存哪些状态，以及这个缺口会如何影响可重复实验。分布式项目还应记录检查点大小、保存时间、恢复时间以及失败重跑的成本。</p>
 
-  <h4>4. 评估检查决定继续训练还是停止</h4>
-  <p>高级训练工程师必须能够区分训练目标和工程决策。损失下降并不一定意味着模型对目标任务更优；基准分数上升也可能来自数据污染、prompt 过拟合或输出长度的变化。实际评估应至少包括：</p>
+  <h4>4. 评估检查用来决定继续训练还是停止</h4>
+  <p>训练工程师需要区分训练目标和工程决策。损失下降并不一定意味着模型对目标任务更优；基准分数上升也可能来自数据污染、prompt 过拟合或输出长度的变化。实际评估应至少包括：</p>
   <ul>
     <li><strong>优化信号：</strong>训练/验证损失、grad norm、lr、loss scale 和 tokens/s 是否稳定？</li>
     <li><strong>能力信号：</strong>在固定任务集上是否优于基线，且有方差和样本量支撑结论？</li>
     <li><strong>回归信号：</strong>安全拒绝、格式遵循、长上下文或工具/RAG 输入是否退化？</li>
     <li><strong>成本信号：</strong>新能力是否值得花费训练 token、GPU 小时、推理延迟和内存成本？</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>工业训练系统的目标不是"让模型更大"，而是确保数据、模型、并行和优化中的每一个变更都能被恢复、被观测和被评估。训练工程师必须能够将一次训练运行描述为一个可审计的工程过程，而不仅仅是一条损失曲线。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>工业训练系统的目标不是"让模型更大"，而是确保数据、模型、并行和优化中的每一处变更都能被恢复、被观测和被评估。训练工程师需要能把一次训练过程描述为可审计的工程流程，而不仅仅是一条损失曲线。</div></div>
 </section><section class="card">
   <h3>概念练习与巩固</h3>
 
-  <div class="exercise" data-answer="2" data-explain="交叉熵损失衡量两个概率分布之间的差异。对于语言建模，真实分布是one-hot（正确token的概率为1），因此交叉熵简化为负对数似然——模型分配给正确token的概率的负对数。">
+  <div class="exercise" data-answer="2" data-explain="交叉熵损失衡量两个概率分布的差异。在语言模型中，真实分布是one-hot（正确token概率为1），所以交叉熵简化为负对数似然——模型分配给正确token概率的负对数。">
     <h4>练习1：语言模型的交叉熵损失等价于什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q71" value="0"> A. 模型预测的所有token的平均概率</label>
       <label><input type="radio" name="q71" value="1"> B. 模型输出的熵</label>
-      <label><input type="radio" name="q71" value="2"> C. 正确token的负对数似然(NLL)</label>
+      <label><input type="radio" name="q71" value="2"> C. 正确token的负对数似然 (NLL)</label>
       <label><input type="radio" name="q71" value="3"> D. 正确token的均方误差</label>
     </div>
     <button class="btn btn-primary" onclick="LLM.checkMC(this,'q71')">检查答案</button>
@@ -1705,7 +1707,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="AdamW将权重衰减与自适应学习率解耦。在标准Adam中，L2正则化被自适应学习率错误地缩放——大梯度参数的规则化被减少，小梯度参数的规则化被放大。AdamW先执行Adam更新，然后独立应用权重衰减。">
+  <div class="exercise" data-answer="1" data-explain="AdamW将权重衰减与自适应学习率解耦。标准Adam中，L2正则化会被自适应学习率错误缩放：大梯度参数的衰减被削弱，小梯度参数的衰减被放大。AdamW先做Adam更新，再独立应用权重衰减。">
     <h4>练习2：AdamW和标准Adam之间的关键区别是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q72" value="0"> A. AdamW不使用动量</label>
@@ -1718,7 +1720,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="困惑度是交叉熵损失的指数。它衡量模型在每个位置上'平均犹豫的候选token数'。PPL=1表示完美，PPL=V（词表大小）表示随机猜测。">
+  <div class="exercise" data-answer="2" data-explain="困惑度是交叉熵损失的指数。它衡量模型在每个位置上“平均犹豫的候选token数”。PPL=1表示完美预测，PPL=V（词表大小）表示随机猜测。">
     <h4>练习3：困惑度的数学定义是什么？如何解释它？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q73" value="0"> A. 模型输出概率的倒数，衡量置信度</label>
@@ -1770,7 +1772,7 @@ model = FSDP(model)  # 自动分片参数、梯度、优化器状态</div>
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="当恢复后损失曲线不连续时，首先要检查的是检查点是否恢复了优化器动量、调度器步数、RNG、数据加载器位置和梯度缩放器。只恢复模型权重适用于推理导出，但不足以证明训练可恢复性。">
+  <div class="exercise" data-answer="2" data-explain="恢复后损失曲线不连续时，首先检查检查点是否恢复了优化器动量、调度器步数、RNG、数据加载器位置和梯度缩放器。只恢复模型权重适用于推理导出，但不足以证明训练可恢复性。">
     <h4>练习7：恢复训练后，损失曲线突然跳跃。应该首先检查什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q77" value="0"> A. 直接加倍模型参数数量，因为小模型天生不稳定</label>

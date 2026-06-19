@@ -34,13 +34,13 @@
   <div class="info-box tip"><span class="icon">💡</span><div><strong>初学者关注：</strong>推理优化不是孤立术语的集合。KV Cache 消除了冗余计算，量化降低了内存和带宽压力，FlashAttention 改善了注意力 IO，RAG 无需重新训练即可更新知识，vLLM 提高了服务吞吐量。稀疏注意力、线性注意力、状态空间模型、外部记忆、Triton 和多模态属于前沿地图；首次学习者应在追逐具体技术之前先建立清晰的分类体系。</div></div>
   <ul>
     <li><strong>前置知识：</strong>第8章中关于生成过程、GPU内存和批处理的基本概念。</li>
-    <li><strong>学习目标：</strong>将推理瓶颈分解为计算、内存、IO、调度、检索、部署和运行时过载问题，并设计 KV Cache、量化、RAG、连续批处理准入、基准测试、SLO 监控、生产发布检查和负载降级应对措施。</li>
+    <li><strong>学习目标：</strong>把推理瓶颈分解为计算、内存、IO、调度、检索、部署和运行时过载问题，然后设计对应的应对措施：KV Cache、量化、RAG、连续批处理准入、基准测试、SLO 监控、生产发布检查和负载降级。</li>
     <li><strong>本章产出：</strong>KV Cache、量化、最小化 RAG、工具调用 schema 检查、MCP 运行时安全检查、调度准入报告、基准测试报告、生产发布报告、服务过载响应报告、投机解码诊断、指标结论总结和 LSH 检索示例。</li>
-    <li><strong>完成标准：</strong>当你遇到一个慢/昂贵的推理问题时，能够判断瓶颈更可能在于计算、GPU内存、带宽还是检索。</li>
+    <li><strong>完成标准：</strong>当你遇到一个慢或昂贵的推理问题时，能判断瓶颈更可能在于计算、GPU内存、带宽还是检索。</li>
     <li><strong>实践产出：</strong>构建 KV 内存计算、前缀缓存节省估算、连续批处理准入报告、量化误差实验、RAG 演示、工具 schema 和 MCP 运行时检查、生产发布报告、服务过载响应、压力测试 JSON、P50/P95/P99 报告、指标结论总结和部署计划。可选练习文件位于 <a href="../../assignments/ch10_inference/">assignments/ch10_inference/</a>。</li>
   </ul>
-  <div class="dependency-note"><strong>必需前置知识：</strong>前九章的计算图、KV cache、生成策略、评估指标，以及 TTFT、TPOT、吞吐量、P95/P99、active KV tokens、峰值内存和缓存命中率。<br><strong>本章内化：</strong>每个服务问题都将分解为 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和降级策略；KV、量化、前缀缓存、RAG、工具检查和多模态 token 都必须计入同一个 SLO/成本账本。<br><strong>验证信号：</strong>你能写出一份部署报告，解释瓶颈在哪里，优化改变了哪个阶段，质量是否回退，容量边界是什么，以及何时应拒绝“只看平均延迟”的结论。</div>
-  <p class="system-role"><strong>本章定位：</strong>本章将前九章的模型、训练、生成和对齐结果转化为能够处理流量的服务。它要求训练工程师理解架构选择如何改变缓存和序列状态成本，推理工程师使用工作负载、SLO、容量、回滚和安全边界证明系统是可部署的。</p>
+  <div class="dependency-note"><strong>必需前置知识：</strong>前九章的计算图、KV cache、生成策略、评估指标，以及 TTFT、TPOT、吞吐量、P95/P99、active KV tokens、峰值内存和缓存命中率。<br><strong>本章内化：</strong>每个服务问题都要分解成 prefill、decode、RAG/tool、网络流式输出、排队、准入控制和降级策略；KV、量化、前缀缓存、RAG、工具检查和多模态 token 都必须计入同一个 SLO/成本账本。<br><strong>验证信号：</strong>你能写出一份部署报告，解释瓶颈在哪里，优化改变了哪个阶段，质量是否回退，容量边界是什么，以及何时应拒绝“只看平均延迟”的结论。</div>
+  <p class="system-role"><strong>本章定位：</strong>本章把前九章的模型、训练、生成和对齐结果转化为能够处理流量的服务。训练工程师需要理解架构选择如何改变缓存和序列状态成本，推理工程师则要用工作负载、SLO、容量、回滚和安全边界来证明系统是可部署的。</p>
   <div class="foundation-map">
     <h4>学习者思维导图：先了解什么 / 本章教授什么 / 接下来读什么</h4>
     <div class="foundation-graph" role="img" aria-label="第10章知识图谱：本章之前，理解模型计算图、KV cache、生成策略和SLO；本章学习LLM serving；之后阅读关于分离式prefill、MCP和多模态serving的内容。">
@@ -69,12 +69,12 @@
       <table>
         <tr><th>学习前需要了解</th><th>本章将阐明</th><th>扩展阅读材料/知识点</th></tr>
         <tr><td>prefill / decode</td><td>分离 TTFT、TPOT、ITL、prefill 批处理和 decode 批处理，以识别瓶颈阶段。</td><td><strong>材料：</strong>vLLM 优化/分离式预填充、Orca、SGLang 调度器。<br><strong>知识点：</strong>chunked prefill、continuous batching、speculative serving。</td></tr>
-        <tr><td>KV 和 GPU 内存</td><td>使用 active KV tokens、缓存命中率、量化、前缀缓存和逐出策略估算容量。</td><td><strong>材料：</strong>PagedAttention、vLLM KV cache、TensorRT-LLM KV 传输。<br><strong>知识点：</strong>前缀缓存、KV 量化、长上下文容量规划。</td></tr>
-        <tr><td>RAG / 工具协议</td><td>将检索、schema、权限、观察、预算和追踪放入同一个 agent 工作流。</td><td><strong>材料：</strong>MCP tools 规范、Anthropic 代码执行与 MCP、OWASP LLM Top 10。<br><strong>知识点：</strong>工具路由、schema 懒加载、沙箱、提示注入。</td></tr>
-        <tr><td>SLO / 金丝雀 / 成本</td><td>使用 P95/P99、错误预算、成本、质量回退和回滚共同决定部署。</td><td><strong>材料：</strong>Google SRE SLO/发布工程、LLM 服务事后分析。<br><strong>知识点：</strong>金丝雀发布、负载降级、成本归因、多模态容量模型。</td></tr>
+        <tr><td>KV 和 GPU 内存</td><td>用 active KV tokens、缓存命中率、量化、前缀缓存和逐出策略估算容量。</td><td><strong>材料：</strong>PagedAttention、vLLM KV cache、TensorRT-LLM KV 传输。<br><strong>知识点：</strong>前缀缓存、KV 量化、长上下文容量规划。</td></tr>
+        <tr><td>RAG / 工具协议</td><td>把检索、schema、权限、观察、预算和追踪放入同一个 agent 工作流。</td><td><strong>材料：</strong>MCP tools 规范、Anthropic 代码执行与 MCP、OWASP LLM Top 10。<br><strong>知识点：</strong>工具路由、schema 懒加载、沙箱、提示注入。</td></tr>
+        <tr><td>SLO / 金丝雀 / 成本</td><td>用 P95/P99、错误预算、成本、质量回退和回滚共同决定部署。</td><td><strong>材料：</strong>Google SRE SLO/发布工程、LLM 服务事后分析。<br><strong>知识点：</strong>金丝雀发布、负载降级、成本归因、多模态容量模型。</td></tr>
       </table>
     </div>
-    <p><strong>本章覆盖范围：</strong>本章涵盖 serving、RAG、工具、量化、多模态、稀疏/压缩注意力、线性注意力、状态空间模型和混合序列架构。目标不是记住每个引擎标志或模型名称，而是根据每种技术改变的资源对其进行分类：KV 内存、注意力范围、序列状态、参数带宽、上下文 token、调度或发布风险。</p>
+    <p><strong>本章覆盖范围：</strong>本章涵盖 serving、RAG、工具、量化、多模态、稀疏/压缩注意力、线性注意力、状态空间模型和混合序列架构。目标不是记住每个引擎标志或模型名称，而是根据每种技术改变的资源分类：KV 内存、注意力范围、序列状态、参数带宽、上下文 token、调度或发布风险。</p>
   </div>
 </section><!-- ================================================================ -->
 <!-- 10.1 推理瓶颈分析 -->
@@ -85,22 +85,22 @@
 <p class="diagram-caption">图10-1: GPU内存层次结构——A100架构（LLM推理视角）</p>
 </section><section class="card" id="s10-1">
   <h3>10.1 推理瓶颈分析——Roofline模型视角</h3>
-  <p>你已经构建、训练并微调了模型用于对齐。现在，是时候<strong>在实际应用中运行它</strong>了。推理优化的目标是让模型跑得更快、成本更低，并支持更长的上下文。</p>
+  <p>你已经完成了模型的构建、训练和对齐微调。现在，是时候<strong>在实际应用中运行它</strong>了。推理优化的目标是让模型跑得更快、成本更低，并支持更长的上下文。</p>
   <p>推理分为两个阶段，每个阶段有不同的瓶颈：</p>
   <ul>
-    <li><strong>Prefilling（预填充）：</strong>处理整个提示（prompt）。大矩阵乘法可以并行化——属于<strong>计算受限（compute-bound）</strong>。瓶颈是GPU的计算能力（FLOPS）。</li>
-    <li><strong>Decoding（解码）：</strong>逐个生成token。每一步只处理1个token——属于<strong>内存受限（memory-bound）</strong>。大多数时间GPU都在等待参数从HBM搬运到计算单元。瓶颈是内存带宽。</li>
+    <li><strong>Prefilling（预填充）：</strong>处理整个提示（prompt）。大矩阵乘法可以并行化，因此是<strong>计算受限的（compute-bound）</strong>。瓶颈在于GPU的计算能力（FLOPS）。</li>
+    <li><strong>Decoding（解码）：</strong>逐个生成token。每一步只处理1个token，因此是<strong>内存受限的（memory-bound）</strong>。大多数时间GPU都在等待参数从HBM搬运到计算单元。瓶颈在于内存带宽。</li>
   </ul>
 
   <h4>Roofline模型</h4>
-  <p>Roofline模型是一个可视化工具，横轴是算术强度（Arithmetic Intensity，FLOPs / Bytes），纵轴是性能（Performance，FLOPs/s）。Prefilling具有较高的算术强度，位于Roofline的“计算受限区域”（右上方的斜坡区域）。Decoding的算术强度极低，位于“内存受限区域”（水平平台区域）。</p>
-  <p>这就解释了为什么增大batch size对Decoding帮助很大——更大的batch提高了算术强度，将操作推回计算受限区域。同时也解释了为什么KV Cache、量化（Quantization）和GQA等技术对Decoding特别有效——它们都减少了内存搬运量。</p>
+  <p>Roofline模型是一个可视化工具，横轴是算术强度（Arithmetic Intensity，FLOPs / Bytes），纵轴是性能（Performance，FLOPs/s）。Prefilling的算术强度较高，处在Roofline的“计算受限区域”（右上方的斜坡区域）。Decoding的算术强度极低，处在“内存受限区域”（水平平台区域）。</p>
+  <p>这解释了为什么增大batch size对Decoding帮助很大：更大的batch提高了算术强度，将操作推回计算受限区域。同时，这也解释了为什么KV Cache、量化（Quantization）和GQA等技术对Decoding特别有效——它们都减少了内存搬运量。</p>
 </section><!-- 10.2 KV 缓存理论 --><section class="card" id="s10-2">
   <h3>10.2 KV Cache — 解码时避免冗余计算</h3>
-  <p>在自回归生成中，每一步计算注意力时，我们都在重复计算所有之前token的Key (K)和Value (V)矩阵。<strong>KV Cache</strong>的核心思想是缓存之前步骤的K和V，以避免冗余计算。</p>
+  <p>在自回归生成中，每步计算注意力时，都会重复计算所有之前 token 的 Key (K) 和 Value (V) 矩阵。<strong>KV Cache</strong> 缓存之前步骤的 K 和 V，避免重复计算。</p>
 
   <h4>计算代价对比</h4>
-  <p>不使用KV Cache时，第t步的输入序列长度为t，注意力计算代价为 <span class="katex-inline" data-expr="O(t^2)" aria-label="O(t^2)" role="img"></span>——代价随序列长度呈平方增长。使用KV Cache后，每一步只需计算新token的K和V，注意力计算代价降为 <span class="katex-inline" data-expr="O(t)" aria-label="O(t)" role="img"></span>：</p>
+  <p>不使用 KV Cache 时，第 t 步的输入序列长度为 t，注意力计算代价为 <span class="katex-inline" data-expr="O(t^2)" aria-label="O(t^2)" role="img"></span>，即随序列长度平方增长。使用 KV Cache 后，每一步只需计算新 token 的 K 和 V，注意力计算代价降为 <span class="katex-inline" data-expr="O(t)" aria-label="O(t)" role="img"></span>：</p>
   <div class="math-box"><div class="label">公式10.1 KV Cache更新</div>
     <div class="katex" data-expr="K_{\text{cache}} = [K_{\text{cache}}; K_{\text{new}}], \quad V_{\text{cache}} = [V_{\text{cache}}; V_{\text{new}}]" aria-label="K_{\text{cache}} = [K_{\text{cache}}; K_{\text{new}}], \quad V_{\text{cache}} = [V_{\text{cache}}; V_{\text{new}}]" role="img"></div>
   </div>
@@ -109,7 +109,7 @@
   </div>
 
   <h4>内存代价</h4>
-  <p>KV Cache以计算换内存。单个batch的缓存大小为 <span class="katex-inline" data-expr="2 \times L \times n_{\text{layers}} \times n_{\text{kv\_heads}} \times d_{\text{head}} \times \text{bytes}" aria-label="2 \times L \times n_{\text{layers}} \times n_{\text{kv\_heads}} \times d_{\text{head}} \times \text{bytes}" role="img"></span>，其中2分别对应K和V，<span class="katex-inline" data-expr="n_{\text{kv\_heads}}" aria-label="n_{\text{kv\_heads}}" role="img"></span>是实际缓存的KV头数，而非查询头数。以Llama 3 8B风格的GQA配置为例，32层，<span class="katex-inline" data-expr="n_{\text{kv\_heads}}=8" aria-label="n_{\text{kv\_heads}}=8" role="img"></span>，<span class="katex-inline" data-expr="d_{\text{head}}=128" aria-label="d_{\text{head}}=128" role="img"></span>，8K上下文，FP16，单个请求的KV Cache约为1GB；若batch size为4，或同时保持4条等长序列，则约为4GB。如果不使用GQA/MLA等压缩技术，长上下文的KV Cache会迅速成为主要内存消耗者。</p>
+  <p>KV Cache 用内存换计算效率。单个 batch 的缓存大小为 <span class="katex-inline" data-expr="2 \times L \times n_{\text{layers}} \times n_{\text{kv\_heads}} \times d_{\text{head}} \times \text{bytes}" aria-label="2 \times L \times n_{\text{layers}} \times n_{\text{kv\_heads}} \times d_{\text{head}} \times \text{bytes}" role="img"></span>，其中 2 对应 K 和 V，<span class="katex-inline" data-expr="n_{\text{kv\_heads}}" aria-label="n_{\text{kv\_heads}}" role="img"></span> 是实际缓存的 KV 头数（而非查询头数）。以 Llama 3 8B 风格的 GQA 配置为例：32 层，<span class="katex-inline" data-expr="n_{\text{kv\_heads}}=8" aria-label="n_{\text{kv\_heads}}=8" role="img"></span>，<span class="katex-inline" data-expr="d_{\text{head}}=128" aria-label="d_{\text{head}}=128" role="img"></span>，8K 上下文，FP16，单个请求的 KV Cache 约为 1 GB；若 batch size 为 4（或同时处理 4 条等长序列），则约为 4 GB。如果不使用 GQA/MLA 等压缩技术，长上下文时 KV Cache 会迅速成为主要内存消耗者。</p>
 </section><!-- ================================================================ -->
 <!-- 编程练习1：KV Cache实现 -->
 <!-- ================================================================ --><section class="card" id="s10-3">
@@ -118,14 +118,14 @@
   <div class="coding-exercise">
     <h4>练习 1：支持 KV Cache 的自注意力层</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现 <code>AttentionWithCache</code>，在增量解码过程中支持 KV 缓存。</p>
+      <p><strong>任务：</strong>实现 <code>AttentionWithCache</code>，在增量解码中支持 KV 缓存。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>forward(x, cache=None)</code> 接收当前 token 的输入和上一步的缓存</li>
-        <li>如果没有缓存（第一步），正常计算所有位置的 K 和 V 并缓存它们</li>
-        <li>如果缓存存在（后续步骤），将历史 K/V 与新计算的 K/V 拼接</li>
+        <li>如果没有缓存（即第一步），正常计算所有位置的 K 和 V，并缓存它们</li>
+        <li>如果缓存存在（即后续步骤），将历史 K/V 和新计算的 K/V 拼接</li>
         <li>返回 <code>(output, new_cache)</code></li>
-        <li>在实现因果掩码时，注意 <span class="katex-inline" data-expr="L_Q \neq L_{KV}" aria-label="L_Q \neq L_{KV}" role="img"></span> 的情况（<span class="katex-inline" data-expr="L_Q = 1" aria-label="L_Q = 1" role="img"></span> 但 <span class="katex-inline" data-expr="L_{KV} = \text{history} + 1" aria-label="L_{KV} = \text{history} + 1" role="img"></span>）</li>
+        <li>实现因果掩码时，注意 <span class="katex-inline" data-expr="L_Q \neq L_{KV}" aria-label="L_Q \neq L_{KV}" role="img"></span> 的情况（<span class="katex-inline" data-expr="L_Q = 1" aria-label="L_Q = 1" role="img"></span> 但 <span class="katex-inline" data-expr="L_{KV} = \text{history} + 1" aria-label="L_{KV} = \text{history} + 1" role="img"></span>）</li>
       </ul>
       <pre># Expected usage
 attn = AttentionWithCache(d_model=512, n_heads=8)
@@ -207,14 +207,14 @@ for step in range(max_len):
     logits = lm_head(out[:, -1, :])
     token_id = torch.multinomial(torch.softmax(logits, dim=-1), 1)
     x = embed(token_id)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>不同 Q 和 K/V 长度下的掩码：</strong>当 <span class="katex-inline" data-expr="L_{KV} > L_Q" aria-label="L_{KV} > L_Q" role="img"></span>（中间解码步骤）时，掩码矩阵形状为 <span class="katex-inline" data-expr="L_Q \times L_{KV}" aria-label="L_Q \times L_{KV}" role="img"></span>，其中只有最后 <span class="katex-inline" data-expr="L_Q" aria-label="L_Q" role="img"></span> 列是因果的。之前缓存的 token 在对应位置应完全可见。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>不同 Q 和 K/V 长度下的掩码：</strong>当 <span class="katex-inline" data-expr="L_{KV} > L_Q" aria-label="L_{KV} > L_Q" role="img"></span>（中间解码步骤）时，掩码矩阵形状为 <span class="katex-inline" data-expr="L_Q \times L_{KV}" aria-label="L_Q \times L_{KV}" role="img"></span>，其中只有最后 <span class="katex-inline" data-expr="L_Q" aria-label="L_Q" role="img"></span> 列是因果的。之前缓存的 token 在对应位置完全可见。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 编程练习2：KV缓存内存计算 -->
 <!-- ================================================================ --><section class="card" id="s10-4">
   <h3>10.4 编程练习 2：计算 KV Cache 内存占用</h3>
-  <p>理解 KV Cache 的内存占用对于设计推理系统至关重要。本练习让你手动计算不同模型配置下的 KV Cache 大小。</p>
+  <p>KV Cache 的内存占用量直接影响推理系统的设计。本练习要求你手动计算不同模型配置下的 KV Cache 大小。</p>
 
   <div class="coding-exercise">
     <h4>练习 2：KV Cache 内存分析</h4>
@@ -272,38 +272,38 @@ mla = kv_cache_memory_analysis(60, 1, 128, 128000)
 gqa = kv_cache_memory_analysis(60, 8, 128, 128000)
 print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
       f"(Standard GQA: {gqa['total_cache_gb']:.1f} GB)")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 MLA 有效：</strong>标准的 MHA 每个 head 有独立的 K/V，GQA 按组共享 K/V。MLA 更进一步，将 K/V 投影到低维隐空间，缓存压缩后的向量而非完整的 K/V。DeepSeek-V2/V3 将 MLA 作为一种 KV Cache 压缩方案；具体的压缩比取决于 latent dimension、RoPE 分支以及实现配置。这里的玩具配置仅用于建立数量级直觉，不应视为任何真实模型的固定规格。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么 MLA 有效：</strong>标准的 MHA 每个 head 有独立的 K/V，GQA 按组共享 K/V。MLA 更进一步，将 K/V 投影到低维隐空间，缓存压缩后的向量而非完整的 K/V。DeepSeek-V2/V3 将 MLA 作为一种 KV Cache 压缩方案；具体的压缩比取决于 latent dimension、RoPE 分支以及实现配置。这里的玩具配置仅用来建立数量级直觉，不应视为任何真实模型的固定规格。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 10.5 稀疏/压缩注意力理论 -->
 <!-- ================================================================ --><section class="card" id="s10-5">
   <h3>10.5 稀疏注意力与压缩注意力：长上下文中的计算权衡</h3>
-  <p>MLA（第4章）主要压缩KV Cache，但注意力计算本身仍随上下文长度增长。长上下文系统通常使用两类思路来降低成本：<strong>稀疏注意力</strong>仅关注候选 token 的子集，以及<strong>压缩注意力</strong>先将相邻 token 压缩成更少的代表性项。这些是前沿系统案例，不应视为所有模型采用的固定标准。</p>
+  <p>MLA（第4章）压缩KV Cache，但注意力计算本身仍随上下文长度增长。长上下文系统通常用两类方法降低成本：<strong>稀疏注意力</strong>仅关注候选 token 的子集，<strong>压缩注意力</strong>先将相邻 token 压缩成更少的代表性项。这些是前沿系统的常用方案，不是所有模型都采用的固定标准。</p>
 
   <h4>可学习的 top-k 稀疏性</h4>
-  <p>可学习稀疏注意力使用轻量级索引器为每个查询给候选 KV 打分，只保留 <strong>top-k</strong> 进行精确注意力。如果每步只访问 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span> 个候选，主注意力项可从 <span class="katex-inline" data-expr="O(n^2)" aria-label="O(n^2)" role="img"></span> 降至约 <span class="katex-inline" data-expr="O(n \cdot k)" aria-label="O(n \cdot k)" role="img"></span>（其中 <span class="katex-inline" data-expr="k \ll n" aria-label="k \ll n" role="img"></span>）；但索引器、压缩器、跨层调度和硬件内核仍会带来额外开销。</p>
+  <p>可学习稀疏注意力使用轻量级索引器为每个查询对候选 KV 打分，只保留 <strong>top-k</strong> 进行精确注意力。如果每步只访问 <span class="katex-inline" data-expr="k" aria-label="k" role="img"></span> 个候选，主注意力项可从 <span class="katex-inline" data-expr="O(n^2)" aria-label="O(n^2)" role="img"></span> 降至约 <span class="katex-inline" data-expr="O(n \cdot k)" aria-label="O(n \cdot k)" role="img"></span>（其中 <span class="katex-inline" data-expr="k \ll n" aria-label="k \ll n" role="img"></span>）；但索引器、压缩器、跨层调度和硬件内核仍会带来额外开销。</p>
 
   <h4>压缩后稀疏选择</h4>
-  <p>压缩稀疏注意力首先将每 m 个相邻 token 的 KV <strong>压缩为 1 个条目</strong>，然后对这些压缩条目进行 top-k 稀疏选择。它与固定滑动窗口不同：稀疏模式可以是数据驱动的，并且可以跨越长距离；然而压缩丢失了细粒度的 token 信息，可能影响长文档中的精确引用、代码位置、表格单元格和局部事实。</p>
+  <p>压缩稀疏注意力首先将每 m 个相邻 token 的 KV <strong>压缩为 1 个条目</strong>，然后对这些压缩条目进行 top-k 稀疏选择。它与固定滑动窗口不同：稀疏模式是数据驱动的，可以跨越长距离；然而压缩丢失了细粒度的 token 信息，可能影响长文档中的精确引用、代码位置、表格单元格和局部事实。</p>
   <div class="math-box"><div class="label">公式 10.3 压缩稀疏注意力（概念）</div>
     <div class="katex" data-expr="\text{SparseCompressedAttn}(q_t) = \text{Attn}\Big(q_t,\; \text{TopK}_k\big(\text{Compress}_m(K),\, \text{Compress}_m(V)\big)\Big)" aria-label="\text{SparseCompressedAttn}(q_t) = \text{Attn}\Big(q_t,\; \text{TopK}_k\big(\text{Compress}_m(K),\, \text{Compress}_m(V)\big)\Big)" role="img"></div>
   </div>
 
   <h4>超压缩全局摘要</h4>
-  <p>另一类方法对整个序列 KV 进行更激进的池化或学习压缩，然后在压缩表示上进行密集注意力。这为模型提供了一种廉价的“全局概览”，弥补了 top-k 稀疏选择可能遗漏的远端信息。压缩比越高，节省的计算越多，但保留精确 token 级别证据的难度也越大。</p>
+  <p>另一类方法对整个序列的 KV 进行更激进的池化或学习压缩，然后对压缩表示做密集注意力。这为模型提供了廉价的“全局概览”，弥补 top-k 稀疏选择可能遗漏的远端信息。压缩比越高，节省的计算越多，但保留精确 token 级别证据的难度也越大。</p>
   <div class="math-box"><div class="label">公式 10.4 压缩全局注意力（概念）</div>
     <div class="katex" data-expr="\text{GlobalCompressedAttn}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Pool}_{m}(K)^\top}{\sqrt{d}}\right) \cdot \text{Pool}_{m}(V)" aria-label="\text{GlobalCompressedAttn}(Q, K, V) = \text{Softmax}\left(\frac{Q \cdot \text{Pool}_{m}(K)^\top}{\sqrt{d}}\right) \cdot \text{Pool}_{m}(V)" role="img"></div>
   </div>
 
   <h4>如何组合与如何评估</h4>
-  <p>稀疏层和全局压缩层可以按层交错、并行融合，或仅用于某些长上下文层。在本课程中分析这些方法时，问三个问题：从 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 个 KV 项到访问了多少项，引入了什么额外的索引或压缩开销，以及在长依赖、精确引用或多跳任务上质量是否下降。任何关于“1M上下文”或“推理FLOPs降至X”的主张都必须绑定到具体模型、上下文长度、硬件、内核和评估集。</p>
-  <div class="info-box tip"><span class="icon">📚</span><div><strong>阅读提示：</strong> 稀疏注意力、压缩注意力、外部记忆、推理努力和测试时计算都适合作为“前沿系统如何在长上下文、内存、吞吐量和推理预算之间做出权衡”的工程案例研究。学习时，将可长期复用的原理与随模型版本变化的规格分开。</div></div>
+  <p>稀疏层和全局压缩层可以按层交错、并行融合，或仅用于某些长上下文层。在本课程中分析这些方法时，问三个问题：从 <span class="katex-inline" data-expr="n" aria-label="n" role="img"></span> 个 KV 项实际访问了多少项，引入了什么额外的索引或压缩开销，以及在长依赖、精确引用或多跳任务上质量是否下降。任何关于“1M上下文”或“推理FLOPs降至X”的主张都必须绑定到具体模型、上下文长度、硬件、内核和评估集。</p>
+  <div class="info-box tip"><span class="icon">📚</span><div><strong>阅读提示：</strong> 稀疏注意力、压缩注意力、外部记忆、推理努力和测试时计算都是很好的工程案例，展示了前沿系统如何在长上下文、内存、吞吐量和推理预算之间权衡。学习时应区分可长期复用的原理和随模型版本变化的具体规格。</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.5A Linear/SSM/Hybrid Sequence Architectures -->
 <!-- ================================================================ --><section class="card" id="s10-5a">
-  <h3>10.5A 线性注意力、状态空间模型与混合序列架构：当全注意力不是唯一的内存方式</h3>
-  <p>稀疏注意力和压缩注意力保留了基本的注意力契约：查询选择先前token的某种表示，然后读取值。另一个不同的前沿方向探讨了模型是否必须为每个token保留KV记忆。<strong>线性注意力</strong>、<strong>状态空间模型</strong>、retention风格的模型以及最近的混合架构，用紧凑的循环状态取代了逐token查找的一部分。对于推理工程师来说，问题不在于“哪种架构更时髦”，而在于哪种记忆表示随时间的推移被传递，以及哪些质量证据被丢失或获得。</p>
+  <h3>10.5A 线性注意力、状态空间模型与混合序列架构：全注意力不是唯一的内存方式</h3>
+  <p>稀疏注意力和压缩注意力仍遵循注意力契约：查询选择某个先前token的表示，然后读取值。另一个方向探讨模型是否必须为每个token保留KV记忆。<strong>线性注意力</strong>、<strong>状态空间模型</strong>、retention风格模型以及最近的混合架构，用紧凑的循环状态代替了逐token查找的一部分。对推理工程师来说，问题不是“哪种架构更时髦”，而是传递哪种记忆表示，以及丢失或获得了哪些质量证据。</p>
 
   <div class="svg-diagram" style="max-width:940px">
     <svg viewBox="0 0 940 500" role="img" aria-label="Sequence architecture comparison from dense attention to hybrid systems">
@@ -369,39 +369,39 @@ print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
       <tr><th>家族</th><th>推理时的记忆表示</th><th>适用场景</th><th>需要评估的主要风险</th></tr>
       <tr><td>全密集注意力</td><td>所有历史K/V向量均可被每个新查询寻址。</td><td>精确召回、代码导航、引用，以及任何先前token都可能重要的任务。</td><td>KV缓存和注意力计算量随上下文长度和并发数增长。</td></tr>
       <tr><td>稀疏或压缩注意力</td><td>模型保留历史K/V的子集、窗口或池化摘要。</td><td>长文档，其中大多数token对每个查询不相关，且稀疏模式可靠。</td><td>重要证据可能被跳过、池化掉，或难以精确引用。</td></tr>
-      <tr><td>线性注意力</td><td>通过特征映射或delta规则更新，将注意力重写为运行状态。</td><td>流式处理、超长序列处理，以及紧凑状态比精确查找更重要的场景。</td><td>有限状态在基于内容的任意检索上可能较弱，除非进行混合或精心训练。</td></tr>
-      <tr><td>SSM / Mamba风格选择性状态</td><td>逐token更新循环隐状态，并依据输入选择保留或遗忘什么。</td><td>长序列、音频/时间序列类数据，以及线性序列缩放重要的场景。</td><td>不同的内核生态、检查点兼容性，以及与注意力相比的长程精确召回行为。</td></tr>
+      <tr><td>线性注意力</td><td>通过特征映射或delta规则更新，将注意力重写为运行状态。</td><td>流式处理、超长序列处理，以及紧凑状态比精确查找更重要的场景。</td><td>有限状态在基于内容的任意检索上可能较弱，除非混合或精心训练。</td></tr>
+      <tr><td>SSM / Mamba风格选择性状态</td><td>逐token更新循环隐状态，并依据输入选择保留或遗忘什么。</td><td>长序列、音频/时间序列类数据，以及线性序列缩放重要的场景。</td><td>不同的内核生态、检查点兼容性，以及相比注意力的长程精确召回行为。</td></tr>
       <tr><td>混合架构</td><td>结合注意力层、线性/SSM层、局部窗口、MLA/GQA缓存压缩以及FFN/MoE块。</td><td>需要高效流式和高品质检索/推理的前沿长上下文LLM。</td><td>更多活动部件：层混合、内核可用性、训练配方以及任务特定回归。</td></tr>
     </table>
   </div>
 
   <h4>线性注意力背后的核心代数</h4>
-  <p>标准因果注意力为每个查询在所有先前键上计算一个新的分布。线性注意力试图使用一种结合形式，使得前面的序列可以增量式地汇总。简化后的因果形式如下：</p>
+  <p>标准因果注意力为每个查询在所有先前键上计算一个新分布。线性注意力尝试用一种结合形式，使前面序列可以增量式汇总。简化后的因果形式如下：</p>
   <div class="math-box"><div class="label">线性注意力状态更新（概念）</div>
     <div class="katex" data-expr="S_t = S_{t-1} + \phi(k_t)v_t^\top,\quad z_t = z_{t-1} + \phi(k_t),\quad y_t = \frac{\phi(q_t)^\top S_t}{\phi(q_t)^\top z_t}" aria-label="S_t = S_{t-1} + phi(k_t) v_t^T, z_t = z_{t-1} + phi(k_t), y_t = phi(q_t)^T S_t / phi(q_t)^T z_t" role="img"></div>
   </div>
-  <p>重要的转变在于，模型不再需要为每一层具体化一个<code>[T,T]</code>得分矩阵或保留完整的逐token查找路径。它向前携带<code>S_t</code>和<code>z_t</code>。这就是为什么线性注意力对于长序列和流式解码具有吸引力。其权衡也很明显：在将多个token折叠成有限状态后，模型可能无法像密集注意力那样清晰地恢复任意token级别的事实，除非架构添加了选择性记忆、局部注意力、检索或周期性全注意力层。</p>
+  <p>关键变化是模型不再需要为每一层具体化一个<code>[T,T]</code>得分矩阵，也不再保留完整的逐token查找路径。它向前携带<code>S_t</code>和<code>z_t</code>。这就是线性注意力对长序列和流式解码有吸引力的原因。权衡也很明显：多个token被折叠成有限状态后，模型可能无法像密集注意力那样清晰地恢复任意token级别的事实，除非架构额外添加了选择性记忆、局部注意力、检索或周期性全注意力层。</p>
 
   <h4>为什么Mamba风格的SSM对LLM工程师很重要</h4>
-  <p>状态空间模型携带的是隐状态而非KV表。Mamba系列通过使状态更新具有选择性，使这一方向对语言建模产生了重要影响：决定保留、遗忘或暴露哪些信息的参数可以依赖于当前输入token。简化符号表示如下：</p>
+  <p>状态空间模型携带的是隐状态而不是KV表。Mamba系列通过让状态更新具有选择性，使这个方向在语言建模中产生了重要影响：决定保留、遗忘或暴露哪些信息的参数可以依赖当前输入token。简化符号表示如下：</p>
   <div class="math-box"><div class="label">选择性状态更新（概念）</div>
     <div class="katex" data-expr="h_t = A(x_t)h_{t-1} + B(x_t)x_t,\quad y_t = C(x_t)h_t" aria-label="h_t = A(x_t) h_{t-1} + B(x_t) x_t, y_t = C(x_t) h_t" role="img"></div>
   </div>
-  <p>这为模型提供了一种明确的机制来决定哪些信息应该在状态中持久化。Mamba-2进一步阐明，注意力类层和SSM类层可以通过共享的结构化矩阵视角来理解，这对工程师很有用，因为它减少了“注意力模型”与“循环模型”之间的错误二分法。实际的问题变成了：哪些层需要精确的token查找，哪些层可以使用紧凑状态，以及哪些内核能使得所选的混合在目标硬件上高效运行？</p>
+  <p>这给了模型一个明确的机制来决定哪些信息应该在状态中持续保存。Mamba-2进一步阐明，注意力类层和SSM类层可以通过共享的结构化矩阵视角来理解。这对工程师很有用，因为它减少了“注意力模型”与“循环模型”这种错误二分法。实际问题变成了：哪些层需要精确的token查找，哪些层可以使用紧凑状态，以及哪些内核能让所选混合在目标硬件上高效运行？</p>
 
   <h4>如何解读混合线性注意力的声称</h4>
-  <p>最近的混合系统（如Kimi Linear）将表达性的线性注意力模块与MLA等注意力/缓存压缩组件相结合。报道的动机不仅仅是“取代Transformer”，而是降低KV缓存和长上下文解码成本，同时保留足够的注意力能力以应对短上下文、长上下文以及训练后/RL任务。对于本课程，请通过以下三个账本解读这类声称：</p>
+  <p>最近的混合系统（如Kimi Linear）将表达性的线性注意力模块与MLA等注意力/缓存压缩组件相结合。报道的动机不只是“取代Transformer”，而是降低KV缓存和长上下文解码成本，同时保留足够的注意力能力以应对短上下文、长上下文以及训练后/RL任务。对本课程而言，请从以下三个维度解读这类声称：</p>
   <ul>
-    <li><strong>架构账本：</strong>哪些层使用了密集注意力、局部注意力、线性注意力、SSM、MLA/GQA或MoE？是否在任何地方保留了精确检索？</li>
-    <li><strong>系统账本：</strong>每个token/层的实际状态或缓存大小是多少？存在哪些内核？在目标上下文长度下，TTFT、TPOT、吞吐量和内存如何变化？</li>
-    <li><strong>质量账本：</strong>评估是否按短上下文、长上下文、多跳召回、引用、代码、工具使用以及RL/训练后任务分别进行，而不仅仅是平均基准分数？</li>
+    <li><strong>架构维度：</strong>哪些层使用了密集注意力、局部注意力、线性注意力、SSM、MLA/GQA或MoE？是否在任何地方保留了精确检索？</li>
+    <li><strong>系统维度：</strong>每个token/层的实际状态或缓存大小是多少？存在哪些内核？在目标上下文长度下，TTFT、TPOT、吞吐量和内存如何变化？</li>
+    <li><strong>质量维度：</strong>评估是否分别按短上下文、长上下文、多跳召回、引用、代码、工具使用以及RL/训练后任务进行，而不仅仅是看平均基准分数？</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>全注意力、稀疏注意力、线性注意力和SSM并不是可以互换的速度技巧。它们定义了不同的记忆契约。高级训练和推理工程师应该追问：什么状态被保留？精确查找路径还存在吗？哪个内核使其变快？哪些任务切片证明更廉价的记忆并未擦除产品所需的信息？</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>全注意力、稀疏注意力、线性注意力和SSM并不是可以互换的速度技巧。它们定义了不同的记忆契约。高级训练和推理工程师应该追问：保留了什么状态？精确查找路径还在不在？哪个内核让它变快？哪些任务切片能证明更廉价的记忆没有擦除产品所需的信息？</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.6 Quantization System -->
 <!-- ================================================================ --><section class="card" id="s10-6">
   <h3>10.6 量化系统：权重、激活值、KV Cache 与发布检查</h3>
-  <p><strong>量化</strong> 并非单一的开关，而是一组针对不同瓶颈的低精度策略。仅权重的 INT4/INT8 主要减少模型权重内存和解码带宽；W8A8 / SmoothQuant 类方法同时量化权重和激活值，更加依赖校准数据和 kernel 支持；KV cache 量化主要减少长上下文和高并发场景下的驻留缓存内存；FP8/FP4 需要一起评估 dtype、缩放元数据、硬件矩阵核心以及 checkpoint/引擎支持。</p>
+  <p><strong>量化</strong> 不是单一开关，而是多组针对不同瓶颈的低精度策略。仅权重的 INT4/INT8 主要减少模型权重内存和解码带宽；W8A8 / SmoothQuant 这类方法同时量化权重和激活值，更依赖校准数据和 kernel 支持；KV Cache 量化主要减少长上下文和高并发场景下的驻留缓存内存；FP8/FP4 需要一起评估 dtype、缩放元数据、硬件矩阵核心、checkpoint 和引擎支持。</p>
 
   <div class="table-wrap">
     <table>
@@ -414,14 +414,14 @@ print(f"MLA-style toy: KV Cache {mla['total_cache_gb']:.2f} GB "
   </div>
 
   <h4>10.6.1 校准集定义了你在保护什么</h4>
-  <p>量化校准集不应只是几十条英文简短闲聊样本。推理工程师应将校准样本视为服务负载的缩影：提示/输出长度、RAG 引用、工具/JSON schema、代码/数学、中文或多语言、安全拒绝、长上下文位置以及少量多模态输入，都应按目标产品的比例覆盖。GPTQ 使用近似二阶信息来控制权重量化误差；AWQ 根据激活值分布保护显著通道；SmoothQuant 将激活值异常点的困难迁移到权重侧。这些方法的共同前提是：校准分布与在线分布不能严重错位。</p>
+  <p>量化校准集不应只有几十条英文简短闲聊样本。推理工程师应该把校准样本当成服务负载的缩影：提示/输出长度、RAG 引用、工具/JSON schema、代码/数学、中文或多语言、安全拒绝、长上下文位置以及少量多模态输入，都应该按目标产品的比例覆盖。GPTQ 使用近似二阶信息来控制权重量化误差；AWQ 根据激活值分布保护显著通道；SmoothQuant 将激活值异常点的困难迁移到权重侧。这些方法都基于同一个前提：校准分布不能和在线分布严重错位。</p>
 
   <h4>10.6.2 发布决策：量化收益必须与质量回归一起报告</h4>
-  <p>不要只写“4-bit 节省内存”或“FP8 更快”。一份可用于生产的量化发布报告应至少包含：未量化的基线、量化格式、分组大小 / scale 粒度、校准集来源、引擎/kernel 版本、峰值内存、tokens/s、TTFT/TPOT P95、困惑度或固定任务评分、结构化输出/schema 通过率、RAG 引用召回、安全拒绝/过度拒绝、长上下文位置召回以及失败样例。如果吞吐量提升仅在短提示上观察到，不能推断长上下文、RAG、agent 工具或多模态路径也是安全的。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>仅量化权重并不会自动减少 KV cache；KV cache 量化并不会自动提升所有请求的吞吐量；FP8/FP4 不仅是一种 dtype，而是硬件、scale、kernel 和评估的组合。发布决策必须将资源收益和任务片段回归放在同一张表中。</div></div>
+  <p>不要只写“4-bit 节省内存”或“FP8 更快”。一份可用于生产的量化发布报告至少应该包含：未量化的基线、量化格式、分组大小 / scale 粒度、校准集来源、引擎/kernel 版本、峰值内存、tokens/s、TTFT/TPOT P95、困惑度或固定任务评分、结构化输出/schema 通过率、RAG 引用召回、安全拒绝/过度拒绝、长上下文位置召回以及失败样例。如果只在短提示上观察到吞吐量提升，就不能推断长上下文、RAG、agent 工具或多模态路径也是安全的。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程判断：</strong>仅量化权重不会自动减少 KV Cache；KV Cache 量化不会自动提升所有请求的吞吐量；FP8/FP4 不只是一个 dtype，而是硬件、scale、kernel 和评估的组合。发布决策必须把资源收益和任务片段回归放在同一张表里。</div></div>
 
   <h4>编程练习 3：实现对称 INT8 量化</h4>
-  <p>下面的练习仅覆盖最基本的对称逐通道 INT8 量化。其目的是让你理解 scale、round、clamp 和反量化如何产生误差；实际部署还必须结合本节中的校准集、kernel 和发布检查。</p>
+  <p>下面的练习只覆盖最基本的对称逐通道 INT8 量化。目的是让你理解 scale、round、clamp 和反量化如何产生误差；实际部署时还必须结合本节的校准集、kernel 和发布检查。</p>
 
   <div class="coding-exercise">
     <h4>练习 3：对称逐通道 INT8 量化</h4>
@@ -481,44 +481,44 @@ print(f"INT8 quantization error: {nrmse(weight, dq_w):.2f}%")
 # GPTQ: 利用 Hessian 矩阵加权量化误差，逐列优化
 # AWQ: 找出 1% 的重要通道（显著通道），通过缩放因子保护它们
 # 两者在 INT4 下都能接近 FP16 精度</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>SmoothQuant 的技巧：</strong>激活值中的异常点是量化面临的主要挑战。SmoothQuant 通过等效缩放——激活值除以 s、权重乘以 s——将部分量化困难从激活值迁移到权重。它是 INT8 量化的重要方法之一，但最终精度仍然取决于校准数据、模型结构和部署 kernel。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>SmoothQuant 的技巧：</strong>激活值中的异常点是量化的主要挑战。SmoothQuant 通过等效缩放——激活值除以 s、权重乘以 s——把部分量化困难从激活值迁移到权重。它是 INT8 量化的一个重要方法，但最终精度仍然取决于校准数据、模型结构和部署 kernel。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 10.7 FlashAttention 理论 --><section class="card" id="s10-7">
   <h3>10.7 FlashAttention——IO感知的注意力加速</h3>
-  <p><strong>FlashAttention</strong>（Dao 等人，2022）是近年来最重要的注意力加速技术之一。它不改变数学结果，但通过一种<strong>IO感知算法</strong>显著减少了 GPU HBM 访问次数。</p>
+  <p><strong>FlashAttention</strong>（Dao 等人，2022）是近年最重要的注意力加速技术之一。它不改变数学结果，而是通过 <strong>IO 感知算法</strong> 大幅减少 GPU HBM 的访问次数。</p>
 
   <h4>标准注意力的问题：HBM 瓶颈</h4>
-  <p>标准注意力将 <span class="katex-inline" data-expr="S = QK^\top \in \mathbb{R}^{L \times L}" aria-label="S = QK^\top \in \mathbb{R}^{L \times L}" role="img"></span> 写入 HBM，读取进行 softmax，然后将 <span class="katex-inline" data-expr="P = \text{softmax}(S)" aria-label="P = \text{softmax}(S)" role="img"></span> 写回。这需要 <span class="katex-inline" data-expr="O(L^2)" aria-label="O(L^2)" role="img"></span> 次 HBM 读写——当 L=128K 时，大约 32GB 的 HBM 流量（仅存储一个中间矩阵）。</p>
+  <p>标准注意力将 <span class="katex-inline" data-expr="S = QK^\top \in \mathbb{R}^{L \times L}" aria-label="S = QK^\top \in \mathbb{R}^{L \times L}" role="img"></span> 写入 HBM，读取后进行 softmax，然后将 <span class="katex-inline" data-expr="P = \text{softmax}(S)" aria-label="P = \text{softmax}(S)" role="img"></span> 写回。这需要 <span class="katex-inline" data-expr="O(L^2)" aria-label="O(L^2)" role="img"></span> 次 HBM 读写——当 L=128K 时，仅存储一个中间矩阵就产生约 32GB 的 HBM 流量。</p>
 
   <h4>FlashAttention 的三个关键思想</h4>
   <ul>
-    <li><strong>分块：</strong>将 QKV 分块到 SRAM（片上缓存，约 192KB/A100）中进行计算，避免将中间矩阵写入 HBM</li>
+    <li><strong>分块：</strong>将 QKV 分块载入 SRAM（片上缓存，约 192KB/A100）进行计算，避免将中间矩阵写入 HBM</li>
     <li><strong>重计算：</strong>反向传播时不存储注意力权重，而是重新计算——用计算换内存</li>
-    <li><strong>在线 Softmax：</strong>一种分块计算 softmax 的算法——无需先计算所有 S 再做 softmax；每处理一个块就更新 softmax 统计量</li>
+    <li><strong>在线 Softmax：</strong>一种分块计算 softmax 的算法——无需先算出所有 S 再做 softmax；每处理一个块就更新 softmax 统计量</li>
   </ul>
 
   <div class="table-wrap">
     <table>
       <tr><th>注意力核</th><th>HBM 流量直观解释</th><th>为何重要</th><th>边界条件</th></tr>
-      <tr><td>标准注意力</td><td>写入并重新读取得分矩阵和概率矩阵；主要由与 <code>L^2</code> 成比例的项主导</td><td>长序列会变得 IO 密集，因为中间注意力矩阵很大</td><td>实际内存移动取决于实现、dtype、batch 和 masking</td></tr>
-      <tr><td>FlashAttention</td><td>将 Q/K/V 通过片上内存分块并维护在线 softmax 统计量</td><td>避免在 HBM 中物化完整的得分/概率矩阵</td><td>加速比取决于 GPU 架构、序列长度、头维度和核支持</td></tr>
-      <tr><td>经验法则</td><td>对于足够长的 <code>L</code>，减少 IO 是主要好处</td><td>这解释了为什么注意力可以在不改变数学结果的情况下变得更快</td><td>端到端服务延迟仍包括排队、prefill、decode、KV cache 和流式传输</td></tr>
+      <tr><td>标准注意力</td><td>写入并重新读取得分矩阵和概率矩阵；主要流量来自与 <code>L^2</code> 成正比的项</td><td>长序列的 IO 负担变重，因为中间注意力矩阵很大</td><td>实际内存移动取决于实现、dtype、batch 和 masking</td></tr>
+      <tr><td>FlashAttention</td><td>将 Q/K/V 分块到片上内存，并维护在线 softmax 统计量</td><td>避免在 HBM 中实例化完整的得分/概率矩阵</td><td>加速比取决于 GPU 架构、序列长度、头维度和核支持</td></tr>
+      <tr><td>经验法则</td><td>当 <code>L</code> 足够长时，减少 IO 是主要优势</td><td>这解释了注意力为何能在不改变数学结果的前提下变快</td><td>端到端服务延迟仍包括排队、prefill、decode、KV cache 和流式传输</td></tr>
     </table>
   </div>
-  <p class="diagram-caption">图 10-4：FlashAttention 应理解为 IO 感知的精确注意力。该算法改变了数据在内存中的移动方式，而非正在计算的注意力方程。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>FlashAttention-3：</strong>论文和项目报告在特定的 Hopper/H100、dtype 和矩阵尺寸上实现了非常高的 FLOPS 利用率。本课程的重点不是记住某个数字，而是理解 IO 感知分块、在线 softmax 和硬件特性如何共同影响注意力核。</div></div>
+  <p class="diagram-caption">图 10-4：FlashAttention 是一种 IO 感知的精确注意力算法。它改变了数据在内存中的移动方式，而不是注意力方程本身。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>FlashAttention-3：</strong>论文和项目报告在特定的 Hopper/H100、dtype 和矩阵尺寸上实现了非常高的 FLOPS 利用率。本课程的重点不在于记住某个数字，而是理解 IO 感知分块、在线 softmax 和硬件特性如何共同影响注意力核的性能。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 4：RAG 管道 -->
 <!-- ================================================================ --><section class="card" id="s10-8">
   <h3>10.8 编程练习4：实现一个最小化的RAG流水线</h3>
-  <p><strong>RAG（检索增强生成）</strong>是缓解LLM知识过时、领域知识缺口以及部分幻觉问题的常见方案。它让模型进行“开卷考试”——检索外部文档并将其注入提示词中；然而，检索命中率、上下文压缩和答案忠实性仍需单独评估。</p>
+  <p><strong>RAG（检索增强生成）</strong>是解决LLM知识过时、领域知识不足以及部分幻觉问题的常用做法。它让模型进行“开卷考试”——检索外部文档并把内容注入提示词；不过，检索命中率、上下文压缩和答案忠实性仍然需要单独评估。</p>
 
   <div class="coding-exercise">
     <h4>练习4：RAG检索+生成流水线</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现<code>SimpleRAG</code>类，涵盖文档分块、嵌入、检索和增强生成的完整流水线。</p>
+      <p><strong>任务：</strong>实现<code>SimpleRAG</code>类，覆盖文档分块、嵌入、检索和增强生成的完整流水线。</p>
       <p><strong>要求：</strong></p>
       <ul>
         <li><code>add_document(text)</code> 将文档分块（每块512个token，重叠64个token），计算每个块的嵌入向量</li>
@@ -598,14 +598,14 @@ Question: {question}
 
 Please provide an accurate and concise answer based on the document content. If the documents do not contain relevant information, please state this explicitly."""
         return self.llm.generate(prompt)</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>高级RAG技术：</strong> 1）混合搜索 = 稠密检索 + BM25稀疏检索，通过RRF合并；2）重排序：检索Top-50，用cross-encoder重排序，只保留Top-3；3）MMR：在查询相关性和分块多样性之间权衡；4）查询重写：让LLM在检索前重写查询（消歧、指代消解）。这些技术通常能提升召回率和答案忠实性，但提升必须在固定的数据集、查询分布和评估指标上报告。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>高级RAG技术：</strong> 1）混合搜索 = 稠密检索 + BM25稀疏检索，用RRF合并结果；2）重排序：检索Top-50，用cross-encoder重排序，只保留Top-3；3）MMR：在查询相关性和分块多样性之间做权衡；4）查询重写：让LLM在检索前重写查询（消歧、指代消解）。这些技术能提升召回率和答案忠实性，但需要在固定的数据集、查询分布和评估指标上验证。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 10.8A RAG Evaluation and Failure Decomposition -->
 <!-- ================================================================ --><section class="card" id="s10-8a">
   <h3>10.8A RAG 评估：将错误拆解为检索错误和生成错误</h3>
-  <p>RAG 系统的难点不在于“把文档塞进 prompt”，而在于判断失败发生在哪个环节。如果答案错了，可能是文档分块切断了关键信息，embedding 模型未能命中正确的块，reranker 排序错误，组装后的上下文超出了窗口，或者生成模型没有忠实地使用检索到的内容。一门课程级别的 RAG 评估必须分别检查这些组件。</p>
+  <p>RAG 系统的难点不在于“把文档塞进 prompt”，而在于判断失败发生在哪个环节。如果答案错了，可能是文档分块切断了关键信息，embedding 模型未能命中正确的块，reranker 排序错误，组装后的上下文超出了窗口，或者生成模型没有忠实地使用检索到的内容。课程级别的 RAG 评估必须分别检查这些组件。</p>
 
   <h4>错误分解</h4>
   <div class="table-wrap">
@@ -621,11 +621,11 @@ Please provide an accurate and concise answer based on the document content. If 
   </div>
 
   <h4>离线评估与在线指标</h4>
-  <p>在离线阶段，首先构建查询-答案-文档三元组：每个问题对应一个标准答案以及应该被命中的文档片段。检索模块报告 Recall@k、MRR、nDCG；生成模块报告答案准确率、引用一致性，以及在未命中时是否拒绝捏造。在线阶段，则关注延迟（latency）、成本和用户行为：检索时间、重排序时间、prompt token 数、答案 token 数、用户追问率、人工转接率。</p>
-  <p>在训练双编码器（bi-encoder）检索 embedding 时，通常使用批次内负样本（in-batch negatives）：对于批次中的第 <code>i</code> 个查询，正样本文档是第 <code>i</code> 个文档，而批次内所有其他文档都作为负样本。一个极简的对比检索损失首先对 embedding 做 L2 归一化，计算 <code>Q D^T / temperature</code>，然后用对角线标签做交叉熵。这是 InfoNCE / 对比检索损失的最小形式；它训练了向量空间，后续仍需用 Recall@k、MRR、nDCG 以及端到端的答案质量来评估 RAG 是否真正得到改进。</p>
+  <p>离线阶段先构建查询-答案-文档三元组：每个问题对应一个标准答案以及应该被命中的文档片段。检索模块输出 Recall@k、MRR、nDCG；生成模块输出答案准确率、引用一致性，以及在未命中时是否拒绝捏造。在线阶段关注延迟（latency）、成本和用户行为：检索时间、重排序时间、prompt token 数、答案 token 数、用户追问率、人工转接率。</p>
+  <p>训练双编码器（bi-encoder）检索 embedding 时，通常使用批次内负样本（in-batch negatives）：批次中的第 <code>i</code> 个查询以第 <code>i</code> 个文档作为正样本，批次内所有其他文档作为负样本。一个极简的对比检索损失先对 embedding 做 L2 归一化，计算 <code>Q D^T / temperature</code>，然后用对角线标签做交叉熵。这是 InfoNCE / 对比检索损失的最小形式；它训练了向量空间，后续仍需用 Recall@k、MRR、nDCG 以及端到端的答案质量来评估 RAG 是否真正得到改进。</p>
 
   <h4>示例剖析：批次内负样本如何变成检索分类问题</h4>
-  <p>假设一个批次有 2 个查询和 2 个文档，所有向量均已 L2 归一化，温度（temperature）为 <code>temperature=0.5</code>。对角线代表正样本对：<code>q0 -> d0</code>、<code>q1 -> d1</code>。</p>
+  <p>假设一个批次有 2 个查询和 2 个文档，所有向量均已 L2 归一化，温度（temperature）为 <code>temperature=0.5</code>。对角线上的元素对应正样本对：<code>q0 -> d0</code>、<code>q1 -> d1</code>。</p>
   <div class="math-box"><div class="label">双编码器对比 logits</div>
     <div class="katex" data-expr="Q D^\top =
 \begin{bmatrix}
@@ -647,34 +647,34 @@ Please provide an accurate and concise answer based on the document content. If 
 0.2 & 1.4
 \end{bmatrix}" role="img"></div>
   </div>
-  <p>训练时，将每一行视为一个分类问题，标签为 <code>[0, 1]</code>：第 0 个查询应选择第 0 个文档，第 1 个查询应选择第 1 个文档。对第一行做 softmax 后，正样本概率为 <code>exp(1.6)/(exp(1.6)+exp(0.4)) ≈ 0.768</code>；第二行类似，约为 <code>0.768</code>。批次损失是两个负对数概率的平均值：</p>
+  <p>训练时将每一行视为一个分类问题，标签为 <code>[0, 1]</code>：第 0 个查询应选第 0 个文档，第 1 个查询应选第 1 个文档。对第一行做 softmax 后，正样本概率为 <code>exp(1.6)/(exp(1.6)+exp(0.4)) ≈ 0.768</code>；第二行类似，约为 <code>0.768</code>。批次损失是两个负对数概率的平均值：</p>
   <div class="math-box"><div class="label">InfoNCE 批次损失</div>
     <div class="katex" data-expr="\mathcal{L}= -\frac{1}{2}(\log 0.768+\log 0.768)\approx0.264" aria-label="\mathcal{L}= -\frac{1}{2}(\log 0.768+\log 0.768)\approx0.264" role="img"></div>
   </div>
-  <p>这个例子也说明了批次内负样本的边界：它假设批次中所有非对角线的文档都是负样本。如果 <code>d1</code> 实际上可以回答 <code>q0</code>，那么训练就会将一个真正相关的文档作为负样本推开；真实的 RAG 训练需要进行去重、标注难负样本（hard negative annotation）并处理多个正样本，不能仅依据损失下降来判断检索质量。</p>
-  <p>交叉编码器（cross-encoder）重排序器的训练方法则不同：它直接读取查询和候选文档的拼接文本，输出相关性分数。对于同一查询下的一对被选中的和被拒绝的文档，<code>pairwise_reranker_loss(chosen_scores, rejected_scores)</code> 可以使用 <code>-log sigmoid(s_chosen - s_rejected)</code> 来训练排序方向。双编码器适用于大规模召回，而交叉编码器更适合对 top-k 候选进行精细排序；它们的损失函数、输入格式和服务成本都不同。</p>
-  <p>检索指标回答了三个不同的问题：top-k 结果是否包含应该命中的文档、第一个相关文档的排名如何、以及分级相关性更高的文档是否排在更前面。nDCG 中的 DCG 项通常写作 <code>(2^rel - 1) / log2(rank + 1)</code>，然后除以理想排序的 IDCG 以将分数归一化到约 0 到 1。如果 Recall@5 非常低，生成模型通常缺乏足够的上下文；如果 Recall@5 很高但倒数排名（reciprocal rank）或 nDCG 很低，则表明相关块被排在后面，容易被 prompt 截断或被不相关上下文干扰。混合检索、交叉编码器重排序和去重后的块选择应根据这些指标进行评估，而不是仅凭样本答案来判断。</p>
+  <p>这个例子也说明了批次内负样本的边界：它假设批次中所有非对角线的文档都是负样本。如果 <code>d1</code> 实际上可以回答 <code>q0</code>，训练就会把一个相关的文档作为负样本推开；真实的 RAG 训练需要去重、标注难负样本（hard negative annotation）并处理多个正样本，不能仅根据损失下降判断检索质量。</p>
+  <p>交叉编码器（cross-encoder）重排序器的训练方法不同：它直接读取查询和候选文档的拼接文本，输出相关性分数。对于同一查询下的一对被选中的和被拒绝的文档，<code>pairwise_reranker_loss(chosen_scores, rejected_scores)</code> 可以使用 <code>-log sigmoid(s_chosen - s_rejected)</code> 来训练排序方向。双编码器适用于大规模召回，交叉编码器更适合对 top-k 候选进行精细排序；两者的损失函数、输入格式和服务成本都不同。</p>
+  <p>检索指标回答三个不同的问题：top-k 结果是否包含应该命中的文档、第一个相关文档的排名如何、以及分级相关性更高的文档是否排在更前面。nDCG 的 DCG 项通常写作 <code>(2^rel - 1) / log2(rank + 1)</code>，再除以理想排序的 IDCG 将分数归一化到约 0 到 1。如果 Recall@5 很低，生成模型通常缺乏足够上下文；如果 Recall@5 很高但倒数排名（reciprocal rank）或 nDCG 很低，说明相关块被排在后面，容易被 prompt 截断或被不相关上下文干扰。混合检索、交叉编码器重排序和去重后的块选择应根据这些指标评估，而不是仅凭样本答案判断。</p>
 
   <h4>示例剖析：Recall@k、MRR 和 nDCG 揭示不同的失败</h4>
-  <p>假设某个查询的检索结果为 <code>[doc9, doc2, doc5, doc1]</code>，标准相关文档集为 <code>{doc1, doc2, doc7}</code>。查看 top-3 结果，只命中了一个相关文档，即 <code>doc2</code>：</p>
+  <p>假设某查询的检索结果是 <code>[doc9, doc2, doc5, doc1]</code>，标准相关文档集是 <code>{doc1, doc2, doc7}</code>。在 top-3 结果中只命中了一个相关文档，即 <code>doc2</code>：</p>
   <div class="math-box"><div class="label">k=3 时的召回率和倒数排名</div>
     <div class="katex" data-expr="\text{Recall@3}=\frac{1}{3},\qquad \text{MRR@3}=\frac{1}{2}" aria-label="\text{Recall@3}=\frac{1}{3},\qquad \text{MRR@3}=\frac{1}{2}" role="img"></div>
   </div>
-  <p>低的 Recall@3 表明召回不足：三个标准文档中只检索到了一个。MRR@3 为 <code>1/2</code>，因为第一个相关文档排在第 2 位；它不关心后面是否还有更多相关文档。因此，一个系统可能具有较低 Recall 但可观的 MRR，这意味着“第一份证据出现得相对较早，但证据覆盖不充分”。</p>
+  <p>Recall@3 低表明召回不足：三个标准文档只检索到一个。MRR@3 是 <code>1/2</code>，因为第一个相关文档排在第 2 位；它不关心后面是否还有更多相关文档。因此，系统可能 Recall 低但 MRR 可观，这意味着“第一份证据出现得较早，但证据覆盖不充分”。</p>
 
-  <p>nDCG 进一步处理了分级相关性。如果 <code>doc1=3</code>、<code>doc2=2</code>、<code>doc3=1</code>，那么理想排序为 <code>[doc1, doc2, doc3]</code>。如果系统输出 <code>[doc3, doc2, doc1]</code>，则高相关文档被排在了后面：</p>
+  <p>nDCG 进一步处理分级相关性。如果 <code>doc1=3</code>、<code>doc2=2</code>、<code>doc3=1</code>，则理想排序为 <code>[doc1, doc2, doc3]</code>。如果系统输出 <code>[doc3, doc2, doc1]</code>，则高相关文档排在后面：</p>
   <div class="math-box"><div class="label">不佳排序下的 nDCG@3</div>
     <div class="katex" data-expr="\text{nDCG@3}=\frac{(2^1-1)/\log_2 2+(2^2-1)/\log_2 3+(2^3-1)/\log_2 4}{(2^3-1)/\log_2 2+(2^2-1)/\log_2 3+(2^1-1)/\log_2 4}\approx 0.68" aria-label="\text{nDCG@3}=\frac{(2^1-1)/\log_2 2+(2^2-1)/\log_2 3+(2^3-1)/\log_2 4}{(2^3-1)/\log_2 2+(2^2-1)/\log_2 3+(2^1-1)/\log_2 4}\approx 0.68" role="img"></div>
   </div>
-  <p>这个例子说明了：Recall 决定是否找到了足够的证据，MRR 决定第一个有用证据出现得有多早，而 nDCG 决定高价值证据是否排在首位。调试 RAG 时，应首先查看检索指标，然后是上下文打包和生成忠实度；否则很容易将“未检索到证据”误诊为“生成模型幻觉”。</p>
-  <p>在检索和重排序之后，需要<strong>上下文打包（context packing）</strong>。<code>build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_tokens)</code> 在 prompt 预算内组装带引用的块，并报告 <code>used_tokens</code>、<code>citations</code> 和 <code>skipped</code>。这一步可以暴露一个常见错误：相关块已被检索到，但由于排序靠后、重复块太多或保留了过大的输出预算，最终未能进入 prompt。</p>
+  <p>这个例子说明：Recall 决定是否找到足够证据，MRR 决定第一个有用证据出现多早，nDCG 决定高价值证据是否排在首位。调试 RAG 时应先看检索指标，再看上下文打包和生成忠实度；否则容易把“未检索到证据”误诊为“生成模型幻觉”。</p>
+  <p>在检索和重排序之后，需要<strong>上下文打包（context packing）</strong>。<code>build_rag_context(retrieved_chunks, max_context_tokens, reserved_output_tokens)</code> 在 prompt 预算内组装带引用的块，并报告 <code>used_tokens</code>、<code>citations</code> 和 <code>skipped</code>。这一步能暴露一个常见错误：相关块已被检索到，但由于排序靠后、重复块太多或输出预算预留过大，最终未能进入 prompt。</p>
 
   <h4>示例剖析：将错误答案归因于 RAG 子系统</h4>
-  <p>假设某个问题的检索结果仍是 <code>[doc9, doc2, doc5, doc1]</code>，标准相关文档为 <code>{doc1, doc2, doc7}</code>，最终答案引用了 <code>[doc2, doc9]</code>，但答案是错的。查看 <code>k=3</code>，检索只命中了 <code>doc2</code>，因此 <code>Recall@3=1/3</code>、<code>MRR@3=1/2</code>；在引用的内容中，一个是相关的，一个是不相关的，因此引用精确率（citation precision）为 <code>1/2</code>，引用召回率（citation recall）为 <code>1/3</code>。由于相关证据已在 top-3 中，且答案也引用了相关证据，因此主要的故障模式不是纯粹的检索失败，而是<strong>生成错误</strong>：模型看到了一些证据，但没有产生正确答案。</p>
-  <p>RAG 答案诊断将此判断形式化为结构化输出：<code>retrieval_recall_at_k</code>、<code>retrieval_mrr_at_k</code>、<code>citation_precision</code>、<code>citation_recall</code>、<code>missing_relevant_ids</code> 和 <code>failure_mode</code>。如果 top-k 中没有相关文档，则归因于 <code>retrieval_miss</code>；如果检索命中但引用或上下文未覆盖相关文档，则归因于 <code>context_or_citation_miss</code>；如果证据已在引用中但答案仍然错误，则归因于 <code>generation_error</code>。</p>
+  <p>假设某个问题的检索结果仍是 <code>[doc9, doc2, doc5, doc1]</code>，标准相关文档是 <code>{doc1, doc2, doc7}</code>，最终答案引用了 <code>[doc2, doc9]</code>，但答案是错的。查看 <code>k=3</code>，检索只命中 <code>doc2</code>，因此 <code>Recall@3=1/3</code>、<code>MRR@3=1/2</code>；引用的内容中，一个是相关的，另一个不相关，因此引用精确率（citation precision）为 <code>1/2</code>，引用召回率（citation recall）为 <code>1/3</code>。由于相关证据已在 top-3 中，且答案也引用了相关证据，主要故障不是纯粹的检索失败，而是<strong>生成错误</strong>：模型看到了一些证据，但没有产生正确答案。</p>
+  <p>RAG 答案诊断将此判断形式化为结构化输出：<code>retrieval_recall_at_k</code>、<code>retrieval_mrr_at_k</code>、<code>citation_precision</code>、<code>citation_recall</code>、<code>missing_relevant_ids</code> 和 <code>failure_mode</code>。如果 top-k 中没有相关文档，归因于 <code>retrieval_miss</code>；如果检索命中但引用或上下文未覆盖相关文档，归因于 <code>context_or_citation_miss</code>；如果证据已在引用中但答案仍然错误，归因于 <code>generation_error</code>。</p>
 
   <h4>示例剖析：上下文打包可能丢弃检索到的证据</h4>
-  <p>假设检索和重排序后，我们有 3 个块。生成答案需要预留 2 个 token，整个 prompt 中用于检索上下文的预算最多为 9 个 token。像 <code>[A]</code> 这样的每个引用标记也占用 1 个 token：</p>
+  <p>假设检索和重排序后得到 3 个块。生成答案需要预留 2 个 token，整个 prompt 中用于检索上下文的预算最多为 9 个 token。每个引用标记（如 <code>[A]</code>）也占用 1 个 token：</p>
   <table class="metrics-table">
     <thead>
       <tr><th>块</th><th>文本 token 数</th><th>引用 token 数</th><th>总成本</th><th>是否包含在上下文中？</th></tr>
@@ -685,31 +685,31 @@ Please provide an accurate and concise answer based on the document content. If 
       <tr><td>C</td><td><code>zeta eta theta iota</code> = 4</td><td>1</td><td>5</td><td>否，剩余预算 0</td></tr>
     </tbody>
   </table>
-  <p>上下文实际可用预算为 <code>9 - 2 = 7</code>。因此，最终 prompt 只包含 <code>[A] alpha beta</code> 和 <code>[B] gamma delta epsilon</code>，报告 <code>citations=[A,B]</code>、<code>used_tokens=7</code>、<code>skipped=1</code>。如果 <code>C</code> 是回答问题所需的关键证据，那么检索指标可能显示“已召回”，但生成模型实际上无法看到它；这种情况下，你应该优化排序、去重、压缩块或调整输出预留，而不是直接归咎于生成模型。</p>
+  <p>上下文实际可用预算为 <code>9 - 2 = 7</code>。因此最终 prompt 只包含 <code>[A] alpha beta</code> 和 <code>[B] gamma delta epsilon</code>，报告 <code>citations=[A,B]</code>、<code>used_tokens=7</code>、<code>skipped=1</code>。如果 <code>C</code> 是回答问题所需的关键证据，检索指标可能显示“已召回”，但生成模型实际上看不到它。这种情况下，应优化排序、去重、压缩块或调整输出预留，而不是直接归咎于生成模型。</p>
 
-  <p>MMR 的选择规则是每一步选择使 <code>lambda * sim(query, doc) - (1 - lambda) * max_sim(doc, selected)</code> 最大化的候选。它不是用来提高召回率的训练目标，而是在 prompt 组装之前的贪心选择策略：当多个块来自同一篇近似重复的文本时，MMR 牺牲一点查询相似度来换取上下文覆盖互补信息。</p>
+  <p>MMR 的选择规则是每一步选取使 <code>lambda * sim(query, doc) - (1 - lambda) * max_sim(doc, selected)</code> 最大的候选。它不是用来提高召回率的训练目标，而是在 prompt 组装前使用的贪心选择策略：当多个块来自同一篇近似重复的文本时，MMR 牺牲一点查询相似度来换取上下文覆盖互补信息。</p>
 
   <h4>一个可复现的实验设置</h4>
   <ol>
-    <li><strong>固定数据切片：</strong>分别报告 FAQ、长文档、多跳问题、时效性问题、相似实体问题的统计结果；不要用一个总分代表所有场景。</li>
-    <li><strong>逐层消融：</strong>比较仅用 dense、仅用 BM25、混合检索、混合+重排序、混合+MMR、以及不同块大小/重叠（chunk sizes/overlaps）之间的变化。</li>
-    <li><strong>分别报告检索和生成：</strong>如果 Recall@5 很低，先修复检索；如果 Recall@5 很高但答案错误，重点关注 prompt 组装、引用覆盖和生成。</li>
-    <li><strong>记录成本维度：</strong>更大的 top-k 不一定更好；它增加了 token 成本、TTFT 和上下文干扰。</li>
+    <li><strong>固定数据切片：</strong>对 FAQ、长文档、多跳问题、时效性问题、相似实体问题分别报告统计结果；不要用一个总分代表所有场景。</li>
+    <li><strong>逐层消融：</strong>比较仅用 dense、仅用 BM25、混合检索、混合+重排序、混合+MMR，以及不同块大小/重叠（chunk sizes/overlaps）之间的变化。</li>
+    <li><strong>分开报告检索和生成：</strong>如果 Recall@5 很低，先修复检索；如果 Recall@5 很高但答案错误，重点看 prompt 组装、引用覆盖和生成。</li>
+    <li><strong>记录成本维度：</strong>更大的 top-k 不一定更好；它增加 token 成本、TTFT 和上下文干扰。</li>
   </ol>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> RAG 的质量不是一个单一的“相似度分数”。在上线之前，你至少必须知道：相关文档是否已被召回、它们是否被排在高位、它们是否进入了 prompt、模型是否忠实地使用了它们、以及这些变化对延迟和成本的影响。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> RAG 的质量不是一个单一的“相似度分数”。上线前，至少要知道：相关文档是否已被召回、是否排在高位、是否进入了 prompt、模型是否忠实地使用了它们，以及这些变化对延迟和成本的影响。</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.9 Agent -->
 <!-- ================================================================ --><section class="card" id="s10-9">
   <h3>10.9 Agent 模式——从生成到行动</h3>
-  <p><strong>Agent</strong> 是大语言模型应用的一种重要形式：模型不再仅仅是“一次回答一个问题”，而是通过工具调用、规划步骤、观察结果和纠正错误来执行多步任务。它适合用来展示工程能力的边界，但并非所有大语言模型应用的终极目标。</p>
+  <p><strong>Agent</strong> 是大语言模型应用的一种重要形式：模型不再只是“回答一个问题”，而是通过工具调用、规划步骤、观察结果和纠正错误来执行多步任务。Agent 模式能体现工程能力的边界，但并非所有大语言模型应用都一定要走到这一步。</p>
 
   <h4>Agent 循环：规划 → 行动 → 观察 → 反思</h4>
   <p>Agent 的核心循环：</p>
   <ol>
     <li><strong>规划：</strong> 将任务分解为子步骤。例如：“我需要先搜索 XX，分析结果，然后进行下一步。”</li>
-    <li><strong>行动：</strong> 生成工具调用（例如搜索、执行代码、读写文件）。工具调用输出为结构化的 JSON。</li>
-    <li><strong>观察：</strong> 接收工具执行的结果。这可能是搜索的结果、一段代码的输出或者 API 的响应。</li>
+    <li><strong>行动：</strong> 生成工具调用（例如搜索、执行代码、读写文件）。工具调用输出是结构化的 JSON。</li>
+    <li><strong>观察：</strong> 接收工具执行的结果，例如搜索的结果、一段代码的输出或者 API 的响应。</li>
     <li><strong>反思：</strong> 根据观察调整计划。如果结果不符合预期，Agent 应能纠正自己的策略。</li>
   </ol>
 
@@ -726,24 +726,24 @@ Please provide an accurate and concise answer based on the document content. If 
   <div class="info-box tip"><span class="icon">💡</span><div><strong>Claude Code 案例分析：</strong> Claude Code 是一个基于 Claude 的自主编码 Agent。它读取 PR 描述 → 搜索代码库 → 读取文件 → 执行命令 → 写代码 → 提交 PR。在每一步中，Agent 可能会“反思”上一步的结果并调整策略。生成循环预测的是 <strong>下一个 token</strong>，而 Agent 循环决定的是 <strong>下一个行动</strong>。</div></div>
 </section><section class="card" id="s10-9a">
   <h3>10.9A 工具使用工程协议：Schema、MCP 边界、循环控制与故障恢复</h3>
-  <p>在将工具集成到 LLM 服务中时，核心难点不在于让模型"想要调用工具"，而在于将单次工具调用转变为可验证、可权限控制且可恢复的系统协议。模型输出仅是一个候选动作；实际执行必须经过 schema 验证、权限检查、预算控制、工具结果注入以及最终答案约束。工程师需要将工具调用视为一个有状态的控制循环，而不仅仅是普通文本生成的附属品。</p>
+  <p>把工具集成到 LLM 服务时，真正的难点不是让模型“想要调用工具”，而是把单次工具调用变成一个可以验证、控制权限、可以恢复的系统协议。模型输出只是一个候选动作；实际执行必须经过 schema 验证、权限检查、预算控制、工具结果注入和最终答案约束。工程师应该把工具调用看成一个有状态的控制循环，而不是普通文本生成的副产品。</p>
 
   <h4>单次工具调用的最小协议</h4>
-  <p>一个典型的工具调用链可以分解为 7 个状态：</p>
+  <p>一个典型的工具调用链可以拆成 7 个状态：</p>
   <ol>
     <li><strong>工具注册：</strong>服务器声明工具名称、用途、参数 schema、超时时间、权限级别和返回格式。</li>
     <li><strong>模型提议：</strong>模型根据当前消息、系统策略和工具定义生成候选工具调用。</li>
     <li><strong>Schema 验证：</strong>服务器验证工具名称是否存在、参数类型是否正确、必填字段是否齐全、枚举值是否有效。</li>
     <li><strong>策略检查：</strong>根据用户、租户、任务类型和工具风险级别判断是否允许执行；必要时请求人工确认。</li>
     <li><strong>执行：</strong>工具在隔离环境中执行，记录延迟、状态、输入摘要和输出摘要。</li>
-    <li><strong>观察注入：</strong>工具结果作为工具消息反馈给模型，而不是作为非结构化文本拼接。</li>
+    <li><strong>观察注入：</strong>工具结果以工具消息的形式反馈给模型，而不是拼成非结构化文本。</li>
     <li><strong>终结：</strong>模型基于观察生成最终响应，服务器再次检查格式、安全和引用约束。</li>
   </ol>
 
-  <p>这个链与 RAG 的区别在于：在 RAG 中，服务器通常主动检索证据，而工具调用则允许模型选择下一个动作。模型获得了更强的外部操作能力，但也将错误空间从"答案不准确"扩展到了"调用错误工具、传入错误参数、过度循环、未经授权的执行、将工具结果误解为事实"。</p>
+  <p>这个链和 RAG 的区别在于：RAG 是服务器主动检索证据，而工具调用让模型自己选择下一个动作。模型获得了更强的外部操作能力，但错误空间也从“答案不准确”扩大到“调用错误工具、传入错误参数、过度循环、未授权执行、把工具结果当成事实”。</p>
 
   <h4>Schema 不是文档，而是执行边界</h4>
-  <p>工具 schema 至少应指定参数类型、值范围、默认值和错误返回。这里是一个抽象的课程级别示例：</p>
+  <p>工具 schema 至少应该指定参数类型、值范围、默认值和错误返回。下面是一个课程级别的抽象例子：</p>
   <pre><code class="language-json">{
   "name": "search_docs",
   "description": "Search approved course documents by query.",
@@ -759,28 +759,28 @@ Please provide an accurate and concise answer based on the document content. If 
   "timeout_ms": 1200,
   "risk": "read_only"
 }</code></pre>
-  <p>如果模型输出 <code>{"top_k": 100}</code>，服务器必须拒绝或纠正它，而不是直接将其传递给检索器。如果工具写文件、发邮件、下订单、执行命令或访问私有数据，schema 仍然不够；还需要权限系统、沙箱、执行日志、人工确认和回滚策略。</p>
+  <p>如果模型输出 <code>{"top_k": 100}</code>，服务器必须拒绝或纠正，不能直接交给检索器。对于写文件、发邮件、下订单、执行命令或访问私有数据的工具，光有 schema 还不够，还需要权限系统、沙箱、执行日志、人工确认和回滚策略。</p>
 
-  <h4>循环预算：防止 Agent 将系统拖入不可控状态</h4>
-  <p>Agent 循环必须有硬性预算。常见的预算包括最大工具调用次数、最大挂钟时间、最大观察 token 数、最大外部 API 成本、最大失败重试次数以及同一类型工具的最大连续调用次数。预算不仅仅是产品体验细节，它们是对推理服务的能力控制：一个重复搜索、阅读长文档和执行代码的单一请求会同时增加 TTFT、总延迟、外部服务成本和上下文 token 数。</p>
+  <h4>循环预算：防止 Agent 把系统拖入不可控状态</h4>
+  <p>Agent 循环必须有硬性预算。常见的预算包括最大工具调用次数、最大挂钟时间、最大观察 token 数、最大外部 API 成本、最大失败重试次数，以及同一类型工具的最大连续调用次数。预算不只是产品体验细节，更是对推理服务的能力控制：一个重复搜索、阅读长文档、执行代码的单一请求会同时增加 TTFT、总延迟、外部服务成本和上下文 token 数。</p>
 
   <h4>工具上下文预算与 Agent 追踪</h4>
-  <p>工具系统上线后，token 成本不仅来自用户提示和模型响应。每个工具定义、schema、候选调用、观察、纠正提示和最终响应都会消耗上下文。MCP 2025 系列规范将主机/客户端/服务器、资源、提示、工具以及客户端侧采样、根节点和启发纳入同一个 JSON-RPC 协议；这使得工具生态系统更具可组合性，但也使得单次 agent 运行的上下文、权限和观察边界变得更加复杂。</p>
-  <p>官方 MCP 工具规范将工具视为服务器暴露给模型调用的能力：每个工具都有一个名称、描述性元数据和一个输入 schema。这个抽象解决了"如何连接工具"的接口问题，但并没有自动解决"应该暴露哪些工具"或"工具结果应如何进入上下文"的问题。当一个 agent 连接到数十个 MCP 服务器和数百个工具时，将所有 schema 直接放入活动上下文会提高 TTFT、消耗窗口空间并增加选择错误工具的概率；因此，工具系统还需要工具路由、schema 懒加载、结果摘要和环境内处理。</p>
-  <p>高级推理工程师需要将 agent 运行视为一个可追踪的分布式工作流，而不是一次单一的文本生成。最小的追踪记录应包括：输入护栏是否被触发、模型生成了哪些工具提议、哪些 schema/权限/预算检查通过或失败、每个工具的延迟/状态/摘要、观察是否被隔离、最终输出护栏是否通过，以及整个运行的提示 token 数、工具 token 数、观察 token 数、输出 token 数和挂钟时间。</p>
+  <p>工具系统上线后，token 成本不仅来自用户提示和模型响应。每个工具定义、schema、候选调用、观察、纠正提示和最终响应都会消耗上下文。MCP 2025 系列规范把主机/客户端/服务器、资源、提示、工具以及客户端侧采样、根节点和启发纳入同一个 JSON-RPC 协议；这让工具生态系统更容易组合，但也让单次 agent 运行的上下文、权限和观察边界变得更复杂。</p>
+  <p>官方 MCP 工具规范把工具看作服务器暴露给模型调用的能力：每个工具有一个名称、描述性元数据和一个输入 schema。这个抽象解决了“怎么连接工具”的接口问题，但没有自动解决“应该暴露哪些工具”或“工具结果怎么进入上下文”。当一个 agent 连接数十个 MCP 服务器和数百个工具时，把所有 schema 直接放进活动上下文会提高 TTFT、消耗窗口空间，还增加选错工具的概率；所以工具系统还需要工具路由、schema 懒加载、结果摘要和环境内处理。</p>
+  <p>生产环境中，应该把 agent 运行看成一个可追踪的分布式工作流，而不是一次单一的文本生成。最小的追踪记录应包括：输入护栏是否被触发、模型生成了哪些工具提议、哪些 schema/权限/预算检查通过或失败、每个工具的延迟/状态/摘要、观察是否被隔离、最终输出护栏是否通过，以及整个运行的提示 token 数、工具 token 数、观察 token 数、输出 token 数和挂钟时间。</p>
   <div class="table-wrap">
     <table>
       <tr><th>Agent 追踪字段</th><th>它回答的问题</th><th>缺失的后果</th></tr>
-      <tr><td>护栏事件</td><td>哪一层（输入、工具、输出）拦截了风险</td><td>只知道请求失败，无法确定是修复提示、schema 还是权限策略</td></tr>
-      <tr><td>工具跨度</td><td>每次调用的参数摘要、权限、延迟、状态和重试</td><td>无法定位延迟是来自模型生成、工具 API 还是重试循环</td></tr>
-      <tr><td>上下文预算</td><td>工具定义和观察消耗了多少上下文</td><td>过长的工具列表或大型观察会将关键用户上下文推出窗口</td></tr>
+      <tr><td>护栏事件</td><td>哪一层（输入、工具、输出）拦截了风险</td><td>只知道请求失败，无法确定是修提示、schema 还是权限策略</td></tr>
+      <tr><td>工具跨度</td><td>每次调用的参数摘要、权限、延迟、状态和重试</td><td>无法定位延迟来自模型生成、工具 API 还是重试循环</td></tr>
+      <tr><td>上下文预算</td><td>工具定义和观察消耗了多少上下文</td><td>过长的工具列表或大型观察会把关键用户上下文推出窗口</td></tr>
       <tr><td>副作用日志</td><td>是否发生了写入、消息、订单、代码执行或外部数据发送</td><td>无法审计未授权执行或回滚有副作用的操作</td></tr>
     </table>
   </div>
-  <p>当工具数量从几个增长到几十个、几百个甚至更多时，直接将所有工具定义塞入模型上下文会减慢预填充、增加成本并提高错误选择的概率。一个更健壮的设计是按任务路由可用工具、懒加载工具 schema、将大型结果保留在执行环境中，并且只将摘要、引用和必要字段回填给模型。Anthropic 的 MCP 代码执行方法使用"让 agent 编写代码来调用工具"来减少工具定义和中间结果在上下文窗口中的重复传递；工程结论是工具上下文属于 SLO 和成本账本。</p>
+  <p>当工具数量从几个增长到几十个、几百个甚至更多时，直接把所有工具定义塞进模型上下文会减慢预填充、增加成本、提高选错概率。一个更健壮的做法是按任务路由可用工具、懒加载工具 schema、把大型结果留在执行环境里，只把摘要、引用和必要字段回填给模型。Anthropic 的 MCP 代码执行方法让 agent 写代码调用工具，减少工具定义和中间结果在上下文窗口中的重复传递；工程结论是工具上下文属于 SLO 和成本账本。</p>
 
   <h4>编程练习：结构化输出的可靠性检查</h4>
-  <p>结构化输出不仅仅是"模型看起来输出了 JSON"。生产服务应至少区分五种信号：JSON 是否可解析、字段是否满足业务 schema、修复重试是否将延迟推得过高、回退/拒绝是否异常增加，以及格式路径是否绕过了安全/输出护栏。一份结构化输出可靠性报告将这些信号放入一个单一的可靠性表格中，适用于 JSON 模式、JSON schema、引导解码、正则/语法约束解码或工具调用前的参数生成。</p>
+  <p>结构化输出不只是“模型看起来输出了 JSON”。生产服务应至少区分五种信号：JSON 是否可解析、字段是否满足业务 schema、修复重试是否把延迟推得太高、回退/拒绝是否异常增加、格式路径是否绕过了安全/输出护栏。一份结构化输出可靠性报告把这些信号放进一个单一的可靠性表格，适用于 JSON 模式、JSON schema、引导解码、正则/语法约束解码或工具调用前的参数生成。</p>
   <pre><code class="language-python">schema = {
     "type": "object",
     "properties": {
@@ -798,10 +798,10 @@ report = structured_output_reliability_report(records, schema, policy={
     "max_p95_latency_ms": 500,
 })
 assert report["decision"] in {"promote_structured_output_path", "revise_structured_output_path"}</code></pre>
-  <p>这项检查的关键是将"格式正确率"从单一指标分解。一个系统可能有很高的 JSON 解析率，但枚举值漂移、缺少必填字段、重试后 P95 恶化，或者过多的回退导致用户收到非结构化文本。只有当解析、schema、重试/延迟、回退/拒绝和安全都处于可控状态时，结构化输出才适合发布。</p>
+  <p>这项检查的关键是把“格式正确率”从单一指标拆开。一个系统可能有很高的 JSON 解析率，但枚举值漂移、缺少必填字段、重试后 P95 恶化，或者过多的回退导致用户收到非结构化文本。只有当解析、schema、重试/延迟、回退/拒绝和安全都处于可控状态时，结构化输出才适合发布。</p>
 
   <h4>编程练习：工具调用计划的执行前验证</h4>
-  <p>执行前工具验证将上述协议转化为可测试的检查：它接收工具注册表、模型提议的工具调用和预算，并输出三个结果：schema、权限和预算。它不执行工具，而是在执行前拦截未知工具、缺失参数、越界参数、高风险权限和重复循环。</p>
+  <p>执行前工具验证把上面的协议转化成可测试的检查：它接收工具注册表、模型提议的工具调用和预算，输出三个结果：schema、权限和预算。它不执行工具，而是在执行前拦截未知工具、缺失参数、越界参数、高风险权限和重复循环。</p>
   <pre><code class="language-python">registry = {    "search_docs": {
         "risk": "read_only",
         "parameters": {
@@ -821,10 +821,10 @@ report = validate_tool_call_plan(
     budgets={"max_calls": 2, "allowed_risks": ["read_only"]},
 )
 assert report["decision"] == "execute_tool_calls"</code></pre>
-  <p>此练习对应在线系统中的"工具执行前端网关"。OpenAI 结构化输出 / 函数调用、MCP 工具清单和 Agent 护栏的接口可能不同，但核心不变：模型生成的工具调用仅仅是提议；服务器必须将 schema、权限和预算视为硬性边界。</p>
+  <p>这个练习对应在线系统中的“工具执行前端网关”。OpenAI 结构化输出/函数调用、MCP 工具清单和 Agent 护栏的接口可能不同，但核心不变：模型生成的工具调用只是提议；服务器必须把 schema、权限和预算当成硬性边界。</p>
 
   <h4>MCP / 远程工具的第二层检查</h4>
-  <p>通过 schema 验证仅表明"参数看起来有效"，并不表示工具可以安全执行。最新的 MCP 规范标准化了主机、客户端、服务器、资源、提示、工具、采样、根节点和启发，使其适用于将外部系统集成到 AI 应用中；然而，它也引入了任意数据访问、代码执行路径、服务器发起的采样、用户补充信息请求和外部观察到推理服务中。在本课程中，此类风险通过第二层运行时检查来处理：</p>
+  <p>通过 schema 验证只说明“参数看起来有效”，不表示工具可以安全执行。最新的 MCP 规范标准化了主机、客户端、服务器、资源、提示、工具、采样、根节点和启发，使其适用于把外部系统集成到 AI 应用中；但它也引入了任意数据访问、代码执行路径、服务器发起的采样、用户补充信息请求，以及外部服务进入推理服务。本课程通过第二层运行时检查来处理这些风险：</p>
   <div class="table-wrap">
     <table>
       <tr><th>检查项</th><th>检查内容</th><th>失败时的操作</th></tr>
@@ -836,7 +836,7 @@ assert report["decision"] == "execute_tool_calls"</code></pre>
       <tr><td>采样/预算</td><td>MCP 服务器是否请求递归 LLM 采样；工具调用、观察 token 和挂钟时间是否超过预算</td><td>禁用采样、要求批准、停止循环或总结观察</td></tr>
     </table>
   </div>
-  <p>工具运行时安全报告实现了这一层检查：它以工具注册表、运行时工具事件和策略为输入，输出五种信号：服务器信任、权限/同意、数据隐私、观察隔离和采样/预算。它将 OWASP LLM Top 10 中的提示注入、不安全输出处理、不安全插件设计和过度自主性转化为服务上线前可检查的清单。</p>
+  <p>工具运行时安全报告实现了这一层检查：它以工具注册表、运行时工具事件和策略为输入，输出五种信号：服务器信任、权限/同意、数据隐私、观察隔离和采样/预算。它把 OWASP LLM Top 10 中的提示注入、不安全输出处理、不安全插件设计和过度自主性转化为服务上线前可检查的清单。</p>
   <pre><code class="language-python">report = tool_runtime_security_report(
     registry,
     [{
@@ -869,16 +869,16 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
   </div>
 
   <h4>工作示例：课程问答 Agent 的一次决策</h4>
-  <p>用户问："这个 RAG 服务需要哪些评估指标？" 如果模型直接回答，可能会遗漏细节；如果它调用 <code>search_docs</code>，一个合理的参数是 <code>{"query":"rag metrics recall mrr ndcg diagnostics","top_k":4,"source":"docs"}</code>。服务器首先验证 <code>top_k<=8</code>，执行检索，并将命中的文档和片段 ID 作为观察回填。最终答案应引用 Recall@k、MRR、nDCG、引用精确率/召回率和故障模式，并解释哪些指标对应检索、排序、引用和生成归因。</p>
+  <p>用户问："这个 RAG 服务需要哪些评估指标？" 如果模型直接回答，可能会遗漏细节；如果它调用 <code>search_docs</code>，一个合理的参数是 <code>{"query":"rag metrics recall mrr ndcg diagnostics","top_k":4,"source":"docs"}</code>。服务器先验证 <code>top_k<=8</code>，执行检索，把命中的文档和片段 ID 作为观察回填。最终答案应引用 Recall@k、MRR、nDCG、引用精确率/召回率和故障模式，并解释哪些指标对应检索、排序、引用和生成归因。</p>
 
-  <p>如果模型连续三次用相同的查询进行搜索，系统应停止工具循环，并要求模型基于现有观察回答或向用户澄清。如果检索结果为空，模型不应捏造需求，而应报告"未找到足够证据"并建议下一步可操作步骤。这个行为边界与第 11 章中的基准有效性和安全评估是同一个问题：高分 agent 不是尽可能多地调用工具，而是在正确的时间调用正确的工具，并在证据不足时停止。</p>
+  <p>如果模型连续三次用相同的查询搜索，系统应停止工具循环，要求模型基于现有观察回答或向用户澄清。如果检索结果为空，模型不应捏造需求，而应报告"未找到足够证据"并建议下一步可操作步骤。这个行为边界和第 11 章中的基准有效性和安全评估是同一个问题：高分 agent 不是尽可能多地调用工具，而是在正确的时间调用正确的工具，并在证据不足时停止。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>工具使用是推理工程的一部分。它同时改变了质量、延迟、成本和风险：你需要评估工具选择、参数正确性、循环预算、工具结果保真度、安全边界、agent 追踪和工具上下文预算，而不仅仅是最终答案看起来是否合理。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>工具使用是推理工程的一部分，会同时影响质量、延迟、成本和风险。你需要评估工具选择、参数正确性、循环预算、工具结果保真度、安全边界、agent 追踪和工具上下文预算，而不仅仅是看最终答案是否合理。</div></div>
 </section><section class="card" id="s10-9b">
   <h3>10.9B 上下文工程：将上下文作为有限资源进行管理</h3>
-  <p>Agent、RAG、工具调用、长对话和长文档问答都会将大量信息塞入模型的上下文。上下文工程的核心不是“写更长的提示词”，而是决定每轮推理中哪些token进入活跃上下文、哪些留在外部存储、哪些被压缩成摘要、哪些工具结果可以清除、以及哪些证据必须保留引用。Anthropic 将上下文工程描述为从提示词工程扩展到管理系统指令、工具、MCP、外部数据和消息历史的整体状态；这与本章中的 RAG、工具协议和长上下文检查属于同一个系统问题。</p>
+  <p>Agent、RAG、工具调用、长对话和长文档问答都会向模型的上下文塞入大量信息。上下文工程的核心不在于写更长的提示词，而在于决定每轮推理中哪些 token 进入活跃上下文、哪些留在外部存储、哪些被压缩成摘要、哪些工具结果可以清除、以及哪些证据必须保留引用。Anthropic 将上下文工程定义为从提示词工程扩展而来的整体状态管理，涵盖系统指令、工具、MCP、外部数据和消息历史；这与本章中的 RAG、工具协议和长上下文检查属于同一个系统问题。</p>
 
-  <p>高级推理工程师应将上下文视为一种有预算的运行时资源。更大的上下文窗口只是提高了上限，并不能自动保证检索质量；无关的工具结果、重复的检索片段、过长的历史消息和未压缩的观察结果会增加预填充成本，并可能导致模型对关键事实失去关注。一个良好的设计会将“用户任务需要什么信息”分解为可审计的上下文层级：</p>
+  <p>高级推理工程师应将上下文视为一种有预算的运行时资源。更大的上下文窗口只是提高了上限，并不能自动保证检索质量更好；无关的工具结果、重复的检索片段、过长的历史消息和未压缩的观察结果会增加预填充成本，并可能使模型对关键事实失去关注。好的设计会将“用户任务需要什么信息”分解成可审计的上下文层级：</p>
   <div class="table-wrap">
     <table>
       <tr><th>层级</th><th>包含内容</th><th>主要风险</th><th>检查信号</th></tr>
@@ -889,24 +889,24 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
       <tr><td>已清除的工具结果</td><td>可重新获取的大文件/API输出，仅保留调用记录和摘要</td><td>清除了不可复现的证据，导致无法审计</td><td>工具结果句柄、可重新获取性、副作用日志</td></tr>
     </table>
   </div>
-  <p>这些层级对应不同的工程动作。<strong>Select（选择）</strong> 决定哪些文档、工具和历史片段进入窗口；<strong>Compress（压缩）</strong> 将长轨迹转换为可验证的摘要；<strong>Clear（清除）</strong> 将大型、可重新获取的工具结果移出活跃上下文；<strong>Write（写入）</strong> 将需要跨会话保留的信息写入外部记忆；<strong>Isolate（隔离）</strong> 为子任务、子Agent或工具执行环境提供它们自己的上下文，防止所有中间状态污染主对话。</p>
+  <p>这些层级对应不同的工程动作。<strong>Select（选择）</strong> 决定哪些文档、工具和历史片段进入窗口；<strong>Compress（压缩）</strong> 将长轨迹转换为可验证的摘要；<strong>Clear（清除）</strong> 将大型、可重新获取的工具结果移出活跃上下文；<strong>Write（写入）</strong> 将需要跨会话保留的信息写入外部记忆；<strong>Isolate（隔离）</strong> 为子任务、子Agent或工具执行环境提供它们自己的上下文，防止中间状态污染主对话。</p>
 
   <h4>上下文工程检查</h4>
-  <p>一份 Agent/RAG 报告应包含最低限度的上下文检查。它不需要一个完整的记忆系统，但必须证明上下文策略没有牺牲质量、安全性或成本：</p>
+  <p>一份 Agent/RAG 报告应包含最低限度的上下文检查项。它不需要一个完整的记忆系统，但必须证明上下文策略没有牺牲质量、安全性或成本：</p>
   <ul>
-    <li><strong>Token 预算：</strong> 报告系统、工具架构、历史记录、检索上下文、观察结果、摘要和输出的 token 比例。</li>
-    <li><strong>证据保留：</strong> 对关键事实进行首/中/尾部检查、引用 ID 检查和摘要保真度检查，以确认在压缩后仍然可以回答这些问题。</li>
+    <li><strong>Token 预算：</strong> 报告系统提示词、工具架构、历史记录、检索上下文、观察结果、摘要和输出各自的 token 比例。</li>
+    <li><strong>证据保留：</strong> 对关键事实进行首/中/尾部检查、引用 ID 检查和摘要保真度检查，确认压缩后仍能回答这些问题。</li>
     <li><strong>成本/延迟：</strong> 比较原始长上下文、RAG 打包、压缩和工具结果清除情况下的 P95 TTFT、总延迟和提示词 token 成本。</li>
     <li><strong>记忆安全：</strong> 跨会话记忆必须记录来源、更新时间、权限、删除路径，以及是否包含 PII/凭据。</li>
     <li><strong>观察隔离：</strong> 外部网页、文件、工具输出和 MCP 资源必须标记为不可信数据，并且不能提升为系统指令。</li>
   </ul>
 
-  <p>一个常见的失败模式是“长上下文路径的通过率提高了，但 token 成本和 TTFT 呈指数级增长，并且引用不稳定”。在这种情况下，可行的措施可能不是切换到更大的模型，而是简化工具架构、对工具进行懒加载、调整分块/重排序、压缩历史记录、清除可重新获取的观察结果，或将长期状态写入权限受控的记忆。因此，上下文工程是 RAG、Agent、长上下文服务和可观测性的交叉领域。</p>
+  <p>一个常见失败模式是：长上下文路径的通过率提高，但 token 成本和 TTFT 呈指数增长，且引用不稳定。在这种情况下，可行的措施往往不是切换到更大的模型，而是简化工具架构、对工具进行懒加载、调整分块/重排序、压缩历史记录、清除可重新获取的观察结果，或将长期状态写入权限受控的记忆。因此，上下文工程是 RAG、Agent、长上下文服务和可观测性的交叉领域。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 上下文不是一个无限免费的“提示空间”。它是模型工作记忆、延迟成本、隐私边界和质量证据的共同载体；任何 Agent 或 RAG 的上线报告都应说明上下文从何而来、为何进入窗口、何时被压缩或清除，以及这些操作是否破坏了引用、权限和 SLO。</div></div>
 </section><section class="card" id="s10-9c">
   <h3>10.9C Prompt注入与工具数据边界</h3>
-  <p>RAG文档、网页、邮件正文、上传文件、OCR文本、工具输出、MCP资源以及工具描述，都以token的形式进入模型。模型内部并不存在“可信指令”与“不可信内容”之间的密码学边界；因此，服务系统必须在模型外部创建这一边界。OWASP将prompt注入列为LLM应用的首要风险，其预防指南强调要将指令与数据分离、验证输出、约束工具执行并测试对抗性案例。MCP规范和安全最佳实践文档从工具协议角度也表达了相同的观点：工具行为描述可能不可信，工具可以代表任意代码执行，实现需要用户同意、访问控制、作用域最小化，并防范混淆代理和token透传故障。</p>
-  <p>实际规则很简单：<strong>外部内容可以提供证据，但不能成为策略</strong>。检索到的段落可以支持答案，但不能重写系统提示。工具结果可以报告事实，但不能授权下一次工具调用。工具描述可以解释接口，但不能悄悄请求私有上下文。更大的模型、更长的上下文、RAG和微调并不能消除这个边界问题，因为故障源于将可信token与不可信token混合在同一个序列中。</p>
+  <p>RAG文档、网页、邮件正文、上传文件、OCR文本、工具输出、MCP资源以及工具描述，都以token形式进入模型。模型内部没有密码学边界来区分“可信指令”和“不可信内容”；因此，服务系统必须在模型外部创建这一边界。OWASP将prompt注入列为LLM应用的首要风险，其预防指南强调：指令与数据分离、验证输出、约束工具执行、测试对抗性案例。MCP规范和安全最佳实践文档也从工具协议角度表达了相同观点：工具行为描述可能不可信，工具可以代表任意代码执行，实现需要用户同意、访问控制、作用域最小化，并防范混淆代理和token透传故障。</p>
+  <p>实际规则很简单：<strong>外部内容可以提供证据，但不能成为策略</strong>。检索到的段落可以支持答案，但不能重写系统提示。工具结果可以报告事实，但不能授权下一次工具调用。工具描述可以解释接口，但不能悄悄请求私有上下文。更大的模型、更长的上下文、RAG和微调并不能消除这个边界问题，因为故障源自可信token与不可信token混合在同一个序列中。</p>
 
   <div class="svg-diagram">
     <svg viewBox="0 0 1040 500" role="img" aria-label="Prompt injection and tool data boundary for RAG, tools, MCP resources, and final answer verification">
@@ -999,7 +999,7 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
   </div>
 
   <h4>需要测试的安全不变量</h4>
-  <p>高级推理工程师应当将prompt注入安全性转化为可重复的测试，而不仅仅是文字指南。最小的对抗集应包括直接的越狱提示、投毒的RAG文档、恶意网页片段、对抗性工具输出、投毒的MCP工具描述、多模态/OCR隐藏指令、跨轮记忆污染以及放置在私有上下文中的"canary"秘密。</p>
+  <p>高级推理工程师应将prompt注入安全性转化为可重复的测试，而不仅是文字指南。最小的对抗集应包括：直接的越狱提示、投毒的RAG文档、恶意网页片段、对抗性工具输出、投毒的MCP工具描述、多模态/OCR隐藏指令、跨轮记忆污染以及放置在私有上下文中的"canary"秘密。</p>
   <div class="table-wrap">
     <table>
       <tr><th>不变量</th><th>如何测试</th><th>可观测信号</th></tr>
@@ -1011,18 +1011,18 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
     </table>
   </div>
 
-  <p>本小节有用的主要参考文献包括<a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank">OWASP LLM01: Prompt Injection</a>、<a href="https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html" target="_blank">OWASP LLM Prompt Injection Prevention Cheat Sheet</a>、<a href="https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices" target="_blank">MCP Security Best Practices</a>以及<a href="https://modelcontextprotocol.io/specification/2025-11-25" target="_blank">MCP规格说明书安全原则</a>。本课程的结论并非这些文档提供了某种魔法过滤器；它们定义了围绕模型必须存在的工程边界。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>Prompt注入是一个系统设计问题。将模型视为提议生成器；可信策略、数据流出控制、工具授权、同意以及最终验证必须位于应用层，在那里它们可以被测试、记录和强制实施。</div></div>
+  <p>本小节的参考文献包括<a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank">OWASP LLM01: Prompt Injection</a>、<a href="https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html" target="_blank">OWASP LLM Prompt Injection Prevention Cheat Sheet</a>、<a href="https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices" target="_blank">MCP Security Best Practices</a>以及<a href="https://modelcontextprotocol.io/specification/2025-11-25" target="_blank">MCP规格说明书安全原则</a>。本课程的结论并非这些文档提供了某种魔法过滤器；它们定义的是围绕模型必须存在的工程边界。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>Prompt注入是一个系统设计问题。把模型视为提议生成器；可信策略、数据流出控制、工具授权、同意以及最终验证必须位于应用层，在那里它们可以被测试、记录和强制实施。</div></div>
 </section><!-- ================================================================ -->
 <!-- 编程练习 5：基准测试 -->
 <!-- ================================================================ --><section class="card" id="s10-10">
   <h3>10.10 编程练习5：推理速度基准测试</h3>
-  <p>现在我们将所有技术结合起来，创建一个全面的基准测试，定量比较不同优化技术的加速效果。</p>
+  <p>本练习综合前面讲到的优化技术，编写一个全面的基准测试，定量比较不同优化方法对推理速度的影响。</p>
 
   <div class="coding-exercise">
     <h4>练习5：比较推理速度</h4>
     <div class="task">
-      <p><strong>任务：</strong>编写基准测试代码，比较以下四种配置生成100个token的速度：</p>
+      <p><strong>任务：</strong>编写基准测试代码，比较下面四种配置在生成100个token时的推理速度：</p>
       <ul>
         <li><strong>基础（无优化）：</strong> 无KV Cache，FP32</li>
         <li><strong>+ KV Cache：</strong> 启用KV Cache，FP32</li>
@@ -1031,10 +1031,10 @@ assert report["decision"] == "execute_with_runtime_guards"</code></pre>
       </ul>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>对每种配置测量：首token生成时间（ms）、平均每token延迟（ms/tok）、GPU内存使用（GB）</li>
+        <li>每种配置测量：首token生成时间（ms）、平均每token延迟（ms/tok）、GPU内存使用（GB）</li>
         <li>使用 <code>time.perf_counter</code> 测量时间</li>
-        <li>使用 <code>torch.cuda.max_memory_allocated</code> 测量GPU内存（当GPU可用时）</li>
-        <li>打印一个比较表格</li>
+        <li>使用 <code>torch.cuda.max_memory_allocated</code> 测量GPU内存（GPU可用时）</li>
+        <li>打印一个对比表格</li>
       </ul>
       <pre># Expected output (illustrative)
 Benchmark Results (generate 100 tokens, batch_size=1):
@@ -1124,14 +1124,14 @@ print(f"{'+ 量化INT8':<20} {result_quant['ttft_ms']:<12.1f} "
 # 加速比计算
 print(f"\nKV Cache加速比：{result_no_cache['ms_per_token'] / result_cache['ms_per_token']:.1f}x")
 print(f"量化加速比：{result_cache['ms_per_token'] / result_quant['ms_per_token']:.1f}x")</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期观察：</strong> KV Cache通常能显著减少解码阶段的冗余计算；INT8量化通常能减少权重内存和带宽压力。具体的加速比取决于提示长度、批量大小、GPU、内核、量化方案和模型架构。注意，KV Cache会<strong>增加</strong>缓存内存，而量化主要<strong>减少</strong>权重内存。</p>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>预期结果：</strong> KV Cache通常能大幅减少解码阶段的冗余计算；INT8量化通常能减小权重内存和带宽压力。具体加速比取决于提示长度、批量大小、GPU、内核、量化方案和模型架构。注意，KV Cache会<strong>增加</strong>缓存内存，而量化主要<strong>减少</strong>权重内存。</p>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 10.10A LLM Benchmarking Methodology -->
 <!-- ================================================================ --><section class="card" id="s10-10a">
   <h3>10.10A 大语言模型评估方法：单一数字无法代表模型</h3>
-  <p>大语言模型的基准测试与评估值得单独讨论，原因很简单：现代 LLM 的质量无法用单个 loss、单个排行榜得分或一组延迟数据来概括。有效的评估应当回答具体问题，例如“混合+重排序（hybrid+rerank）是否提高了该客服知识库的引文准确性？”，而非笼统地声称“模型更好”。</p>
+  <p>大语言模型的基准测试与评估需要单独讨论，因为现代 LLM 的质量无法用单个 loss、单个排行榜得分或一组延迟数据来概括。有效的评估应当回答具体问题，例如“混合+重排序（hybrid+rerank）是否提高了该客服知识库的引文准确性？”，而不是笼统地声称“模型更好”。</p>
 
   <h4>从任务到结论的最小链条</h4>
   <table>
@@ -1145,7 +1145,7 @@ print(f"量化加速比：{result_cache['ms_per_token'] / result_quant['ms_per_t
   </table>
 
   <h4>基准测试摘要：清晰呈现评估结果</h4>
-  <p>基准测试摘要并非复杂的算法，而是防止模糊结论的保障。一份可用的摘要至少应包含：<code>task</code>、<code>sample_size</code>、<code>baseline</code>、<code>metrics</code>、<code>risks</code>、<code>uncertainty</code> 和 <code>conclusion</code>。重点不在于文档格式，而是防止评估结论在数据条件之外被误解。</p>
+  <p>基准测试摘要不是复杂的算法，而是防止模糊结论的保障。一份可用的摘要至少应包含：<code>task</code>、<code>sample_size</code>、<code>baseline</code>、<code>metrics</code>、<code>risks</code>、<code>uncertainty</code> 和 <code>conclusion</code>。关键不在文档格式，而是避免评估结论超出数据条件被误解。</p>
 
   <div class="code-block" data-lang="python">
 summary = build_benchmark_summary(
@@ -1158,12 +1158,12 @@ summary = build_benchmark_summary(
     conclusion="hybrid+rerank improves this fixed support QA dev set, but does not prove open-domain QA quality",
 )</div>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>基准测试的目标不是创造一个排行榜，而是让工程决策可辩论：是否值得增加重排序？是否值得增加 max tokens？是否值得牺牲一点延迟来换取更高的引文准确性？</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>基准测试的目标不是创造排行榜，而是让工程决策可以讨论：是否值得增加重排序？是否值得增加 max tokens？是否值得牺牲一点延迟来换取更高的引文准确性？</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.11 vLLM -->
 <!-- ================================================================ --><section class="card" id="s10-11">
   <h3>10.11 vLLM——生产级LLM推理引擎</h3>
-  <p>如果你想把LLM部署到生产环境并处理成百上千的并发请求，光靠手写KV Cache和量化是不够的。<strong>vLLM</strong>是开源生态中使用最广泛的LLM推理引擎之一，其PagedAttention、continuous batching和prefix caching等设计已成为理解现代推理系统的重要案例分析。</p>
+  <p>如果你想把LLM部署到生产环境并处理成百上千的并发请求，仅靠手写KV Cache和量化是不够的。<strong>vLLM</strong>是开源生态中使用最广泛的LLM推理引擎之一，其PagedAttention、continuous batching和prefix caching等设计已成为理解现代推理系统的典型案例。</p>
 
   <h4>核心创新1：PagedAttention</h4>
   <p>传统的KV Cache为每个序列分配连续的内存块，类似于操作系统早期的内存管理——连续分配会导致<strong>内存碎片</strong>：128K序列的KV Cache需要一大块连续内存，释放后可能留下无法使用的碎片。PagedAttention借鉴了<strong>操作系统虚拟内存的分页机制</strong>：</p>
@@ -1173,27 +1173,27 @@ summary = build_benchmark_summary(
     <li>释放时逐块回收内存，无碎片</li>
     <li>不同序列可以<strong>共享相同的prompt前缀块</strong>（例如系统prompt只存储一次）</li>
   </ul>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>类比：</strong>PagedAttention之于KV Cache = 虚拟内存之于物理内存。它将“分配连续内存”的问题转变为“管理页表”的问题；论文和工程基准测试报告了内存利用率的显著提升，但具体数值取决于模型、请求长度分布、并发度和调度策略。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>类比：</strong>PagedAttention之于KV Cache = 虚拟内存之于物理内存。它将“分配连续内存”的问题转变为“管理页表”的问题；论文和工程基准测试报告了内存利用率的显著提升，具体数值取决于模型、请求长度分布、并发度和调度策略。</div></div>
 
   <h4>核心创新2：Continuous Batching</h4>
   <p>传统批处理：等待批次中所有请求完成后再开始下一个批次。问题：长序列阻塞整个批次，短序列空闲等待。</p>
-  <p>Continuous Batching：<strong>每次前向传播后，完成的序列离开批次，新请求立即进入</strong>。调度器不再等待批次中每个序列都完成。结果更接近餐厅翻台：完成的请求离开，等待的请求进入，GPU始终有有用工作排队。</p>
+  <p>Continuous Batching：<strong>每次前向传播后，完成的序列离开批次，新请求立即进入</strong>。调度器不再等待批次中每个序列都完成。结果更接近餐厅翻台：完成的请求离开，等待的请求进入，GPU始终有任务可做。</p>
   <p>实现关键：每一步执行“prefill + decode”混合调度，内核需要支持不同的序列长度和张量形状。</p>
 
   <h4>调度准入：max_num_seqs、max_num_batched_tokens和active KV</h4>
-  <p>Continuous batching并不意味“把所有请求塞进GPU”。每一步调度至少受三个预算的共同约束：这一轮能处理多少个序列、能处理多少个token、必须保留多少KV cache。vLLM的<code>max_num_seqs</code>、<code>max_num_batched_tokens</code>、SGLang的continuous decode / RadixAttention配置以及TensorRT-LLM的in-flight batching都回答同一个工程问题：哪些请求现在进入批次，哪些请求继续等待，队列是否已经打破了SLO。</p>
+  <p>Continuous batching并不意味“把所有请求塞进GPU”。每一步调度受三个预算的共同约束：这一轮能处理多少个序列、能处理多少个token、必须保留多少KV cache。vLLM的<code>max_num_seqs</code>、<code>max_num_batched_tokens</code>、SGLang的continuous decode / RadixAttention配置以及TensorRT-LLM的in-flight batching都回答同一个工程问题：哪些请求现在进入批次，哪些请求继续等待，队列是否已经违反SLO。</p>
 
   <table class="metrics-table">
     <thead><tr><th>调度预算</th><th>约束内容</th><th>典型故障</th><th>优先操作</th></tr></thead>
     <tbody>
-      <tr><td><code>max_num_seqs</code></td><td>一次迭代中可同时处理的序列数量</td><td>大量短请求无法进入批次，队列等待增加</td><td>增大序列预算、扩容副本、或按租户隔离队列</td></tr>
+      <tr><td><code>max_num_seqs</code></td><td>一次迭代中可同时处理的序列数量</td><td>大量短请求无法进入批次，队列等待时间增加</td><td>增大序列预算、扩容副本、或按租户隔离队列</td></tr>
       <tr><td><code>max_num_batched_tokens</code></td><td>一次迭代中prefill/decode token的总数</td><td>长prompt的prefill阻塞decode，TTFT和TPOT同时抖动</td><td>启用chunked prefill、缩短prompt长度、或增加token预算</td></tr>
       <tr><td>active KV tokens</td><td>已接收请求未来需要的KV cache</td><td>高并发长输出导致OOM或尾部延迟崩溃</td><td>减小max_new_tokens、限流长上下文请求、或增加KV容量</td></tr>
       <tr><td>queue wait SLO</td><td>队列中的请求还能等待多久</td><td>吞吐量看似正常，但P95/P99用户延迟超出限制</td><td>扩容、优先级调度、拒绝/降级低优先级请求</td></tr>
     </tbody>
   </table>
 
-  <p>一个continuous batching准入报告将这些预算转化为单步调度决策。它获取待调度请求，按优先级和等待时间排序，计算经过前缀缓存后的有效prefill、经过分块prefill后本轮token、请求的active KV预留，并输出<code>admitted</code>、<code>queued</code>、排队原因和动作项。核心教训是：增大批次参数可能提升吞吐量，但也可能把KV内存、队列等待或TPOT推过SLO。</p>
+  <p>一个continuous batching准入报告将这些预算转化为单步调度决策。它获取待调度请求，按优先级和等待时间排序，计算经过前缀缓存后的有效prefill、经过分块prefill后本轮token、请求的active KV预留，并输出<code>admitted</code>、<code>queued</code>、排队原因和动作项。核心要点是：增大批次参数可能提升吞吐量，但也可能把KV内存、队列等待或TPOT推过SLO。</p>
 
   <div class="coding-exercise">
     <h4>练习：Continuous Batching准入决策</h4>
@@ -1224,7 +1224,7 @@ summary = build_benchmark_summary(
   </div>
 
   <h4>如何阅读vLLM性能数据</h4>
-  <p>以下数字仅用于说明量级和指标定义，并非课程对任何模型/硬件的性能保证。正式项目必须在自己硬件、模型、上下文、批处理、并发度设置下重新测量。</p>
+  <p>以下数字仅用于说明量级和指标定义，并非课程对任何模型或硬件的性能保证。正式项目必须在自己硬件、模型、上下文、批处理、并发度设置下重新测量。</p>
   <div class="table-wrap">
     <table>
       <tr><th>指标</th><th>朴素实现常见问题</th><th>vLLM优化方向</th><th>项目中应报告什么</th></tr>
@@ -1268,7 +1268,7 @@ summary = build_benchmark_summary(
 <!-- 10.12 推理引擎生态系统 -->
 <!-- ================================================================ --><section class="card" id="s10-12">
   <h3>10.12 推理引擎全景——vLLM / SGLang / TensorRT-LLM / llama.cpp</h3>
-  <p>vLLM 并非唯一的 LLM 推理引擎。不同的场景需要不同的工具：</p>
+  <p>vLLM 不是唯一的 LLM 推理引擎。不同场景需要不同工具：</p>
   <div class="table-wrap">
     <table>
       <tr><th>引擎</th><th>核心策略</th><th>最佳用途</th><th>内存需求</th></tr>
@@ -1282,13 +1282,13 @@ summary = build_benchmark_summary(
   </div>
 
   <h4>SGLang 的前缀树共享（RadixAttention）</h4>
-  <p>当多个请求共享相同的 system prompt 或 few-shot 前缀时，推理引擎可以通过前缀缓存复用已计算的 KV Cache。vLLM 和 SGLang 都提供相关能力；SGLang 的 RadixAttention 使用<strong>Radix Tree（基数树）</strong>来组织可复用的前缀，适用于多轮对话和结构化程序生成。实际复用率仍取决于 prompt 模板、缓存配置、调度策略和请求分布；如果 prompt 模板中包含时间戳、随机 ID 或每次变化的无关检索片段，公共前缀就会被破坏，命中率就会下降。</p>
+  <p>当多个请求共享相同的 system prompt 或 few-shot 前缀时，推理引擎可以用前缀缓存复用已计算的 KV Cache。vLLM 和 SGLang 都提供相关能力；SGLang 的 RadixAttention 使用<strong>Radix Tree（基数树）</strong>来组织可复用的前缀，适用于多轮对话和结构化程序生成。实际复用率仍取决于 prompt 模板、缓存配置、调度策略和请求分布；如果 prompt 模板中包含时间戳、随机 ID 或每次变化的无关检索片段，公共前缀就会被破坏，命中率也会下降。</p>
 
   <h4>TensorRT-LLM 的图编译</h4>
-  <p>TensorRT-LLM 将整个 LLM 计算图编译成针对 NVIDIA GPU 最优化的执行计划。这包括算子融合（例如将 QKV 投影合并为单个 GEMM）、内核自动调优以及 FP8/INT4 精度支持。代价是<strong>编译时间长</strong>（首次模型加载需要几分钟），并且仅支持 NVIDIA GPU。</p>
+  <p>TensorRT-LLM 将整个 LLM 计算图编译成针对 NVIDIA GPU 的最优执行计划。这包括算子融合（例如将 QKV 投影合并为单个 GEMM）、内核自动调优以及 FP8/INT4 精度支持。代价是<strong>编译时间长</strong>（首次模型加载需要几分钟），并且仅支持 NVIDIA GPU。</p>
 
   <h4>llama.cpp 的消费级硬件理念</h4>
-  <p>llama.cpp 的定位完全不同——它允许 LLM 推理在<strong>没有 GPU</strong> 的情况下运行。核心技术是 GGUF 格式的 INT4/INT5/INT8 量化——将 70B 模型压缩至约 40GB，使其能够在 MacBook Pro（64GB RAM）上借助 Metal 加速运行。内存映射（mmap）加载使模型启动几乎瞬时完成。2024 年后，Ollama 将其封装为 `ollama run llama3` 的简单体验，推动了本地 LLM 的普及。</p>
+  <p>llama.cpp 的定位完全不同——它让 LLM 推理能在<strong>没有 GPU</strong> 的情况下运行。核心技术是 GGUF 格式的 INT4/INT5/INT8 量化——将 70B 模型压缩至约 40GB，让它能在 MacBook Pro（64GB RAM）上借助 Metal 加速运行。内存映射（mmap）加载使模型启动几乎瞬时完成。2024 年后，Ollama 将其封装成 `ollama run llama3` 这样简单的体验，推动了本地 LLM 的普及。</p>
 
   <h4>选择指南</h4>
   <div class="info-box tip"><span class="icon">💡</span><div>
@@ -1300,19 +1300,19 @@ summary = build_benchmark_summary(
   </div></div>
 </section><section class="card" id="s10-12a">
   <h3>10.12A MoE 推理服务：专家并行、EPLB 和 KV Ledger</h3>
-  <p>第06章已经解释了MoE的模型结构：参数量很大，但每个token只激活少数几个专家。对于在线推理，真正的问题变成了：专家权重放在哪些GPU上？token如何分发到专家？AllToAll通信是否会抵消稀疏计算的好处？KV cache是否会因为并行策略而重复存储？热门专家是否会使少数rank成为尾延迟瓶颈？在部署DeepSeek-V3/R1、Qwen MoE和Mixtral这类模型时，不能简单套用稠密模型的张量并行估算方式。</p>
+  <p>第06章已经解释了MoE的模型结构：参数量很大，但每个token只激活少数几个专家。对于在线推理，核心问题在于：专家权重放在哪些GPU上？token如何分发到专家？AllToAll通信是否会抵消稀疏计算的好处？KV cache是否会因并行策略而重复存储？热门专家是否会导致少数rank成为尾延迟瓶颈？在部署DeepSeek-V3/R1、Qwen MoE和Mixtral这类模型时，不能直接套用稠密模型的张量并行估算方法。</p>
 
   <div class="table-wrap">
     <table>
       <tr><th>策略</th><th>MoE层如何切分</th><th>主要优势</th><th>主要风险</th></tr>
-      <tr><td>TP for MoE</td><td>每个专家的矩阵像稠密层一样跨多个GPU切分</td><td>实现简单，复用稠密模型并行策略</td><td>专家权重访问和KV cache可能重复；热门专家仍然导致等待</td></tr>
-      <tr><td>专家并行 (EP)</td><td>不同专家放在不同GPU上，token被路由到持有该专家的rank</td><td>增大专家权重带宽，改善MoE层的局部性</td><td>需要dispatch/combine、AllToAll、专家负载均衡以及跨节点拓扑优化</td></tr>
+      <tr><td>TP for MoE</td><td>每个专家的矩阵像稠密层一样跨多个GPU切分</td><td>实现简单，复用稠密模型的并行策略</td><td>专家权重访问和KV cache可能重复；热门专家仍然导致等待</td></tr>
+      <tr><td>专家并行 (EP)</td><td>不同专家放在不同GPU上，token被路由到持有该专家的rank</td><td>提升专家权重带宽，改善MoE层的局部性</td><td>需要dispatch/combine、AllToAll、专家负载均衡以及跨节点拓扑优化</td></tr>
       <tr><td>DP + EP</td><td>Attention/KV按数据并行分组，MoE层使用专家并行</td><td>减少MLA/MQA场景下的KV cache重复，适合高吞吐批次</td><td>请求路由、prefix cache、DP rank负载和专家AllToAll需要统一调度</td></tr>
-      <tr><td>EPLB</td><td>基于历史专家负载复制或重新放置热门专家</td><td>减少热门专家导致的落伍者和尾延迟</td><td>迁移/复制有内存和调度开销；静态分布变化时可能失效</td></tr>
+      <tr><td>EPLB</td><td>基于历史专家负载复制或重新放置热门专家</td><td>减少因热门专家导致的落伍者和尾延迟</td><td>迁移/复制有内存和调度开销；静态分布变化时可能失效</td></tr>
     </table>
   </div>
 
-  <p>MoE推理服务的评估应至少回答四个问题。第一，<strong>权重和KV cache</strong>：EP是否真正减少了专家权重访问瓶颈？还是TP/DP组合导致KV cache被冗余存储？第二，<strong>专家负载</strong>：top-k路由的专家token数分布是否倾斜？最繁忙的专家/rank是否决定了TPOT？第三，<strong>通信</strong>：dispatch/combine、AllToAll、跨节点RDMA或KV传输是否成为瓶颈？第四，<strong>质量和兼容性</strong>：EPLB、专家复制或路由重排是否会改变输出一致性、缓存命中率、工具/schema路径或安全回归？</p>
+  <p>评估MoE推理服务至少需要回答四个问题。第一，<strong>权重和KV cache</strong>：EP是否真正减少了专家权重访问瓶颈？还是TP/DP组合导致KV cache被冗余存储？第二，<strong>专家负载</strong>：top-k路由的专家token数分布是否倾斜？最繁忙的专家/rank是否决定了TPOT？第三，<strong>通信</strong>：dispatch/combine、AllToAll、跨节点RDMA或KV传输是否成为瓶颈？第四，<strong>质量和兼容性</strong>：EPLB、专家复制或路由重排是否会改变输出一致性、缓存命中率、工具/schema路径或安全回归？</p>
 
   <pre><code class="language-text">moe_serving_check:
   parallelism: TP=2, DP=4, EP=8, PP=1
@@ -1327,14 +1327,14 @@ summary = build_benchmark_summary(
   decision:
     compare TP baseline, EP, DP+EP, EP+EPLB under same workload</code></pre>
 
-  <p>阅读vLLM、SGLang或TensorRT-LLM的MoE基准测试时，不要只看总token/s。你需要了解：工作负载是交互式低并发还是批量高吞吐？提示/输出长度分布是否代表真实流量？专家激活密度是多少？是否启用了prefill/decode解耦？是否启用了EPLB？AllToAll是在同节点NVLink还是跨节点进行？每个DP rank的KV cache是否独立？如果某种配置在A100/H100/NVL72上有效，不能自动外推到消费级GPU、不同网络拓扑或超稀疏MoE上。</p>
+  <p>在阅读vLLM、SGLang或TensorRT-LLM的MoE基准测试时，不要只看总token/s。需要关注：工作负载是交互式低并发还是批量高吞吐？提示/输出长度分布是否与真实流量一致？专家激活密度是多少？是否启用了prefill/decode解耦？是否启用了EPLB？AllToAll是在同节点NVLink还是跨节点进行？每个DP rank的KV cache是否独立？在A100/H100/NVL72上有效的配置，不能直接外推到消费级GPU、不同网络拓扑或超稀疏MoE上。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>MoE推理的优化目标不是“参数量更大但每个token更少”这一句口号，而是专家权重带宽、token分发、AllToAll、KV cache、专家负载倾斜和尾延迟的综合效果。一份在线报告必须在相同工作负载下对比稠密/TP基线、EP、DP+EP和EPLB，否则无法判断MoE是否真的比稠密推理更经济、更快或更稳定。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>MoE推理的优化目标不是简单的“参数量更大但每个token更少”，而是专家权重带宽、token分发、AllToAll、KV cache、专家负载倾斜和尾延迟的综合效果。一份在线报告必须在相同工作负载下对比稠密/TP基线、EP、DP+EP和EPLB，否则无法判断MoE是否比稠密推理更经济、更快或更稳定。</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.13 生产推理服务蓝图 -->
 <!-- ================================================================ --><section class="card" id="s10-13">
   <h3>10.13 生产推理服务蓝图——从模型到兼容 OpenAI 的 API</h3>
-  <p>推理工程师面对的核心工程对象不是能在 Notebook 里跑的模型，而是一个<strong>稳定、可观测、可伸缩、成本可控</strong>的在线服务。一个典型的 LLM 推理服务可以拆分为 7 层：</p>
+  <p>推理工程师面对的核心工程对象不是能在 Notebook 里跑的模型，而是一个<strong>稳定、可观测、可伸缩、成本可控</strong>的在线服务。典型的 LLM 推理服务可以拆成 7 层：</p>
   <div class="table-wrap">
     <table>
       <tr><th>层级</th><th>职责</th><th>关键指标</th><th>常用技术</th></tr>
@@ -1349,42 +1349,42 @@ summary = build_benchmark_summary(
   </div>
 
   <h4>兼容 OpenAI 的接口应该支持什么</h4>
-  <p>生产服务通常需要兼容像 <code>/v1/chat/completions</code> 这样的接口，因为上层应用、Agent 框架和评估工具都能直接对接。最少功能包括：</p>
+  <p>生产服务通常需要兼容像 <code>/v1/chat/completions</code> 这样的接口，因为上层应用、Agent 框架和评估工具都能直接对接。最低功能包括：</p>
   <ul>
     <li><strong>非流式与流式输出：</strong>标准 JSON 响应 + 服务器发送事件 (SSE) token 流。</li>
     <li><strong>采样参数：</strong> <code>temperature</code>、<code>top_p</code>、<code>max_tokens</code>、<code>stop</code>。</li>
-    <li><strong>结构化输出：</strong>JSON schema / 受约束解码，不能仅靠 prompt 来约束格式。</li>
+    <li><strong>结构化输出：</strong>JSON schema / 受约束解码，不能只靠 prompt 约束格式。</li>
     <li><strong>工具调用：</strong>函数/工具 schema、工具调用参数校验、工具结果回填。</li>
     <li><strong>用量统计：</strong>Prompt tokens、completion tokens、总 token 数，用于计费和容量规划。</li>
   </ul>
 
   <h4>LLM 可观测性：指标、追踪和内容收集应分层</h4>
-  <p>普通 Web 服务的请求日志不足以解释 LLM 服务的问题。OpenTelemetry GenAI 语义约定正在标准化模型名称、操作、token 用量、finish reason、工具调用、prompt/completion 事件等字段；vLLM 等推理引擎也会暴露请求队列、KV cache、前缀缓存、tokens/s 和引擎状态等指标。一个有用的遥测设计应该分成四个层次，而不是把一切都塞进一个延迟日志里。</p>
+  <p>普通 Web 服务的请求日志不足以解释 LLM 服务的问题。OpenTelemetry GenAI 语义约定正在标准化模型名称、操作、token 用量、finish reason、工具调用、prompt/completion 事件等字段；vLLM 等推理引擎也会暴露请求队列、KV cache、前缀缓存、tokens/s 和引擎状态等指标。好用的遥测设计应该分成四个层次，而不是把所有东西都塞进一个延迟日志里。</p>
   <div class="table-wrap">
     <table>
       <tr><th>遥测层</th><th>最少字段</th><th>解决的问题</th><th>隐私/成本边界</th></tr>
-      <tr><td>请求指标</td><td>model、tenant、status、error_code、TTFT、TPOT、P95/P99、prompt/completion tokens</td><td>是哪个版本、哪个租户或哪个长度区间违反了 SLO</td><td>仅存储聚合指标；默认避免将原始 prompt 写入日志</td></tr>
+      <tr><td>请求指标</td><td>model、tenant、status、error_code、TTFT、TPOT、P95/P99、prompt/completion tokens</td><td>是哪个版本、哪个租户或哪个长度区间违反了 SLO</td><td>只存储聚合指标；默认避免将原始 prompt 写入日志</td></tr>
       <tr><td>引擎指标</td><td>队列深度、运行/等待请求数、活跃 KV token 数、KV 利用率、前缀缓存命中率、tokens/s/GPU</td><td>瓶颈是排队、prefill、解码、KV 内存不足还是缓存未命中</td><td>按模型/副本聚合；避免高基数标签压垮监控系统</td></tr>
-      <tr><td>追踪跨度</td><td>网关、路由器、LLM 调用、检索、重排序、工具调用、护栏、流式传输</td><td>慢请求究竟卡在了哪个环节</td><td>对追踪进行采样；敏感的工具参数和观察结果应脱敏或摘要处理</td></tr>
+      <tr><td>追踪跨度</td><td>网关、路由器、LLM 调用、检索、重排序、工具调用、护栏、流式传输</td><td>慢请求究竟卡在了哪个环节</td><td>对追踪采样；敏感的工具参数和观察结果应脱敏或做摘要处理</td></tr>
       <tr><td>质量/成本事件</td><td>schema 通过、安全/拒绝、引用命中、评判结果、成本/请求、回滚版本</td><td>质量、安全和成本是否随版本或流量变化而漂移</td><td>内容收集必须有开关、保留期限和访问控制</td></tr>
     </table>
   </div>
-  <p>Agent 和工具系统尤其需要追踪，而不仅仅是最终答案。一次单独的 Agent 运行应该展示 LLM 生成、工具提议、schema/权限检查、工具执行、护栏事件、移交或重试之间的父子关系。如果只记录最终文本，当用户报告“响应慢且未授权访问”时，工程师无法判断是由模型规划、工具 API、权限检查、检索、上下文扩展还是输出护栏导致的。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>可观测性原则：</strong>指标用于 SLO 和容量趋势，追踪用于单次请求归因，内容事件用于质量/安全采样。三者不可相互替代；同时，prompt、工具参数和用户数据默认应脱敏或采样，敏感内容不应不加边界地写入日志用以调试。</div></div>
+  <p>Agent 和工具系统尤其需要追踪，而不仅仅是最终答案。一次单独的 Agent 运行应该展示 LLM 生成、工具提议、schema/权限检查、工具执行、护栏事件、移交或重试之间的父子关系。如果只记录最终文本，当用户报告“响应慢且未授权访问”时，工程师无法判断问题出在模型规划、工具 API、权限检查、检索、上下文扩展还是输出护栏。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>可观测性原则：</strong>指标用于 SLO 和容量趋势，追踪用于单次请求归因，内容事件用于质量/安全采样。三者不可相互替代；同时，prompt、工具参数和用户数据默认应脱敏或采样，敏感内容不应不加边界地写入日志用于调试。</div></div>
 
   <h4>模型路由与级联：不要把所有请求都发给最大模型</h4>
   <p>生产系统通常同时有多个模型：低延迟小模型、强推理模型、专用代码模型、视觉模型、合规区域模型和备用供应商。模型路由的目标不是“隐藏模型选择”，而是做出可审计的决策，平衡质量、成本、延迟、可用性和数据边界。FrugalGPT 将 LLM 级联表述为一个成本优化问题；RouteLLM 使用偏好数据在强/弱模型之间学习查询路由器；LiteLLM 等网关提供负载均衡、fallback、超时、重试以及供应商冷却。课程要求掌握一个通用的路由决策框架，而不是绑定到某个具体的路由产品。</p>
   <div class="table-wrap">
     <table>
       <tr><th>路由模式</th><th>适用场景</th><th>必须记录</th><th>失败模式</th></tr>
-      <tr><td>静态规则</td><td>任务类型、租户、区域、数据边界明确</td><td>route_rule、model、tenant、region、policy version</td><td>规则过时；复杂请求被发给了弱模型</td></tr>
+      <tr><td>静态规则</td><td>任务类型、租户、区域、数据边界明确</td><td>route_rule、model、tenant、region、policy version</td><td>规则过时；复杂请求被发给弱模型</td></tr>
       <tr><td>成本/延迟路由</td><td>在选择质量相当的前提下，选用更便宜或更快的模型/副本</td><td>estimated cost、queue wait、SLO class、fallback target</td><td>一味追求便宜导致质量或安全回退</td></tr>
       <tr><td>语义/分类器路由</td><td>请求难度或任务类别无法由调用方可靠标记</td><td>router score、threshold、route_reason、router latency</td><td>路由器误判、分类器漂移、提示注入诱导错误路由</td></tr>
       <tr><td>级联 / 升级路由</td><td>先用小模型，低置信度或失败时升级到更强模型</td><td>first-pass result、confidence/verifier、escalation reason、total cost</td><td>级联延迟过高、验证器本身不可靠、fallback 循环</td></tr>
       <tr><td>可靠性 fallback</td><td>供应商超时、速率限制、区域故障或模型版本回滚</td><td>error class、retry count、fallback model、final status</td><td>模型模板/工具能力不兼容、输出格式漂移</td></tr>
     </table>
   </div>
-  <p>部署路由器时，必须与“所有请求都发给强模型”的基线进行对比。最少的报告包括：每个路由分支的样本数、质量/安全/schema/RAG 指标、P95 TTFT/TPOT、平均成本、升级率、错误 fallback 率、路由器延迟、不可路由样本以及人工抽检。如果路由保持整体通过率不变，但将医疗、金融、代码执行或长上下文片段发给了错误的模型，则不能发布。如果 fallback 模型不支持相同的 tokenizer、工具 schema、response_format 或安全策略，则不能被视为透明替换。</p>
+  <p>部署路由器时，必须与“所有请求都发给强模型”的基线作对比。最小报告要求：每个路由分支的样本数、质量/安全/schema/RAG 指标、P95 TTFT/TPOT、平均成本、升级率、错误 fallback 率、路由器延迟、不可路由样本以及人工抽检。如果路由能保持整体通过率不变，但将医疗、金融、代码执行或长上下文片段发给了错误的模型，则不能发布。如果 fallback 模型不支持相同的 tokenizer、工具 schema、response_format 或安全策略，则不能视为透明替换。</p>
 
   <h4>SLO：推理服务应该承诺什么</h4>
   <p>不要只看平均延迟。在线用户感知到的是尾延迟和稳定性。一个合理的课程级 SLO 示例：</p>
@@ -1414,18 +1414,18 @@ summary = build_benchmark_summary(
 
   <h4>容量规划：从工作负载到准入控制</h4>
   <p>真正服务的容量不是一个像“GPU 能跑多少 tokens/s”那样的单一数字。请求进入系统后，要经过排队、prefill、解码、流式传输和后处理；只要到达率超过稳定服务速率，队列就会快速增长，P95/P99 首先恶化，而平均延迟往往最后才暴露问题。</p>
-  <p>推理工程师通常先将工作负载描述为四个分布：每秒请求数、prompt tokens、completion tokens 和并发持续时间。然后，将负载分解为 prefill 工作量和解码工作量：</p>
+  <p>推理工程师通常先把工作负载描述成四个分布：每秒请求数、prompt tokens、completion tokens 和并发持续时间。然后，将负载分解为 prefill 工作量和解码工作量：</p>
   <div class="math-box"><div class="label">工作负载 token 速率</div>
     <div class="katex" data-expr="\lambda_{\text{prefill}} = \text{QPS}\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = \text{QPS}\cdot E[T_{\text{output}}]" aria-label="\lambda_{\text{prefill}} = \text{QPS}\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = \text{QPS}\cdot E[T_{\text{output}}]" role="img"></div>
   </div>
-  <p>如果在当前模型、批处理和上下文分布下，单个 GPU 实测的 prefill 容量是 <code>120k prompt tokens/s</code>，解码容量是 <code>2.5k output tokens/s</code>，而一个典型请求的平均输入为 <code>800</code> tokens、输出为 <code>200</code> tokens，那么 <code>10 QPS</code> 的负载大约对应 <code>8k prompt tokens/s</code> 和 <code>2k output tokens/s</code>。解码已经接近瓶颈；进一步增加 QPS 将首先导致 TPOT 和排队时间恶化，而不是导致 TTFT 均匀增加。</p>
+  <p>如果在当前模型、批处理和上下文分布下，单个 GPU 实测的 prefill 容量是 <code>120k prompt tokens/s</code>，解码容量是 <code>2.5k output tokens/s</code>，而一个典型请求的平均输入为 <code>800</code> tokens、输出为 <code>200</code> tokens，那么 <code>10 QPS</code> 的负载大约对应 <code>8k prompt tokens/s</code> 和 <code>2k output tokens/s</code>。解码已经接近瓶颈；进一步增加 QPS 将首先导致 TPOT 和排队时间恶化，而不是 TTFT 均匀增加。</p>
 
   <h4>计算示例：为什么准入控制必须考虑 KV Cache</h4>
   <p>考虑一个 32 层的 GQA 模型，有 <code>n_kv_heads=8</code>、<code>head_dim=128</code>，使用 fp16 KV Cache。单个 token 的 KV Cache 为：</p>
   <div class="math-box"><div class="label">每 token KV cache</div>
     <div class="katex" data-expr="2 \cdot 32 \cdot 8 \cdot 128 \cdot 2 = 131072\text{ bytes} \approx 128\text{ KiB/token}" aria-label="2 \cdot 32 \cdot 8 \cdot 128 \cdot 2 = 131072\text{ bytes} \approx 128\text{ KiB/token}" role="img"></div>
   </div>
-  <p>如果每个请求的平均活跃上下文长度是 <code>6,000</code> tokens，每个请求的 KV Cache 大约是 <code>768 MiB</code>。如果服务节点只有 <code>48 GiB</code> 的 GPU 内存可用于 KV，那么理论上最多能容纳约 <code>64</code> 个此类活跃请求；考虑到碎片化、prefill 峰值、临时缓冲区和安全余量，准入限制可能需要降低到 <code>40-50</code>。这就是为什么高 QPS 服务不能仅通过 tokens/s 来限流，还需要对活跃 KV token 进行限制：</p>
+  <p>如果每个请求的平均活跃上下文长度是 <code>6,000</code> tokens，每个请求的 KV Cache 大约是 <code>768 MiB</code>。如果服务节点只有 <code>48 GiB</code> 的 GPU 内存可用于 KV，那么理论上最多能容纳约 <code>64</code> 个此类活跃请求；考虑到碎片化、prefill 峰值、临时缓冲区和安全余量，准入限制可能需要降到 <code>40-50</code>。这就是为什么高 QPS 服务不能只靠 tokens/s 来限流，还需要对活跃 KV token 做限制：</p>
   <ul>
     <li><strong>按请求数量限流：</strong>简单，但无法区分 256 token 的短请求和 128K 长上下文的请求。</li>
     <li><strong>按活跃 token 数限流：</strong>更接近 KV Cache 内存压力，适用于长上下文服务。</li>
@@ -1434,7 +1434,7 @@ summary = build_benchmark_summary(
   </ul>
 
   <h4>调度策略：Prefill 和解码不应互相饿死</h4>
-  <p>对长 prompt 进行 prefill 更像一次大型矩阵乘法，而解码则是每一步为大量活跃序列处理下一个 token。如果调度器一次性注入过多长 prefill，新对话请求的 TTFT 就会恶化；如果调度器只偏爱解码，长 prompt 请求将无限期排队。生产引擎通常使用分块 prefill、优先级队列、最大批处理 token 数和服务等待比率等参数来平衡两者。</p>
+  <p>对长 prompt 做 prefill 更像一次大型矩阵乘法，而解码是每一步为大量活跃序列处理下一个 token。如果调度器一次性注入太多长 prefill，新对话请求的 TTFT 就会恶化；如果调度器只偏爱解码，长 prompt 请求将无限期排队。生产引擎通常用分块 prefill、优先级队列、最大批处理 token 数和服务等待比率等参数来平衡两者。</p>
   <div class="table-wrap">
     <table>
       <tr><th>症状</th><th>可能原因</th><th>优先检查项</th><th>常见操作</th></tr>
@@ -1447,7 +1447,7 @@ summary = build_benchmark_summary(
 
   <h4>长上下文发布检查：上下文长度不等于可用内存</h4>
   <p>百万 token 级别的上下文使“将整个文档、代码库或长对话直接放入 prompt”成为一种可行的产品形式，但长上下文不是免费内存。上下文越长，prefill、KV cache、TTFT、引用定位和位置鲁棒性就越成为独立风险；如果只考虑 <code>max_model_len</code>，截断、上下文腐烂、引用错误或 KV OOM 很容易被误诊为模型能力问题。</p>
-  <p>一份长上下文服务报告将长上下文路径分解为四项检查：<code>context_fit</code> 检查输入和预留输出是否会导致截断或溢出；<code>long_context_quality</code> 检查针/答案召回率和引用命中率；<code>position_robustness</code> 要求在不同位置（开头/中间/结尾）的覆盖率和稳定准确率；<code>serving_cost</code> 将 P95 TTFT、总延迟、KV cache 使用率和前缀缓存命中率放入一张发布表中。</p>
+  <p>一份长上下文服务报告将长上下文路径拆成四项检查：<code>context_fit</code> 检查输入和预留输出是否会导致截断或溢出；<code>long_context_quality</code> 检查针/答案召回率和引用命中率；<code>position_robustness</code> 要求在不同位置（开头/中间/结尾）的覆盖率和稳定准确率；<code>serving_cost</code> 将 P95 TTFT、总延迟、KV cache 使用率和前缀缓存命中率放入一张发布表中。</p>
   <div class="code-block" data-lang="python">
 report = long_context_serving_check_report(
     records=[
@@ -1484,15 +1484,15 @@ report = long_context_serving_check_report(
     <li><strong>成本：</strong>能估算每 1M 输入/输出 token 的 GPU 成本，并按租户归因。</li>
   </ul>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>推理工程师判断题：</strong>如果用户说“模型很慢”，你不能只回答“换成 H100”。先分解 TTFT/TPOT/排队时间，然后检查瓶颈是 prefill、解码、KV、批次占用量、网络流式输出还是 RAG 检索。</div></div>
-  <div class="info-box tip"><span class="icon">💡</span><div><strong>课堂练习：</strong>学完本节后，使用本章的服务蓝图绘制一个兼容 OpenAI 的 Chat API 的请求路径：网关、调度器、prefill/解码、RAG/工具、指标和错误处理。对每一步，写出输入、输出、主要瓶颈和可观测指标。</div></div>
+  <div class="info-box tip"><span class="icon">💡</span><div><strong>课堂练习：</strong>学完本节后，用本章的服务蓝图绘制一个兼容 OpenAI 的 Chat API 的请求路径：网关、调度器、prefill/解码、RAG/工具、指标和错误处理。对每一步，写出输入、输出、主要瓶颈和可观测指标。</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.13A Inference Stress Test Report -->
 <!-- ================================================================ --><section class="card" id="s10-13a">
   <h3>10.13A 推理压力测试报告——从负载到底盘归因</h3>
-  <p>对推理服务进行压力测试不仅仅是产生一个 <code>tokens/s</code> 数字。工程师需要回答：在目标业务负载下，服务能否稳定满足 SLO？如果不能，问题是 prefill、decode、KV Cache、检索、排队还是网络流式输出？一份有用的推理压力测试报告应形成连接 <strong>负载假设、实验矩阵、分层指标、容量计算和调优行动</strong> 的闭环。</p>
+  <p>对推理服务做压力测试，不能只输出一个 <code>tokens/s</code> 数字。工程师需要回答：在目标业务负载下，服务能否稳定满足 SLO？如果不能，问题出在 prefill、decode、KV Cache、检索、排队还是网络流式输出？一份有用的推理压力测试报告应该把 <strong>负载假设、实验矩阵、分层指标、容量计算和调优行动</strong> 串成完整的闭环。</p>
 
   <h4>步骤 1：将工作负载描述为可测量的分布</h4>
-  <p>不要用“平均 1000 个 token”来概括所有请求。LLM 服务的性能高度依赖于长度分布：短提示词的瓶颈通常是调度和首 token；长上下文请求会放大 prefill 和 KV Cache；长输出请求会长时间占用 decode batch。一份有用的服务报告应至少根据下表进行分层：</p>
+  <p>不要用“平均 1000 个 token”来概括所有请求。LLM 服务的性能高度依赖长度分布：短提示词的瓶颈通常是调度和首 token；长上下文请求会放大 prefill 和 KV Cache；长输出请求会长时间占用 decode batch。一份有用的服务报告至少应按下表分层：</p>
   <div class="table-wrap">
     <table>
       <tr><th>分层维度</th><th>推荐值</th><th>为何重要</th></tr>
@@ -1506,7 +1506,7 @@ report = long_context_serving_check_report(
   </div>
 
   <h4>步骤 2：为每个实验单元记录同一组指标</h4>
-  <p>同一压力测试矩阵中的每个单元应使用一致的指标定义。平均值可以保留，但不能取代分位数；总体曲线可以保留，但不能取代按长度分层的结果。</p>
+  <p>同一个压力测试矩阵中的每个单元，应该用一致的指标定义。平均值可以保留，但不能取代分位数；总体曲线可以保留，但不能取代按长度分层的结果。</p>
   <div class="table-wrap">
     <table>
       <tr><th>指标</th><th>定义</th><th>诊断意义</th></tr>
@@ -1522,17 +1522,17 @@ report = long_context_serving_check_report(
   </div>
 
   <h4>步骤 3：用容量公式解释曲线，而不仅仅是绘图</h4>
-  <p>压力测试曲线应能用工作负载公式解释。如果请求到达率是 <code>QPS</code>，平均输入和输出长度分别为 <code>E[T_prompt]</code> 和 <code>E[T_output]</code>，那么：</p>
+  <p>压力测试曲线应该能用工作负载公式解释。如果请求到达率是 <code>QPS</code>，平均输入和输出长度分别为 <code>E[T_prompt]</code> 和 <code>E[T_output]</code>，那么：</p>
   <div class="math-box"><div class="label">工作负载分解</div>
     <div class="katex" data-expr="\lambda_{\text{prefill}} = QPS\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = QPS\cdot E[T_{\text{output}}]" aria-label="\lambda_{\text{prefill}} = QPS\cdot E[T_{\text{prompt}}],\qquad \lambda_{\text{decode}} = QPS\cdot E[T_{\text{output}}]" role="img"></div>
   </div>
   <div class="math-box"><div class="label">活跃 KV 压力</div>    <div class="katex" data-expr="T_{\text{active-kv}} \approx N_{\text{active}}\cdot E[T_{\text{prompt}} + T_{\text{generated-so-far}}]" aria-label="T_{\text{active-kv}} \approx N_{\text{active}}\cdot E[T_{\text{prompt}} + T_{\text{generated-so-far}}]" role="img"></div>
   </div>
-  <p>例如，一个服务有 <code>20 QPS</code>，平均 <code>2,000</code> 个 prompt token，平均 <code>200</code> 个输出 token，每秒大约产生 <code>40k</code> 个 prefill token 和 <code>4k</code> 个 decode token。如果单块 GPU 的实际 decode 吞吐量只有 <code>2.5k output tokens/s</code>，即使 prefill 还有余量，TPOT 和排队时间也会首先恶化。如果长上下文请求将活跃 KV token 推近 GPU 内存限制，服务将表现出吞吐量突然下降、尾部延迟增加和 OOM 错误交替出现。</p>
+  <p>例如，一个服务有 <code>20 QPS</code>，平均 <code>2,000</code> 个 prompt token，平均 <code>200</code> 个输出 token，每秒大约产生 <code>40k</code> 个 prefill token 和 <code>4k</code> 个 decode token。如果单块 GPU 的实际 decode 吞吐量只有 <code>2.5k output tokens/s</code>，即使 prefill 还有余量，TPOT 和排队时间也会首先恶化。如果长上下文请求将活跃 KV token 推近 GPU 内存限制，服务会表现出吞吐量突然下降、尾部延迟增加和 OOM 错误交替出现。</p>
 
   <h4>步骤 3A：P/D 分离需要工作池容量规划</h4>
-  <p>Prefill/decode 分离不仅仅是分离两个术语。当前在 vLLM、SGLang 和 TensorRT-LLM 的实践中，prefill、decode 和 KV 传输被视为不同的资源边界：prefill worker 更偏向计算吞吐量，decode worker 更受内存和带宽限制，KV 缓存必须在它们之间传输。只要 KV 传输或活跃 KV 内存成为瓶颈，分离可能无法改善端到端的 SLO。</p>
-  <p>一份 P/D 池容量计划将这一判断转化为容量方案。它从 <code>QPS</code>、平均 prompt/output token、前缀缓存命中率和活跃请求中估算三种类型的 token 速率（有效 prefill、decode 输出和 KV 传输）；然后将它们与 prefill worker、decode worker、KV 传输链路和 decode 侧 KV 容量进行比较，输出所需的 worker/链路、可能的瓶颈和行动项。</p>
+  <p>Prefill/decode 分离，不能只是把两个术语分开谈。目前 vLLM、SGLang 和 TensorRT-LLM 的实践中，prefill、decode 和 KV 传输被视为不同的资源边界：prefill worker 更偏向计算吞吐量，decode worker 更受内存和带宽限制，KV 缓存必须在它们之间传输。只要 KV 传输或活跃 KV 内存成为瓶颈，分离可能无法改善端到端的 SLO。</p>
+  <p>一份 P/D 池容量计划会把这种判断变成具体的容量方案。它从 <code>QPS</code>、平均 prompt/output token、前缀缓存命中率和活跃请求中估算三种类型的 token 速率（有效 prefill、decode 输出和 KV 传输）；然后把它们与 prefill worker、decode worker、KV 传输链路和 decode 侧 KV 容量做比较，输出所需的 worker/链路、可能的瓶颈和行动项。</p>
   <div class="code-block" data-lang="python">
 plan = pd_pool_capacity_plan(
     workload={
@@ -1554,10 +1554,10 @@ plan = pd_pool_capacity_plan(
     },
 )
 assert plan["overall_pass"]</div>
-  <p>此类计划的结论必须具体：如果 prefill 失败，优先增加 prefill worker、提高前缀缓存命中率或限制长提示词；如果 decode 失败，优先增加 decode worker、减少输出长度或切换到更高带宽的配置；如果 KV 传输失败，说明分离的网络/进程间传输成本正在蚕食收益；如果 KV 内存失败，必须基于活跃 KV token（而不仅仅是请求数）进行准入控制。</p>
+  <p>这类计划的结论必须具体：如果 prefill 失败，优先增加 prefill worker、提高前缀缓存命中率或限制长提示词；如果 decode 失败，优先增加 decode worker、减少输出长度或切换到更高带宽的配置；如果 KV 传输失败，说明分离的网络/进程间传输成本正在蚕食收益；如果 KV 内存失败，必须基于活跃 KV token（而不仅仅是请求数）进行准入控制。</p>
 
   <h4>步骤 4：将症状映射到工程行动</h4>
-  <p>推理压力测试报告中最有价值的部分是归因表：相同的“缓慢”症状，根据指标组合的不同，对应的处理方式完全不同。</p>
+  <p>推理压力测试报告里最有价值的部分是归因表：相同的“缓慢”症状，根据指标组合的不同，对应的处理方式完全不同。</p>
   <div class="table-wrap">
     <table>
       <tr><th>观察到的症状</th><th>更可能的瓶颈</th><th>下一步行动</th></tr>
@@ -1571,19 +1571,19 @@ assert plan["overall_pass"]</div>
   </div>
 
   <h4>课程项目中的报告结构</h4>
-  <p>最终报告不需要大量截图；关键是要让读者能够重现实验并理解结论。推荐结构如下：</p>
+  <p>最终报告不需要大量截图；关键是让读者能重现实验并理解结论。推荐结构如下：</p>
   <ol>
     <li><strong>模型和硬件：</strong>模型版本、量化方法、GPU、内存、推理引擎和关键参数。</li>
     <li><strong>工作负载：</strong>请求到达率、prompt/output 长度分布、是否启用 RAG、缓存命中假设。</li>
     <li><strong>实验矩阵：</strong>并发数、长度、量化方式、batch 参数和缓存配置。</li>
     <li><strong>指标结果：</strong>TTFT/TPOT 分位数、tokens/s/GPU、活跃 KV token、峰值内存、错误率。</li>
-    <li><strong>瓶颈归因：</strong>使用上述容量公式解释哪个曲线首先断裂以及原因。</li>
+    <li><strong>瓶颈归因：</strong>用上述容量公式解释哪个曲线先断裂以及原因。</li>
     <li><strong>工程行动：</strong>列出参数调整或架构修改，并说明它改进了哪个指标以及牺牲了什么。</li>
   </ol>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>推理工程训练不应停留在“我知道如何调用推理 API”。你需要能够将真实服务分解为工作负载、内存、调度、缓存、质量和成本，并使用实验结果来支持容量决策。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>推理工程训练不能停留在“我知道怎么调用推理 API”。你需要能把真实服务分解成工作负载、内存、调度、缓存、质量和成本，然后用实验结果来支撑容量决策。</div></div>
 </section><section class="card" id="s10-13b">
   <h3>10.13B 模型发布包：从训练检查点到可回滚的服务</h3>
-  <p>一个完成的训练检查点还不能直接用于生产环境。训练检查点关注的是优化能否继续；推理发布包关注的是模型能否被服务系统稳定加载、能否按固定模板生成、是否满足质量和延迟目标，以及出问题时能否快速回滚。当训练工程师和推理工程师交接时，模型产物、数据协议和服务配置必须被打包成一个带版本号的完整包。</p>
+  <p>训练检查点做完之后还不能直接拿去上线。训练检查点关心的是优化能不能继续跑；推理发布包关心的是模型能不能被服务系统稳定加载、能不能按固定模板生成、能不能满足质量与延迟要求，以及出问题时能不能快速回滚。训练工程师和推理工程师交接的时候，模型产物、数据协议和服务配置必须打包成一个带版本号的完整包。</p>
 
   <h4>1. 发布包至少需要包含的内容</h4>
   <div class="table-wrap">
@@ -1600,9 +1600,9 @@ assert plan["overall_pass"]</div>
     </table>
   </div>
 
-  <h4>1A. 金丝雀发布不仅仅是离线分数的简单放大</h4>
-  <p>LLM 服务的发布目标通常不是一个单一的二进制文件，而是模型权重、提示词/模板、RAG 索引、重排序器、工具注册表、批处理参数、默认采样值和安全策略的组合。通过离线评估只意味着候选版本值得进入金丝雀测试；是否扩大流量还取决于真实请求下的质量、安全、P95/P99、错误率、成本、监控字段以及回滚准备情况。</p>
-  <p>一份生产环境发布报告会将候选版本和稳定基线放在同一个发布对比表中。它要求候选版本同时满足六类条件：离线质量、安全、SLO、成本、金丝雀设计以及回滚/监控：</p>
+  <h4>1A. 金丝雀发布不只是离线分数的简单放大</h4>
+  <p>LLM 服务的发布目标通常不是一个单一的二进制文件，而是模型权重、提示词/模板、RAG 索引、重排序器、工具注册表、批处理参数、默认采样值和安全策略的组合。离线评估通过只说明候选版本值得进入金丝雀测试；是否扩大流量还要看真实请求下的质量、安全、P95/P99、错误率、成本、监控字段以及回滚准备情况。</p>
+  <p>一份生产环境发布报告会把候选版本和稳定基线放在同一个发布对比表中。候选版本需要同时满足六类条件：离线质量、安全、SLO、成本、金丝雀设计以及回滚/监控：</p>
   <pre><code class="language-python">report = production_rollout_check_report(
     baseline={"pass_rate": 0.82, "safety_pass_rate": 0.96, "cost_per_1k_requests_usd": 1.20},
     candidate={
@@ -1620,11 +1620,11 @@ assert plan["overall_pass"]</div>
     rollout_policy={"min_pass_rate": 0.8, "max_p95_latency_ms": 900, "max_error_rate": 0.01},
 )
 assert report["decision"] == "promote_to_next_stage"</code></pre>
-  <p>如果安全检查失败，应阻止发布；如果质量稍有波动但安全、金丝雀和回滚都准备就绪，可以继续用小流量观察；如果回滚或按版本划分的指标缺失，即使离线分数更高，也不应扩大流量。这一逻辑来自通用的 SRE 金丝雀原则，但 LLM 服务还需要额外考虑回答质量、安全拒绝、JSON/工具/RAG 回归以及 token 成本。</p>
+  <p>如果安全检查失败，应阻止发布；如果质量稍有波动但安全、金丝雀和回滚都准备就绪，可以继续用小流量观察；如果回滚或按版本划分的指标缺失，即使离线分数更高，也不应扩大流量。这个逻辑来自通用的 SRE 金丝雀原则，但 LLM 服务还需要额外考虑回答质量、安全拒绝、JSON/工具/RAG 回归以及 token 成本。</p>
 
   <h4>1B. 上线后过载前的主动降级</h4>
-  <p>发布决策回答的是"候选版本能否扩大流量？"，而运行时过载响应回答的是"当前服务能否继续处理相同流量？"。LLM 服务的过载信号通常不是单一的 CPU 使用率指标，而是队列积压、P95 TTFT、P95 TPOT、KV 缓存使用率、交换、超时/错误、租户配额和长上下文请求的综合降级。等到 5xx 错误上升才采取行动往往为时已晚。</p>
-  <p>一份服务过载响应报告将这些运行时信号放入一个响应表中：</p>
+  <p>发布决策回答的是"候选版本能不能扩大流量？"，运行时过载响应回答的是"当前服务能不能继续处理同样流量？"。LLM 服务的过载信号通常不是单一的 CPU 使用率，而是队列积压、P95 TTFT、P95 TPOT、KV 缓存使用率、交换、超时/错误、租户配额和长上下文请求的综合降级。等 5xx 错误上升再行动往往已经晚了。</p>
+  <p>一份服务过载响应报告把这些运行时信号放在一个响应表中：</p>
   <pre><code class="language-python">report = serving_overload_response_report(
     metrics={
         "waiting_requests": 80,
@@ -1641,10 +1641,10 @@ assert report["decision"] == "promote_to_next_stage"</code></pre>
     tenant_usage=[{"tenant_id": "free-tier", "request_rate": 40, "quota": 10}],
 )
 assert report["decision"] == "load_shed_and_page_owner"</code></pre>
-  <p>如果队列和 TTFT 首先降级，优先进行低优先级速率限制、队列隔离、减少 RAG top-k 或启用缓存响应；如果 TPOT 首先降级，说明解码端饱和，应减少 <code>max_tokens</code>、降低并发度或增加解码 worker；如果 KV 使用率接近满载或发生交换，应立即减少活跃 KV、截断上下文或拒绝长请求；如果某个租户超过配额，应隔离该噪声邻居，而不是让所有用户承担尾部延迟。过载响应不是"等服务变慢后再分析"，而是预先将 SLO、配额和降级动作转化为可执行的运行手册。</p>
+  <p>如果队列和 TTFT 先降级，优先做低优先级速率限制、队列隔离、减少 RAG top-k 或启用缓存响应；如果 TPOT 先降级，说明解码端饱和，应该减少 <code>max_tokens</code>、降低并发度或增加解码 worker；如果 KV 使用率接近满载或发生交换，应立即减少活跃 KV、截断上下文或拒绝长请求；如果某个租户超过配额，应隔离这个噪声邻居，而不是让所有用户承担尾部延迟。过载响应不是"等服务变慢后再分析"，而是预先将 SLO、配额和降级动作转化为可执行的运行手册。</p>
 
   <h4>2. 推理导出与训练恢复是两种不同的检查点</h4>
-  <p>第 7 章的训练检查点应包含优化器、调度器、RNG、数据加载器位置和全局步数；推理发布包通常只需要模型权重、配置、分词器、模板和服务参数。直接将训练检查点塞入推理引擎会引入冗余状态、格式不兼容和加载缓慢；仅保存推理权重则无法在中断后恢复训练。工程上应明确区分：</p>
+  <p>第 7 章的训练检查点应包含优化器、调度器、RNG、数据加载器位置和全局步数；推理发布包通常只需要模型权重、配置、分词器、模板和服务参数。直接把训练检查点塞进推理引擎会引入冗余状态、格式不兼容和加载缓慢；只保存推理权重则无法在中断后恢复训练。工程上应明确区分：</p>
   <ul>
     <li><strong>恢复检查点：</strong>用于继续训练，包含优化器状态、采样器状态和运行配置。</li>
     <li><strong>服务产物：</strong>用于推理部署，强调加载速度、权重格式、分词器/模板和服务参数。</li>
@@ -1652,7 +1652,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   </ul>
 
   <h4>3. 发布前的一致性检查</h4>
-  <p>模型发布不是等待线上流量来发现问题。最低限度的检查应覆盖四类："能否加载、输出是否对齐、行为是否保持、系统能否处理？"</p>
+  <p>模型发布不应该等线上流量来发现问题。最低限度要覆盖四类检查："能不能加载、输出是否对齐、行为是否保持、系统能否处理？"</p>
   <div class="table-wrap">
     <table>
       <tr><th>检查项</th><th>输入</th><th>通过标准</th><th>失败时首要怀疑对象</th></tr>
@@ -1666,20 +1666,20 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   </div>
 
   <h4>操作示例：如何交接一个 LoRA + 量化模型</h4>
-  <p>假设一个团队为中文客服 RAG 系统训练了一个 LoRA 适配器。训练侧报告 DPO 后偏好胜率提升，但推理侧希望使用 INT4 权重量化来降低成本。一个发布流程不应止步于"合并 LoRA 后部署"。一个更严谨的步骤是：</p>
+  <p>假设一个团队为中文客服 RAG 系统训练了一个 LoRA 适配器。训练侧报告 DPO 后偏好胜率提升，但推理侧希望用 INT4 权重量化来降低成本。一个发布流程不应该止于"合并 LoRA 后直接部署"。一个更严谨的步骤是：</p>
   <ol>
     <li>固定基座模型、分词器、对话模板以及 SFT/DPO 适配器的版本。</li>
     <li>决定适配器是离线合并成一个权重，还是在服务端按租户动态加载。</li>
-    <li>如果合并，先在 FP16/BF16 下运行 logit 一致性和行为回归，然后进行量化。</li>
-    <li>量化后，重新运行 PPL、格式准确率、引用一致性和 P95 TTFT/TPOT；不要将未量化的结果外推到量化版本。</li>
-    <li>发布时，保留上一个稳定版本，并确保路由、缓存键和监控标签能够区分两个模型。</li>
+    <li>如果合并，先在 FP16/BF16 下运行 logit 一致性和行为回归，然后做量化。</li>
+    <li>量化后，重新运行 PPL、格式准确率、引用一致性和 P95 TTFT/TPOT；不要把未量化的结果直接外推到量化版本。</li>
+    <li>发布时，保留上一个稳定版本，并确保路由、缓存键和监控标签能区分两个模型。</li>
   </ol>
-  <p>这个示例说明了：训练方法、权重格式、分词器、量化和服务参数共同定义了最终模型。任何变化都可能影响质量、延迟、内存和安全行为，因此发布包必须将它们一起进行版本管理。</p>
+  <p>这个示例说明了：训练方法、权重格式、分词器、量化和服务参数共同定义了最终模型。任何变化都可能影响质量、延迟、内存和安全行为，因此发布包必须把它们一起进行版本管理。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> LLM 工程交付的不是"一个检查点文件"，而是一个可加载、可复现、可压力测试、可金丝雀部署、可回滚的模型发布包。只有当训练指标在这个发布包中得以复现时，它们才能转化为线上能力。</div></div>
 </section><section class="card" id="s10-13c">
   <h3>10.13C Prefill/Decode 分离：将服务拆分为两个资源池</h3>
-  <p>传统推理引擎将 prefill 和 decode 调度在同一组 worker 中。问题在于这两个阶段的资源特征完全不同：prefill 处理整个 prompt，类似于大型矩阵乘法和上下文构建；decode 每步只生成一个 token，类似于长期的 KV cache 内存带宽和调度问题。当长 prompt、RAG、多模态或高并发混合时，prefill 会阻塞交互式请求的 TTFT，而 decode 会因活跃序列过多而填满 KV 内存。工业系统开始将它们拆分为独立的资源池：prefill worker 负责生成初始 KV cache，decode worker 接收 KV cache 并持续生成输出 token。</p>
+  <p>传统推理引擎把 prefill 和 decode 调度到同一组 worker 中。但这两个阶段的资源特征完全不同：prefill 处理整个 prompt，类似大型矩阵乘法和上下文构建；decode 每步只生成一个 token，主要是长期的 KV cache 内存带宽和调度问题。当长 prompt、RAG、多模态或高并发混合时，prefill 会阻塞交互式请求的 TTFT，而 decode 会因活跃序列过多而填满 KV 内存。工业系统开始将它们拆分为独立的资源池：prefill worker 负责生成初始 KV cache，decode worker 接收 KV cache 并持续生成输出 token。</p>
 
   <h4>1. 何时需要分离</h4>
   <div class="table-wrap">
@@ -1691,7 +1691,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
       <tr><td>GPU 利用率高但有效吞吐低</td><td>计算繁忙但未产生满足延迟约束的有效输出</td><td>throughput@latency、丢弃/超时请求比例</td></tr>
     </table>
   </div>
-  <p>这并非“所有服务都应分离”。如果请求较短、并发较低、模型较小或 KV 传输成本较高，统一引擎更简单。只有当 prefill 和 decode 之间的负载差异足够大、网络/进程间 KV 传输可控、调度器能基于 SLO 做准入控制时，分离才有价值。</p>
+  <p>并非所有服务都适合分离。如果请求较短、并发较低、模型较小或 KV 传输成本较高，统一引擎更简单。只有当 prefill 和 decode 之间的负载差异足够大、网络/进程间 KV 传输可控、调度器能基于 SLO 做准入控制时，分离才有价值。</p>
   <p>工业文档也谨慎描述这一点：vLLM 将分离式 prefill 标记为实验性功能，强调它可以分别调节 TTFT 和 ITL，并缓解 prefill 插入 decode 导致的尾部 ITL；但这不是免费的收益，因为系统新增了 KV 传输连接器、跨实例调度和故障恢复等边界。在本课程中，评估这类功能时，应将其与 chunked prefill、prefix cache、DP/TP 配置放在相同的实验矩阵中比较。</p>
 
   <h4>2. KV Cache 传输是一个新的系统边界</h4>
@@ -1726,7 +1726,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong>Prefill/decode 分离将 LLM 服务从“单个模型进程”转变为“带有 KV cache 传输协议的分布式系统”。高级推理工程师必须能够判断拆分是否值得、KV 传输是否成为新瓶颈，以及具有不同 SLO 的请求应如何路由。</div></div>
 </section><section class="card" id="s10-13d">
   <h3>10.13D 集群级推理编排：从引擎功能到服务架构</h3>
-  <p>现代推理栈正在超越“选择一个引擎并调整其批处理大小”的思维。vLLM 提供了实验性的分离式预填充（disaggregated prefilling），使得 TTFT 和 token 间延迟可以单独调优，但其文档警告说这并不会自动提升吞吐量。TensorRT-LLM 将分离式服务描述为独立的上下文池和生成池，并带有 KV 缓存交换和传输重叠。NVIDIA Dynamo 将自己定位为 vLLM、SGLang 和 TensorRT-LLM 等引擎之上的编排层，增加了 KV 感知路由、多级 KV 缓存、基于 SLA 的规划和自动扩缩容。工程教训是：前沿已经从单进程优化转变为对 KV、路由和 SLO 的集群级控制。</p>
+  <p>现代推理栈已经不再只是选一个引擎、调一下批处理大小。vLLM 提供了实验性的分离式预填充（disaggregated prefilling），可以分别优化 TTFT 和 token 间延迟，但文档提醒这不会自动提高吞吐量。TensorRT-LLM 把分离式服务做成了独立的上下文池和生成池，并支持 KV 缓存交换和传输重叠。NVIDIA Dynamo 定位为 vLLM、SGLang 和 TensorRT-LLM 等引擎之上的编排层，增加了 KV 感知路由、多级 KV 缓存、基于 SLA 的规划和自动扩缩容。关键变化是：前沿已经从单进程优化转向对 KV、路由和 SLO 的集群级控制。</p>
 
   <div class="foundation-graph" role="img" aria-label="集群级推理编排图">
     <svg viewBox="0 0 940 340">
@@ -1773,7 +1773,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
     </table>
   </div>
 
-  <p>重点不在于教每个框架的每个命令行标志。课程层面的要求是，学习者能够解释每种方法改变了哪个系统边界。单一引擎功能主要改变进程内的调度。分离式后端增加了 KV 传输和布局兼容性。集群编排器增加了路由、缓存所有权、自动扩缩容和故障恢复。产品策略增加了租户、安全、工具和预算约束。在性能报告中不能将这些边界混淆。</p>
+  <p>重点不是教每个框架的每个命令行标志。课程要求学习者能解释每种方法改变了哪个系统边界。单一引擎功能主要改变进程内的调度。分离式后端增加了 KV 传输和布局兼容性。集群编排器增加了路由、缓存所有权、自动扩缩容和故障恢复。产品策略增加了租户、安全、工具和预算约束。性能报告里不能混淆这些边界。</p>
 
   <h4>高级推理工程师的生产报告模板</h4>
   <div class="table-wrap">
@@ -1786,10 +1786,10 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
       <tr><td>成本与韧性</td><td>GPU 小时数、内存余量、SLA 违反率、故障转移行为、回滚路径</td><td>将基准测试转化为运营决策</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统设计判断：</strong>高级推理工程现在是一个集群控制问题。如果课程答案只说"使用 vLLM"或"启用 P/D 分离"，那是不完整的；必须指定工作负载、拓扑、KV 所有权、延迟分解、质量不变性、成本和回滚证据。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统设计判断：</strong>高级推理工程现在是一个集群控制问题。如果课程答案只是说"使用 vLLM"或"启用 P/D 分离"，那是不完整的；必须指定工作负载、拓扑、KV 所有权、延迟分解、质量不变性、成本和回滚证据。</div></div>
 </section><section class="card" id="s10-13e">
   <h3>10.13E KV感知路由与缓存层次：新的控制面</h3>
-  <p>将预填充和解码分离开来只是第一步。一旦 KV cache 可以在 worker 之间移动，或者超越单个请求而持久存在，主要的工程问题就变成了：<strong>每个 KV 块归谁所有，哪个请求应该被路由到哪个 worker，以及哪个缓存层级值得为之付费？</strong> 当前的生产系统栈都指向了同一个方向。vLLM 为分离式预填充暴露了 KV 传输连接器；SGLang 将 P/D 解耦与路由器集成以及诸如 Mooncake 或 NIXL 这样的传输引擎结合起来；NVIDIA Dynamo 描述了一个 KV 感知路由器、通过 NIXL 的低延迟 KV 传输、一个 KV 块管理器以及 SLO 规划；llm-d 将 Kubernetes 原生推理定位为围绕前缀缓存感知路由、分层 KV 管理、宽专家并行以及 SLO 感知自动扩展。共同的教训是：KV cache 已经成为了一等公民的分布式资源，而不是隐藏在单个引擎内部的实现细节。</p>
+  <p>分离预填充和解码只是第一步。当 KV cache 可以在 worker 间移动，或跨越单个请求持久化时，核心工程问题就变成了：<strong>每个 KV 块归谁所有，哪个请求应该被路由到哪个 worker，以及哪个缓存层级值得为之付费？</strong> 当前的生产系统栈都指向同一个方向。vLLM 为分离式预填充暴露了 KV 传输连接器；SGLang 将 P/D 解耦与路由器集成，并结合 Mooncake 或 NIXL 等传输引擎；NVIDIA Dynamo 描述了一个 KV 感知路由器、通过 NIXL 的低延迟 KV 传输、KV 块管理器以及 SLO 规划；llm-d 将 Kubernetes 原生推理定位为围绕前缀缓存感知路由、分层 KV 管理、宽专家并行以及 SLO 感知自动扩展。核心教训是：KV cache 已经成为一等公民的分布式资源，不再是隐藏在单个引擎内部的实现细节。</p>
 
   <div class="foundation-graph" role="img" aria-label="KV感知的分布式推理控制面">
     <svg viewBox="0 0 940 360">
@@ -1829,7 +1829,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   </div>
 
   <h4>路由器必须知道什么</h4>
-  <p>一个通用的 HTTP 负载均衡器只关注请求数和响应延迟。而一个 LLM 路由器需要更丰富的状态向量，因为两个 HTTP 大小相同的请求可能具有截然不同的 GPU 成本。一个 500 token 的提示词带 4K 输出是解码密集型的；一个 128K 的 RAG 提示词带 128 个输出 token 是预填充密集型的；一个智能体对话可能拥有可复用的前缀、工具状态和租户特定的内存限制。没有这些信号的路由，要么浪费缓存复用，要么造成尾部延迟尖峰。</p>
+  <p>通用 HTTP 负载均衡器只关注请求数和响应延迟。而 LLM 路由器需要更丰富的状态向量，因为两个 HTTP 大小相同的请求，GPU 成本可能完全不同。一个 500 token 的提示词带 4K 输出，属于解码密集型；一个 128K 的 RAG 提示词带 128 个输出 token，属于预填充密集型；智能体对话可能有可复用的前缀、工具状态和租户特定的内存限制。缺乏这些信号的路由，要么浪费缓存复用，要么造成尾部延迟尖峰。</p>
   <div class="table-wrap">
     <table>
       <tr><th>信号</th><th>为何重要</th><th>路由不佳的症状</th></tr>
@@ -1841,7 +1841,7 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
       <tr><td>SLO 等级与优先级</td><td>让实时、批处理和后端请求使用不同的队列</td><td>批处理作业消耗了交互式会话所需的解码插槽</td></tr>
     </table>
   </div>
-  <p>近期面向生产的系统让我们更具体地看到了这个教训：从一个引擎副本扩展到多个副本，可能会破坏使单个副本运行快速的前缀缓存局部性。一个标准的轮询或最少连接负载均衡器可能会将相关的提示词分散到不同的 worker 上；每个 worker 随后会重新计算相同的系统提示词、工具模式、RAG 模板或对话前缀。因此，一份路由报告应比较路由策略，而不仅仅是引擎内核。</p>
+  <p>近期生产系统让我们更清楚地看到这个教训：从一个引擎副本扩展到多个副本，可能会破坏单副本快速运行所依赖的前缀缓存局部性。标准的轮询或最少连接负载均衡器可能将相关提示词分散到不同 worker，每个 worker 随后重新计算相同的系统提示词、工具模式、RAG 模板或对话前缀。因此，路由报告应该比较路由策略，而不仅仅是引擎内核。</p>
   <div class="table-wrap">
     <table>
       <tr><th>路由策略</th><th>最适合</th><th>它忽略了什么</th><th>必须报告</th></tr>
@@ -1852,8 +1852,8 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
     </table>
   </div>
 
-  <h4>缓存层次是一个成本模型，而不仅仅是存储特性</h4>
-  <p>多层 KV cache 之所以有吸引力，是因为 GPU 内存稀缺且昂贵，而 CPU 内存或磁盘可以容纳更大的工作集。但是，每一层都会增加读取延迟、传输带宽限制、驱逐决策以及正确性边界。只有当命中模式与复用价值证明传输成本是合理时，才应使用缓存层。一个被数千个请求复用的长系统提示词是一个好的候选者；一个一次性的私有文档可能不值得卸载，除非它属于一个具有明确隐私控制的多轮会话。</p>
+  <h4>缓存层次是一个成本模型，不只是存储特性</h4>
+  <p>多层 KV cache 吸引人的原因在于 GPU 内存稀缺且昂贵，而 CPU 内存或磁盘能容纳更大的工作集。但每一层都会引入读取延迟、传输带宽限制、驱逐决策以及正确性边界。只有当命中模式与复用价值足以证明传输成本合理时，才应使用缓存层。一个被数千个请求复用的长系统提示词就是好候选；而一次性的私有文档可能不值得卸载，除非它属于有明确隐私控制的多轮会话。</p>
   <div class="table-wrap">
     <table>
       <tr><th>层级</th><th>适合场景</th><th>风险</th><th>决策指标</th></tr>
@@ -1865,12 +1865,12 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
   </div>
 
   <h4>何时 KV 感知基础设施不值得</h4>
-  <p>先进的基础设施应由工作负载证据来证明其合理性。如果服务主要处理短提示词、并发度低、前缀复用少、或者运行在一个简单的单节点部署上，那么一个更简单的、带有前缀缓存和分块预填充的统一引擎可能是更好的工程选择。KV 感知的分布式服务在以下情况变得有价值：存在可衡量的、长提示词、高并发、多轮或重复前缀流量、严格 SLO，以及足够的互连带宽来移动缓存状态而不隐藏新的瓶颈。</p>
+  <p>先进的基础设施需要工作负载证据来证明其合理性。如果服务主要处理短提示词、并发度低、前缀复用少，或运行在简单的单节点部署上，那么一个更简单的、带有前缀缓存和分块预填充的统一引擎可能是更好的工程选择。KV 感知的分布式服务在以下场景中有价值：存在可衡量的长提示词、高并发、多轮或重复前缀流量、严格 SLO，以及足够的互连带宽来移动缓存状态而不掩盖新的瓶颈。</p>
 
   <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>前沿不仅仅是“更大的上下文”或“更多 GPU”。真正的难题是控制 KV 状态驻留在何处、请求如何找到可复用的状态、何时传输或重新计算，以及如何在缓存变得分布式的同时保持 SLO、隐私和回滚保障。</div></div>
 </section><section class="card" id="s10-13f">
   <h3>10.13F 模型路由与级联评估：质量、成本、SLO 与安全性的一次决策</h3>
-  <p>上一节重点讨论了在考虑 KV 局部性和集群状态时，<strong>请求应运行在哪里</strong>。生产服务还需要决定<strong>哪个模型或提供商来回答</strong>。这是一个不同的控制问题。模型路由器通过将简单或低风险的请求发送到更便宜的模型来改变质量/成本边界，将更强的模型留给困难或高风险的请求，并在提供商、区域或模型版本失败时使用回退路径。<a href="https://arxiv.org/abs/2406.18665" target="_blank">RouteLLM</a> 研究了使用偏好数据在强模型和弱模型之间进行路由；<a href="https://arxiv.org/abs/2305.05176" target="_blank">FrugalGPT</a> 将 LLM 级联定义为考虑成本的模型选择；<a href="https://docs.litellm.ai/docs/routing" target="_blank">LiteLLM</a> 展示了网关侧的路由，包括负载均衡、超时、重试、回退和冷却。</p>
+  <p>上一节重点讨论了在考虑 KV 局部性和集群状态时，<strong>请求应运行在哪里</strong>。生产服务还需要决定<strong>哪个模型或提供商来回答</strong>。这是一个不同的控制问题。模型路由器将简单或低风险的请求发送到更便宜的模型，改变质量/成本边界；把更强的模型留给困难或高风险的请求；并在提供商、区域或模型版本失败时使用回退路径。<a href="https://arxiv.org/abs/2406.18665" target="_blank">RouteLLM</a> 研究了使用偏好数据在强模型和弱模型之间进行路由；<a href="https://arxiv.org/abs/2305.05176" target="_blank">FrugalGPT</a> 将 LLM 级联定义为考虑成本的模型选择；<a href="https://docs.litellm.ai/docs/routing" target="_blank">LiteLLM</a> 展示了网关侧的路由，包括负载均衡、超时、重试、回退和冷却。</p>
 
   <div class="foundation-graph" role="img" aria-label="模型路由与级联决策流程">
     <svg viewBox="0 0 940 390">
@@ -1917,20 +1917,20 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
     </svg>
   </div>
 
-  <h4>在设计一个路由器之前，先区分四种路由问题</h4>
-  <p>许多生产故障源于用一个路由标签对应不同的决策。基于任务的路由、基于难度的路由、用于可靠性的路由和用于合规性的路由，它们对证据的要求各不相同。一个低成本的分类器可能足以用于选择摘要模型，但对于决定涉及医疗建议、代码执行或私有数据的请求是否可以跳过最强的安全路径，这还不够。</p>
+  <h4>在设计路由器之前，先区分四种路由问题</h4>
+  <p>许多生产故障源于用一个路由标签代表不同的决策。基于任务的路由、基于难度的路由、用于可靠性的路由和用于合规性的路由，对证据的要求各不相同。一个低成本的分类器可能足以选择摘要模型，但不足以决定涉及医疗建议、代码执行或私有数据的请求能否跳过最强的安全路径。</p>
   <div class="table-wrap">
     <table>
       <tr><th>路由问题</th><th>决策单元</th><th>主要信号</th><th>错误决策的代价</th><th>发布证据</th></tr>
       <tr><td>任务路由</td><td>选择文本、代码、视觉、RAG 或工具路径</td><td>任务分类器、工具需求、模态、schema</td><td>选错模型家族或缺少工具路径</td><td>按任务切片的混淆矩阵、工具选择准确率、schema 通过率</td></tr>
-      <tr><td>难度路由</td><td>选择弱、中或强模型</td><td>路由器分数、不确定性、提示长度、领域、历史失败</td><td>困难请求被弱模型回答</td><td>以全强模型为基线的质量/成本曲线，以及每个切片的回归情况</td></tr>
+      <tr><td>难度路由</td><td>选择弱、中或强模型</td><td>路由器分数、不确定性、提示长度、领域、历史失败</td><td>困难请求由弱模型回答</td><td>以全强模型为基线的质量/成本曲线，以及每个切片的回归情况</td></tr>
       <tr><td>可靠性路由</td><td>重试、回退、区域或提供商</td><td>超时、速率限制、提供商健康度、冷却状态</td><td>重试风暴、重复副作用、不兼容的响应格式</td><td>错误分类、回退成功率、重试预算、幂等性检查</td></tr>
       <tr><td>合规性路由</td><td>选择区域、隐私层级、安全策略或人工审核</td><td>租户、数据类别、管辖区域、权限、风险标签</td><td>数据边界违规或非安全自动化</td><td>策略追踪、租户隔离审计、安全/拒绝及过度拒绝切片</td></tr>
     </table>
   </div>
 
-  <h4>评估必须与强模型基线进行比较</h4>
-  <p>只有当路由器能改善已部署的边界时才有用，而不仅仅是看起来合理。基线应包括：每个请求都使用强模型、最便宜的可用固定模型，以及当前的生产策略（如果存在）。对于每个候选路由器，绘制每个成功任务的质量、安全性、schema 有效性和 SLO 与成本的关系图。报告不应使用良好的全局平均值来掩盖较差的切片：长上下文 RAG、代码执行、法律/医疗/金融领域、非英语流量、结构化输出和工具调用应分别报告。</p>
+  <h4>评估必须与强模型基线对比</h4>
+  <p>只有当路由器能改善已部署的边界时才有用，而不仅仅是看起来合理。基线应包括：每个请求都使用强模型、最便宜的可用固定模型，以及当前的生产策略（如果存在）。对于每个候选路由器，绘制每个成功任务的质量、安全性、schema 有效性和 SLO 与成本的关系图。报告不应靠漂亮的全局平均值掩盖表现较差的切片：长上下文 RAG、代码执行、法律/医疗/金融领域、非英语流量、结构化输出和工具调用应分别报告。</p>
   <div class="table-wrap">
     <table>
       <tr><th>指标系列</th><th>每个请求需要记录的内容</th><th>为什么需要</th></tr>
@@ -1954,15 +1954,15 @@ assert report["decision"] == "load_shed_and_page_owner"</code></pre>
       <tr><td>路由器分数上线后漂移</td><td>流量、提示、模型或评估分布发生了变化</td><td>使用新的带标签样本重新校准阈值并重新训练路由器</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 模型路由是一种服务策略，而不是绕过评估的捷径。一个可部署的路由器必须将选定的模型、路由原因、验证器结果、成本、延迟、安全性切片和回退路径绑定到一条追踪中。否则，服务无法解释为什么选择了更便宜的分支，也无法证明成本节省并非来自无声的质量损失。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>工程要点：</strong> 模型路由是一种服务策略，而不是绕过评估的捷径。一个可部署的路由器必须将选定的模型、路由原因、验证器结果、成本、延迟、安全性切片和回退路径绑定到一条追踪中。否则，服务无法解释为什么选择了更便宜的分支，也无法证明成本节省并非来自未察觉的质量损失。</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.14 Triton -->
 <!-- ================================================================ --><section class="card" id="s10-14">
   <h3>10.14 Triton——GPU内核编程入门</h3>
-  <p>FlashAttention、vLLM内核、量化推理——这些高性能LLM推理系统的底层组件都是用 <strong>Triton</strong> 编写的。Triton 是 OpenAI 开源的一种 GPU 内核编程语言，目标是 <strong>让编写 GPU 内核像编写 Python 一样简单</strong>。</p>
+  <p>FlashAttention、vLLM 内核、量化推理这些高性能 LLM 推理系统的底层组件，都是用 <strong>Triton</strong> 编写的。Triton 是 OpenAI 开源的一种 GPU 内核编程语言，目标是 <strong>让编写 GPU 内核像写 Python 一样简单</strong>。</p>
 
   <h4>为什么选择 Triton？</h4>
-  <p>传统的 GPU 编程使用 CUDA C++，需要手动管理：线程块、共享内存、寄存器分配、内存合并和 bank conflict。Triton 将这些底层优化抽象为 <strong>编译器优化</strong>——你描述“要做什么”，Triton 编译器决定“如何高效地做”。</p>
+  <p>传统的 GPU 编程使用 CUDA C++，需要手动管理线程块、共享内存、寄存器分配、内存合并和 bank conflict。Triton 把这些底层优化交给编译器——你只需描述“要做什么”，编译器决定“如何高效完成”。</p>
   <div class="table-wrap">
     <table>
       <tr><th>维度</th><th>CUDA C++</th><th>Triton</th></tr>
@@ -1991,7 +1991,7 @@ def vector_add(x_ptr, y_ptr, out_ptr, N, BLOCK_SIZE: tl.constexpr):
 
 # Call: automatically tiled and executed in parallel
 vector_add[(N + BLOCK-1)//BLOCK](x, y, out, N, BLOCK=1024)</div>
-  <p>这个内核只有 <strong>5 行有效代码</strong>——但 Triton 将其编译成高度优化的 GPU 机器码，利用所有 SM 并行执行。</p>
+  <p>这个内核只有 <strong>5 行有效代码</strong>，Triton 却能把它编译成高度优化的 GPU 机器码，让所有 SM 并行执行。</p>
 
   <h4>Triton 在 LLM 中的应用</h4>
   <p><strong>FlashAttention 的 Triton 实现</strong> 是其最著名的应用之一。核心技术：</p>
@@ -2000,7 +2000,7 @@ vector_add[(N + BLOCK-1)//BLOCK](x, y, out, N, BLOCK=1024)</div>
     <li><strong>在线 softmax（Online Softmax）：</strong>通过维护 running max 和 running sum，在分块中计算 softmax，无需完整矩阵</li>
     <li><strong>重计算（Recomputation）：</strong>反向传播时不保存 attention 矩阵，而是重新计算</li>
   </ul>
-  <p>FlashAttention 的 Triton 实现约 100 行，而等效的 CUDA 实现约 300 多行。Triton 版本不仅更短，也更容易修改和实验——这就是 Triton 的价值。</p>
+  <p>FlashAttention 的 Triton 实现约 100 行，而等效的 CUDA 实现约 300 多行。Triton 版本不仅更短，也更容易修改和实验。</p>
 
   <h4>动手实践：Triton 矩阵乘法</h4>
   <div class="code-block" data-lang="python">
@@ -2019,13 +2019,13 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
         b = tl.load(B + (k + offs_k)[:, None] * N + offs_n[None, :])  # (BLOCK_K, BLOCK_N)
         acc += tl.dot(a, b)
     tl.store(C + offs_m[:, None] * N + offs_n[None, :], acc)</div>
-  <p>这个内核可以在 NVIDIA A100 上达到约 85-90% 的 cuBLAS 性能——代码仅约 20 行。</p>
+  <p>这个内核在 NVIDIA A100 上能达到约 85-90% 的 cuBLAS 性能，而代码只需约 20 行。</p>
   <div class="info-box tip"><span class="icon">💡</span><div><strong>学习路径：</strong>先理解 GPU 内存层次结构（HBM → L2 → SRAM → Register），然后从 Triton 的 vector_add 开始，逐步过渡到 matmul、FlashAttention。Triton 的 <a href="https://triton-lang.org/main/getting-started/tutorials/01-vector-add.html" target="_blank">官方教程</a> 是一个很好的起点。</div></div>
 </section><!-- ================================================================ -->
 <!-- 10.15 GPU 内存层次结构 -->
 <!-- ================================================================ --><section class="card" id="s10-15">
   <h3>10.15 GPU 内存层次结构——理解为什么需要 Triton</h3>
-  <p>在编写 Triton kernel 之前，你必须先理解 GPU 的内存架构。FlashAttention 的“IO 感知”、Triton 的“分块（tiling）”以及 vLLM 的“内存利用”等概念，都建立在对以下内存层次结构的理解之上：</p>
+  <p>要编写 Triton kernel，必须先理解 GPU 的内存架构。FlashAttention 的“IO 感知”、Triton 的“分块（tiling）”、vLLM 的“内存利用”等概念，都基于以下内存层次结构：</p>
   <div class="table-wrap">
     <table>
       <tr><th>层级</th><th>大小（A100）</th><th>带宽</th><th>延迟</th><th>作用域</th></tr>
@@ -2035,35 +2035,35 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
       <tr><td><strong>寄存器</strong></td><td>256 KB/SM</td><td>~50 TB/s</td><td>~1 周期</td><td>单个线程</td></tr>
     </table>
   </div>
-  <p>关键比例：<strong>SRAM 带宽约为 HBM 的 10 倍，但其容量仅为 HBM 的约 1/400</strong>。因此 GPU 优化的目标是<strong>尽可能在 SRAM 中执行计算，同时尽量减少 HBM 与 SRAM 之间的数据传输</strong>。</p>
+  <p>关键对比：<strong>SRAM 带宽约为 HBM 的 10 倍，但容量仅为 HBM 的约 1/400</strong>。所以 GPU 优化要尽量在 SRAM 中计算，减少 HBM 与 SRAM 之间的数据搬运。</p>
 
-  <h4>一个具体例子：矩阵乘法（GEMM）</h4>
-  <p>假设我们要计算 <span class="katex-inline" data-expr="C = A \times B" aria-label="C = A × B" role="img"></span>，其中 A 和 B 都是 1024×1024 的 FP16 矩阵。</p>
+  <h4>举个例子：矩阵乘法（GEMM）</h4>
+  <p>假设要计算 <span class="katex-inline" data-expr="C = A \times B" aria-label="C = A × B" role="img"></span>，其中 A 和 B 都是 1024×1024 的 FP16 矩阵。</p>
   <ul>
-    <li><strong>朴素实现：</strong>每次计算 C[i,j] 时，都要从 HBM 读取 A[i,:] 和 B[:,j]——总共需要 1024×1024×2048 ≈ <strong>2B</strong> 次 HBM 读取</li>
-    <li><strong>分块（Tiling）：</strong>将 A 和 B 分成小块（例如 128×128）。每个块加载到 SRAM 中并重复使用——HBM 读取减少到约 128×128×... ≈ <strong>16M</strong></li>
+    <li><strong>朴素实现：</strong>每次算 C[i,j] 都要从 HBM 读 A[i,:] 和 B[:,j]——总共需要 1024×1024×2048 ≈ <strong>2B</strong> 次 HBM 读取</li>
+    <li><strong>分块（Tiling）：</strong>把 A 和 B 切成小块（例如 128×128）。每块加载到 SRAM 中重复使用——HBM 读取降到约 128×128×... ≈ <strong>16M</strong></li>
   </ul>
-  <p>分块将 HBM 带宽需求降低了 <strong>100 倍</strong>。Triton 自动处理分块——你只需指定 BLOCK_SIZE 参数。</p>
+  <p>分块把 HBM 带宽需求降了 <strong>100 倍</strong>。Triton 自动处理分块——你只需指定 BLOCK_SIZE 参数。</p>
 
   <h4>GPU Kernel 融合</h4>
-  <p>在 LLM 推理中，一系列逐元素操作（例如 LayerNorm → Dropout → 残差相加）如果写成三个独立的 kernel，每个都会从 HBM 读取并写回 HBM。Kernel 融合<strong>将它们合并为一个 kernel</strong>——数据在整个计算过程中停留在 SRAM/寄存器中，只读/写 HBM 一次。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心原则：瓶颈是内存，而非计算。</strong> GPU 浮点运算能力远超内存带宽。大多数 kernel 的时间并不花在计算上，而是<strong>等待数据从 HBM 搬到 SRAM</strong>。Roofline 模型量化了这一权衡。</div></div>
+  <p>LLM 推理中，如果 LayerNorm → Dropout → 残差相加这些逐元素操作写成三个独立 kernel，每个都要从 HBM 读、写各一次。Kernel 融合把它们合成一个 kernel——数据一直留在 SRAM / 寄存器里，只读/写 HBM 一次。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心原则：瓶颈在内存，不在计算。</strong> GPU 的浮点运算能力远高于内存带宽。大多数 kernel 的时间花在等数据从 HBM 搬到 SRAM，而不是计算本身。Roofline 模型可以量化这种权衡。</div></div>
 
   <h4>快速回顾 Roofline 模型</h4>
   <p>一个 kernel 的“算术强度”= FLOPs / bytes_moved。在 Roofline 图上：</p>
   <ul>
-    <li><strong>低算术强度（例如逐元素操作）：</strong><strong>内存受限（Memory-Bound）</strong> → 优化目标是减少数据移动</li>
-    <li><strong>高算术强度（例如大矩阵乘法）：</strong><strong>计算受限（Compute-Bound）</strong> → 已接近硬件最优</li>
+    <li><strong>低算术强度（如逐元素操作）：</strong><strong>内存受限（Memory-Bound）</strong> → 优化方向是少搬数据</li>
+    <li><strong>高算术强度（如大矩阵乘法）：</strong><strong>计算受限（Compute-Bound）</strong> → 已接近硬件最优</li>
   </ul>
-  <p>这就是 FlashAttention 和 Triton 专注于<strong>减少内存 I/O</strong> 的原因——注意力机制是经典的内存受限操作。</p>
+  <p>所以 FlashAttention 和 Triton 都把重点放在减少内存 I/O 上——注意力是典型的内存受限操作。</p>
 </section><!-- ================================================================ -->
 <!-- 10.16 Engram 外部记忆 -->
 <!-- ================================================================ --><section class="card" id="s10-16">
   <h3>10.16 Engram——受海马体启发的外部记忆案例研究</h3>
-  <p>RAG（10.8）将知识存放在<strong>模型外部</strong>，依赖向量检索进行召回。作为一个前沿设计案例，<strong>Engram</strong>（源自神经科学术语"记忆痕迹"）可以理解为将外部记忆更紧密地集成到模型的前向传播中：它设想了一个受海马体启发的知识库，与骨干网络并行运行，使用哈希索引来降低候选召回成本。这里的复杂度应被理解为哈希桶查找的工程近似，而不是端到端 QA 质量或最坏情况检索复杂度的数学保证。</p>
+  <p>RAG（10.8）将知识存放在<strong>模型外部</strong>，依赖向量检索进行召回。<strong>Engram</strong>（源自神经科学术语"记忆痕迹"）是一种前沿设计，把外部记忆更紧密地集成到模型的前向传播中：它构建一个受海马体启发的知识库，与骨干网络并行运行，使用哈希索引筛选候选键，降低召回成本。这里的复杂度是哈希桶查找的工程近似，并非端到端 QA 质量或最坏情况检索复杂度的数学保证。</p>
 
   <h4>为什么 Engram 式记忆有用</h4>
-  <p>注意力机制的成本随上下文长度增长。将所有事实知识塞进参数或上下文代价高昂。Engram 将可枚举的知识条目放入一个<strong>独立、可更新</strong>的库中，使用<strong>局部敏感哈希（LSH）</strong>进行索引——查询向量通过同一组哈希函数映射到一个桶，命中桶内的条目被视为邻居，从而避免全库扫描。</p>
+  <p>注意力机制的成本随上下文长度增长。把所有事实知识存进参数或上下文，代价太高。Engram 把可枚举的知识条目放在一个<strong>独立、可更新</strong>的库中，用<strong>局部敏感哈希（LSH）</strong>做索引——查询向量经过同一组哈希函数落到某个桶，桶内的条目即为邻居，从而避免全库扫描。</p>
 
   <h4>与 RAG 的区别</h4>
   <div class="table-wrap">
@@ -2075,23 +2075,23 @@ def matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr
       <tr><td>耦合度</td><td>松散（拼接到 prompt 中）</td><td>与前向传播紧密耦合</td></tr>
     </table>
   </div>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>阅读笔记：</strong>本节使用 Engram 来阐述"内置外部记忆 + LSH 检索"这一前沿概念。重点在于理解外部记忆如何改变检索时机、索引结构以及前向传播路径，而非记忆具体的基准测试数值。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>阅读笔记：</strong>本节以 Engram 为例，讲解"内置外部记忆 + LSH 检索"这一概念。重点在于理解外部记忆如何改变检索时机、索引结构和前向传播路径，而非记住具体的基准测试数值。</div></div>
 </section><!-- ================================================================ -->
 <!-- Programming Exercise 6: LSH Retrieval (Engram Style) -->
 <!-- ================================================================ --><section class="card" id="s10-17">
   <h3>10.17 编程练习6：实现LSH桶检索（Engram风格）</h3>
-  <p>Engram风格外部存储的核心动机是使用LSH将“在大内存中查找邻居”从全库扫描减少到在少数候选桶内检索。本练习实现一个最小的<strong>随机超平面LSH</strong>检索器，以理解近似召回率与复杂度的权衡。</p>
+  <p>Engram风格外部存储的核心思路：用LSH把“在大内存中找邻居”从全库扫描改成只查少数候选桶。本练习实现一个最小化的<strong>随机超平面LSH</strong>检索器，用来观察近似召回率和复杂度之间的权衡。</p>
 
   <div class="coding-exercise">
     <h4>练习6：随机超平面LSH检索器</h4>
     <div class="task">
-      <p><strong>任务：</strong>实现<code>LSHMemory</code>，它使用<code>n_bits</code>个随机超平面将向量哈希为二进制桶键，支持<code>add</code>进行写入，以及<code>query</code>进行最近邻召回。</p>
+      <p><strong>任务：</strong>实现<code>LSHMemory</code>，使用<code>n_bits</code>个随机超平面把向量哈希成二进制桶键，支持<code>add</code>写入和<code>query</code>最近邻召回。</p>
       <p><strong>要求：</strong></p>
       <ul>
-        <li>哈希：计算每个向量与<code>n_bits</code>个随机超平面的点积，取符号位，并将它们拼接成一个整数桶键 <span class="katex-inline" data-expr="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i" aria-label="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i" role="img"></span></li>
-        <li><code>add(vec, value)</code>：将<code>value</code>存入对应桶中</li>
-        <li><code>query(vec)</code>：仅在<strong>同一桶</strong>中的条目间执行精确最近邻搜索（常数时间桶查找 + 小规模桶内比较）</li>
-        <li>哈希平面在<code>__init__</code>中固定——同一组函数确保索引和查询时桶分区一致；相似向量更可能（但不保证）落入同一桶中</li>
+        <li>哈希：计算每个向量与<code>n_bits</code>个随机超平面的点积，取符号位，拼成一个整数桶键 <span class="katex-inline" data-expr="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i" aria-label="h(\mathbf{x}) = \sum_i \mathbb{1}[\mathbf{r}_i\cdot\mathbf{x} > 0]\,2^i" role="img"></span></li>
+        <li><code>add(vec, value)</code>：把<code>value</code>存入对应桶中</li>
+        <li><code>query(vec)</code>：只在<strong>同一桶</strong>内的条目之间做精确近邻搜索（常数时间桶查找 + 小规模桶内比较）</li>
+        <li>哈希平面在<code>__init__</code>中固定——同一组函数保证索引和查询用的桶分区一致；相似向量更可能（但不保证）落入同一个桶</li>
       </ul>
       <pre># Expected Usage
 mem = LSHMemory(dim=64, n_bits=8)
@@ -2127,14 +2127,14 @@ class LSHMemory:
         # Exact comparison only within same-bucket candidates (bucket size << N)
         sims = [torch.dot(vec, v) / (vec.norm() * v.norm() + 1e-9) for v, _ in cand]
         return cand[int(torch.tensor(sims).argmax())][1]</div>
-      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么查询时间通常被描述为近似常数：</strong>哈希将整个库划分为许多小桶。一次查询通常只与命中桶中的少数候选者比较，使得平均查询成本远低于全库扫描。代价在于<strong>近似性</strong>：相似向量极有可能（但不保证）落入同一桶中；最坏情况输入、桶不平衡以及多探针搜索都可能影响复杂度。本课程仅将Engram作为“外部内存+LSH检索”的前沿案例研究，并不声称特定基准数据是既定事实。</div>
+      <p style="color:var(--code-text);margin-top:8px;font-size:.82rem">💡 <strong>为什么查询时间常被称为“近似常数”：</strong>哈希把整个库切成了很多小桶。一次查询通常只和命中桶里的少数候选比较，平均查询成本远低于全库扫描。代价是<strong>近似性</strong>：相似向量大概率（但不保证）落入同一桶；最坏情况输入、桶不平衡、多探针搜索都会影响复杂度。本课程只把Engram当作“外部内存+LSH检索”的一个前沿案例，不强调特定基准数据。</div>
     </div>
   </div>
 </section><!-- ================================================================ -->
 <!-- 10.17A 推测性解码服务决策（Speculative Decoding Serving Decision） -->
 <!-- ================================================================ --><section class="card" id="s10-17a">
   <h3>10.17A 投机解码服务决策：何时真正启用</h3>
-  <p>第8章已经将投机解码拆解为草稿 token、接受率、目标模型验证步骤以及粗略加速比。在服务层，决策标准还需要额外考虑四项：目标工作负载的 QPS 和批处理状态、草稿模型/头的额外计算和内存、质量或分布一致性检查，以及在真实 prompt/output 长度分布下的 P95 TPOT。vLLM 文档将其定位为中低 QPS、内存受限工作负载的 token 间延迟优化；SGLang 和 vLLM 等引擎还提供不同的实现，如 EAGLE、MTP、草稿模型以及 n-gram/suffix，其收益必须根据您的具体系统工作负载重新评估。</p>
+  <p>第8章已经将投机解码拆解为草稿 token、接受率、目标模型验证步骤以及粗略加速比。在服务层，决策标准还需要额外考虑四项：目标工作负载的 QPS 和批处理状态、草稿模型/头的额外计算和内存、质量或分布一致性检查，以及在真实 prompt/output 长度分布下的 P95 TPOT。vLLM 文档将其定位为中低 QPS、内存受限工作负载的 token 间延迟优化；SGLang 和 vLLM 等引擎还提供不同的实现，如 EAGLE、MTP、草稿模型以及 n-gram/suffix，但收益需要根据你的具体系统工作负载重新评估。</p>
   <div class="table-wrap">
     <table>
       <tr><th>检查项</th><th>计算方法</th><th>未通过时的操作</th></tr>
@@ -2164,12 +2164,12 @@ report = speculative_serving_check_report(
     thresholds={"min_acceptance_rate": 0.7, "min_speedup": 1.8},
 )
 assert report["decision"] == "enable_speculative_decoding_for_this_workload"</div>
-  <p>这个决策框架将论文或引擎演示中的“看起来有 2 倍加速”的说法，转化为部署前必须回答的问题：在你的 prompt 分布、并发度、采样参数、GPU 内核和服务 SLO 下，这个结论是否依然成立？对于高 QPS、计算受限工作负载或高草稿开销的系统，投机解码可能只会增加复杂性，而不会改善 P95。</p>
+  <p>这个决策框架把论文或引擎演示中“看起来有 2 倍加速”的说法，变成了部署前必须回答的问题：在你的 prompt 分布、并发度、采样参数、GPU 内核和服务 SLO 下，这个结论还成立吗？对于高 QPS、计算受限工作负载或高草稿开销的系统，投机解码可能只会增加复杂性，而不会改善 P95。</p>
 </section><!-- ================================================================ -->
 <!-- 10.18 成本降低路线图 -->
 <!-- ================================================================ --><section class="card" id="s10-18">
   <h3>10.18 推理系统成本缩减地图</h3>
-  <p>本章可以用一张“剪枝”地图来概括：现代大语言模型系统不仅仅依赖更大的GPU，而是在不同层面减少冗余计算、冗余内存和冗余上下文。</p>
+  <p>本章可以用一张“剪枝”地图来概括：现代大语言模型系统并不只是靠更大的GPU，而是在不同层面减少冗余计算、冗余内存和冗余上下文。</p>
   <div class="table-wrap">
     <table>
       <tr><th>压缩目标</th><th>代表性技术</th><th>节省了什么</th><th>主要风险</th></tr>
@@ -2182,7 +2182,7 @@ assert report["decision"] == "enable_speculative_decoding_for_this_workload"</di
       <tr><td><strong>推理步数</strong></td><td>speculative decoding、multi-token prediction、early stop</td><td>目标模型前向次数、平均 TPOT</td><td>接受率不足、draft 模型偏差、质量下降</td></tr>
     </table>
   </div>
-  <p>该表格是课程级别的抽象，不能替代具体技术报告。一个系统是否真正更快、更高效或更准确取决于 prompt 长度分布、batch 大小、并发数、GPU 类型、kernel 实现、量化校准、检索库和评估数据集。Linear attention 和状态空间模型（如 Mamba）为长序列建模提供了另一条路线，但每种方法都改变了内存契约，必须在需要精确召回的任务切片上进行评估。</p>
+  <p>该表格是课程层面的概括，不能替代具体技术报告。一个系统是否真能更快、更高效、更准确，取决于 prompt 长度分布、batch 大小、并发数、GPU 类型、kernel 实现、量化校准、检索库和评估数据集。Linear attention 和状态空间模型（如 Mamba）为长序列建模提供了另一种思路，但每种方法都改变了内存契约，必须在需要精确召回的任务切片上进行评估。</p>
 </section><!-- ================================================================ -->
 <!-- 10.19 Inference Optimization Summary -->
 <!-- ================================================================ --><section class="card" id="s10-19">
@@ -2197,8 +2197,8 @@ assert report["decision"] == "enable_speculative_decoding_for_this_workload"</di
       <tr><td>质量不稳定</td><td>sampling、RAG召回、工具schema、格式约束</td><td>通过率、引用准确率、格式错误及失败类型</td></tr>
     </table>
   </div>
-  <p><strong>推理优化的核心不是记住工具名称，而是定位瓶颈。</strong> KV Cache、量化、RAG、工具使用、推测解码和服务压力测试都应服务于一个问题：在目标负载下，用可复现的指标来解释质量、延迟、吞吐、内存和成本之间的权衡。</p>
-  <div class="info-box key"><span class="icon">🚀</span><div><strong>最终判断：</strong> 具体的引擎、模型版本和基准排名会变化，但prompt长度、KV内存、批处理调度、检索质量、尾部延迟和成本边界将长期存在。</div></div>
+  <p><strong>推理优化的核心是定位瓶颈，不是记住工具名称。</strong> KV Cache、量化、RAG、工具使用、推测解码和服务压力测试都围绕一个问题：在目标负载下，用可复现的指标解释质量、延迟、吞吐、内存和成本之间的权衡。</p>
+  <div class="info-box key"><span class="icon">🚀</span><div><strong>最终判断：</strong> 具体的引擎、模型版本和基准排名会变化，但prompt长度、KV内存、批处理调度、检索质量、尾部延迟和成本边界是长期需要关注的问题。</div></div>
 </section><!-- ================================================================ -->
 <!-- 概念练习 -->
 <!-- ================================================================ -->
@@ -2206,7 +2206,7 @@ assert report["decision"] == "enable_speculative_decoding_for_this_workload"</di
 <!-- 10.20 多模态大语言模型 -->
 <!-- ================================================================ --><section class="card" id="s10-20">
   <h3>10.20 多模态大语言模型——视觉与多模态输入</h3>
-  <p>许多前沿的助手模型已将文本、图像、音频或视频能力集成到单个交互界面中。本课程聚焦于稳定的架构抽象：将非文本模态编码为向量序列，然后将其投影到LLM能够处理的表示空间；具体产品的能力、上下文长度和延迟会随模型和API版本而变化。</p>
+  <p>许多主流助手模型已经将文本、图像、音频或视频能力集成到单个交互界面中。本课程专注于稳定的架构抽象：将非文本模态编码为向量序列，然后投影到LLM可以处理的表示空间；具体产品的能力、上下文长度和延迟会根据模型和API版本发生变化。</p>
 
   <h4>核心架构：视觉编码器 + 投影层 + LLM</h4>
   <ol>
@@ -2234,21 +2234,21 @@ def forward(image, text_prompt):
   </div>
 
   <h4>如何阅读现代多模态模型报告</h4>
-  <p>阅读多模态模型报告时，不要只看总体基准分数。更有价值的问题是：视觉或音频信息以何种形式进入语言模型，输入压缩了多少，哪些任务需要保留局部细节，哪些任务更依赖长上下文或时间顺序。下面四类近期系统提供了不同的答案：</p>
+  <p>阅读多模态模型报告时，不要只看总体基准分。更有价值的问题是：视觉或音频信息以什么形式进入语言模型，输入压缩了多少，哪些任务需要保留局部细节，哪些任务更依赖长上下文或时间顺序。下面四类近期系统提供了不同的答案：</p>
   <div class="table-wrap">
     <table>
       <tr><th>系统方法</th><th>核心思想</th><th>课程需掌握的关键机制</th></tr>
       <tr><td>全能模型</td><td>文本、图像、音频和视频由同一个模型界面处理，强调实时交互和跨模态安全评估</td><td>音频/视觉不是“外部工具结果”，而是输入/输出空间的一部分；安全评估必须覆盖语音、图像和文本之间的迁移</td></tr>
-      <tr><td>长上下文多模态</td><td>将长文档、视频和音频放入超长上下文中，使模型能够在多模态序列中进行检索和推理</td><td>多模态长上下文的关键不仅仅是最大 token 数，更是长输入下的细粒度召回、位置鲁棒性和 prefill 成本</td></tr>
+      <tr><td>长上下文多模态</td><td>将长文档、视频和音频放入超长上下文中，使模型能在多模态序列中检索和推理</td><td>多模态长上下文的关键不仅是最大 token 数，更是长输入下的细粒度召回、位置鲁棒性和 prefill 成本</td></tr>
       <tr><td>动态分辨率 VLM</td><td>以原始分辨率处理图像和视频，使用窗口注意力、动态平铺或时间编码</td><td>高分辨率保留了 OCR、图表和定位的细节，但会改变视觉 token 数量、计算成本和视频事件定位方法</td></tr>
-      <tr><td>开源高效 VLM</td><td>通过数据配比、训练策略、测试时策略和高效推理提升通用多模态能力</td><td>开源模型报告通常更适合学习消融实验：视觉编码器、分辨率、数据混合和推理策略各自贡献了什么？</td></tr>
+      <tr><td>开源高效 VLM</td><td>通过数据配比、训练策略、测试时策略和高效推理提升通用多模态能力</td><td>开源模型报告更适合学习消融实验：视觉编码器、分辨率、数据混合和推理策略各自贡献了什么？</td></tr>
     </table>
   </div>
-  <p>例如，Qwen2.5-VL 报告将动态分辨率、窗口注意力、物体定位、文档/图表解析和绝对时间编码联系起来。重点不在于简单的“图像分辨率越高越好”，而是视觉细节、计算开销和时间定位如何共同进入模型。阅读此类报告时，将机制分解为三个问题：视觉 token 是如何生成的，哪些任务需要保留局部像素细节，以及视频/长文档的时间或位置编码如何影响 prefill 成本？</p>
-  <p>这些方法并非互斥。一个生产系统可能使用强大的多模态模型进行开放式视觉问答，使用 OCR 优先的流程处理发票和合同，使用轻量级视觉模型进行路由或预过滤，然后将关键文本和少量图像裁剪块传递给长上下文模型。工程师必须将产品需求转化为“哪些视觉信息必须保留，哪些可以丢弃，以及哪一步成本最高”。</p>
+  <p>例如，Qwen2.5-VL 报告将动态分辨率、窗口注意力、物体定位、文档/图表解析和绝对时间编码联系起来。重点不在于简单的“图像分辨率越高越好”，而是视觉细节、计算开销和时间定位如何共同进入模型。阅读这类报告时，把机制分解为三个问题：视觉 token 如何生成，哪些任务需要保留局部像素细节，视频/长文档的时间或位置编码如何影响 prefill 成本。</p>
+  <p>这些方法并非互斥。一个生产系统可能使用强大的多模态模型做开放式视觉问答，使用 OCR 优先的流程处理发票和合同，使用轻量级视觉模型做路由或预过滤，然后将关键文本和少量图像裁剪块传给长上下文模型。工程师必须把产品需求转化为“哪些视觉信息必须保留，哪些可以丢弃，哪一步成本最高”。</p>
 
   <h4>架构家族：视觉信息何时进入语言模型</h4>
-  <p>多模态 LLM 的核心区别不仅在于“使用哪个视觉编码器”，更在于序列建模时视觉信息以何种形式进入 LLM。这一选择会改变训练目标、推理成本和可扩展性。</p>
+  <p>多模态 LLM 的核心区别不在于“使用哪个视觉编码器”，而在于序列建模时视觉信息以何种形式进入 LLM。这个选择会改变训练目标、推理成本和可扩展性。</p>
   <div class="table-wrap">
     <table>
       <tr><th>架构</th><th>信息流</th><th>优点</th><th>成本与局限</th></tr>
@@ -2256,26 +2256,26 @@ def forward(image, text_prompt):
       <tr><td>查询重采样器 / Q-Former</td><td>使用固定数量的查询从视觉特征中提取压缩表示</td><td>控制视觉 token 数量，适合多图像或高分辨率输入</td><td>压缩会丢失细节；OCR、图表和定位任务可能受影响</td></tr>
       <tr><td>交叉注意力适配器</td><td>部分 LLM 层通过交叉注意力读取视觉 K/V</td><td>文本序列长度无需直接容纳所有视觉 token</td><td>修改模型结构；服务内核和缓存管理变得更复杂</td></tr>
       <tr><td>早期融合统一 token</td><td>图像块、文本 token 或其他模态 token 进入同一个自回归序列</td><td>统一建模，适合混合模态生成和跨模态上下文</td><td>训练成本高；数据配比、tokenizer 和输出空间更难设计</td></tr>
-      <tr><td>工具/OCR 优先混合架构</td><td>首先使用 OCR、布局解析器或检测器将视觉内容转换为结构化文本，然后输入给 LLM</td><td>成本低、可解释，适合文档提取和引用</td><td>依赖外部工具；图像关系、布局和非文本视觉信息可能丢失</td></tr>
+      <tr><td>工具/OCR 优先混合架构</td><td>先使用 OCR、布局解析器或检测器将视觉内容转换为结构化文本，再输入给 LLM</td><td>成本低、可解释，适合文档提取和引用</td><td>依赖外部工具；图像关系、布局和非文本视觉信息可能丢失</td></tr>
     </table>
   </div>
-  <p>如果任务是“观察自然图像并回答主体之间的关系”，编码器 + 投影器通常就足够了；如果任务是“阅读十页扫描合同并提取金额”，OCR 优先或查询重采样器更易于控制成本；如果任务是“交错的文本-图像生成”或“图像也是生成目标”，则需要更统一的模态 token 设计。</p>
+  <p>如果任务是“观察自然图像并回答主体之间的关系”，编码器 + 投影器通常就够了；如果任务是“阅读十页扫描合同并提取金额”，OCR 优先或查询重采样器更易于控制成本；如果任务是“交错的文本-图像生成”或“图像也是生成目标”，则需要更统一的模态 token 设计。</p>
 
   <h4>两阶段训练</h4>
-  <p><strong>阶段 1：</strong>冻结 LLM 和视觉编码器，仅训练投影层——使用图像-文本配对数据，教会投影层将视觉特征“翻译”成 LLM 能理解的语言。</p>
+  <p><strong>阶段 1：</strong>冻结 LLM 和视觉编码器，只训练投影层——使用图像-文本配对数据，教会投影层把视觉特征“翻译”成 LLM 能理解的语言。</p>
   <p><strong>阶段 2：</strong>解冻 LLM，使用多模态指令数据（图像-文本问答、OCR、图表理解）进行微调——教会模型根据指令关注图像的特定区域。</p>
 
-  <h4>训练目标：对齐、指令遵循和任务能力并非一回事</h4>
-  <p>多模态训练常被概括为“图像-文本对齐”，但从工程角度看，至少存在三类目标，不能用一个指标解释：</p>
+  <h4>训练目标：对齐、指令遵循和任务能力不是一回事</h4>
+  <p>多模态训练常被概括为“图像-文本对齐”，但从工程角度看，至少有三类目标，不能用同一个指标解释：</p>
   <ul>
-    <li><strong>表示对齐：</strong>图像-文本配对或描述数据使视觉特征落入 LLM 可读的表示空间，通常用于训练投影器或重采样器。</li>
+    <li><strong>表示对齐：</strong>图像-文本配对或描述数据使视觉特征落入 LLM 可读的表示空间，常用于训练投影器或重采样器。</li>
     <li><strong>指令遵循：</strong>VQA、对话、OCR、图表问答等，教会模型根据用户问题选择视觉信息。</li>
-    <li><strong>偏好与安全：</strong>多模态拒绝、隐私、人脸、医学图像和不确定性表达需要单独的数据和评估；不能从通用 VQA 分数外推。</li>
+    <li><strong>偏好与安全：</strong>多模态拒绝、隐私、人脸、医学图像和不确定性表达需要单独的数据和评估，不能从通用 VQA 分数外推。</li>
   </ul>
-  <p>冻结策略也必须与数据规模匹配：仅训练投影器成本低且保留 LLM 语言能力，但视觉任务的性能上限有限；解冻 LLM 或视觉编码器可以提升跨模态能力，但更易遗忘原始语言能力，需要更谨慎的学习率、数据混合和任务采样。</p>
+  <p>冻结策略也必须与数据规模匹配：只训练投影器成本低且保留 LLM 的语言能力，但视觉任务的性能上限有限；解冻 LLM 或视觉编码器可以提升跨模态能力，但更容易遗忘原始语言能力，需要更谨慎的学习率、数据混合和任务采样。</p>
 
   <h4>多模态数据混合：不只是把图像和文本拼在一起</h4>
-  <p>多模态能力来源于任务分布，而非“模型看过了图像”这个事实。文档理解模型需要大量 OCR、表格、布局和字段提取样本；视觉接地模型需要边界框、点或区域描述；视频模型需要帧序列、时间戳、事件边界和动作序列；GUI 智能体还需要截图、控件位置、动作历史和执行结果。</p>
+  <p>多模态能力来源于任务分布，而不是“模型看过了图像”这个事实。文档理解模型需要大量 OCR、表格、布局和字段提取样本；视觉接地模型需要边界框、点或区域描述；视频模型需要帧序列、时间戳、事件边界和动作序列；GUI 智能体还需要截图、控件位置、动作历史和执行结果。</p>
   <div class="table-wrap">
     <table>
       <tr><th>数据类型</th><th>训练信号</th><th>主要学习内容</th><th>缺失时会怎样</th></tr>
@@ -2283,25 +2283,25 @@ def forward(image, text_prompt):
       <tr><td>OCR / 文档解析</td><td>字符、字段、表格结构、布局层次</td><td>将像素中的文字和布局转换为可引用的信息</td><td>发票、合同、论文图表和截图容易出现幻觉</td></tr>
       <tr><td>图表 / 示意图问答</td><td>坐标轴、图例、单位、趋势、数值、误差</td><td>将视觉几何与数值推理联系起来</td><td>模型可能正确读取文字，但算错比例、单位或趋势</td></tr>
       <tr><td>接地 / 检测</td><td>边界框、点、掩码或区域-文本对齐</td><td>使答案能够回溯到图像中的位置</td><td>答案可能正确，但证据区域或点击位置错误</td></tr>
-      <tr><td>视频 / 音频序列</td><td>时间戳、事件顺序、说话人/音频片段和动作变化</td><td>理解时间结构和跨帧依赖关系</td><td>会将静态帧描述当作视频理解，遗漏短期事件</td></tr>
+      <tr><td>视频 / 音频序列</td><td>时间戳、事件顺序、说话人/音频片段和动作变化</td><td>理解时间结构和跨帧依赖关系</td><td>会把静态帧描述当作视频理解，遗漏短期事件</td></tr>
       <tr><td>安全 / 隐私多模态数据</td><td>拒绝、敏感属性、不确定性表达和受限场景</td><td>将文本安全策略迁移到图像、语音和视频</td><td>可能从图像或音频中做出不恰当的身份、属性或高风险推断</td></tr>
     </table>
   </div>
-  <p>因此，看到一个模型在 VQA 或通用多模态基准测试中表现良好，只说明它在那类问题上很强，并不意味着它适用于发票提取、医学影像解读、屏幕操作或视频监控。一个更强的工程习惯是从任务推断数据和架构需求，而不是死记硬背模型名称。</p>
+  <p>因此，一个模型在 VQA 或通用多模态基准测试中表现良好，只说明它在那类问题上很强，不代表它适用于发票提取、医学影像解读、屏幕操作或视频监控。一个更实用的工程习惯是从任务推断数据和架构需求，而不是死记硬背模型名称。</p>
 
   <h4>工作示例：从图像分辨率推断视觉 token 数量</h4>
-  <p>假设 ViT 的 patch 大小为 <code>14</code>，输入图像被调整为 <code>336 × 336</code>。patch 网格大约是 <code>24 × 24</code>，即 <code>576</code> 个视觉 patch token；如果添加了全局 CLS token，则视觉编码器输出约 <code>577</code> 个向量。如果使用了 <code>4</code> 个高分辨率裁剪块，每个裁剪块产生 <code>576</code> 个 patch token，并且没有使用重采样器，则视觉 token 数量将接近 <code>2304</code>。</p>
+  <p>假设 ViT 的 patch 大小为 <code>14</code>，输入图像被调整为 <code>336 × 336</code>。patch 网格大约是 <code>24 × 24</code>，即 <code>576</code> 个视觉 patch token；如果添加了全局 CLS token，视觉编码器输出约 <code>577</code> 个向量。如果使用了 <code>4</code> 个高分辨率裁剪块，每个裁剪块产生 <code>576</code> 个 patch token，且没有使用重采样器，视觉 token 数量将接近 <code>2304</code>。</p>
   <div class="math-box"><div class="label">粗略视觉 Token 估算</div>    <span class="katex-block" data-expr="T_{\text{vision}} \approx N_{\text{crop}}\cdot \left\lceil \frac{H}{P} \right\rceil \cdot \left\lceil \frac{W}{P} \right\rceil" aria-label="T_vision 近似等于 N_crop 乘以 H/P 向上取整乘以 W/P 向上取整" role="img"></span>
   </div>
-  <p>这就是为什么高分辨率有助于 OCR 和图表，但会显著增加 TTFT：在纯解码器服务中，视觉 token 通常进入 prefill 序列，像文本 token 一样参与注意力计算并占用 KV Cache。如果模型使用查询重采样器将每张图像压缩为 <code>64</code> 个视觉 token，成本会大幅下降，但小文字、表格单元格和局部对象可能会丢失。</p>
+  <p>这就是高分辨率有助于 OCR 和图表，但会显著增加 TTFT 的原因：在纯解码器服务中，视觉 token 通常进入 prefill 序列，像文本 token 一样参与注意力计算并占用 KV Cache。如果模型使用查询重采样器把每张图像压缩到 <code>64</code> 个视觉 token，成本会大幅下降，但小文字、表格单元格和局部对象可能会丢失。</p>
 
   <h4>音频与视频</h4>
-  <p>相同的“编码器 + 投影 + LLM”模式也适用于音频（例如，语音编码器 → LLM）和视频（帧采样 → 视觉编码器 → 时间池化 → LLM）。实时语音系统的端到端延迟取决于音频分块、编码器、LLM 解码、网络和播放缓冲区；课程报告应记录测量的环境，而不是引用脱离配置的固定毫秒数。</p>
-  <p>视频和语音也引入了时间轴问题。视频帧采样过于稀疏会遗漏短期事件；采样过于密集会填满上下文。语音分块过短会丢失上下文；过长则增加首包延迟。现代多模态模型报告中常见的技术，如绝对时间编码、动态 FPS 采样、音频分块和事件定位，本质上都在回答同一个问题：如何让模型看到足够精细的时间细节，同时避免将所有帧或音频片段原封不动地塞入 LLM。</p>
+  <p>相同的“编码器 + 投影 + LLM”模式也适用于音频（如语音编码器 → LLM）和视频（帧采样 → 视觉编码器 → 时间池化 → LLM）。实时语音系统的端到端延迟取决于音频分块、编码器、LLM 解码、网络和播放缓冲区；课程报告应记录测量的环境，而不是引用脱离配置的固定毫秒数。</p>
+  <p>视频和语音也引入了时间轴问题。视频帧采样过于稀疏会遗漏短期事件；采样过于密集会填满上下文。语音分块过短会丢失上下文；过长则增加首包延迟。现代多模态模型报告中常见的技术，如绝对时间编码、动态 FPS 采样、音频分块和事件定位，本质上都在回答同一个问题：如何让模型看到足够精细的时间细节，同时避免把所有帧或音频片段原封不动地塞入 LLM。</p>
 
   <h4>多模态成本与失败模式</h4>
-  <p>一张图像不是“免费的额外信息”。一张图像会变成几十到几千个视觉 token；分辨率越高，patch 越细，裁剪块越多，LLM 看到的序列就越长，prefill 延迟和 KV Cache 成本也越高。多张图像、多页 PDF 或视频帧会进一步放大这个问题。</p>
-  <p>在工程中，多模态输入应统一计入 token 预算，而不仅仅是记录文本 prompt 长度。如果视觉 token 已被投影到解码器的输入序列中，则一个请求的 prefill 序列长度可以近似为：</p>
+  <p>一张图像不是“免费的额外信息”。一张图像会变成几十到几千个视觉 token；分辨率越高、patch 越细、裁剪块越多，LLM 看到的序列就越长，prefill 延迟和 KV Cache 成本也越高。多张图像、多页 PDF 或视频帧会进一步放大这个问题。</p>
+  <p>在工程中，多模态输入应统一计入 token 预算，而不仅仅是记录文本 prompt 长度。如果视觉 token 已被投影到解码器的输入序列中，一个请求的 prefill 序列长度可以近似为：</p>
   <div class="math-box"><div class="label">公式 10.9 多模态 Prefill Token 预算</div>
     <span class="katex-block" data-expr="T_{\text{prefill}} = T_{\text{text}} + N_{\text{image}}T_{\text{vision}} + N_{\text{page}}T_{\text{page}} + N_{\text{frame}}T_{\text{frame}} + T_{\text{retrieved}} + T_{\text{tool}}" aria-label="T_prefill = T_text + N_image T_vision + N_page T_page + N_frame T_frame + T_retrieved + T_tool" role="img"></span>
   </div>
@@ -2319,11 +2319,11 @@ def forward(image, text_prompt):
       <tr><td>视觉嵌入 / 前缀缓存</td><td>重复图像或固定文档可以复用前缀计算</td><td>缓存失效、权限隔离和内容更新问题</td><td>缓存命中率、节省的 prefill token 数、租户隔离策略</td></tr>
     </table>
   </div>
-  <p>在将多模态请求集成到在线服务时，调度器不应仅根据“请求数量”执行准入控制。更稳健的做法是结合活跃文本 token、活跃视觉 token、预期输出 token 和租户预算进行限流。图像预处理、视觉编码器、LLM prefill 和解码的延迟也应分别计时。否则，一个简短的文本问题配上 10 页 PDF 可能只显示为“一个请求”，但实际上消耗的 GPU 内存和 prefill 时间与长上下文批次相当。</p>
+  <p>在把多模态请求集成到在线服务时，调度器不应仅根据“请求数量”做准入控制。更稳健的做法是结合活跃文本 token、活跃视觉 token、预期输出 token 和租户预算进行限流。图像预处理、视觉编码器、LLM prefill 和解码的延迟也应分别计时。否则，一个简短的文本问题配上 10 页 PDF 可能只显示为“一个请求”，但实际上消耗的 GPU 内存和 prefill 时间与长上下文批次相当。</p>
   <div class="table-wrap">
     <table>
       <tr><th>任务</th><th>关键能力</th><th>常见失败</th><th>评估方法</th></tr>
-      <tr><td>图像问答</td><td>识别主体、属性、关系</td><td>将常识补全当作视觉事实</td><td>VQA 准确率、人工错误分类</td></tr>
+      <tr><td>图像问答</td><td>识别主体、属性、关系</td><td>把常识补全当作视觉事实</td><td>VQA 准确率、人工错误分类</td></tr>
       <tr><td>OCR / 文档理解</td><td>读取文字、表格和布局</td><td>少字、错列、单位或小数点错误</td><td>字符/字段准确率、表格结构匹配</td></tr>
       <tr><td>图表理解</td><td>坐标轴、图例、趋势和数值估计</td><td>误读坐标轴、忽略单位、过度精确</td><td>数值误差、趋势判断准确率</td></tr>
       <tr><td>视觉接地</td><td>将答案绑定到图像中的区域</td><td>答案正确但位置依据错误</td><td>边界框 IoU、指向准确率</td></tr>
@@ -2332,11 +2332,11 @@ def forward(image, text_prompt):
   </div>
 
   <h4>如何编写多模态实验</h4>
-  <p>多模态报告至少应分别描述输入设置和模型输出：图像分辨率、裁剪策略、视觉 token 数量、prompt、最大输出 token、是否允许使用 OCR 工具、是否允许多轮追问。质量指标也应根据任务细分：VQA 不能替代 OCR，OCR 不能替代图表数值推理，图表推理也不能证明模型拥有可靠的视觉接地能力。</p>
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心见解：</strong>LLM 可以被视为一个强大的序列建模主干。只要能将其它模态编码成合适的 token 或向量序列，并且训练数据提供跨模态对齐信号，模型就能学会在视觉、音频、代码等输入上执行任务。这并不意味着任何模态本质上等同于自然语言。</div></div>
+  <p>多模态报告至少需要分别描述输入设置和模型输出：图像分辨率、裁剪策略、视觉 token 数量、prompt、最大输出 token、是否允许使用 OCR 工具、是否允许多轮追问。质量指标也应根据任务细分：VQA 不能替代 OCR，OCR 不能替代图表数值推理，图表推理也不能证明模型拥有可靠的视觉接地能力。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>核心见解：</strong>LLM 可以作为一个强大的序列建模主干。只要能把其他模态编码成合适的 token 或向量序列，并且训练数据提供跨模态对齐信号，模型就能学会在视觉、音频、代码等输入上执行任务。这并不意味着任何模态本质上等同于自然语言。</div></div>
 </section><section class="card" id="s10-20a">
   <h3>10.20A 实时多模态与长上下文服务</h3>
-  <p>近期的产品 API 让多模态服务看起来像是一个统一的接口：文本、图像、音频、视频、工具和长上下文都可以进入同一个模型调用。从工程角度而言，它们涉及截然不同的延迟和状态问题。Gemini 长上下文指南描述了 100 万以上的 token 上下文以及视频和音频等多模态输入，同时也指出长上下文仍然存在成本和检索限制。OpenAI 的 GPT-4.1 公告同样强调了 100 万 token 上下文以及多针/多跳评估，而不仅仅是单针检索。OpenAI Realtime 和 Gemini Live 等实时 API 会保持一个打开的会话以实现低延迟的音频/视频交互，这使服务问题从“一次请求返回一个答案”变为“带有中断、部分输出、工具调用和音频播放的有状态流”。</p>
+  <p>近期的产品 API 让多模态服务看起来像一个统一的接口：文本、图像、音频、视频、工具和长上下文都可以进入同一个模型调用。但从工程上看，它们涉及不同的延迟和状态问题。Gemini 长上下文指南描述了 100 万以上的 token 上下文以及视频和音频等多模态输入，同时指出长上下文仍然存在成本和检索限制。OpenAI 的 GPT-4.1 公告也强调了 100 万 token 上下文以及多针/多跳评估，而不只是单针检索。OpenAI Realtime 和 Gemini Live 等实时 API 会保持一个打开的会话以实现低延迟的音频/视频交互，这让服务问题从“一次请求返回一个答案”变为“带有中断、部分输出、工具调用和音频播放的有状态流”。</p>
 
   <div class="foundation-graph" role="img" aria-label="实时多模态服务流水线">
     <svg viewBox="0 0 940 330">
@@ -2375,15 +2375,15 @@ def forward(image, text_prompt):
   <div class="table-wrap">
     <table>
       <tr><th>边界</th><th>变化内容</th><th>衡量指标</th><th>常见故障</th></tr>
-      <tr><td>流式输入</td><td>音频/视频以块的形式到达，而非一个完整的提示</td><td>块大小、VAD 错误、帧采样率、丢帧</td><td>模型在获得足够上下文之前就回答，或遗漏短事件</td></tr>
+      <tr><td>流式输入</td><td>音频/视频以块形式到达，而不是一个完整的提示</td><td>块大小、VAD 错误、帧采样率、丢帧</td><td>模型在获得足够上下文前就回答，或漏掉短事件</td></tr>
       <tr><td>会话记忆</td><td>服务器保持一个打开的会话，状态不断变化</td><td>会话持续时间、缓存上下文、工具状态、记忆重置行为</td><td>旧轮次或工具结果泄露到后续决策中</td></tr>
-      <tr><td>中断与抢话</td><td>用户可能在模型生成音频时说话</td><td>中断延迟、取消正确性、部分输出处理</td><td>助手在用户纠正后继续说话，或重复过时的音频</td></tr>
+      <tr><td>中断与抢话</td><td>用户可能在模型生成音频时说话</td><td>中断延迟、取消正确性、部分输出处理</td><td>助手在用户纠正后继续说，或重复过时的音频</td></tr>
       <tr><td>实时工具使用</td><td>模型可以在保持实时对话的同时调用工具</td><td>工具延迟、超时策略、用户确认、回滚路径</td><td>工具调用阻塞音频、违反权限，或在上下文变化后执行</td></tr>
     </table>
   </div>
 
   <h4>长上下文与实时是不同的优化</h4>
-  <p>长上下文增加了单次请求中模型能看到的内容；实时会话通过保持流式连接和会话状态来降低交互延迟。这两个特性可以结合，但它们解决不同的问题并产生不同的瓶颈。一个 100 万 token 的文档问答任务主要受限于预填充、上下文缓存、召回质量和成本。一个语音助手主要受限于音频分块、话轮检测、首次音频延迟、中断处理和工具延迟。一个视频会议助手可能同时包含两者：长上下文的转录/视频记忆加上低延迟的用户交互。</p>
+  <p>长上下文增加了单次请求中模型能看到的内容；实时会话靠保持流式连接和会话状态来降低交互延迟。这两个特性可以结合，但解决不同的问题，产生不同的瓶颈。一个 100 万 token 的文档问答任务主要受限于预填充、上下文缓存、召回质量和成本。一个语音助手主要受限于音频分块、话轮检测、首次音频延迟、中断处理和工具延迟。一个视频会议助手则可能同时包含两者：长上下文的转录/视频记忆加上低延迟的用户交互。</p>
 
   <div class="table-wrap">
     <table>
@@ -2396,13 +2396,13 @@ def forward(image, text_prompt):
   </div>
 
   <h4>长上下文多模态系统评估矩阵</h4>
-  <p>不要仅用通用 VQA 分数或单针测试来评估长上下文多模态系统。一份可信的发布报告应涵盖：文本检索、多针消歧、跨文档推理、OCR/文档字段、图表数值推理、视频事件定位、音频转录/理解、工具/状态正确性以及安全切片。还应记录输入 token 数、视觉/音频 token 数、上下文缓存命中率、TTFT、首次音频延迟、P95 端到端延迟以及每个成功任务的成本。</p>
+  <p>评估长上下文多模态系统时，不要只用通用 VQA 分数或单针测试。一份可信的发布报告应涵盖：文本检索、多针消歧、跨文档推理、OCR/文档字段、图表数值推理、视频事件定位、音频转录/理解、工具/状态正确性以及安全切片。还应记录输入 token 数、视觉/音频 token 数、上下文缓存命中率、TTFT、首次音频延迟、P95 端到端延迟以及每个成功任务的成本。</p>
 
-  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>“支持图像、音频、视频和100万 token”并不是一个工程结论。资深推理工程师必须将模态和上下文特征转化为 token 预算、状态边界、延迟分解、缓存策略、质量切片和回滚规则。</div></div>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>系统判断：</strong>“支持图像、音频、视频和100万 token”并不是一个工程结论。资深推理工程师必须把模态和上下文特征拆解为 Token 预算、状态边界、延迟分解、缓存策略、质量切片和回滚规则。</div></div>
 </section><section class="card">
   <h3>概念练习与巩固</h3>
 
-  <div class="exercise" data-answer="1" data-explain="KV Cache 将前序步骤计算出的 K 和 V 矩阵缓存到 GPU 内存中。解码时，每一步只需计算新 token 的 Q、K、V 并与缓存做注意力计算，避免了重复计算完整的前缀。但需要额外的 GPU 内存存储缓存的 K/V。">
+  <div class="exercise" data-answer="1" data-explain="KV Cache 把之前步骤算出的 K 矩阵和 V 矩阵存到 GPU 内存。解码时，每步只需要算当前 token 的 Q、K、V，再和缓存做注意力计算，不用重复算完整的前缀。代价是额外占用 GPU 内存。">
     <h4>练习 1：KV Cache 的核心功能是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q1" value="0"> A. 减少模型参数数量</label>
@@ -2415,7 +2415,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="解码阶段每步只处理 1 个 token，计算量极小，GPU 大部分时间在等待数据从显存传输到计算单元。这是典型的 memory-bound 场景——瓶颈是带宽而非计算量。预填充阶段则是 compute-bound。">
+  <div class="exercise" data-answer="2" data-explain="解码阶段每步只算一个 token，计算量很小，GPU 大部分时间都在等数据从显存传到计算单元。这是典型的 memory-bound 场景——瓶颈是带宽，不是计算量。预填充阶段则是 compute-bound。">
     <h4>练习 2：为什么解码阶段被称为“带宽密集型”（memory-bound）？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q2" value="0"> A. 因为需要从网络下载模型参数</label>
@@ -2428,7 +2428,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="0" data-explain="FlashAttention 的核心是 IO-aware tiling 算法：将 QKV 分块后在 SRAM 中计算，避免将中间矩阵 S 和 P 写出到 HBM。反向传播时用重计算代替存储注意力权重。">
+  <div class="exercise" data-answer="0" data-explain="FlashAttention 的关键是 IO-aware tiling 算法：把 QKV 分块后在 SRAM 里算，避免把中间的 S 矩阵和 P 矩阵写到 HBM。反向传播时用重计算代替存注意力权重。">
     <h4>练习 3：FlashAttention 实现加速的关键机制是什么？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q3" value="0"> A. 将 QKV 分块后在 SRAM 中计算，避免对 HBM 读写中间矩阵</label>
@@ -2441,7 +2441,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="RAG 主要用于缓解 LLM 的知识局限性、知识过时以及部分幻觉问题。它从外部知识库检索相关信息注入 prompt，但检索质量、上下文压缩和答案忠实性仍需评估。">
+  <div class="exercise" data-answer="1" data-explain="RAG 主要用来缓解 LLM 的知识局限、知识过时和部分幻觉问题。它从外部知识库检索相关信息注入 prompt，但检索质量、上下文压缩和答案忠实性仍需评估。">
     <h4>练习 4：RAG（检索增强生成）解决了 LLM 的什么问题？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q4" value="0"> A. 推理速度慢</label>
@@ -2454,7 +2454,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="这是推理系统通用的成本映射图：GQA/MLA/prefix cache 主要压缩历史状态或重复的 prefill；MoE/量化主要减少参数访问或内存带宽；稀疏/压缩注意力主要减少长上下文的注意力范围。实际收益仍取决于模型、数据、硬件和服务配置。">
+  <div class="exercise" data-answer="2" data-explain="这是推理系统通用的成本映射图：GQA/MLA/prefix cache 主要压缩历史状态或重复的 prefill；MoE/量化主要减少参数访问或内存带宽；稀疏/压缩注意力主要减少长上下文的注意力范围。实际收益取决于模型、数据、硬件和服务配置。">
     <h4>练习 5：以下哪组“压缩目标 → 代表性技术”最合理？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q5" value="0"> A. 参数访问 → prefix cache；历史状态 → MoE；注意力范围 → INT8</label>
@@ -2467,7 +2467,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="1" data-explain="长上下文服务的准入控制不能仅基于请求数或平均 tokens/s。活跃 KV token 数直接对应 GPU 内存压力；TTFT/TPOT/P95 反映排队、预填充和解码是否已经失衡。短请求和长请求应基于 token budget、租户 budget 或 SLO 队列区别处理。">
+  <div class="exercise" data-answer="1" data-explain="长上下文服务的准入控制不能只靠请求数或平均 tokens/s。活跃 KV token 数直接反映 GPU 内存压力；TTFT/TPOT/P95 能看出排队、预填充和解码是否已经失衡。短请求和长请求应该按 token budget、租户 budget 或 SLO 队列分别处理。">
     <h4>练习 6：为什么 LLM 服务不能仅靠“并发请求数”来做限流？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q6" value="0"> A. 因为并发请求数与 GPU 内存无关</label>
@@ -2479,7 +2479,7 @@ def forward(image, text_prompt):
     <div class="feedback"></div>
   </div>
 
-  <div class="exercise" data-answer="2" data-explain="工具调用必须经过 schema 校验、权限检查、循环预算和观察结果回填。仅靠 prompt 告诉模型不要随意调用工具，无法防止参数非法、未授权执行、重复循环或将不可信的工具输出当作事实。">
+  <div class="exercise" data-answer="2" data-explain="工具调用必须经过 schema 校验、权限检查、循环预算和观察结果回填。光靠 prompt 告诉模型不要随意调用工具，防止不了参数非法、未授权执行、重复循环，或者把不可信的工具输出当成事实。">
     <h4>练习 7：为什么 agent/工具的使用不能仅靠 prompt 来约束？</h4>
     <div class="opts" role="radiogroup">
       <label><input type="radio" name="q7" value="0"> A. 因为工具调用只影响最终答案质量，不影响延迟和成本</label>

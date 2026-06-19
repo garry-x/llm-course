@@ -51,10 +51,14 @@
   }
 
   function chapterHref(ch){
-    return currentCh === 0 ? 'chapters/' + ch.file : ch.file;
+    var explicitPrefix = document.body.getAttribute('data-chapter-prefix');
+    if(currentCh === 0) return (explicitPrefix || 'chapters/') + ch.file;
+    return ch.file;
   }
 
   function languageHref(){
+    var explicitLanguage = document.body.getAttribute('data-language-href');
+    if(explicitLanguage) return explicitLanguage;
     if(isEnglishPage()){
       return currentCh === 0 ? 'index.html' : '../zh/chapters/' + CHAPTERS[currentCh - 1].file;
     }

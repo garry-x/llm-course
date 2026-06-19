@@ -2,30 +2,24 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
-<link rel="icon" type="image/x-icon" href="../images/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
+  <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon.png">
+  <link rel="apple-touch-icon" href="../images/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>LLM Deep Learning 中文版</title>
-<meta name="description" content="从代码出发，用 11 章搭出完整的大语言模型工程系统。">
+<title>LLM Deep Learning 中文版 — 从代码构建大语言模型</title>
+<meta name="description" content="面向训练工程师和推理工程师的大语言模型系统课程：从 token、Transformer、训练循环、对齐到推理服务和评估。">
 <link rel="stylesheet" href="../css/style.css">
 </head>
-<body data-ch="0">
+<body data-ch="0" data-page="home" data-home-href="../index.html" data-language-href="../en.html" data-chapter-prefix="chapters/">
 
 <button class="menu-toggle" aria-label="菜单">☰</button>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <h1><a href="index.html">LLM Deep Learning</a></h1>
+    <h1>LLM Deep Learning</h1>
     <p>从代码构建大语言模型</p>
   </div>
-  <nav class="sidebar-nav">
-    <a href="#about" class="active"><span class="ch-num">⌂</span><span class="ch-label">课程介绍</span></a>
-    <a href="#path"><span class="ch-num">1</span><span class="ch-label">学习路径</span></a>
-    <a href="#system"><span class="ch-num">2</span><span class="ch-label">知识系统</span></a>
-    <a href="#chapters"><span class="ch-num">3</span><span class="ch-label">章节大纲</span></a>
-    <a href="#quickstart"><span class="ch-num">4</span><span class="ch-label">快速开始</span></a>
-    <a href="../en.html" class="language-link"><span class="ch-num">EN</span><span class="ch-label">英文版</span></a>
-  </nav>
+  <nav class="sidebar-nav" id="sidebar-nav"></nav>
   <div class="sidebar-footer">
     <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="切换主题">
       <span id="theme-icon">🌙</span> <span id="theme-label">深色模式</span>
@@ -34,104 +28,28 @@
 </aside>
 
 <main class="main">
-  <section class="hero" id="about">
+  <section class="hero">
     <div class="hero-copy">
       <h2>LLM Deep Learning 中文版</h2>
-      <p>从代码出发，用 11 章搭出一套完整的大语言模型工程系统。课程面向训练工程师和推理工程师，重点是把原理落到 PyTorch、shape、mask、梯度、系统指标和发布判断里。</p>
+      <p>面向训练工程师和推理工程师的代码优先、系统导向课程：从头构建、训练、对齐、服务和评估现代大语言模型。</p>
       <div class="hero-actions">
-        <a href="chapters/ch01.html" class="btn btn-primary">开始学习</a>
+        <a href="chapters/ch01.html" class="btn btn-primary">开始学习 →</a>
         <a href="#chapters" class="btn btn-outline">查看章节</a>
         <a href="../en.html" class="btn btn-outline">英文版</a>
       </div>
     </div>
   </section>
 
-  <section class="card" id="path">
-    <h3>初学者怎么学</h3>
-    <p>第一次学时，不要把所有高级内容都当成必修。先按主线跑通，再回头补高级结构和工程细节。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>阶段</th><th>章节</th><th>目标</th><th>建议</th></tr>
-        <tr><td>第一轮：主线必修</td><td>Ch01-Ch06</td><td>把文本变成 token，搭出能 forward 的 GPT</td><td>编程练习必须写；DeepSeek 扩展先理解动机</td></tr>
-        <tr><td>第二轮：让模型跑起来</td><td>Ch07-Ch08</td><td>训练一个小模型，并让它生成文本</td><td>重点看 loss、optimizer、sampling 的输入输出 shape</td></tr>
-        <tr><td>第三轮：高级内容选读</td><td>Ch09-Ch10</td><td>微调、对齐、RAG、推理优化和前沿架构</td><td>先搭概念地图，再回头补公式和工程细节</td></tr>
-      </table>
-    </div>
-    <p>最低前置要求：会写 Python 函数，理解 list/dict，知道基本矩阵乘法，能看懂 PyTorch tensor 的 <code>shape</code>。</p>
-  </section>
-
-  <section class="card" id="system">
-    <h3>课程知识系统</h3>
-    <p>课程按“大模型如何被表示、计算、训练、生成、对齐和部署”来组织，而不是按工具名散排。</p>
-    <div class="table-wrap">
-      <table>
-        <tr><th>模块</th><th>对应章节</th><th>核心问题</th></tr>
-        <tr><td>表示层</td><td>Ch01-Ch02</td><td>文本怎么变成 token，token 怎么变成向量，模型怎么拿到位置信息</td></tr>
-        <tr><td>Transformer 核心</td><td>Ch03-Ch06</td><td>attention、mask、多头、GQA/MLA、Norm、FFN、MoE 和 GPT forward 怎么组合起来</td></tr>
-        <tr><td>训练循环</td><td>Ch07</td><td>loss、PPL、optimizer、checkpoint/resume 和分布式诊断怎么做</td></tr>
-        <tr><td>生成与推理</td><td>Ch08-Ch10</td><td>prefill/decode、采样、KV Cache、FlashAttention、RAG 和推理服务怎么取舍</td></tr>
-        <tr><td>微调与对齐</td><td>Ch09</td><td>SFT、LoRA、DPO、GRPO、RLVR/RFT 和 rollout 系统怎么改变模型行为</td></tr>
-        <tr><td>经典 NLP 与评估</td><td>Ch11</td><td>RNN/LSTM、依存句法、seq2seq、BERT 和传统指标怎么接到现代 LLM</td></tr>
-      </table>
-    </div>
-  </section>
-
   <section class="course-index" id="chapters">
-    <h3>章节大纲</h3>
-    <div class="chapter-list">
-      <a class="chapter-item" href="chapters/ch01.html"><span class="ch-num-big">1</span><span class="ch-info"><h4>环境配置与分词</h4><p>BPE、多语言 tokenizer、special tokens 和模型接口合约</p></span><span class="ch-meta">19 小节</span></a>
-      <a class="chapter-item" href="chapters/ch02.html"><span class="ch-num-big">2</span><span class="ch-info"><h4>Embedding 层与位置编码</h4><p>TokenEmbedding、词向量、上下文化表示、RoPE、长上下文和 prompt 表示</p></span><span class="ch-meta">20 小节</span></a>
-      <a class="chapter-item" href="chapters/ch03.html"><span class="ch-num-big">3</span><span class="ch-info"><h4>单头自注意力</h4><p>Scaled Dot-Product Attention、mask、masked softmax、诊断账本和复杂度边界</p></span><span class="ch-meta">20 小节</span></a>
-      <a class="chapter-item" href="chapters/ch04.html"><span class="ch-num-big">4</span><span class="ch-info"><h4>多头注意力与 MLA</h4><p>MHA、GQA、MLA、KV Cache 预算和 checkpoint 转换</p></span><span class="ch-meta">18 小节</span></a>
-      <a class="chapter-item" href="chapters/ch05.html"><span class="ch-num-big">5</span><span class="ch-info"><h4>Transformer Block</h4><p>RMSNorm、SwiGLU、资源估算、稳定性和可解释性</p></span><span class="ch-meta">20 小节</span></a>
-      <a class="chapter-item" href="chapters/ch06.html"><span class="ch-num-big">6</span><span class="ch-info"><h4>组装完整 GPT 模型</h4><p>GPT-2 124M、MoE、权重加载、logit parity 和 checkpoint 兼容性</p></span><span class="ch-meta">18 小节</span></a>
-      <a class="chapter-item" href="chapters/ch07.html"><span class="ch-num-big">7</span><span class="ch-info"><h4>训练循环</h4><p>数据管线、AdamW、checkpoint、分布式、MFU 和工业训练诊断</p></span><span class="ch-meta">26 小节</span></a>
-      <a class="chapter-item" href="chapters/ch08.html"><span class="ch-num-big">8</span><span class="ch-info"><h4>文本生成</h4><p>采样、beam、thinking budget、speculative decoding 和结构化解码</p></span><span class="ch-meta">25 小节</span></a>
-      <a class="chapter-item" href="chapters/ch09.html"><span class="ch-num-big">9</span><span class="ch-info"><h4>微调与对齐</h4><p>SFT、合成蒸馏、LoRA、DPO、GRPO、rollout 系统和 retention</p></span><span class="ch-meta">27 小节</span></a>
-      <a class="chapter-item" href="chapters/ch10.html"><span class="ch-num-big">10</span><span class="ch-info"><h4>推理优化与前沿方向</h4><p>KV Cache、稀疏/线性注意力、continuous batching、RAG 和 KV-aware orchestration</p></span><span class="ch-meta">38 小节</span></a>
-      <a class="chapter-item" href="chapters/ch11.html"><span class="ch-num-big">11</span><span class="ch-info"><h4>经典神经 NLP 与评估</h4><p>RNN、Parsing、Seq2Seq、BERT、agent workflow evaluation 和 safety</p></span><span class="ch-meta">20 小节</span></a>
-    </div>
-  </section>
-
-  <section class="card" id="quickstart">
-    <h3>快速开始</h3>
-    <div class="code-block" data-lang="bash">git clone https://github.com/garry-x/llm-course.git && cd llm-course
-
-./serve.sh                    # 监听 0.0.0.0:8080，本机打开 127.0.0.1:8080
-./serve.sh serve -p 3000      # 指定端口</div>
-    <p>打开命令输出里的本地 URL，通常是 <code>http://127.0.0.1:8080</code>。默认中文首页在 <a href="../index.html">../index.html</a>；当前页保留为 <code>zh/</code> 下的备用中文入口，英文版从 <a href="../en.html">en.html</a> 进入。</p>
+    <h3>章节索引</h3>
+    <div class="chapter-list" id="chapter-list"></div>
   </section>
 </main>
 
+<script src="../js/app.js"></script>
 <script>
 (function(){
-  function safeGet(key, fallback){
-    try{
-      var value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : fallback;
-    } catch(e){ return fallback; }
-  }
-  function safeSet(key, value){
-    try{ localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
-  }
-  function updateThemeLabel(theme){
-    var icon = document.getElementById('theme-icon');
-    var label = document.getElementById('theme-label');
-    if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if(label) label.textContent = theme === 'dark' ? '浅色模式' : '深色模式';
-  }
-  window.LLM = {
-    toggleTheme: function(){
-      var html = document.documentElement;
-      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      safeSet('llm-theme', next);
-      updateThemeLabel(next);
-    }
-  };
-  var theme = safeGet('llm-theme', 'light');
-  document.documentElement.setAttribute('data-theme', theme);
-  updateThemeLabel(theme);
+  if(window.LLM && LLM.renderHomeChapterList) LLM.renderHomeChapterList();
 })();
 </script>
 </body>

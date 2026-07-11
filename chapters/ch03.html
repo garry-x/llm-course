@@ -24,7 +24,7 @@
 <article class="chapter">
   <h2>Chapter 3 Single-Head Self-Attention</h2>
   <p class="subtitle">Implementing Scaled Dot-Product Attention from Scratch — The Core Operation Behind Modern LLMs</p>
-  <div class="reading-time">⏱ Estimated Reading: 120 minutes · 19 sections · 6 programming exercises · 6 conceptual exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 130 minutes · 20 sections · 6 programming exercises · 6 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -824,6 +824,38 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Essence:</strong> Attention = Differentiable Dictionary Lookup = Soft Content Addressing. It is not "magic," but <strong>an elegant trick for making a database retrieval operation differentiable</strong>.</div></div>
 </section>
 
+<section class="card" id="s3-10a">
+  <h3>3.10A Self-Attention and Cross-Attention: Who Creates Q, and Who Supplies K/V?</h3>
+  <p>Self-attention and cross-attention use the same scaled dot-product operation. The difference is not a new softmax formula, but <strong>which sequence supplies the query and which sequence supplies the keys and values</strong>. Keeping this distinction explicit prevents a common mistake: treating every attention map as if it were a causal decoder attention map.</p>
+
+  <div class="math-box"><div class="label">Cross-attention tensor contract</div>
+    <div class="katex" data-expr="Q = H_q W^Q,\quad K = H_{kv} W^K,\quad V = H_{kv} W^V" aria-label="Q = H_q W^Q, K = H_kv W^K, V = H_kv W^V" role="img"></div>
+    <div class="katex" data-expr="\operatorname{CrossAttn}(H_q,H_{kv})=\operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}+M\right)V" aria-label="CrossAttn(H_q,H_kv)=softmax(QK^T/sqrt(d_k)+M)V" role="img"></div>
+  </div>
+  <p>Here <code>H_q</code> has shape <code>[B,T_q,d_model]</code> and <code>H_kv</code> has shape <code>[B,T_kv,d_model]</code>. After splitting heads, <code>Q</code> is <code>[B,H,T_q,D]</code>, while <code>K</code> and <code>V</code> are <code>[B,H,T_kv,D]</code>; therefore the score tensor is <code>[B,H,T_q,T_kv]</code>. Unlike self-attention, the query length and source length need not be equal.</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Question</th><th>Decoder Self-Attention</th><th>Cross-Attention</th></tr>
+      <tr><td>Where do Q/K/V come from?</td><td>The same decoder hidden-state sequence</td><td>Q comes from the receiving sequence; K/V come from a source sequence or modality representation</td></tr>
+      <tr><td>Typical visibility rule</td><td>Each generated position can read only its prefix; padding keys are hidden</td><td>Each query can usually read all valid source positions; source padding is hidden</td></tr>
+      <tr><td>Primary role</td><td>Combine information already in the generated prefix</td><td>Condition the receiving sequence on an encoded source, image/audio features, or another memory</td></tr>
+      <tr><td>Common architecture</td><td>Decoder-only language model</td><td>Encoder-decoder translation/summarization and many multimodal fusion blocks</td></tr>
+    </table>
+  </div>
+
+  <h4>Mask Semantics: Causality Constrains Readable Keys</h4>
+  <p>A causal mask is not a generic “attention mask.” It says that a decoder query at time <code>t</code> may not read later <em>decoder keys</em>. In ordinary encoder-decoder cross-attention, the source sequence is already fully observed, so applying a lower-triangular <code>[T_q,T_kv]</code> mask would invent a time alignment and can hide needed source evidence. Cross-attention still needs a source-padding mask, and may need task-specific masks, but it normally does not reuse the decoder causal mask unchanged.</p>
+
+  <h4>Worked Shape Trace</h4>
+  <p>Suppose <code>B=2</code>, a decoder prefix has <code>T_q=3</code> positions, and an encoded document has <code>T_kv=5</code> positions. With <code>H=4</code> heads and <code>D=16</code>, the head-wise tensors are <code>Q:[2,4,3,16]</code>, <code>K,V:[2,4,5,16]</code>, scores <code>[2,4,3,5]</code>, and output <code>[2,4,3,16]</code>. The last dimension of the score matrix is source position, not a future decoder position. A source padding mask therefore broadcasts over <code>[B,H,T_q,T_kv]</code> and masks only invalid source keys.</p>
+
+  <h4>Where This Appears Later in the Course</h4>
+  <p>In Chapter 11, seq2seq models use a decoder state as the query and encoder states as K/V. In Chapter 10, a multimodal architecture may supply visual or audio features as K/V through a cross-attention-like fusion layer. RAG is related but not identical: appending retrieved text to a decoder prompt lets <em>self-attention</em> read those tokens, whereas a separate encoded memory attended through K/V is cross-attention. Both bring external information into generation, but they have different position handling, cache layouts, and failure modes.</p>
+
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>Implementation Checks:</strong> verify the distinct <code>T_q</code>/<code>T_kv</code> dimensions, apply padding to source keys rather than a copied causal triangle, and do not interpret cross-attention weights as guaranteed citations or explanations. The weights show routing; correctness still requires source, output, and task-level checks.</div></div>
+</section>
+
 
 <section class="card" id="s3-11">
   <h3>3.11 Chapter Summary: What You Implemented</h3>
@@ -835,6 +867,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
     <li>✅ <strong>Masked softmax contract</strong> — Understood the numerical risks of padding keys, padding queries, and all-masked rows</li>
     <li>✅ <strong>Attention Visualization</strong> — Built an intuitive understanding of attention behavior</li>
     <li>✅ <strong>Attention Heatmap Interpretation Boundaries</strong> — Learned that heatmaps can diagnose routing patterns but cannot serve as standalone causal explanations</li>
+    <li>✅ <strong>Self-Attention vs. Cross-Attention</strong> — Can distinguish the Q source from the K/V source and choose the corresponding mask semantics</li>
     <li>✅ <strong>Deep understanding of √dₖ</strong> — Mastered the scaling factor from variance analysis and gradient perspectives</li>
   </ul>
   <p>These pieces of code total about <strong>60 lines</strong>, but they are the common foundation for all modern LLMs like GPT, Llama, and Claude. In Chapter 4, we will extend single-head attention to <strong>multi-head attention</strong> and delve into implementing DeepSeek's MLA.</p>

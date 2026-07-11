@@ -24,7 +24,7 @@
 <article class="chapter">
   <h2>第3章 单头自注意力</h2>
   <p class="subtitle">从头实现缩放点积注意力——大语言模型的核心机制</p>
-  <div class="reading-time">⏱ 阅读时间：120分钟 · 19个小节 · 6个编程练习 · 6个概念练习</div>
+  <div class="reading-time">⏱ 阅读时间：130分钟 · 20个小节 · 6个编程练习 · 6个概念练习</div>
   <div class="font-controls"><span>字号：</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -762,6 +762,36 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
   <p><strong>注意力：</strong>每个位置可以关注<strong>任意距离</strong>的任意位置。信息路径长度始终为 O(1)，但代价是 O(n²) 的计算。</p>
   <p>这也解释了为什么在采用ViT之后，计算机视觉领域仍然保留了一些卷积特性（例如Swin Transformer的局部窗口注意力）——局部性是图像的强先验。</p>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>本质：</strong>注意力 = 可微字典查找 = 软性内容寻址。这不是“魔法”，而是<strong>使数据库检索操作可微的一个巧妙技巧</strong>。</div></div>
+</section><section class="card" id="s3-10a">
+  <h3>3.10A Self-Attention 与 Cross-Attention：Q 来自哪里，K/V 又来自哪里？</h3>
+  <p>Self-Attention 与 Cross-Attention 使用的是同一套缩放点积注意力计算。差别不在于多了一条 softmax 公式，而在于<strong>哪条序列提供 Query，哪条序列提供 Key 和 Value</strong>。把这个差别说清楚，才能避免把所有注意力图都误当成 causal decoder attention。</p>
+
+  <div class="math-box"><div class="label">Cross-Attention 的张量契约</div>
+    <div class="katex" data-expr="Q = H_q W^Q,\quad K = H_{kv} W^K,\quad V = H_{kv} W^V" aria-label="Q = H_q W^Q, K = H_kv W^K, V = H_kv W^V" role="img"></div>
+    <div class="katex" data-expr="\operatorname{CrossAttn}(H_q,H_{kv})=\operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}+M\right)V" aria-label="CrossAttn(H_q,H_kv)=softmax(QK^T/sqrt(d_k)+M)V" role="img"></div>
+  </div>
+  <p>其中 <code>H_q</code> 的形状是 <code>[B,T_q,d_model]</code>，<code>H_kv</code> 的形状是 <code>[B,T_kv,d_model]</code>。拆分为多头后，<code>Q</code> 是 <code>[B,H,T_q,D]</code>，<code>K</code> 和 <code>V</code> 是 <code>[B,H,T_kv,D]</code>，因此分数张量是 <code>[B,H,T_q,T_kv]</code>。与 self-attention 不同，query 长度和 source 长度不必相等。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>问题</th><th>Decoder Self-Attention</th><th>Cross-Attention</th></tr>
+      <tr><td>Q/K/V 来自哪里？</td><td>都来自同一条 decoder hidden-state 序列</td><td>Q 来自接收信息的序列；K/V 来自 source 序列或另一种模态的表示</td></tr>
+      <tr><td>典型可见性规则</td><td>每个生成位置只能读取自身前缀；padding key 不可见</td><td>每个 query 通常可读取全部有效 source 位置；source padding 不可见</td></tr>
+      <tr><td>主要作用</td><td>整合已经写入生成前缀的信息</td><td>让接收序列依赖于编码后的 source、图像/音频特征或另一块 memory</td></tr>
+      <tr><td>常见架构</td><td>Decoder-only language model</td><td>Encoder-decoder 翻译/摘要，以及许多多模态融合模块</td></tr>
+    </table>
+  </div>
+
+  <h4>Mask 语义：因果约束限制的是可读取的 Key</h4>
+  <p>Causal mask 不是通用的“attention mask”。它表达的是 decoder 在时间 <code>t</code> 的 query 不能读取之后的<em>decoder key</em>。普通 encoder-decoder 的 cross-attention 中，source 序列已经完整可见；若机械套用下三角 <code>[T_q,T_kv]</code> mask，就人为假设了一种时间对齐关系，可能遮住真正需要的 source 证据。Cross-Attention 仍需要 source-padding mask，也可能有任务特定 mask，但通常不能原样复用 decoder 的 causal mask。</p>
+
+  <h4>形状追踪示例</h4>
+  <p>设 <code>B=2</code>，decoder 前缀有 <code>T_q=3</code> 个位置，编码后的文档有 <code>T_kv=5</code> 个位置，且 <code>H=4</code>、<code>D=16</code>。逐头张量为 <code>Q:[2,4,3,16]</code>、<code>K,V:[2,4,5,16]</code>，分数为 <code>[2,4,3,5]</code>，输出为 <code>[2,4,3,16]</code>。分数矩阵的最后一维是 source position，不是未来的 decoder position。因此 source padding mask 要广播到 <code>[B,H,T_q,T_kv]</code>，并且只遮住无效的 source key。</p>
+
+  <h4>它会在后续章节出现在哪里</h4>
+  <p>第 11 章的 seq2seq 模型会把 decoder state 作为 query，把 encoder state 作为 K/V。第 10 章的多模态架构可能通过类似 cross-attention 的融合层，把视觉或音频特征作为 K/V。RAG 与它相关但不等同：把检索文本直接拼进 decoder prompt，是让<em>self-attention</em>读取这些 token；把单独编码的 memory 通过 K/V 提供给模型，才是 cross-attention。两者都能向生成过程引入外部信息，但位置处理、cache 布局和失败模式不同。</p>
+
+  <div class="info-box warn"><span class="icon">⚠️</span><div><strong>实现检查：</strong>核对 <code>T_q</code>/<code>T_kv</code> 两个维度是否不同；对 source key 使用 padding mask，而不是复制 causal triangle；也不要把 cross-attention 权重当作必然正确的引用或解释。权重只展示路由，正确性还要由 source、输出和任务层面的检查支撑。</div></div>
 </section><section class="card" id="s3-11">
   <h3>3.11 章节总结：你的实现内容</h3>
   <p>这一章，你从零实现了大语言模型的<strong>核心计算引擎</strong>：</p>
@@ -772,6 +802,7 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
     <li>✅ <strong>Masked softmax contract</strong> — 理解了填充键、填充查询和全遮蔽行带来的数值风险</li>
     <li>✅ <strong>Attention Visualization</strong> — 建立对注意力行为的直观理解</li>
     <li>✅ <strong>Attention Heatmap Interpretation Boundaries</strong> — 理解热力图可以诊断路由模式，但不能作为独立的因果解释</li>
+    <li>✅ <strong>Self-Attention 与 Cross-Attention</strong> — 能区分 Q 的来源与 K/V 的来源，并选择对应的 mask 语义</li>
     <li>✅ <strong>对√dₖ的深入理解</strong> — 从方差分析和梯度角度掌握了缩放因子</li>
   </ul>
   <p>这些代码总共约<strong>60行</strong>，但它们是所有现代大语言模型（如GPT、Llama和Claude）的共同基础。第4章会把单头注意力扩展到<strong>多头注意力</strong>，并实现DeepSeek的MLA。</p>

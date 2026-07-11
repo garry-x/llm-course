@@ -772,21 +772,21 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
   <p>Now that you have a complete understanding and implementation of single-head attention, let's honestly confront its biggest problem.</p>
 
   <h4>Computational and Memory Bottlenecks</h4>
-  <p>The size of the attention score matrix <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> is <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>, where n is the sequence length. When n=128K (e.g., GPT-4's context window):</p>
+  <p>The size of one attention score matrix <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> is <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>, where n is the sequence length. Use <code>n=128K</code> as an illustrative long-context case:</p>
   <ul>
-    <li>Attention matrix: 128K × 128K = <strong>16B elements</strong></li>
-    <li>Under FP16: 32 GB of VRAM—just to store the attention scores</li>
-    <li>This contrasts sharply with the O(n) memory cost of the embedding layer (d×n) and FFN (4d²)</li>
+    <li>One score matrix: 128K × 128K = <strong>about 16.4B elements</strong></li>
+    <li>One FP16 score matrix: <strong>about 32 GiB</strong>; batch size and head count multiply this cost</li>
+    <li>This is only the score tensor, not Q/K/V, softmax output, gradients, masks, or allocator overhead</li>
   </ul>
   <p>The homework function <code>attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes)</code> corresponds to the materialization cost of the dense attention score tensor <code>[B,H,T,T]</code>: <span class="katex-inline" data-expr="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" aria-label="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" role="img"></span>. It only estimates the score matrix itself, not Q/K/V, softmax output, dropout mask, activation checkpointing, or FlashAttention's recomputation strategy.</p>
 
   <h4>FlashAttention: An IO-Aware Solution</h4>
   <p>The core insight of FlashAttention (Dao et al., 2022): In many practical GPU configurations, the performance bottleneck of attention is not just FLOPs, but also the data movement between HBM (High Bandwidth Memory) and SRAM (on-chip cache). Traditional implementations materialize the full attention matrix, whereas FlashAttention uses tiling to split the computation into blocks, completing softmax within SRAM—without ever writing the full attention matrix to HBM.</p>
-  <p>This saves memory (from O(n²) to O(n)) and often becomes <strong>faster</strong> because it reduces HBM reads and writes.</p>
+  <p>This avoids materializing the full <code>[T,T]</code> score/probability matrix and often becomes <strong>faster</strong> because it reduces HBM reads and writes. It does not remove the mathematical all-pairs interaction of dense attention; its main improvement is the IO and activation-memory schedule.</p>
 
   <h4>DeepSeek MLA: From "Less Compute" to "Less Storage"</h4>
   <p>MLA (Multi-head Latent Attention), proposed by DeepSeek-V2, takes a different path: instead of optimizing the softmax computation, it <strong>fundamentally reduces the size of the KV Cache</strong>.</p>
-  <p>MLA's core idea: project the high-dimensional representations of multi-head Q, K, V into a <strong>low-dimensional latent space</strong>, cache only the compressed latent vectors during inference, and decompress them when used. This reduces the KV Cache size by 93%—from needing to store h sets of K and V vectors per token to storing just one low-dimensional vector.</p>
+  <p>MLA's core idea is to compress the high-dimensional multi-head <strong>K/V state</strong> into a lower-dimensional latent representation, cache that latent state during inference, and use learned projections when it is consumed. The cache reduction depends on the number of KV heads, head dimension, latent dimension, positional branch, dtype, and implementation layout; it should be calculated from the actual configuration rather than quoted as one universal percentage.</p>
   <p>We will delve into implementing MLA in Chapter 4.</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) is a persistent tension for attention.</strong> FlashAttention and MLA alleviate the problem from the "compute I/O" and "KV storage" dimensions respectively, but the pairwise score of standard dense attention still grows quadratically with sequence length. Long-context systems also use methods like sparse attention, sliding windows, global tokens, compressed attention, or external retrieval; any specific benefit must be tied to the model, context length, hardware, kernel, and evaluation task.</div></div>
 </section>

@@ -715,21 +715,21 @@ plot_attention(attn[0], tokens, "Causal Attention Weight Distribution")</div>
   <p>你已经理解并实现了单头注意力。接下来看它最大的问题：计算和内存瓶颈。</p>
 
   <h4>计算与内存瓶颈</h4>
-  <p>注意力分数矩阵 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> 的大小是 <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>，其中 n 是序列长度。当 n=128K 时（例如 GPT-4 的上下文窗口）：</p>
+  <p>一张注意力分数矩阵 <span class="katex-inline" data-expr="\mathbf{Q}\mathbf{K}^\top" aria-label="\mathbf{Q}\mathbf{K}^\top" role="img"></span> 的大小是 <span class="katex-inline" data-expr="n \times n" aria-label="n \times n" role="img"></span>，其中 n 是序列长度。以 <code>n=128K</code> 作为长上下文的示例：</p>
   <ul>
-    <li>注意力矩阵：128K × 128K = <strong>160 亿个元素</strong></li>
-    <li>在 FP16 下：需要 32 GB 显存——仅用来存储注意力分数</li>
-    <li>相比之下，embedding 层（d×n）和 FFN（4d²）的内存开销是 O(n)</li>
+    <li>单张分数矩阵：128K × 128K = <strong>约 164 亿个元素</strong></li>
+    <li>单张 FP16 分数矩阵：<strong>约 32 GiB</strong>；batch size 和 head 数会把这一成本继续放大</li>
+    <li>这里仅计算分数张量，不包括 Q/K/V、softmax 输出、梯度、mask 或分配器开销</li>
   </ul>
   <p>作业函数 <code>attention_score_memory_bytes(batch_size, n_heads, seq_len, dtype_bytes)</code> 对应稠密注意力分数张量 <code>[B,H,T,T]</code> 的显式物化代价：<span class="katex-inline" data-expr="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" aria-label="B \cdot H \cdot T^2 \cdot \text{dtype\_bytes}" role="img"></span>。它只估算分数矩阵本身，不包括 Q/K/V、softmax 输出、dropout mask、activation checkpointing 或 FlashAttention 的重计算策略。</p>
 
   <h4>FlashAttention：一种 IO 感知的解决方案</h4>
   <p>FlashAttention（Dao 等人，2022）指出，在许多实际 GPU 配置中，注意力的性能瓶颈在于 HBM（高带宽内存）与 SRAM（片上缓存）之间的数据搬运，而不只是 FLOPs。传统实现会显式物化完整的注意力矩阵，FlashAttention 则采用分块（tiling）技术，将计算拆分为多个 block，在 SRAM 内完成 softmax——全程无需将完整注意力矩阵写入 HBM。</p>
-  <p>这既节省了内存（从 O(n²) 降到 O(n)），而且通常<strong>更快</strong>，因为它减少了 HBM 的读写次数。</p>
+  <p>它避免显式物化完整的 <code>[T,T]</code> 分数/概率矩阵，而且通常<strong>更快</strong>，因为它减少了 HBM 的读写次数。它并没有消除稠密注意力的两两交互；主要改变的是 IO 与激活内存的调度方式。</p>
 
   <h4>DeepSeek MLA：从“减少计算”到“减少存储”</h4>
   <p>DeepSeek-V2 提出的 MLA（Multi-head Latent Attention，多头潜在注意力）用了不同的思路：它不直接优化 softmax 计算，而是<strong>从根源上减小 KV Cache 的尺寸</strong>。</p>
-  <p>MLA 的核心思想：将多头 Q、K、V 的高维表示投影到<strong>低维潜在空间</strong>，推理时只缓存压缩后的潜在向量，使用时再解压。这能将 KV Cache 大小减少 93%——从每个 token 存储 h 组 K 和 V 向量，压缩成只存一个低维向量。</p>
+  <p>MLA 的核心思想是把高维多头的<strong>K/V 状态</strong>压缩到低维潜在表示中，推理时缓存该潜在状态，使用时再经过可学习投影。缓存压缩比例取决于 KV head 数、head dimension、latent dimension、位置分支、dtype 和实现布局；应按实际配置计算，而不应把某个比例当作通用结论。</p>
   <p>我们将在第 4 章深入讲解如何实现 MLA。</p>
   <div class="info-box warn"><span class="icon">⚠️</span><div><strong>O(n²) 是注意力机制一直面临的核心问题。</strong>FlashAttention 和 MLA 分别从“计算 I/O”和“KV 存储”两个方向缓解了问题，但标准稠密注意力的两两分数仍然随序列长度平方增长。长上下文系统还会使用稀疏注意力、滑动窗口、全局 token、压缩注意力或外部检索等方法；具体收益取决于模型、上下文长度、硬件、kernel 和评估任务。</div></div>
 </section><!-- ================================================================ -->

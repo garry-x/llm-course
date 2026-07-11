@@ -24,7 +24,7 @@
 <article class="chapter">
   <h2>Chapter 8 Text Generation</h2>
   <p class="subtitle">Sampling Strategies and DeepSeek MTP Speculative Decoding — Turning Probabilities into Text</p>
-  <div class="reading-time">⏱ Estimated Reading: 130 minutes · 25 sections · 7 coding exercises · 5 concept exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 140 minutes · 26 sections · 7 coding exercises · 5 concept exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -101,6 +101,42 @@
     <li><strong>Decoding:</strong> Tokens are generated one by one. Each step inputs only one token, using the KV Cache for incremental computation. This is typically a <strong>bandwidth-intensive</strong> phase — with small batches or low concurrency, GPU compute utilization can be significantly lower than during prefill. Subsequent throughput (TPS/TPOT) is dominated by this phase.</li>
   </ul>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>Important Concept:</strong> TTFT (Time to First Token) is primarily affected by prefill, queuing, network, and routing; the user perceives it as "the time to wait for the first character to appear." TPS/TPOT is primarily affected by decoding, batching, KV cache, and bandwidth; the user perceives it as "typing speed." Numerical values vary greatly across different models, context lengths, concurrency levels, and service providers. A reproducible generation benchmark should report these metrics under a fixed model, prompt set, context length, concurrency level, and serving configuration.</div></div>
+</section>
+
+<section class="card" id="s8-1a">
+  <h3>8.1A Stopping Is Part of Generation Semantics: EOS, Stop Sequences, and Budget Limits</h3>
+  <p>Choosing the next token is only half of a generation loop. The other half is deciding whether that token completes the response. The generation result can return a <strong>stop reason</strong>; otherwise an empty answer, a truncated answer, and a correctly completed answer can all look like “generation ended.”</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Stop mechanism</th><th>Meaning</th><th>Common mistake</th></tr>
+      <tr><td>EOS or end-of-turn token</td><td>The model emitted a tokenizer-defined control token that completes this response</td><td>Assuming every tokenizer uses the same id or that EOS and a chat turn delimiter are interchangeable</td></tr>
+      <tr><td>Stop sequence</td><td>A configured delimiter such as the next role prefix has appeared in generated content</td><td>Checking only the newest token text and missing a delimiter that spans token boundaries</td></tr>
+      <tr><td><code>max_new_tokens</code></td><td>The request consumed its output-token budget</td><td>Reporting it as a natural completion rather than a possible truncation</td></tr>
+      <tr><td>Context limit</td><td>The prompt plus generated tokens reaches the model's usable context window</td><td>Setting a large output cap without reserving context space</td></tr>
+      <tr><td>Constraint failure or cancellation</td><td>No legal continuation exists, or the client/server stops the request</td><td>Silently falling back to unconstrained sampling or hiding the failure reason</td></tr>
+    </table>
+  </div>
+
+  <h4>Length Budgets Are Not One Number</h4>
+  <p><code>max_new_tokens</code> bounds only newly generated tokens. A total-length API often instead bounds <code>prompt_tokens + generated_tokens</code>. Before decoding, the service must check that the requested output fits the model context after reserving any system/template tokens. Reaching a budget is not evidence that the model chose to finish; the response should expose a reason such as <code>length</code> or <code>context_limit</code> so callers can retry, shorten context, or mark the result incomplete.</p>
+
+  <h4>Batch Decoding Needs Per-Sequence State</h4>
+  <p>In a batch, one row can emit EOS while another still has unfinished output. Stopping the entire batch on the first EOS discards valid work; continuing to sample a finished row can append unintended tokens and distort token accounting. Maintain a <code>finished[B]</code> mask, freeze or pad completed rows for tensor-shape regularity, and stop the loop only when every row is finished or its budget is exhausted. The returned text must exclude generated padding and control delimiters.</p>
+
+  <pre class="code-block" data-lang="text"><code>finished = [False] * batch_size
+for step in range(max_new_tokens):
+    next_token = choose_from_logits(logits, only_rows=not_finished)
+    append_to_active_rows(next_token)
+    finished |= is_eos(next_token) | matched_stop_sequence() | constraint_failed()
+    if all(finished):
+        break
+record(stop_reason_per_row, generated_token_count_per_row)</code></pre>
+
+  <h4>Stop Strings Are a Streaming Boundary</h4>
+  <p>A text stop string may be split across several tokenizer tokens, and a streamed chunk may end halfway through it. Implementations therefore keep a small suffix buffer or token-prefix matcher up to the longest configured delimiter. When a delimiter matches, remove it from user-visible output and record the corresponding reason. For tokenizer control tokens, matching token IDs is usually clearer; for arbitrary textual delimiters, matching the decoded stream is necessary but must use the same tokenizer/decoder rules as the response path.</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Practical Rule:</strong> Sampling parameters decide <em>which</em> legal token is selected. Stop rules decide <em>when</em> the response ends. Log both independently, and treat <code>max_new_tokens</code>, context exhaustion, cancellation, and constraint failure as operational outcomes rather than successful EOS completion.</div></div>
 </section>
 
 <!-- ================================================================ -->

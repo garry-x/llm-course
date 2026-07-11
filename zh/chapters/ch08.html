@@ -24,7 +24,7 @@
 <article class="chapter">
   <h2>第8章 文本生成</h2>
   <p class="subtitle">采样策略与DeepSeek MTP推测解码 —— 将概率转化为文本</p>
-  <div class="reading-time">⏱ 预计阅读时间：130分钟 · 25个小节 · 7个编程练习 · 5个概念练习</div>
+  <div class="reading-time">⏱ 预计阅读时间：140分钟 · 26个小节 · 7个编程练习 · 5个概念练习</div>
   <div class="font-controls"><span>字号：</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -96,7 +96,45 @@
     <li><strong>解码：</strong> token 逐个生成。每步只输入一个 token，利用 KV Cache 做增量计算。这通常是<strong>带宽密集型</strong>阶段——在小批量或低并发下，GPU 计算利用率可能明显低于预填充阶段。后续吞吐量（TPS/TPOT）由该阶段主导。</li>
   </ul>
   <div class="info-box key"><span class="icon">🔑</span><div><strong>重要概念：</strong> TTFT（Time to First Token）主要受预填充、排队、网络和路由影响；用户等待第一个字符出现的时间就是 TTFT。TPS/TPOT 主要受解码、批处理、KV cache 和带宽影响；对应的是用户的“打字速度”。不同模型、上下文长度、并发级别和服务提供商之间，这些数值差异很大。可复现的生成基准测试应该在固定的模型、prompt 集合、上下文长度、并发级别和服务配置下报告这些指标。</div></div>
-</section><!-- ================================================================ -->
+</section>
+
+<section class="card" id="s8-1a">
+  <h3>8.1A 停止也是生成语义的一部分：EOS、停止序列与预算上限</h3>
+  <p>选择下一个 token 只完成了生成循环的一半；另一半是判断这个 token 是否结束了响应。生成结果可以返回<strong>stop reason</strong>。否则，空响应、被截断的响应和正常完成的响应，都会被笼统地记成“生成结束”。</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>停止机制</th><th>含义</th><th>常见错误</th></tr>
+      <tr><td>EOS 或 end-of-turn token</td><td>模型输出了 tokenizer 定义的控制 token，表示本次响应结束</td><td>假定所有 tokenizer 使用相同 id，或把 EOS 与聊天轮次分隔符混为一谈</td></tr>
+      <tr><td>停止序列</td><td>生成内容中出现了配置好的分隔符，例如下一角色的前缀</td><td>只检查最新 token 的文本，漏掉跨 token 边界的分隔符</td></tr>
+      <tr><td><code>max_new_tokens</code></td><td>请求耗尽了输出 token 预算</td><td>把它当作自然结束，而不是可能的截断</td></tr>
+      <tr><td>上下文上限</td><td>prompt 加已生成 token 达到模型可用的 context window</td><td>设置很大的输出上限，却没有预留上下文空间</td></tr>
+      <tr><td>约束失败或取消</td><td>不存在合法续写，或客户端/服务端终止了请求</td><td>悄悄退回无约束采样，或隐藏失败原因</td></tr>
+    </table>
+  </div>
+
+  <h4>长度预算不是一个数字</h4>
+  <p><code>max_new_tokens</code> 只限制新生成的 token。有些 API 限制的是总长度，即 <code>prompt_tokens + generated_tokens</code>。解码前，服务必须检查请求的输出是否能在模型 context window 内放下，并预留 system/template token。达到预算不代表模型主动选择结束；响应应暴露 <code>length</code> 或 <code>context_limit</code> 等原因，让调用方决定重试、缩短上下文，或把结果标记为不完整。</p>
+
+  <h4>批量解码需要逐序列状态</h4>
+  <p>同一批里，一行可能已经输出 EOS，另一行仍有未完成的输出。第一个 EOS 出现就停止整个 batch，会丢掉仍然有效的工作；继续为已完成的行采样，会追加非预期 token 并污染 token 统计。应维护 <code>finished[B]</code> mask：已完成的行为了保持张量形状可以冻结或填充，但循环只有在所有行结束或各自耗尽预算时才停止。最终返回的文本必须排除生成出的 padding 和控制分隔符。</p>
+
+  <pre class="code-block" data-lang="text"><code>finished = [False] * batch_size
+for step in range(max_new_tokens):
+    next_token = choose_from_logits(logits, only_rows=not_finished)
+    append_to_active_rows(next_token)
+    finished |= is_eos(next_token) | matched_stop_sequence() | constraint_failed()
+    if all(finished):
+        break
+record(stop_reason_per_row, generated_token_count_per_row)</code></pre>
+
+  <h4>停止字符串是 streaming 边界</h4>
+  <p>一个文本停止字符串可能被 tokenizer 拆到多个 token 中，streaming chunk 也可能刚好停在它的中间。因此实现需要保存一个小的后缀缓冲区，或使用 token-prefix matcher，缓冲长度至少覆盖最长的配置分隔符。命中分隔符后，要从用户可见输出中移除它，并记录停止原因。对于 tokenizer 控制 token，直接匹配 token ID 通常更清晰；对于任意文本分隔符，则需要匹配解码后的流，但必须使用与响应路径相同的 tokenizer/decoder 规则。</p>
+
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>实用原则：</strong>采样参数决定“从合法 token 中选哪一个”；停止规则决定“何时结束响应”。两者应独立记录。<code>max_new_tokens</code>、上下文耗尽、取消和约束失败都是运行结果，不能等同于成功输出 EOS。</div></div>
+</section>
+
+<!-- ================================================================ -->
 <!-- 8.2 为什么贪婪解码会失败 -->
 <!-- ================================================================ --><section class="card">
 <div class="svg-diagram" style="max-width:940px">

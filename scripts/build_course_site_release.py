@@ -12,11 +12,14 @@ import sys
 from pathlib import Path
 
 from render_docs_html import render_docs
+from validate_course_site import validate_site
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS = [f"ch{index:02d}.html" for index in range(1, 12)]
 SAFE_DOCS = [
+    "capstone-project-guide.md",
+    "capstone-project-guide.zh.md",
     "classic-nlp-deep-dive-module.md",
     "classic-nlp-handout.md",
     "math-prerequisites.md",
@@ -26,14 +29,17 @@ SAFE_DOCS = [
     "worked-example-pack.md",
     "written-problem-set.md",
 ]
-ROOT_PAGES: list[str] = []
+ROOT_PAGES = ["en.html"]
 INCLUDED_ROOTS = [
     "index.html",
+    "en.html",
     "chapters/",
+    "zh/",
     "css/",
     "js/",
     "images/",
     "docs/",
+    "capstone-template/",
     "assignments/",
 ]
 EXCLUDED_DOCS: list[str] = []
@@ -133,6 +139,7 @@ def build_release(out_dir: Path) -> dict[str, object]:
     copy_tree(ROOT / "css", out_dir / "css")
     copy_tree(ROOT / "js", out_dir / "js")
     copy_tree(ROOT / "images", out_dir / "images")
+    copy_tree(ROOT / "capstone-template", out_dir / "capstone-template")
 
     chapter_manifest = []
     for chapter in CHAPTERS:
@@ -143,6 +150,26 @@ def build_release(out_dir: Path) -> dict[str, object]:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(stripped, encoding="utf-8")
         chapter_manifest.append({"file": f"chapters/{chapter}", "removed_solution_blocks": removed})
+
+    # The default entry point is Chinese, while en.html and zh/chapters provide
+    # its paired English and chapter routes. Build the localized tree explicitly
+    # instead of copying it wholesale, so learner releases do not expose the
+    # inline reference solutions present in the source chapters.
+    zh_dir = out_dir / "zh"
+    zh_dir.mkdir()
+    zh_index = rewrite_markdown_links(
+        rewrite_internal_material_links((ROOT / "zh" / "index.html").read_text(encoding="utf-8"))
+    )
+    (zh_dir / "index.html").write_text(zh_index, encoding="utf-8")
+    zh_chapter_manifest = []
+    for chapter in CHAPTERS:
+        source = (ROOT / "zh" / "chapters" / chapter).read_text(encoding="utf-8")
+        stripped, removed = strip_inline_solutions(source)
+        stripped = rewrite_markdown_links(rewrite_internal_material_links(stripped))
+        target = zh_dir / "chapters" / chapter
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(stripped, encoding="utf-8")
+        zh_chapter_manifest.append({"file": f"zh/chapters/{chapter}", "removed_solution_blocks": removed})
 
     docs_dir = out_dir / "docs"
     docs_dir.mkdir()
@@ -180,7 +207,13 @@ def build_release(out_dir: Path) -> dict[str, object]:
         "excluded_docs": EXCLUDED_DOCS,
         "assignment_release": assignment_manifest,
         "chapters": chapter_manifest,
+        "localized_chapters": zh_chapter_manifest,
     }
+    validation_errors = validate_site(out_dir, learner_release=True)
+    if validation_errors:
+        details = "\n".join(f"- {error}" for error in validation_errors)
+        raise RuntimeError(f"learner site validation failed:\n{details}")
+    manifest["validation"] = {"status": "pass", "checks": ["local-routes", "learner-release-boundary"]}
     (out_dir / "SITE_RELEASE_MANIFEST.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

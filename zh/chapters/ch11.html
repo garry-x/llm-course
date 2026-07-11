@@ -24,7 +24,7 @@
 <article class="chapter">
   <h2>第11章 经典神经NLP与评估</h2>
   <p class="subtitle">RNN、依存分析、Seq2Seq和BERT——连接经典神经NLP与现代LLM</p>
-  <div class="reading-time">⏱ 预计阅读时间：145分钟 · 15节 · 5个可运行练习 · 5个概念练习</div>
+  <div class="reading-time">⏱ 预计阅读时间：160分钟 · 21节 · 5个可运行练习 · 5个概念练习</div>
   <div class="font-controls"><span>字号：</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -600,6 +600,20 @@ assert audit["overall_pass"]</div>
     <tr><td><code>safety_evaluation_metrics</code></td><td>安全评估</td><td>为什么必须同时报告攻击成功率、拒绝率、过度拒绝率和任务实用性</td></tr>
     <tr><td><code>benchmark_result_summary</code></td><td>基准报告</td><td>如何把度量结果转化为包含样本、推理设置、失败类型和边界的工程结论</td></tr>
   </table>
+</section><section class="card" id="s11-9a">
+  <h3>11.9A 跨章节结课项目：把演示变成工程决策</h3>
+  <p>本课程的各章练习刻意验证局部契约：一个 shape、一个 loss、一项指标，或一条服务控制规则。课程项目还需要另一种证据：这些契约确实组成了一个范围明确、最后能做出决策的系统。结课项目不是要求把所有 LLM 功能堆在一起，而是要求做一次受控比较，并事先写下发布、拒绝或回滚规则。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>系统层</th><th>结课项目必须说清什么</th><th>可复用的课程证据</th></tr>
+      <tr><td>任务和接口</td><td>用户、允许的输出、非目标、schema/template、token/context 预算</td><td>Ch01 tokenizer 契约、Ch02 位置、Ch08 结构化解码</td></tr>
+      <tr><td>模型或流水线</td><td>基线、一次受控改动、shape/mask 或检索/工具 trace</td><td>Ch03-Ch06 tensor 检查、Ch09 适配、Ch10 RAG/工具校验</td></tr>
+      <tr><td>评估</td><td>冻结用例、任务切片、指标边界、错误分类、不确定性</td><td>Ch07 曲线与校准、Ch11 EM/F1/judge/安全协议</td></tr>
+      <tr><td>运行</td><td>延迟/成本边界、权限、回退、负载和回归行为</td><td>Ch08 生成预算、Ch10 SLO/准入/回滚控制</td></tr>
+    </table>
+  </div>
+  <p>例如，手册问答助手可以比较不检索的基线与版本化检索流水线。要让结论成立，必须记录语料/索引版本、检索 chunk、引用支持率、拒答、畸形或注入输入、给定负载下的 TTFT/P95，以及触发停止发布的阈值。能返回合法 JSON 或在某次对话中表现不错，只是整条证据链中的一个信号。</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>结课标准：</strong>提出一个可检验的问题，保留回答它所需的基线和证据，并写清什么情况会让团队拒绝或回滚此次变更。里程碑、证据台账、演练和评分标准见<a href="../../docs/capstone-project-guide.zh.html">端到端 LLM 结课项目指南</a>。</div></div>
 </section><section class="card" id="s11-10">
   <h3>11.10 总结</h3>
   <ul>

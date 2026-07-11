@@ -1,0 +1,19 @@
+{
+  "run_id": "[REPLACE: variant run ID]",
+  "role": "variant",
+  "commit": "[REPLACE: commit SHA or immutable source revision]",
+  "command": "[REPLACE: reproducible command]",
+  "seed": "[REPLACE: seed or deterministic policy]",
+  "hardware_or_runtime": "[REPLACE: CPU/GPU, engine, and version]",
+  "model_or_pipeline_version": "[REPLACE: checkpoint, API, or pipeline version]",
+  "tokenizer_or_template_version": "[REPLACE: tokenizer, chat template, or schema version]",
+  "data_or_index_version": "[REPLACE: dataset, corpus, embedding, or index version]",
+  "evaluation_version": "[REPLACE: frozen eval set version]",
+  "metrics": {
+    "quality": "[REPLACE: metric and value]",
+    "safety": "[REPLACE: metric and value]",
+    "latency": "[REPLACE: percentile and load condition]",
+    "cost": "[REPLACE: token, compute, or currency cost]"
+  },
+  "resource_profile": "[REPLACE: input/output token distribution, concurrency, memory, or throughput]"
+}

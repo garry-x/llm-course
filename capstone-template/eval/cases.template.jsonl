@@ -1,0 +1,1 @@
+{"case_id":"[REPLACE: stable eval ID]","slice":"[REPLACE: task-relevant slice]","input":"[REPLACE: redacted input or fixture reference]","expected_behavior":"[REPLACE: correct answer, extraction, abstention, or validator outcome]","risk_level":"[REPLACE: low, medium, or high]","source_version":"[REPLACE: evaluation version]","frozen":true}

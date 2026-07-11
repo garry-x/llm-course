@@ -24,7 +24,7 @@
 <article class="chapter">
   <h2>Chapter 11 Classic Neural NLP and Evaluation</h2>
   <p class="subtitle">RNN, Dependency Parsing, Seq2Seq, and BERT — Connecting Classic Neural NLP to Modern LLMs</p>
-  <div class="reading-time">⏱ Estimated Reading: 145 minutes · 15 sections · 5 runnable exercises · 5 conceptual exercises</div>
+  <div class="reading-time">⏱ Estimated Reading: 160 minutes · 21 sections · 5 runnable exercises · 5 conceptual exercises</div>
   <div class="font-controls"><span>Font Size:</span>
     <button class="font-btn" data-size="small" onclick="LLM.setFontSize('small')">S</button>
     <button class="font-btn" data-size="medium" onclick="LLM.setFontSize('medium')">M</button>
@@ -636,6 +636,22 @@ assert audit["overall_pass"]</div>
     <tr><td><code>safety_evaluation_metrics</code></td><td>Safety evaluation</td><td>Why attack success, refusal, over-refusal, and task utility must be reported simultaneously</td></tr>
     <tr><td><code>benchmark_result_summary</code></td><td>Benchmark reporting</td><td>How to turn metrics into engineering conclusions that include samples, inference settings, failure types, and boundaries</td></tr>
   </table>
+</section>
+
+<section class="card" id="s11-9a">
+  <h3>11.9A Cross-Chapter Capstone: Turn a Demo into an Engineering Decision</h3>
+  <p>The chapter exercises deliberately test local contracts: a shape, a loss, a metric, or a service-control rule. A course project needs a second kind of proof: that these contracts form one bounded system with a decision at the end. The capstone is not a request to build every LLM feature; it is a controlled comparison with an explicit release, reject, or rollback rule.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>System layer</th><th>What the capstone must make explicit</th><th>Useful course evidence</th></tr>
+      <tr><td>Task and interface</td><td>User, allowed output, non-goal, schema/template, token/context budget</td><td>Ch01 tokenizer contract, Ch02 positions, Ch08 structured decoding</td></tr>
+      <tr><td>Model or pipeline</td><td>Baseline, one controlled change, shapes/masks or retrieval/tool trace</td><td>Ch03-Ch06 tensor checks, Ch09 adaptation, Ch10 RAG/tool validation</td></tr>
+      <tr><td>Evaluation</td><td>Frozen cases, task slices, metric limits, error taxonomy, uncertainty</td><td>Ch07 curves and calibration, Ch11 EM/F1/judge/safety protocol</td></tr>
+      <tr><td>Operation</td><td>Latency/cost envelope, permissions, fallback, load and regression behavior</td><td>Ch08 generation budget, Ch10 SLO/admission/rollback controls</td></tr>
+    </table>
+  </div>
+  <p>For example, a handbook Q&amp;A assistant can compare a no-retrieval baseline with a versioned retrieval pipeline. Its conclusion is credible only if it records corpus/index version, retrieved chunks, citation support, abstentions, malformed or injected inputs, TTFT/P95 under a stated load, and the threshold that stops a rollout. A valid JSON response or a favorable demo conversation is only one signal in that chain.</p>
+  <div class="info-box key"><span class="icon">🔑</span><div><strong>Capstone Standard:</strong> State one testable question, preserve the baseline and evidence needed to answer it, and document what would make the team reject or roll back the change. Use the <a href="../docs/capstone-project-guide.html">End-to-End LLM Capstone Guide</a> for the milestone map, evidence ledger, drills, and scoring rubric.</div></div>
 </section>
 
 <section class="card" id="s11-10">

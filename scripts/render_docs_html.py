@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = [
+    "capstone-project-guide.md",
+    "capstone-project-guide.zh.md",
     "classic-nlp-deep-dive-module.md",
     "classic-nlp-handout.md",
     "math-prerequisites.md",
@@ -20,6 +22,8 @@ DOCS = [
     "worked-example-pack.md",
     "written-problem-set.md",
 ]
+
+ZH_DOCS = {"capstone-project-guide.zh.md"}
 
 
 def slugify(text: str, used: set[str]) -> str:
@@ -191,17 +195,33 @@ def render_markdown(markdown: str) -> tuple[str, list[tuple[int, str, str]], str
     return "\n".join(out), toc, title
 
 
-def render_page(markdown: str, source_name: str) -> str:
+def render_page(markdown: str, source_name: str, language: str = "en") -> str:
     body, toc, title = render_markdown(markdown)
     page_name = source_name.replace(".md", ".html")
+    zh = language.lower().startswith("zh")
+    home_href = "../index.html" if zh else "../en.html"
+    home_label = "课程首页" if zh else "Course Home"
+    contents_label = "目录" if zh else "Contents"
+    theme_aria_label = "切换主题" if zh else "Toggle theme"
+    theme_label = "深色模式" if zh else "Dark Mode"
+    material_label = "课程材料" if zh else "Course Materials"
+    nav_items = (
+        [("阅", "阅读材料", "reading-list.html"), ("题", "书面题库", "written-problem-set.html"), ("例", "可复算例题", "worked-example-pack.html"), ("结", "结课项目", "capstone-project-guide.zh.html"), ("E", "English Guide", "capstone-project-guide.html")]
+        if zh
+        else [("R", "Reading List", "reading-list.html"), ("W", "Written Problem Set", "written-problem-set.html"), ("E", "Worked Examples", "worked-example-pack.html"), ("C", "Capstone Guide", "capstone-project-guide.html"), ("中", "中文指南", "capstone-project-guide.zh.html")]
+    )
+    nav_html = "\n    ".join(
+        f'<a href="{html.escape(href, quote=True)}"><span class="ch-num">{html.escape(icon)}</span>{html.escape(label)}</a>'
+        for icon, label, href in nav_items
+    )
     toc_items = "\n".join(
         f'<li class="doc-toc-level-{level}"><a href="#{slug}">{html.escape(text)}</a></li>'
         for level, slug, text in toc
         if level <= 3
     )
-    toc_html = f'<nav class="toc"><h4>Contents</h4><ol>{toc_items}</ol></nav>' if toc_items else ""
+    toc_html = f'<nav class="toc"><h4>{contents_label}</h4><ol>{toc_items}</ol></nav>' if toc_items else ""
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{html.escape(language, quote=True)}">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
@@ -217,23 +237,21 @@ def render_page(markdown: str, source_name: str) -> str:
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <h1>LLM Deep Learning</h1>
-    <p>Course Materials</p>
+    <p>{material_label}</p>
   </div>
   <nav class="sidebar-nav">
-    <a href="../index.html"><span class="ch-num">⌂</span>Course Home</a>
-    <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
-    <a href="written-problem-set.html"><span class="ch-num">W</span>Written Problem Set</a>
-    <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
+    <a href="{home_href}"><span class="ch-num">⌂</span>{home_label}</a>
+    {nav_html}
   </nav>
   <div class="sidebar-footer">
-    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="Toggle theme">
-      <span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span>
+    <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="{theme_aria_label}">
+      <span id="theme-icon">🌙</span> <span id="theme-label">{theme_label}</span>
     </button>
   </div>
 </aside>
 <main class="main doc-main">
   <article class="chapter doc-article">
-    <div class="reading-time"><a href="../index.html">Course Home</a> / {html.escape(page_name)}</div>
+    <div class="reading-time"><a href="{home_href}">{home_label}</a> / {html.escape(page_name)}</div>
     <h2>{html.escape(title)}</h2>
     {toc_html}
     <section class="card doc-content">
@@ -255,7 +273,8 @@ def render_docs(source_dir: Path, out_dir: Path) -> list[str]:
         source = source_dir / doc
         if not source.exists():
             continue
-        html_text = render_page(source.read_text(encoding="utf-8"), doc)
+        language = "zh-CN" if doc in ZH_DOCS else "en"
+        html_text = render_page(source.read_text(encoding="utf-8"), doc, language)
         target = out_dir / doc.replace(".md", ".html")
         target.write_text(html_text, encoding="utf-8")
         rendered.append(str(target))

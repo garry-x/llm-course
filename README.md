@@ -79,6 +79,7 @@ Supplementary learning materials:
 - [Written Derivation & Concept Problem Set](docs/written-problem-set.html): Formula derivation, complexity analysis, and concept differentiation.
 - [Worked Example Pack](docs/worked-example-pack.html): Reproducible small examples for BPE, RoPE, attention, GQA, Norm, AdamW, SFT mask/packing, DPO, KV cache, etc.
 - [Classic NLP Topic Handout](docs/classic-nlp-handout.html): Relationship between RNN/LSTM, dependency parsing, seq2seq/NMT, BERT, BLEU/ROUGE/F1/EM and modern LLMs.
+- [End-to-End LLM Capstone Guide](docs/capstone-project-guide.html): Turn chapter exercises into one evidence-backed training, retrieval/tool, or structured-NLP system project. The copyable [capstone template](capstone-template/) includes an evidence checker. [中文指南](docs/capstone-project-guide.zh.html).
 
 Chapter assignment entry points: [assignments/ch01_bpe/](assignments/ch01_bpe/) · [assignments/ch02_embeddings/](assignments/ch02_embeddings/) · [assignments/ch03_attention/](assignments/ch03_attention/) · [assignments/ch04_multihead/](assignments/ch04_multihead/) · [assignments/ch05_block/](assignments/ch05_block/) · [assignments/ch06_gpt/](assignments/ch06_gpt/) · [assignments/ch07_training/](assignments/ch07_training/) · [assignments/ch08_generation/](assignments/ch08_generation/) · [assignments/ch09_alignment/](assignments/ch09_alignment/) · [assignments/ch10_inference/](assignments/ch10_inference/) · [assignments/ch11_classic_nlp/](assignments/ch11_classic_nlp/).
 
@@ -136,6 +137,7 @@ This repository recommends using `.venv` in the root directory to run local code
 
 ```bash
 python3 scripts/render_docs_html.py
+python3 scripts/validate_course_site.py
 python3 scripts/build_course_site_release.py --out /tmp/llm-course-site-release
 python3 scripts/build_assignment_release.py --all --out /tmp/llm-course-assignments
 ```
@@ -163,6 +165,7 @@ python3 scripts/build_assignment_release.py --all --out /tmp/llm-course-assignme
 | 9 | **Fine-tuning & Alignment** — SFT/preference data/synthetic distillation/LoRA/DPO/GRPO/DAPO/GSPO/RLVR + rollout systems + R1 reasoning | SFT protocol, post-training data audit, LoRA, DPO/GRPO/RLVR, reasoning RL logs, rollout system ledger, and distillation data quality analysis | 8+5 |
 | 10 | **Inference Optimization & Frontiers** — KV Cache/quantization release diagnostics/RAG/Context Engineering/Structured Output/Tool and MCP runtime/vLLM/Triton/MoE serving/Model routing/Production release/KV-aware routing/Long context/Multimodal | KV Cache + quantization calibration/regression + RAG + context engineering report + structured output reliability + Tool/MCP runtime checks + MoE serving report + model routing checks + rollout evidence + overload response + continuous batching admission + P/D pool plan + KV-aware cache hierarchy + speculative decoding diagnostics + long-context validation + LSH + service blueprint | 11+5 |
 | Topic | **Classic NLP & Evaluation** — RNN/LSTM / dependency parsing / seq2seq / BERT / metrics / agent workflow eval | RNN gradient path + UAS/LAS + BLEU/ROUGE/EM/F1 + judge audit + agent eval protocol + MLM mask | Ch11 |
+| Capstone | **End-to-End Engineering Decision** — scope one LLM system, run a controlled comparison, and make a release decision | Project contract + data/interface ledger + golden trace + frozen evaluation + serving/safety drills + rollback rule | All chapters |
 
 > **Total: Covers 11 chapters of programming assignments, written derivation problems, and classic NLP topic assignments.**
 
@@ -201,11 +204,14 @@ llm-course/
 │   ├── reading-list.md/.html
 │   ├── written-problem-set.md/.html
 │   ├── worked-example-pack.md/.html
+│   ├── capstone-project-guide.md/.html
+│   ├── capstone-project-guide.zh.md/.html
 │   ├── math-prerequisites.md/.html
 │   ├── ml-foundations-prerequisite-bridge.md/.html
 │   ├── python-pytorch-review-session.md/.html
 │   ├── classic-nlp-handout.md/.html
 │   └── classic-nlp-deep-dive-module.md/.html
+├── capstone-template/        # Copyable project contract, evidence records, decision report, and checker
 ├── assignments/              # Starter code, tests, READMEs, and reference solutions
 │   └── ch01_bpe/ ... ch11_classic_nlp/
 ├── images/                   # SVG concept diagrams and favicon assets
@@ -224,7 +230,8 @@ llm-course/
 ├── scripts/
 │   ├── render_docs_html.py          # Render docs/*.md to styled docs/*.html
 │   ├── build_assignment_release.py  # Create public assignment packages
-│   └── build_course_site_release.py # Create the learner-facing static site release
+│   ├── build_course_site_release.py # Create the learner-facing static site release
+│   └── validate_course_site.py      # Check local routes and learner-release boundaries
 ├── run_assignment_tests.py    # Run all assignment tests
 ├── requirements.txt           # Python dependencies for local exercises
 ├── serve.sh                   # CLI: local static server

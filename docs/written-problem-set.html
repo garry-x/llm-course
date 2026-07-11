@@ -18,10 +18,12 @@
     <p>Course Materials</p>
   </div>
   <nav class="sidebar-nav">
-    <a href="../index.html"><span class="ch-num">⌂</span>Course Home</a>
+    <a href="../en.html"><span class="ch-num">⌂</span>Course Home</a>
     <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
     <a href="written-problem-set.html"><span class="ch-num">W</span>Written Problem Set</a>
     <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
+    <a href="capstone-project-guide.html"><span class="ch-num">C</span>Capstone Guide</a>
+    <a href="capstone-project-guide.zh.html"><span class="ch-num">中</span>中文指南</a>
   </nav>
   <div class="sidebar-footer">
     <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="Toggle theme">
@@ -31,7 +33,7 @@
 </aside>
 <main class="main doc-main">
   <article class="chapter doc-article">
-    <div class="reading-time"><a href="../index.html">Course Home</a> / written-problem-set.html</div>
+    <div class="reading-time"><a href="../en.html">Course Home</a> / written-problem-set.html</div>
     <h2>Written Derivation and Conceptual Question Bank</h2>
     <nav class="toc"><h4>Contents</h4><ol><li class="doc-toc-level-1"><a href="#written-derivation-and-conceptual-question-bank">Written Derivation and Conceptual Question Bank</a></li>
 <li class="doc-toc-level-2"><a href="#grading-rubric">Grading Rubric</a></li>
@@ -192,6 +194,7 @@
 <li>Retrieval-to-generation failure analysis: Given dense/BM25 rankings, reranker scores, MMR similarity table, context token budget, generated answer, and gold answer, compute RRF, rerank top-k, MMR selection, final citations, Recall@k, MRR, answer EM/F1, and used tokens; determine whether the failure is more likely from retrieval, reranking, context packing, or generation.</li>
 <li>Decoding and evaluation tradeoff: Given greedy, top-p, self-consistency, and constrained decoding outputs for the same prompt, compute distinct-n, pass@k, vote distribution, token cost, and format legality rate; explain how to choose different strategies for open-ended writing, code generation, JSON tool calling, and math problems.</li>
 <li>Model family selection: For the same information extraction task, compare four approaches: decoder-only generation, encoder-only token classification, BERT span QA, and RAG + constrained decoding. Write the input/output format, training or inference objective, available metrics, main failure modes, and serving cost for each approach.</li>
+<li>Capstone evidence chain: Design a bounded handbook Q&amp;A, extraction, or adapted-assistant project. State its user task, output and permission contract, baseline, one controlled intervention, data/index/template versions, frozen evaluation slices, quality/safety/latency/cost metrics, uncertainty statement, three failure categories, and one release/rollback threshold. For each field, identify the corresponding evidence artifact and explain why a favorable demo or training-loss change alone cannot justify deployment.</li>
 </ol>
     </section>
   </article>

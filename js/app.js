@@ -15,7 +15,7 @@
     {id:8, file:'ch08.html', title:'Text Generation', navTitle:'Generation', desc:'Sampling, beam, thinking budget, speculative & structured decoding', zhTitle:'文本生成', zhNavTitle:'文本生成', zhDesc:'采样、beam、thinking budget、speculative decoding 与结构化输出', sections:25},
     {id:9, file:'ch09.html', title:'Fine-Tuning & Alignment', navTitle:'Alignment', desc:'SFT, synthetic distillation, LoRA, DPO, GRPO, rollout systems & retention', zhTitle:'微调与对齐', zhNavTitle:'微调与对齐', zhDesc:'SFT、synthetic distillation、LoRA、DPO、GRPO、rollout 系统与能力保持', sections:27},
     {id:10, file:'ch10.html', title:'Inference Optimization & Frontiers', navTitle:'Inference', desc:'KV Cache, sparse/linear attention, continuous batching, RAG & KV-aware orchestration', zhTitle:'推理优化与前沿', zhNavTitle:'推理优化', zhDesc:'KV Cache、稀疏/线性注意力、continuous batching、RAG 与 KV-aware orchestration', sections:38},
-    {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', navTitle:'NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, capstone evidence & safety', zhTitle:'经典神经 NLP 与评估', zhNavTitle:'NLP 与评估', zhDesc:'RNN、Parsing、Seq2Seq、BERT、结课项目证据与 safety', sections:21}
+    {id:11, file:'ch11.html', title:'Classical Neural NLP & Evaluation', navTitle:'NLP & Evaluation', desc:'RNN, Parsing, Seq2Seq, BERT, agent workflow evaluation & safety', zhTitle:'经典神经 NLP 与评估', zhNavTitle:'NLP 与评估', zhDesc:'RNN、Parsing、Seq2Seq、BERT、agent workflow evaluation 与 safety', sections:20}
   ];
 
   // ---- State helpers (localStorage-backed) ----

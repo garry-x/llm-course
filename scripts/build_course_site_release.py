@@ -18,8 +18,6 @@ from validate_course_site import validate_site
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS = [f"ch{index:02d}.html" for index in range(1, 12)]
 SAFE_DOCS = [
-    "capstone-project-guide.md",
-    "capstone-project-guide.zh.md",
     "classic-nlp-deep-dive-module.md",
     "classic-nlp-handout.md",
     "math-prerequisites.md",
@@ -39,7 +37,6 @@ INCLUDED_ROOTS = [
     "js/",
     "images/",
     "docs/",
-    "capstone-template/",
     "assignments/",
 ]
 EXCLUDED_DOCS: list[str] = []
@@ -139,7 +136,6 @@ def build_release(out_dir: Path) -> dict[str, object]:
     copy_tree(ROOT / "css", out_dir / "css")
     copy_tree(ROOT / "js", out_dir / "js")
     copy_tree(ROOT / "images", out_dir / "images")
-    copy_tree(ROOT / "capstone-template", out_dir / "capstone-template")
 
     chapter_manifest = []
     for chapter in CHAPTERS:

@@ -22,8 +22,6 @@
     <a href="reading-list.html"><span class="ch-num">R</span>Reading List</a>
     <a href="written-problem-set.html"><span class="ch-num">W</span>Written Problem Set</a>
     <a href="worked-example-pack.html"><span class="ch-num">E</span>Worked Examples</a>
-    <a href="capstone-project-guide.html"><span class="ch-num">C</span>Capstone Guide</a>
-    <a href="capstone-project-guide.zh.html"><span class="ch-num">中</span>中文指南</a>
   </nav>
   <div class="sidebar-footer">
     <button class="theme-toggle" onclick="LLM.toggleTheme()" aria-label="Toggle theme">
@@ -48,11 +46,10 @@
 <li class="doc-toc-level-2"><a href="#week-7-sft-lora-dpo-grpo-and-rlvr-rft">Week 7: SFT, LoRA, DPO, GRPO, and RLVR/RFT</a></li>
 <li class="doc-toc-level-2"><a href="#week-8-inference-engineering-rag-quantization-and-serving">Week 8: Inference Engineering, RAG, Quantization, and Serving</a></li>
 <li class="doc-toc-level-2"><a href="#week-9-rnn-classic-nlp-encoder-only-evaluation-ethics">Week 9: RNN, Classic NLP, Encoder-only, Evaluation &amp; Ethics</a></li>
-<li class="doc-toc-level-2"><a href="#week-10-frontier-methods-benchmark-boundaries-chapter-connections">Week 10: Frontier Methods, Benchmark Boundaries &amp; Chapter Connections</a></li>
-<li class="doc-toc-level-2"><a href="#week-11-capstone-integration-and-release-decision">Week 11: Capstone Integration and Release Decision</a></li></ol></nav>
+<li class="doc-toc-level-2"><a href="#week-10-frontier-methods-benchmark-boundaries-chapter-connections">Week 10: Frontier Methods, Benchmark Boundaries &amp; Chapter Connections</a></li></ol></nav>
     <section class="card doc-content">
 <h2 id="weekly-reading-handout">Weekly Reading Handout</h2>
-<p>This handout organizes the reading materials for the 10-week core course plus a capstone integration week by chapter and task. It is not an independent remedial path; each reading must be tied back to chapter code, written assignments, or chapter judgments. Readings are divided into three categories:</p>
+<p>This handout organizes the reading materials for the 10-week course by chapter and task. It is not an independent remedial path; each reading must be tied back to chapter code, written assignments, or chapter judgments. Readings are divided into three categories:</p>
 <ul>
 <li>Required: Default dependencies for class discussions and assignments.</li>
 <li>Optional: For projects, reports, or deeper understanding.</li>
@@ -443,23 +440,6 @@
 <li>If a new method is only effective on a single benchmark, a single model scale, or a single prompt template, how should the conclusion be stated?</li>
 <li>How can claims from papers on interpretability, multimodality, agents, reasoning, or safety be mapped to the formulas, code, and system metrics already present in this course?</li>
 <li>What questions should the method, experiments, analysis, and limitations sections of a technical conclusion each answer?</li>
-</ul>
-<h3 id="week-11-capstone-integration-and-release-decision">Week 11: Capstone Integration and Release Decision</h3>
-<p>Corresponding Materials: <a href="capstone-project-guide.html">End-to-End LLM Capstone Guide</a>, Written Derivation and Conceptual Question Bank, and the runnable diagnostics in Ch07-Ch11.</p>
-<p>Reading Goals for This Week: Convert the individual chapter artifacts into one bounded engineering claim. The point is not to make a feature checklist; it is to decide whether a specific system change should be adopted, rejected, or tested again under a narrower hypothesis.</p>
-<p>Required Reading:</p>
-<ul>
-<li>This course&#x27;s <a href="capstone-project-guide.html">End-to-End LLM Capstone Guide</a>: Focus on the project contract, evidence ledger, controlled comparison, adversarial drill, and rollback gate.</li>
-<li>Revisit the evaluation and release sections of Ch07, Ch10, and Ch11: Focus on reproducibility, data/version contracts, task slices, load conditions, and conclusion boundaries.</li>
-</ul>
-<p>Capstone Reading Task:</p>
-<p>Write a one-page evidence map before implementing the final variant. It must state the user task, output/permission boundary, baseline, one primary change, frozen evaluation slice, metric limitations, expected resource envelope, and one event that would stop a rollout. Then map every field to a source artifact: config, data manifest, golden trace, run record, evaluation result, safety drill, or load report.</p>
-<p>Questions for Thought:</p>
-<ul>
-<li>Which evidence distinguishes a real causal improvement from a new demo configuration that happened to score higher once?</li>
-<li>If a retrieval assistant has better answer accuracy but worse citation support and P95 latency, what decision rule should resolve the conflict?</li>
-<li>Which artifacts must be versioned together when changing a chat template, tokenizer, retrieval index, tool schema, or model checkpoint?</li>
-<li>Why is a rollback rule part of the technical claim rather than only an operations detail?</li>
 </ul>
     </section>
   </article>

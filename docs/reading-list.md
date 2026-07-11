@@ -1,6 +1,6 @@
 # Weekly Reading Handout
 
-This handout organizes the reading materials for the 10-week core course plus a capstone integration week by chapter and task. It is not an independent remedial path; each reading must be tied back to chapter code, written assignments, or chapter judgments. Readings are divided into three categories:
+This handout organizes the reading materials for the 10-week course by chapter and task. It is not an independent remedial path; each reading must be tied back to chapter code, written assignments, or chapter judgments. Readings are divided into three categories:
 
 - Required: Default dependencies for class discussions and assignments.
 - Optional: For projects, reports, or deeper understanding.
@@ -441,25 +441,3 @@ Questions for Thought:
 - If a new method is only effective on a single benchmark, a single model scale, or a single prompt template, how should the conclusion be stated?
 - How can claims from papers on interpretability, multimodality, agents, reasoning, or safety be mapped to the formulas, code, and system metrics already present in this course?
 - What questions should the method, experiments, analysis, and limitations sections of a technical conclusion each answer?
-
-## Week 11: Capstone Integration and Release Decision
-
-Corresponding Materials: [End-to-End LLM Capstone Guide](capstone-project-guide.md), Written Derivation and Conceptual Question Bank, and the runnable diagnostics in Ch07-Ch11.
-
-Reading Goals for This Week: Convert the individual chapter artifacts into one bounded engineering claim. The point is not to make a feature checklist; it is to decide whether a specific system change should be adopted, rejected, or tested again under a narrower hypothesis.
-
-Required Reading:
-
-- This course's [End-to-End LLM Capstone Guide](capstone-project-guide.md): Focus on the project contract, evidence ledger, controlled comparison, adversarial drill, and rollback gate.
-- Revisit the evaluation and release sections of Ch07, Ch10, and Ch11: Focus on reproducibility, data/version contracts, task slices, load conditions, and conclusion boundaries.
-
-Capstone Reading Task:
-
-Write a one-page evidence map before implementing the final variant. It must state the user task, output/permission boundary, baseline, one primary change, frozen evaluation slice, metric limitations, expected resource envelope, and one event that would stop a rollout. Then map every field to a source artifact: config, data manifest, golden trace, run record, evaluation result, safety drill, or load report.
-
-Questions for Thought:
-
-- Which evidence distinguishes a real causal improvement from a new demo configuration that happened to score higher once?
-- If a retrieval assistant has better answer accuracy but worse citation support and P95 latency, what decision rule should resolve the conflict?
-- Which artifacts must be versioned together when changing a chat template, tokenizer, retrieval index, tool schema, or model checkpoint?
-- Why is a rollback rule part of the technical claim rather than only an operations detail?
